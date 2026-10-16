@@ -136,26 +136,26 @@ export function getStateForCity(cityName: string): string {
   return '';
 }
 
-const CITY_ALIAS_MAP: Array<[string, string[]]> = [
-  ["Nashik", ["nashik", "nasik", "ambad", "satpur", "gonde", "sinnar", "dindori", "igatpuri"]],
-  ["Navi Mumbai", ["navi mumbai", "vashi", "airoli", "ghansoli", "mahpe", "rabale", "koparkhairane", "nerul", "kharghar", "belapur"]],
-  ["Mumbai", ["mumbai", "bombay", "andheri", "bandra", "kurla", "worli", "dadar", "borivali", "powai", "chembur", "colaba", "malad", "ghatkopar", "juhu", "santacruz", "marol", "seepz", "bkc", "lower parel", "nariman point"]],
-  ["Pimpri-Chinchwad", ["pimpri-chinchwad", "pimpri chinchwad", "chakan", "bhosari", "nigdi", "akurdi", "tathawade"]],
-  ["Pune", ["pune", "poona", "hinjewadi", "hinjawadi", "hadapsar", "talegaon", "ranjangaon", "wakad", "baner", "viman nagar", "kothrud", "katraj", "magarpatta"]],
-  ["Thane", ["thane", "majiwada", "ghodbunder", "kalwa", "mumbra"]],
-  ["Kalyan-Dombivli", ["kalyan", "dombivli", "dombivali"]],
-  ["Vasai-Virar", ["vasai", "virar", "nallasopara"]],
+export const CITY_ALIAS_MAP: Array<[string, string[]]> = [
+  ["Nashik", ["nashik", "nasik", "ambad", "ambad midc", "satpur", "satpur midc", "gonde", "sinnar", "sinnar midc", "musalgaon", "dindori", "igatpuri", "panchavati", "cidco", "pathardi", "pathardi phata", "deolali", "devlali", "ozar", "ojhar", "pimpalgaon", "lasalgaon", "yeola"]],
+  ["Navi Mumbai", ["navi mumbai", "vashi", "airoli", "ghansoli", "mahpe", "mahape", "rabale", "koparkhairane", "nerul", "kharghar", "belapur", "cbd belapur", "taloja", "turbhe", "juinagar", "seawoods"]],
+  ["Mumbai", ["mumbai", "bombay", "andheri", "bandra", "kurla", "worli", "dadar", "borivali", "powai", "chembur", "colaba", "malad", "ghatkopar", "juhu", "santacruz", "marol", "seepz", "bkc", "lower parel", "nariman point", "kandivali", "dahisar", "goregaon", "vikhroli", "mulund"]],
+  ["Pimpri-Chinchwad", ["pimpri-chinchwad", "pimpri chinchwad", "chakan", "bhosari", "bhosari midc", "nigdi", "akurdi", "tathawade", "ravet", "talwade"]],
+  ["Pune", ["pune", "poona", "hinjewadi", "hinjawadi", "hadapsar", "magarpatta", "talegaon", "ranjangaon", "wakad", "baner", "viman nagar", "kothrud", "katraj", "kharadi", "yerwada", "wagholi", "alandi", "shirwal", "bhosari", "chakan", "pcmc", "pimpri"]],
+  ["Thane", ["thane", "majiwada", "ghodbunder", "kalwa", "mumbra", "wagle estate"]],
+  ["Kalyan-Dombivli", ["kalyan", "dombivli", "dombivali", "titwala"]],
+  ["Vasai-Virar", ["vasai", "virar", "nallasopara", "naigaon"]],
   ["Bhiwandi", ["bhiwandi"]],
-  ["Panvel", ["panvel", "kamothe", "kalamboli", "taloja"]],
+  ["Panvel", ["panvel", "kamothe", "kalamboli", "taloja", "khandeshwar"]],
   ["Badlapur", ["badlapur"]],
   ["Ambernath", ["ambernath"]],
   ["Mira-Bhayandar", ["mira bhayandar", "bhayandar", "mira road"]],
   ["Palghar", ["palghar", "boisar", "tarapur"]],
-  ["Nagpur", ["nagpur", "butibori", "hingna", "kamthi"]],
-  ["Chhatrapati Sambhajinagar", ["aurangabad", "sambhajinagar", "chhatrapati sambhajinagar", "waluj", "chikalthana", "shendra"]],
+  ["Nagpur", ["nagpur", "butibori", "butibori midc", "hingna", "hingna midc", "kamthi", "mihan", "wadi"]],
+  ["Chhatrapati Sambhajinagar", ["aurangabad", "sambhajinagar", "chhatrapati sambhajinagar", "waluj", "waluj midc", "chikalthana", "chikalthana midc", "shendra", "shendra midc", "paithan"]],
   ["Solapur", ["solapur", "sholapur"]],
   ["Amravati", ["amravati"]],
-  ["Kolhapur", ["kolhapur", "gokul shirgaon", "shiroli"]],
+  ["Kolhapur", ["kolhapur", "gokul shirgaon", "shiroli", "shiroli midc", "uchgaon", "gadhinglaj", "ichalkaranji"]],
   ["Sangli", ["sangli", "miraj"]],
   ["Jalgaon", ["jalgaon", "bhusawal"]],
   ["Akola", ["akola"]],
@@ -291,3 +291,60 @@ export function resolveStrictListedCity(rawText: string): string {
 
   return '';
 }
+
+/**
+ * Checks if two location strings match geographically.
+ * Handles localities, industrial areas, MIDCs, and city aliases (e.g. "Ambad" matches "Nashik", "Hinjewadi" matches "Pune").
+ */
+export function isLocationMatching(loc1: string, loc2: string): boolean {
+  if (!loc1 || !loc2) return true;
+  const clean1 = loc1.toLowerCase().trim();
+  const clean2 = loc2.toLowerCase().trim();
+  if (!clean1 || !clean2) return true;
+
+  // Remote / Any match
+  const openTerms = ['remote', 'any', 'all india', 'work from home', 'wfh', 'pan india', 'open', 'not specified', 'anywhere'];
+  if (openTerms.some(t => clean1.includes(t) || clean2.includes(t))) {
+    return true;
+  }
+
+  // 1. Direct exact or substring match
+  if (clean1 === clean2 || clean1.includes(clean2) || clean2.includes(clean1)) {
+    return true;
+  }
+
+  // 2. Token Matching (e.g. "Ambad, Nashik" matches "Nashik", "Ambad MIDC" matches "Ambad")
+  const tokens1 = clean1.split(/[\s,/-]+/).filter(t => t.length > 2);
+  const tokens2 = clean2.split(/[\s,/-]+/).filter(t => t.length > 2);
+  const hasTokenMatch = tokens1.some(t1 =>
+    tokens2.some(t2 => t1 === t2 || (t1.length >= 4 && t2.length >= 4 && (t1.includes(t2) || t2.includes(t1))))
+  );
+  if (hasTokenMatch) {
+    return true;
+  }
+
+  // 3. Resolve parent city via resolveStrictListedCity
+  const resolvedCity1 = resolveStrictListedCity(clean1);
+  const resolvedCity2 = resolveStrictListedCity(clean2);
+  if (resolvedCity1 && resolvedCity2 && resolvedCity1.toLowerCase() === resolvedCity2.toLowerCase()) {
+    return true;
+  }
+
+  // 4. Check CITY_ALIAS_MAP clusters (e.g. "Ambad" and "Nashik" belong to the same Nashik cluster)
+  for (const [officialCity, aliases] of CITY_ALIAS_MAP) {
+    const allNames = [officialCity.toLowerCase(), ...aliases.map(a => a.toLowerCase())];
+    const match1 = allNames.some(name => clean1.includes(name) || name.includes(clean1));
+    const match2 = allNames.some(name => clean2.includes(name) || name.includes(clean2));
+    if (match1 && match2) {
+      return true;
+    }
+  }
+
+  // 5. Check isCityMatchingQuery bidirectional
+  if (isCityMatchingQuery(clean1, clean2) || isCityMatchingQuery(clean2, clean1)) {
+    return true;
+  }
+
+  return false;
+}
+

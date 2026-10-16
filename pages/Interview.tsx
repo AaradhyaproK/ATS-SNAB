@@ -20,6 +20,7 @@ import { saveCandidateConsent } from '../services/candidateConsent';
 import { LocationCityInput } from '../components/LocationCityInput';
 import { EducationInput } from '../components/EducationInput';
 import { isEducationMatching } from '../utils/educationMatcher';
+import { isLocationMatching } from '../data/maharashtraCities';
 import { ListenJDButton } from '../components/ListenJDButton';
 import { FormattedJobDescription } from '../utils/jobDescriptionFormatter';
 
@@ -546,9 +547,7 @@ const CandidateInfoForm: React.FC<{
     // 2. Location / City Mismatch (ONLY if candidate filled currentCity)
     const reqLoc = ((interviewData as any).location || (interviewData as any).jobLocation || (interviewData as any).city || '').toString().trim();
     if (reqLoc && currentCity.trim()) {
-      const candidateCityNorm = currentCity.trim().toLowerCase();
-      const reqLocNorm = reqLoc.toLowerCase();
-      if (!reqLocNorm.includes(candidateCityNorm) && !candidateCityNorm.includes(reqLocNorm)) {
+      if (!isLocationMatching(reqLoc, currentCity.trim())) {
         mismatches.push(`Location Mismatch: Preferred job location is ${reqLoc} (Your city: ${currentCity})`);
       }
     }

@@ -590,7 +590,7 @@ const parseAIEducation = (value: unknown): ResumeEducationEntry[] => {
   }).filter((item) => item.degree || item.institution);
 };
 
-import { resolveStrictListedCity } from '../data/maharashtraCities';
+import { resolveStrictListedCity, isLocationMatching } from '../data/maharashtraCities';
 
 export const normalizeStandardCityName = (rawLocation: string): string => {
   if (!rawLocation || typeof rawLocation !== 'string') return '';
@@ -1323,7 +1323,9 @@ export function checkMandatoryCriteriaMatch(
     const targetCity = resolveStrictListedCity(reqLocation) || reqLocation;
     const cityTokens = targetCity.toLowerCase().split(/[\s,/-]+/).filter((t) => t.length > 2);
 
-    const matchesCity = cityTokens.some((tok) => candLoc.includes(tok) || candText.includes(tok));
+    const matchesCity = isLocationMatching(reqLocation, candLoc) ||
+      isLocationMatching(reqLocation, candText) ||
+      cityTokens.some((tok) => candLoc.includes(tok) || candText.includes(tok));
 
     if (!matchesCity) {
       failReasons.push(`Location Mismatch: Job requires ${job.location || job.city}.`);

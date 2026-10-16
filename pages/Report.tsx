@@ -10,6 +10,23 @@ import { jsPDF } from 'jspdf';
 import DayNightToggle from '../components/DayNightToggle';
 import { useMessageBox } from '../components/MessageBox';
 import { ArrowLeft, Download, Share2, User, FileText, MessageSquare, Brain, Shield, Video, VideoOff, Eye, EyeOff, CheckCircle, XCircle, Briefcase, MapPin, GraduationCap, DollarSign, Calendar, Award, Link as LinkIcon, Maximize2, Minimize2, Globe, Volume2, Sparkles, BookOpen, Headphones, UserCheck, Mic, Zap, Phone, Users, CheckCircle2 } from 'lucide-react';
+import { isLocationMatching } from '../data/maharashtraCities';
+
+// Filter out false-positive location mismatches (e.g. "Ambad" is inside "Nashik")
+const getValidCriteriaMismatches = (rawMismatches?: string[]): string[] => {
+    if (!rawMismatches || rawMismatches.length === 0) return [];
+    return rawMismatches.filter((m: string) => {
+        const match = m.match(/Preferred job location is (.*?) \(Your city: (.*?)\)/i);
+        if (match) {
+            const jobLoc = match[1].trim();
+            const candCity = match[2].trim();
+            if (isLocationMatching(jobLoc, candCity)) {
+                return false; // Suppress false-positive location mismatch
+            }
+        }
+        return true;
+    });
+};
 
 // New component for radial score display
 const ScoreCircle: React.FC<{ score: number; denom: number; color: 'green' | 'yellow' | 'red'; label: string }> = ({ score, denom, color, label }) => {
@@ -108,6 +125,7 @@ const InterviewReport: React.FC = () => {
   const { userProfile } = useAuth();
   const { interviewId, submissionId } = useParams<{ interviewId: string; submissionId?: string }>();
   const [submission, setSubmission] = useState<InterviewSubmission | null>(null);
+  const [parentInterview, setParentInterview] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [isResumeModalOpen, setIsResumeModalOpen] = useState(false);
   const [profileTextData, setProfileTextData] = useState<string>('');
@@ -266,6 +284,7 @@ const InterviewReport: React.FC = () => {
             const interviewDocSnap = await getDoc(doc(db, 'interviews', interviewId));
             if (interviewDocSnap.exists()) {
               const interviewData = interviewDocSnap.data();
+              setParentInterview(interviewData);
               if (!submissionData.clientAccessExpiresAt && interviewData.clientAccessExpiresAt) {
                 submissionData.clientAccessExpiresAt = interviewData.clientAccessExpiresAt;
               }
@@ -279,6 +298,7 @@ const InterviewReport: React.FC = () => {
           const docSnap = await getDoc(docRef);
           if (docSnap.exists()) {
             const data = docSnap.data();
+            setParentInterview(data);
             // Map legacy fields to current InterviewSubmission format to avoid breaks
             const mappedSubmission: any = {
               id: docSnap.id,
@@ -298,6 +318,10 @@ const InterviewReport: React.FC = () => {
     };
     fetchSubmission();
   }, [interviewId, submissionId]);
+
+  const candidateCity = submission?.candidateInfo?.currentCity || (submission?.candidateInfo as any)?.currentLocation || (submission?.candidateInfo as any)?.city || '';
+  const jobLocation = parentInterview?.location || parentInterview?.jobLocation || parentInterview?.city || (submission as any)?.jobLocation || (submission as any)?.location || '';
+  const isLoc100Match = Boolean(candidateCity && jobLocation && isLocationMatching(jobLocation, candidateCity));
 
   const getScoreValue = (score: unknown): string => {
     let value = 0;
@@ -489,7 +513,14 @@ const InterviewReport: React.FC = () => {
                 profileDetails.push({ label: 'College', value: info.collegeName });
                 profileDetails.push({ label: 'Degree', value: `${info.degree} in ${info.specialization}` });
             }
-            profileDetails.push({ label: 'Current Location', value: info.currentLocation });
+            profileDetails.push({ label: 'Current City', value: info.currentCity || info.currentLocation || 'N/A' });
+            if (jobLocation) {
+                profileDetails.push({ label: 'Job Location', value: jobLocation });
+                profileDetails.push({
+                    label: 'Location Match',
+                    value: isLoc100Match ? '100% Fully Matched' : 'Location Difference'
+                });
+            }
             profileDetails.push({ label: 'Ready to Relocate', value: info.readyToRelocate });
 
             for (let i = 0; i < profileDetails.length; i++) {
@@ -504,9 +535,10 @@ const InterviewReport: React.FC = () => {
         }
 
         // 4b. PROFILE CRITERIA MISMATCHES
-        if (submission.candidateInfo?.criteriaMismatches && submission.candidateInfo.criteriaMismatches.length > 0) {
+        const validMismatchesForPdf = getValidCriteriaMismatches(submission.candidateInfo?.criteriaMismatches);
+        if (validMismatchesForPdf.length > 0) {
             drawSectionHeader("Profile Criteria Mismatches Noted");
-            submission.candidateInfo.criteriaMismatches.forEach((m: string) => {
+            validMismatchesForPdf.forEach((m: string) => {
                 checkPage(10);
                 pdf.setFont('helvetica', 'bold');
                 pdf.setFontSize(9);
@@ -1021,6 +1053,21 @@ const InterviewReport: React.FC = () => {
                     <div className="flex flex-wrap items-center gap-3 text-xs sm:text-sm text-gray-600 dark:text-gray-400">
                         <div className="flex items-center gap-2"><i className="fas fa-envelope text-gray-400"></i> {submission.candidateInfo?.email || 'N/A'}</div>
                         <div className="flex items-center gap-2"><i className="fas fa-calendar-alt text-gray-400"></i> {submission.submittedAt?.toDate ? submission.submittedAt.toDate().toLocaleString('en-GB') : 'N/A'}</div>
+                        {candidateCity && (
+                            <div className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold border transition-colors ${
+                                isLoc100Match 
+                                    ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700/60 shadow-xs'
+                                    : 'bg-gray-100 dark:bg-white/5 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-white/10'
+                            }`}>
+                                <MapPin size={12} className={isLoc100Match ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-500'} />
+                                <span>City: {candidateCity}</span>
+                                {isLoc100Match && (
+                                    <span className="text-[10px] font-extrabold bg-emerald-600 text-white px-1.5 py-0.2 rounded-full uppercase tracking-wider">
+                                        100% Match
+                                    </span>
+                                )}
+                            </div>
+                        )}
                         {submission.candidateResumeURL && !submission.candidateResumeURL.startsWith('data:text/plain') && (
                             <div className="flex items-center gap-1.5 max-w-xs sm:max-w-sm">
                                 <i className="fas fa-eye text-blue-500"></i> 
@@ -1107,22 +1154,26 @@ const InterviewReport: React.FC = () => {
                 {/* Main Content */}
                 <div className={`space-y-6 ${isCompareMode ? '' : 'lg:col-span-2'}`}>
                     {/* Candidate Profile Requirement Mismatch Banner */}
-                    {submission.candidateInfo?.criteriaMismatches && submission.candidateInfo.criteriaMismatches.length > 0 && (
-                        <div className="bg-amber-50 dark:bg-amber-950/40 rounded-2xl p-6 border border-amber-300 dark:border-amber-700/60 shadow-sm text-amber-900 dark:text-amber-200 space-y-2">
-                            <div className="flex items-center gap-2.5 font-extrabold text-base text-amber-800 dark:text-amber-300">
-                                <i className="fas fa-exclamation-triangle text-amber-600 dark:text-amber-400"></i>
-                                <span>Candidate Profile Criteria Mismatch Noted</span>
+                    {(() => {
+                        const validMismatches = getValidCriteriaMismatches(submission.candidateInfo?.criteriaMismatches);
+                        if (validMismatches.length === 0) return null;
+                        return (
+                            <div className="bg-amber-50 dark:bg-amber-950/40 rounded-2xl p-6 border border-amber-300 dark:border-amber-700/60 shadow-sm text-amber-900 dark:text-amber-200 space-y-2">
+                                <div className="flex items-center gap-2.5 font-extrabold text-base text-amber-800 dark:text-amber-300">
+                                    <i className="fas fa-exclamation-triangle text-amber-600 dark:text-amber-400"></i>
+                                    <span>Candidate Profile Criteria Mismatch Noted</span>
+                                </div>
+                                <p className="text-xs text-amber-800/90 dark:text-amber-300/90">
+                                    The candidate proceeded to take the interview despite the following profile requirement mismatches:
+                                </p>
+                                <ul className="list-disc list-inside text-xs font-semibold space-y-1 pl-1">
+                                    {validMismatches.map((mismatch: string, idx: number) => (
+                                        <li key={idx} className="text-amber-900 dark:text-amber-200">{mismatch}</li>
+                                    ))}
+                                </ul>
                             </div>
-                            <p className="text-xs text-amber-800/90 dark:text-amber-300/90">
-                                The candidate proceeded to take the interview despite the following profile requirement mismatches:
-                            </p>
-                            <ul className="list-disc list-inside text-xs font-semibold space-y-1 pl-1">
-                                {submission.candidateInfo.criteriaMismatches.map((mismatch: string, idx: number) => (
-                                    <li key={idx} className="text-amber-900 dark:text-amber-200">{mismatch}</li>
-                                ))}
-                            </ul>
-                        </div>
-                    )}
+                        );
+                    })()}
 
                     {/* AI Summary Card */}
                     <div className="bg-white dark:bg-white/5 rounded-2xl p-6 md:p-8 border border-gray-200 dark:border-white/10 shadow-sm">
@@ -1406,13 +1457,50 @@ const InterviewReport: React.FC = () => {
                                         <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">{submission.candidateInfo.maritalStatus || 'N/A'}</span>
                                     </div>
                                     <div className="flex flex-col p-3 bg-gray-50 dark:bg-black/20 rounded-xl border border-gray-100 dark:border-white/5">
-                                        <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Current City</span>
-                                        <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">{submission.candidateInfo.currentCity || 'N/A'}</span>
+                                        <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Current City (From Selector)</span>
+                                        <div className="flex items-center justify-between mt-0.5">
+                                            <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">{submission.candidateInfo.currentCity || 'N/A'}</span>
+                                            {isLoc100Match && (
+                                                <span className="px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700">
+                                                    100% Match
+                                                </span>
+                                            )}
+                                        </div>
                                     </div>
                                     <div className="flex flex-col col-span-2 p-3 bg-gray-50 dark:bg-black/20 rounded-xl border border-gray-100 dark:border-white/5">
                                         <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Native Place</span>
                                         <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">{submission.candidateInfo.nativePlace || 'N/A'}</span>
                                     </div>
+
+                                    {/* Location Verification & 100% Match Banner */}
+                                    {candidateCity && jobLocation && (
+                                        <div className={`col-span-2 p-3.5 rounded-xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 transition-all ${
+                                            isLoc100Match
+                                                ? 'bg-emerald-50/90 dark:bg-emerald-950/30 border-emerald-300 dark:border-emerald-700/60 shadow-xs'
+                                                : 'bg-blue-50/60 dark:bg-blue-950/20 border-blue-200 dark:border-blue-900/30'
+                                        }`}>
+                                            <div className="flex items-center gap-2.5">
+                                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                                                    isLoc100Match ? 'bg-emerald-600 text-white' : 'bg-blue-600 text-white'
+                                                }`}>
+                                                    <MapPin size={16} />
+                                                </div>
+                                                <div>
+                                                    <p className={`text-xs font-extrabold ${isLoc100Match ? 'text-emerald-800 dark:text-emerald-300' : 'text-blue-800 dark:text-blue-300'}`}>
+                                                        {isLoc100Match ? 'Location Match: 100% Fully Matched' : 'Location Comparison'}
+                                                    </p>
+                                                    <p className={`text-[11px] ${isLoc100Match ? 'text-emerald-700 dark:text-emerald-300/80' : 'text-blue-700 dark:text-blue-300/80'} mt-0.5`}>
+                                                        Candidate City: <strong>{candidateCity}</strong> • Preferred Job Location: <strong>{jobLocation}</strong> {isLoc100Match ? '(Eligible Local Region)' : ''}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            {isLoc100Match && (
+                                                <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-emerald-600 text-white uppercase tracking-wider shrink-0 shadow-xs">
+                                                    100% Fully Matched
+                                                </span>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 

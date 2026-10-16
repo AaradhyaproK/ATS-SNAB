@@ -1,6 +1,7 @@
 import { isEducationMatching, getEducationMatchDetails } from '../utils/educationMatcher';
 import { detectCandidateGender } from './resumeService';
 import { isJobMatchingDomain, resolveCandidateSectorsAndDepartments } from '../data/jobDomains';
+import { isLocationMatching } from '../data/maharashtraCities';
 
 export interface CandidateMatchProfile {
   name?: string;
@@ -112,21 +113,9 @@ export const checkLocationMatch = (candLoc: string, jobLoc: string): { isMatch: 
     return { isMatch: true, label: `City / Location Matches (${candLoc})`, details: `Matched with ${jobLoc}` };
   }
 
-  // Major Maharashtra city fallback check
-  const cityEquivs: Record<string, string[]> = {
-    nashik: ['nashik', 'nasik'],
-    pune: ['pune', 'poona'],
-    mumbai: ['mumbai', 'bombay', 'thane', 'navi mumbai'],
-    nagpur: ['nagpur'],
-    chhatrapati_sambhajinagar: ['aurangabad', 'sambhajinagar', 'chhatrapati sambhajinagar'],
-  };
-
-  for (const group of Object.values(cityEquivs)) {
-    const candInGroup = group.some(g => cleanCand.includes(g));
-    const jobInGroup = group.some(g => cleanJob.includes(g));
-    if (candInGroup && jobInGroup) {
-      return { isMatch: true, label: `City / Location Matches (${candLoc})`, details: `Matched region for ${jobLoc}` };
-    }
+  // Geographic equivalence check (handles MIDCs, localities, e.g. Ambad in Nashik, Hinjewadi in Pune)
+  if (isLocationMatching(candLoc, jobLoc)) {
+    return { isMatch: true, label: `City / Location Matches (${candLoc})`, details: `Matched region for ${jobLoc}` };
   }
 
   return { isMatch: false, label: `Location Difference`, details: `Job in ${jobLoc}, Candidate in ${candLoc}` };
