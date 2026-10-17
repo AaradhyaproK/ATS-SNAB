@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { collection, deleteDoc, deleteField, doc, getDocs, onSnapshot, query, serverTimestamp, setDoc, updateDoc, where } from 'firebase/firestore';
 import * as pdfjsLib from 'pdfjs-dist';
 import * as mammoth from 'mammoth';
-import { Award, Ban, Clock, Edit3, Filter, GraduationCap, MapPin, Plus, Archive, Briefcase, Check, CheckCircle2, CheckSquare, ChevronDown, Copy, ExternalLink, FileText, Mail, MessageSquare, RotateCcw, Search, Send, SlidersHorizontal, Sparkles, Square, Trash2, UploadCloud, UserCheck, UserX, XCircle } from 'lucide-react';
+import { Award, Ban, Clock, Edit3, Filter, GraduationCap, MapPin, Plus, Archive, Briefcase, Check, CheckCircle2, CheckSquare, ChevronDown, Copy, ExternalLink, FileText, Mail, MessageSquare, RotateCcw, Search, Send, SlidersHorizontal, Sparkles, Square, Trash2, UploadCloud, UserCheck, UserX, Wand2, XCircle } from 'lucide-react';
 
 import { db } from '../services/firebase';
 import { useAuth } from '../context/AuthContext';
@@ -24,6 +24,7 @@ import { sendInterviewInvitations } from '../services/sesService';
 import { logTeamActivity } from '../services/auditService';
 import { dedupeCandidatesByIdentity } from '../services/candidateIdentity';
 import { deleteFileFromS3ByUrl } from '../services/s3Service';
+import { MorphResumeModal } from '../components/MorphResumeModal';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
 
@@ -544,6 +545,7 @@ const ResumeDump: React.FC = () => {
   const [showMoreFilters, setShowMoreFilters] = useState<boolean>(false);
   const [skillsPanelCandidate, setSkillsPanelCandidate] = useState<ResumeDumpCandidate | null>(null);
   const [previewResumeCandidate, setPreviewResumeCandidate] = useState<ResumeDumpCandidate | null>(null);
+  const [morphResumeCandidate, setMorphResumeCandidate] = useState<ResumeDumpCandidate | null>(null);
 
   // Strict Mandatory AI Criteria Checkmarks
   const [strictGender, setStrictGender] = useState(false);
@@ -2967,7 +2969,7 @@ const ResumeDump: React.FC = () => {
 
                   <th className="geist-label whitespace-nowrap px-3 py-2 text-left uppercase text-[10px] tracking-wider font-semibold text-gray-500 dark:text-[#8f8f8f] border-b border-gray-200 dark:border-white/[0.08] bg-gray-50/70 dark:bg-white/[0.02]">Status</th>
                   <th className="geist-label whitespace-nowrap px-3 py-2 text-left uppercase text-[10px] tracking-wider font-semibold text-gray-500 dark:text-[#8f8f8f] border-b border-gray-200 dark:border-white/[0.08] bg-gray-50/70 dark:bg-white/[0.02]">Uploaded</th>
-                  <th className="geist-label whitespace-nowrap px-3 py-2 text-right uppercase text-[10px] tracking-wider font-semibold text-gray-500 dark:text-[#8f8f8f] border-b border-gray-200 dark:border-white/[0.08] bg-gray-50/70 dark:bg-white/[0.02] w-[205px] min-w-[205px]">Actions</th>
+                  <th className="geist-label whitespace-nowrap px-3 py-2 text-right uppercase text-[10px] tracking-wider font-semibold text-gray-500 dark:text-[#8f8f8f] border-b border-gray-200 dark:border-white/[0.08] bg-gray-50/70 dark:bg-white/[0.02] w-[235px] min-w-[235px]">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 dark:divide-white/[0.08]">
@@ -3119,7 +3121,7 @@ const ResumeDump: React.FC = () => {
                         {candidate.resumeFileName}
                       </div>
                     </td>
-                    <td className="px-2.5 py-2 text-right w-[205px] min-w-[205px]" onClick={(e) => e.stopPropagation()}>
+                    <td className="px-2.5 py-2 text-right w-[235px] min-w-[235px]" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center justify-end gap-1.5">
                         {/* 1. Invite Action Button */}
                         {candidate.isBlocked || candidate.isBanned ? (
@@ -3175,6 +3177,19 @@ const ResumeDump: React.FC = () => {
                             title="View resume document"
                           >
                             <ExternalLink size={12} strokeWidth={1.8} />
+                          </button>
+
+                          {/* Morph Resume (Redact email, phone & links for client) */}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setMorphResumeCandidate(candidate);
+                            }}
+                            className="inline-flex h-6 w-6 items-center justify-center rounded-[4px] text-purple-600 dark:text-purple-400 hover:bg-purple-500/15 hover:text-purple-700 dark:hover:text-purple-300 transition-colors cursor-pointer"
+                            title="Morph Resume (Blind client copy: remove email, phone & all links)"
+                          >
+                            <Wand2 size={12} strokeWidth={2} />
                           </button>
 
                           {/* Edit Details */}
@@ -3361,6 +3376,16 @@ const ResumeDump: React.FC = () => {
                       <span>Resume</span>
                     </button>
                   )}
+
+                  <button
+                    type="button"
+                    onClick={() => setMorphResumeCandidate(skillsPanelCandidate)}
+                    className="geist-caption inline-flex h-7 items-center gap-1 rounded-[6px] border border-purple-500/40 bg-purple-50 dark:bg-purple-600/20 px-2.5 font-semibold text-xs text-purple-700 dark:text-purple-300 transition-colors hover:bg-purple-100 dark:hover:bg-purple-600/30 cursor-pointer"
+                    title="Morph resume: remove email, phone, and all links for client submission"
+                  >
+                    <Wand2 size={12} strokeWidth={2} className="shrink-0 text-purple-600 dark:text-purple-400" />
+                    <span>Morph Resume</span>
+                  </button>
 
                   <button
                     type="button"
@@ -4669,6 +4694,13 @@ const ResumeDump: React.FC = () => {
           </div>,
           document.body
         )}
+
+      {/* Morph Resume (Redacted Blind Copy) Preview & Download Modal */}
+      <MorphResumeModal
+        candidate={morphResumeCandidate}
+        isOpen={Boolean(morphResumeCandidate)}
+        onClose={() => setMorphResumeCandidate(null)}
+      />
     </div>
   );
 };
