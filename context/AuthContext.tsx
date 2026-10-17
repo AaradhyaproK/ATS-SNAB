@@ -53,7 +53,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       const currentUser = auth.currentUser;
-      const resolvedRole = merged.role || (currentUser?.email === 'admin@dsauce.io' || currentUser?.email?.includes('admin') ? 'admin' : 'recruiter');
+      const resolvedRole = merged.role || (currentUser?.email === 'admin@snab.co.in' || currentUser?.email?.includes('admin') ? 'admin' : 'recruiter');
       const resolvedName = merged.name || merged.displayName || currentUser?.displayName || 'Recruiter';
       const resolvedPhone = merged.phoneNumber || merged.phone || merged.contactNumber || currentUser?.phoneNumber || '';
 

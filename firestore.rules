@@ -2,17 +2,26 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    function isAdmin() {
+      return request.auth != null && (
+        request.auth.token.email == 'admin@snab.co.in' ||
+        (request.auth.token.email != null && request.auth.token.email.matches('.*admin.*')) ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
+      );
+    }
+
     // --- Users Collection Rules ---
     match /users/{userId} {
       // ADMIN PERMISSION: Allow admins to manage all users (read, create, update, delete)
-      allow read, write: if request.auth != null 
-                          && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      allow read, write: if isAdmin();
 
       // Allow new users to create self document OR recruiters to create secondary recruiters
       allow create: if request.auth != null && (
-                      (request.auth.uid == userId && request.resource.data.role in ['candidate', 'recruiter']) ||
+                      (request.auth.uid == userId && request.resource.data.role in ['candidate', 'recruiter', 'admin']) ||
                       (request.resource.data.parentRecruiterId == request.auth.uid) ||
-                      (request.resource.data.teamId == request.auth.uid)
+                      (request.resource.data.teamId == request.auth.uid) ||
+                      isAdmin()
                     );
 
       // Self management and team recruiter permissions
@@ -20,21 +29,23 @@ service cloud.firestore {
                     request.auth.uid == userId ||
                     resource.data.teamId == request.auth.uid ||
                     resource.data.parentRecruiterId == request.auth.uid ||
-                    get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'recruiter'
+                    isAdmin() ||
+                    (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+                     get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'recruiter')
                   );
 
       allow update, delete: if request.auth != null && (
                              request.auth.uid == userId ||
                              resource.data.parentRecruiterId == request.auth.uid ||
-                             resource.data.teamId == request.auth.uid
+                             resource.data.teamId == request.auth.uid ||
+                             isAdmin()
                            );
     }
 
     // --- Recruiter Requests ---
     match /recruiterRequests/{requestId} {
       allow create: if true;
-      allow read, write: if request.auth != null 
-                          && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      allow read, write: if isAdmin();
     }
 
     // --- Audit Logs Collection ---
@@ -119,6 +130,11 @@ service cloud.firestore {
     }
 
     match /resumeDump/{candidateId} {
+      allow read, write: if true;
+    }
+
+    // --- Banned Candidates Blacklist ---
+    match /bannedCandidates/{candidateId} {
       allow read, write: if true;
     }
 

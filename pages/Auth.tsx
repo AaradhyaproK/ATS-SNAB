@@ -24,6 +24,8 @@ import {
 import { addDoc, collection, doc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { Link, useNavigate } from 'react-router-dom';
 import Logo from '../components/Logo';
+import DayNightToggle from '../components/DayNightToggle';
+import { useTheme } from '../context/ThemeContext';
 import { auth, db } from '../services/firebase';
 import { useAuth } from '../context/AuthContext';
 import '../styles/auth.css';
@@ -32,6 +34,7 @@ type AuthMode = 'login' | 'signup' | 'reset';
 
 const AuthPage: React.FC = () => {
   const { user, userProfile, loading: authLoading } = useAuth();
+  const { isDark } = useTheme();
   const [mode, setMode] = useState<AuthMode>('login');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -48,7 +51,7 @@ const AuthPage: React.FC = () => {
 
   React.useEffect(() => {
     if (!authLoading && user) {
-      const role = userProfile?.role || (user.email === 'admin@dsauce.io' || user.email?.includes('admin') ? 'admin' : 'recruiter');
+      const role = userProfile?.role || (user.email === 'admin@snab.co.in' || user.email?.includes('admin') ? 'admin' : 'recruiter');
       if (role === 'admin') {
         navigate('/admin', { replace: true });
       } else {
@@ -73,9 +76,16 @@ const AuthPage: React.FC = () => {
       await setPersistence(auth, rememberMe ? browserLocalPersistence : browserSessionPersistence);
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
 
-      const userDoc = await getDoc(doc(db, 'users', userCredential.user.uid));
-      const userData = userDoc.data() || {};
-      const userRole = userData.role;
+      let userData: any = {};
+      try {
+        const userDoc = await getDoc(doc(db, 'users', userCredential.user.uid));
+        userData = userDoc.data() || {};
+      } catch (docErr) {
+        console.warn('Could not fetch user document from Firestore:', docErr);
+      }
+
+      const isAdminEmail = email.trim().toLowerCase() === 'admin@snab.co.in' || email.trim().toLowerCase().includes('admin');
+      const userRole = userData.role || (isAdminEmail ? 'admin' : 'recruiter');
 
       if (userRole !== 'admin') {
         if (!userCredential.user.emailVerified && !userData.adminVerified) {
@@ -87,7 +97,7 @@ const AuthPage: React.FC = () => {
 
       if (userRole !== 'recruiter' && userRole !== 'admin') {
         await signOut(auth);
-        setError('This Dsauce portal is only for recruiters and admins. Candidates should use the interview or assessment link sent to them.');
+        setError('This SNAB hireX portal is only for recruiters and admins. Candidates should use the interview or assessment link sent to them.');
         return;
       }
 
@@ -148,12 +158,15 @@ const AuthPage: React.FC = () => {
       : 'Share your details for recruiter account approval.';
 
   return (
-    <main className="ix-auth-page">
+    <main className={`ix-auth-page ${!isDark ? 'is-light' : ''}`}>
       <section className="ix-auth-form-panel" aria-label={`${title} form`}>
-        <header className="ix-auth-brand">
+        <header className="ix-auth-brand" style={{ justifyContent: 'space-between', width: '100%' }}>
           <Link to="/" aria-label="SNAB hireX home">
             <Logo className="h-9 w-auto object-contain" />
           </Link>
+          <div className="flex items-center">
+            <DayNightToggle />
+          </div>
         </header>
 
         <div className="ix-auth-form-wrap">

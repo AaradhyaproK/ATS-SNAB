@@ -152,6 +152,10 @@ function getAISuggestedCandidatesForJob(job: any, candidates: any[], alreadyInvi
 
   return candidates
     .filter(c => {
+      // Never recommend hired, blocked, or banned candidates
+      if (c.isHired || c.doNotSuggest || c.isBlocked || c.isBanned) {
+        return false;
+      }
       const email = (c.email || '').toLowerCase().trim();
       const phone = (c.phone || '').trim();
       const pseudoEmail = phone ? `${phone.replace(/[^0-9]/g, '')}@whatsapp.local` : '';

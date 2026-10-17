@@ -203,6 +203,23 @@ const isSkillMatchWithSynonyms = (reqSkill: string, candidateSkills: string[], f
 
 // Main Match Calculator function
 export function calculateJobMatchScore(job: any, candidate: CandidateMatchProfile): JobMatchResult {
+  // Banned / Blocked candidates cannot be recommended or matched for any job
+  if (candidate.isBlocked || candidate.isBanned) {
+    return {
+      job,
+      overallScore: 0,
+      matchGrade: 'Not Recommended',
+      badgeColor: '#ef4444',
+      skillMatch: { score: 0, matchedSkills: [], missingSkills: [], totalRequired: 0, ratioText: 'Banned' },
+      locationMatch: { isMatch: false, label: 'Candidate Blocked', details: 'Candidate email and phone are banned on this software' },
+      genderMatch: { isMatch: false, label: 'Candidate Banned', requiredGender: 'Any', candidateGender: 'Any' },
+      expMatch: { isMatch: false, label: 'Candidate Banned', requiredExp: '', candidateExp: 0 },
+      eduMatch: { isMatch: false, label: 'Candidate Banned', requiredEdu: '', candidateEdu: '', allOptions: [], matchedOptions: [] },
+      matchReasons: [],
+      failReasons: ['Candidate email/phone is banned on this software. Excluded from all job matching and recommendations.']
+    };
+  }
+
   const matchReasons: string[] = [];
   const failReasons: string[] = [];
 

@@ -314,8 +314,8 @@ const AdminStats: React.FC = () => {
                   }}
                 />
               ) : (
-                <div className="w-36 invert">
-                  <Logo className="w-full" />
+                <div className="h-9 mb-2 flex items-center">
+                  <Logo className="h-full w-auto object-contain max-h-9" isDark={false} />
                 </div>
               )}
             </div>
@@ -414,8 +414,8 @@ const AdminStats: React.FC = () => {
         {/* Header */}
         <div className="flex justify-between items-start border-b-4 border-black pb-4 mb-6">
           <div>
-            <div className="w-36 mb-2 invert">
-              <Logo className="w-full" />
+            <div className="h-9 mb-2 flex items-center">
+              <Logo className="h-full w-auto object-contain max-h-9" isDark={false} />
             </div>
             <p className="text-black font-bold text-sm">interviewxpert.in</p>
             <p className="text-gray-800 font-medium text-sm">hackathon746@gmail.com</p>
@@ -495,8 +495,8 @@ const AdminStats: React.FC = () => {
         {/* Header */}
         <div className="flex justify-between items-start border-b-4 border-black pb-4 mb-6">
           <div>
-            <div className="w-36 mb-2 invert">
-              <Logo className="w-full" />
+            <div className="h-9 mb-2 flex items-center">
+              <Logo className="h-full w-auto object-contain max-h-9" isDark={false} />
             </div>
             <p className="text-black font-bold text-sm">interviewxpert.in</p>
             <p className="text-gray-800 font-medium text-sm">hackathon746@gmail.com</p>

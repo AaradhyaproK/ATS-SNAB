@@ -6,6 +6,14 @@
   --auth-muted: #929292;
   --auth-white: #f7f7f5;
   --auth-blue: #3157ff;
+  --auth-input-bg: #101010;
+  --auth-input-text: #f7f7f5;
+  --auth-input-border: #292929;
+  --auth-label: #d0d0d0;
+  --auth-footer-text: #595959;
+  --auth-footer-link: #7d7d7d;
+  --auth-panel-border: rgba(255, 255, 255, 0.08);
+  --auth-scrollbar: #2f2f2f;
   display: grid;
   grid-template-columns: minmax(360px, 39%) minmax(0, 61%);
   height: 100dvh;
@@ -15,6 +23,118 @@
   background: var(--auth-black);
   color: var(--auth-white);
   font-family: var(--font-sans);
+  transition: background-color 200ms ease, color 200ms ease;
+}
+
+.ix-auth-page.is-light,
+html:not(.dark) .ix-auth-page {
+  --auth-black: #f8fafc;
+  --auth-panel: #ffffff;
+  --auth-surface: #f1f5f9;
+  --auth-border: #e2e8f0;
+  --auth-muted: #64748b;
+  --auth-white: #0f172a;
+  --auth-blue: #2563eb;
+  --auth-input-bg: #ffffff;
+  --auth-input-text: #0f172a;
+  --auth-input-border: #cbd5e1;
+  --auth-label: #334155;
+  --auth-footer-text: #64748b;
+  --auth-footer-link: #475569;
+  --auth-panel-border: #e2e8f0;
+  --auth-scrollbar: #cbd5e1;
+}
+
+.ix-auth-page.is-light .ix-auth-section-label,
+html:not(.dark) .ix-auth-page .ix-auth-section-label {
+  color: #64748b !important;
+}
+
+.ix-auth-page.is-light .ix-auth-alert.is-error,
+html:not(.dark) .ix-auth-page .ix-auth-alert.is-error {
+  border-color: rgba(239, 68, 68, 0.35);
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.ix-auth-page.is-light .ix-auth-alert.is-success,
+html:not(.dark) .ix-auth-page .ix-auth-alert.is-success {
+  border-color: rgba(16, 185, 129, 0.35);
+  background: #f0fdf4;
+  color: #15803d;
+}
+
+.ix-auth-page.is-light .ix-auth-visual,
+html:not(.dark) .ix-auth-page .ix-auth-visual {
+  background: #f8fafc;
+}
+
+.ix-auth-page.is-light .ix-auth-visual > img,
+html:not(.dark) .ix-auth-page .ix-auth-visual > img {
+  opacity: 0.88;
+  filter: contrast(0.92) brightness(1.08);
+}
+
+.ix-auth-page.is-light .ix-auth-visual-shade,
+html:not(.dark) .ix-auth-page .ix-auth-visual-shade {
+  background: linear-gradient(90deg, rgba(248, 250, 252, 0.75) 0%, rgba(248, 250, 252, 0.25) 45%, transparent 100%),
+              linear-gradient(0deg, rgba(248, 250, 252, 0.9) 0%, transparent 55%);
+}
+
+.ix-auth-page.is-light .ix-auth-visual-copy > p,
+html:not(.dark) .ix-auth-page .ix-auth-visual-copy > p {
+  color: #475569;
+}
+
+.ix-auth-page.is-light .ix-auth-visual-copy h2,
+html:not(.dark) .ix-auth-page .ix-auth-visual-copy h2 {
+  color: #0f172a;
+}
+
+.ix-auth-page.is-light .ix-auth-visual-copy > span,
+html:not(.dark) .ix-auth-page .ix-auth-visual-copy > span {
+  color: #334155;
+}
+
+.ix-auth-page.is-light .ix-auth-maintainer,
+.ix-auth-page.is-light .ix-auth-maintainer span,
+html:not(.dark) .ix-auth-page .ix-auth-maintainer,
+html:not(.dark) .ix-auth-page .ix-auth-maintainer span {
+  color: #64748b;
+}
+
+.ix-auth-page.is-light .ix-auth-maintainer strong,
+html:not(.dark) .ix-auth-page .ix-auth-maintainer strong {
+  color: #0f172a;
+  text-decoration-color: #94a3b8;
+}
+
+.ix-auth-page.is-light .ix-auth-maintainer:hover strong,
+html:not(.dark) .ix-auth-page .ix-auth-maintainer:hover strong {
+  color: #2563eb;
+}
+
+.ix-auth-page.is-light .ix-auth-visual-index,
+html:not(.dark) .ix-auth-page .ix-auth-visual-index {
+  color: #64748b;
+}
+
+.ix-auth-page.is-light .ix-auth-visual-index i,
+html:not(.dark) .ix-auth-page .ix-auth-visual-index i {
+  background: #cbd5e1;
+}
+
+.ix-auth-page.is-light .ix-auth-modal,
+html:not(.dark) .ix-auth-modal {
+  background: #ffffff;
+  color: #0f172a;
+  border-color: #e2e8f0;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.12);
+}
+
+.ix-auth-page.is-light .ix-auth-modal p,
+html:not(.dark) .ix-auth-modal p {
+  color: #64748b;
 }
 
 .ix-auth-page *,
@@ -32,9 +152,10 @@
   min-height: 100dvh;
   overflow-y: auto;
   background: var(--auth-panel);
-  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  border-right: 1px solid var(--auth-panel-border);
   scrollbar-width: thin;
-  scrollbar-color: #2f2f2f transparent;
+  scrollbar-color: var(--auth-scrollbar) transparent;
+  transition: background-color 200ms ease, border-color 200ms ease;
 }
 
 .ix-auth-brand {
@@ -60,8 +181,9 @@
   position: relative;
   z-index: 1;
   display: block;
-  width: clamp(156px, 14vw, 196px);
-  height: auto;
+  height: clamp(34px, 3.8vw, 44px);
+  width: auto;
+  max-width: 160px;
   object-fit: contain;
 }
 
@@ -148,7 +270,7 @@
 }
 
 .ix-auth-field > label {
-  color: #d0d0d0;
+  color: var(--auth-label);
   font-size: 13px;
   font-weight: 520;
   letter-spacing: 0.01em;
@@ -164,7 +286,7 @@
   position: absolute;
   left: 12px;
   display: inline-flex;
-  color: #696969;
+  color: var(--auth-muted);
   pointer-events: none;
 }
 
@@ -172,27 +294,27 @@
   width: 100%;
   height: 40px;
   padding: 0 40px;
-  border: 1px solid var(--auth-border);
+  border: 1px solid var(--auth-input-border);
   border-radius: 5px;
   outline: none;
-  background: var(--auth-surface);
-  color: var(--auth-white);
+  background: var(--auth-input-bg);
+  color: var(--auth-input-text);
   font: inherit;
   font-size: 13px;
   transition: border-color 160ms ease, background-color 160ms ease, box-shadow 160ms ease;
 }
 
 .ix-auth-field input:not([type='checkbox'])::placeholder {
-  color: #5f5f5f;
+  color: var(--auth-muted);
 }
 
 .ix-auth-field input:not([type='checkbox']):hover {
-  border-color: #414141;
+  border-color: #758cff;
 }
 
 .ix-auth-field input:not([type='checkbox']):focus {
-  border-color: #758cff;
-  background: #121212;
+  border-color: #3157ff;
+  background: var(--auth-input-bg);
   box-shadow: 0 0 0 3px rgba(49, 87, 255, 0.18);
 }
 
@@ -211,13 +333,13 @@
   border: 0;
   border-radius: 4px;
   background: transparent;
-  color: #6f6f6f;
+  color: var(--auth-muted);
   cursor: pointer;
 }
 
 .ix-auth-password-toggle:hover,
 .ix-auth-password-toggle:focus-visible {
-  color: #d7d7d7;
+  color: var(--auth-white);
 }
 
 .ix-auth-password-toggle:focus-visible,
@@ -242,7 +364,7 @@
   display: inline-flex;
   align-items: center;
   gap: 9px;
-  color: #8d8d8d;
+  color: var(--auth-muted);
   font-size: 12px;
   cursor: pointer;
   user-select: none;
@@ -262,9 +384,9 @@
   height: 16px;
   align-items: center;
   justify-content: center;
-  border: 1px solid #3b3b3b;
+  border: 1px solid var(--auth-border);
   border-radius: 3px;
-  background: #111;
+  background: var(--auth-surface);
   color: transparent;
 }
 
@@ -287,7 +409,7 @@
   padding: 0;
   border: 0;
   background: transparent;
-  color: #a5a5a5;
+  color: var(--auth-muted);
   font: inherit;
   font-size: 12px;
   font-weight: 520;
@@ -295,7 +417,7 @@
 }
 
 .ix-auth-text-button:hover {
-  color: white;
+  color: var(--auth-white);
 }
 
 .ix-auth-submit {
@@ -330,7 +452,7 @@
 
 .ix-auth-switch {
   margin: 2px 0 0;
-  color: #747474;
+  color: var(--auth-muted);
   font-size: 12px;
   line-height: 1.5;
   text-align: center;
@@ -341,14 +463,14 @@
   padding: 0;
   border: 0;
   background: transparent;
-  color: #c8c8c8;
+  color: var(--auth-white);
   font: inherit;
   font-weight: 620;
   cursor: pointer;
 }
 
 .ix-auth-switch button:hover {
-  color: white;
+  color: var(--auth-blue);
   text-decoration: underline;
   text-underline-offset: 3px;
 }
@@ -359,7 +481,7 @@
 
 .ix-auth-footer {
   padding: 18px clamp(28px, 3.5vw, 52px) 22px;
-  color: #595959;
+  color: var(--auth-footer-text);
 }
 
 .ix-auth-footer > div {
@@ -373,13 +495,13 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  color: #7d7d7d;
+  color: var(--auth-footer-link);
   font-size: 11px;
   text-decoration: none;
 }
 
 .ix-auth-footer a:hover {
-  color: #e4e4e4;
+  color: var(--auth-white);
 }
 
 .ix-auth-footer p {
@@ -629,7 +751,8 @@
   }
 
   .ix-auth-brand img {
-    width: 190px;
+    height: 36px;
+    width: auto;
   }
 
   .ix-auth-form-wrap {
@@ -655,7 +778,8 @@
   }
 
   .ix-auth-brand img {
-    width: 168px;
+    height: 32px;
+    width: auto;
   }
 
   .ix-auth-form-wrap {

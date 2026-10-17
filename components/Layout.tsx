@@ -93,8 +93,8 @@ const LayoutContent: React.FC<{ children: React.ReactNode }> = ({ children }) =>
             {/* Logo Area */}
             <div className="flex-shrink-0 flex items-center">
               <Link to="/" className="flex items-center group">
-                <div className="w-[118px] sm:w-[140px] flex items-center justify-center transition-all duration-300">
-                  <Logo className="w-full h-auto" />
+                <div className="h-9 sm:h-10 flex items-center justify-center transition-all duration-300">
+                  <Logo className="h-full w-auto max-h-9 sm:max-h-10 object-contain" />
                 </div>
               </Link>
             </div>
@@ -299,7 +299,7 @@ const LayoutContent: React.FC<{ children: React.ReactNode }> = ({ children }) =>
             <div className={`${showRecruiterSidebar ? 'w-full' : 'max-w-7xl mx-auto'} px-3 sm:px-4 lg:px-5`}>
           <div className="flex min-h-14 flex-col items-center justify-between gap-3 py-3 md:flex-row">
             <div className="flex items-center gap-2 opacity-70 transition-opacity hover:opacity-100">
-              <Logo className="w-[108px] sm:w-[124px] h-auto" />
+              <Logo className="h-6 sm:h-7 w-auto object-contain" />
             </div>
 
             <div className="flex flex-wrap items-center justify-center gap-1.5">
@@ -371,6 +371,7 @@ const LayoutContent: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                   <>
                     <Link to="/recruiter/jobs" onClick={() => setIsMobileMenuOpen(false)} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium ${isActive('/recruiter/jobs') ? 'bg-primary/10 text-primary' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-white'}`}><i className="fas fa-columns w-5 text-center"></i> Dashboard</Link>
                     <Link to="/recruiter/interview/create" onClick={() => setIsMobileMenuOpen(false)} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium ${isActive('/recruiter/interview/create') ? 'bg-primary/10 text-primary' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-white'}`}><i className="fas fa-plus-circle w-5 text-center"></i> Post Job</Link>
+                    <Link to="/recruiter/add-candidate" onClick={() => setIsMobileMenuOpen(false)} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium ${isActive('/recruiter/add-candidate') ? 'bg-primary/10 text-primary' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-white'}`}><i className="fas fa-user-plus w-5 text-center"></i> Add Candidate</Link>
                     <Link to="/recruiter/all-jobs" onClick={() => setIsMobileMenuOpen(false)} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium ${isActive('/recruiter/all-jobs') || isActive('/recruiter/interviews') ? 'bg-primary/10 text-primary' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-white'}`}><i className="fas fa-briefcase w-5 text-center"></i> All Jobs</Link>
                     <Link to="/recruiter/hot-leads" onClick={() => setIsMobileMenuOpen(false)} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium ${isActive('/recruiter/hot-leads') ? 'bg-primary/10 text-primary' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-white'}`}><i className="fas fa-fire w-5 text-center text-amber-500"></i> Hot Leads</Link>
                     <Link to="/recruiter/resume-dump" onClick={() => setIsMobileMenuOpen(false)} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium ${isActive('/recruiter/resume-dump') ? 'bg-primary/10 text-primary' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-white'}`}><i className="fas fa-archive w-5 text-center"></i> Resume Dump</Link>

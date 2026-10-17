@@ -165,7 +165,7 @@ const InterviewCandidates: React.FC = () => {
     const queuedPhones = new Set(parsedCandidates.map(c => c.phone).filter(Boolean));
 
     return resumeDumpCandidates
-      .filter(c => !c.isHired && !c.doNotSuggest)
+      .filter(c => !c.isHired && !c.doNotSuggest && !c.isBlocked && !c.isBanned)
       .filter(c => {
         const emailLower = (c.email || '').toLowerCase();
         if (emailLower && (invitedEmails.has(emailLower) || queuedEmails.has(emailLower))) return false;

@@ -447,7 +447,7 @@ const CreateInterview: React.FC = () => {
     shortlistedCandidatesError
       ? []
       : resumeDumpCandidates
-      .filter((candidate) => !candidate.isHired && !candidate.doNotSuggest)
+      .filter((candidate) => !candidate.isHired && !candidate.doNotSuggest && !candidate.isBlocked && !candidate.isBanned)
       .filter((candidate) => !isCandidateIdentityInSet(candidate, shortlistedCandidateIdentityKeys))
       .map((candidate) => scoreCandidateForRoleAdvanced(candidate, {
         title: formData.title,

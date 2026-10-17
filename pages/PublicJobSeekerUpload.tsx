@@ -199,6 +199,12 @@ export default function PublicJobSeekerUpload() {
   const [submittedCandidateData, setSubmittedCandidateData] = useState<CandidateMatchProfile | null>(null);
   const [originalCandidateData, setOriginalCandidateData] = useState<CandidateMatchProfile | null>(null);
 
+  const isCandidateBanned = Boolean(
+    submittedCandidateData?.isBlocked ||
+    submittedCandidateData?.isBanned ||
+    submittedCandidateData?.status === 'blocked'
+  );
+
   // Criteria Editor Toggle on Results View
   const [showCriteriaEditor, setShowCriteriaEditor] = useState(false);
   const [resultSkillInput, setResultSkillInput] = useState('');
@@ -483,6 +489,7 @@ export default function PublicJobSeekerUpload() {
       setCandidateDomain(existingDoms.join(', '));
     }
 
+    const isCandBlocked = Boolean(candData.isBlocked || prof.isBlocked || candData.isBanned || prof.isBanned);
     const profileObj: CandidateMatchProfile = {
       name,
       email,
@@ -501,7 +508,9 @@ export default function PublicJobSeekerUpload() {
       expectedSalary: expectedSal,
       skills,
       resumeText,
-      resumeUrl
+      resumeUrl,
+      isBlocked: isCandBlocked,
+      isBanned: isCandBlocked
     };
 
     setSubmittedCandidateData(profileObj);
@@ -509,7 +518,11 @@ export default function PublicJobSeekerUpload() {
     setIsSubmittedSuccess(true);
     setShowEmailLookup(false);
     setExistingEmailCandidate(null);
-    messageBox.showSuccess(`Welcome back, ${profileObj.name}! Your existing profile has been loaded and matched with active job openings.`);
+    if (isCandBlocked) {
+      messageBox.showError(`Notice: Account for "${profileObj.name}" (${profileObj.email || profileObj.phone}) is restricted. This profile is banned from receiving job recommendations until unbanned.`);
+    } else {
+      messageBox.showSuccess(`Welcome back, ${profileObj.name}! Your existing profile has been loaded and matched with active job openings.`);
+    }
   };
 
   // Fetch active jobs from Firestore interviews and jobs collection
@@ -689,7 +702,7 @@ export default function PublicJobSeekerUpload() {
 
   // Compute matched jobs dynamically whenever submittedCandidateData changes
   const matchedJobsList: JobMatchResult[] = useMemo(() => {
-    if (!submittedCandidateData || activeJobs.length === 0) return [];
+    if (!submittedCandidateData || activeJobs.length === 0 || isCandidateBanned) return [];
     
     const results = activeJobs.map(job => calculateJobMatchScore(job, submittedCandidateData));
     
@@ -2636,67 +2649,82 @@ export default function PublicJobSeekerUpload() {
             <div className="space-y-3">
               <div>
                 <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wider mb-1.5 border shadow-sm ${
-                  isDark ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' : 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                  isCandidateBanned
+                    ? 'bg-red-500/10 border-red-500/30 text-red-500'
+                    : isDark ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' : 'bg-emerald-50 border-emerald-200 text-emerald-800'
                 }`}>
-                  <Sparkles className="w-3.5 h-3.5 text-emerald-500 animate-pulse" />
-                  <span>AI Job Recommendations</span>
+                  {isCandidateBanned ? (
+                    <>
+                      <Ban className="w-3.5 h-3.5 text-red-500" />
+                      <span>Access Restricted</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-3.5 h-3.5 text-emerald-500 animate-pulse" />
+                      <span>AI Job Recommendations</span>
+                    </>
+                  )}
                 </div>
                 <h3 className="text-xl sm:text-2xl font-black tracking-tight flex items-center gap-2">
-                  <span>Best Matched Job Openings</span>
-                  <span className="text-sm font-bold text-slate-400">({matchedJobsList.length})</span>
+                  <span>{isCandidateBanned ? 'Account Banned' : 'Best Matched Job Openings'}</span>
+                  {!isCandidateBanned && (
+                    <span className="text-sm font-bold text-slate-400">({matchedJobsList.length})</span>
+                  )}
                 </h3>
               </div>
 
-              {/* Segmented Filter Tabs */}
-              <div className={`flex items-center gap-1 p-1 rounded-2xl shadow-sm border overflow-x-auto ${
-                isDark ? 'bg-[#0f0f10] border-white/10' : 'bg-slate-100/90 border-slate-200'
-              }`}>
-                <button
-                  type="button"
-                  onClick={() => setMatchFilter('EligibleOnly')}
-                  className={`px-4 py-2 rounded-xl text-xs font-black transition-all shrink-0 cursor-pointer ${
-                    matchFilter === 'EligibleOnly' 
-                      ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/25 scale-[1.02]' 
-                      : isDark ? 'text-slate-400 hover:text-white hover:bg-white/5' : 'text-slate-600 hover:text-slate-900 hover:bg-white/70 font-semibold'
-                  }`}
-                >
-                  Eligible
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setMatchFilter('HighMatch')}
-                  className={`px-4 py-2 rounded-xl text-xs font-black transition-all shrink-0 cursor-pointer ${
-                    matchFilter === 'HighMatch' 
-                      ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/25 scale-[1.02]' 
-                      : isDark ? 'text-slate-400 hover:text-white hover:bg-white/5' : 'text-slate-600 hover:text-slate-900 hover:bg-white/70 font-semibold'
-                  }`}
-                >
-                  High Match (&ge; 75%)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setMatchFilter('LocalCity')}
-                  className={`px-4 py-2 rounded-xl text-xs font-black transition-all shrink-0 cursor-pointer inline-flex items-center gap-1.5 ${
-                    matchFilter === 'LocalCity' 
-                      ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/25 scale-[1.02]' 
-                      : isDark ? 'text-slate-400 hover:text-white hover:bg-white/5' : 'text-slate-600 hover:text-slate-900 hover:bg-white/70 font-semibold'
-                  }`}
-                >
-                  <MapPin className="w-3.5 h-3.5" />
-                  <span>{submittedCandidateData?.location || 'Location'}</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setMatchFilter('All')}
-                  className={`px-4 py-2 rounded-xl text-xs font-black transition-all shrink-0 cursor-pointer ${
-                    matchFilter === 'All' 
-                      ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/25 scale-[1.02]' 
-                      : isDark ? 'text-slate-400 hover:text-white hover:bg-white/5' : 'text-slate-600 hover:text-slate-900 hover:bg-white/70 font-semibold'
-                  }`}
-                >
-                  All ({matchedJobsList.length})
-                </button>
-              </div>
+              {/* Segmented Filter Tabs - Only shown if candidate is not banned */}
+              {!isCandidateBanned && (
+                <div className={`flex items-center gap-1 p-1 rounded-2xl shadow-sm border overflow-x-auto ${
+                  isDark ? 'bg-[#0f0f10] border-white/10' : 'bg-slate-100/90 border-slate-200'
+                }`}>
+                  <button
+                    type="button"
+                    onClick={() => setMatchFilter('EligibleOnly')}
+                    className={`px-4 py-2 rounded-xl text-xs font-black transition-all shrink-0 cursor-pointer ${
+                      matchFilter === 'EligibleOnly' 
+                        ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/25 scale-[1.02]' 
+                        : isDark ? 'text-slate-400 hover:text-white hover:bg-white/5' : 'text-slate-600 hover:text-slate-900 hover:bg-white/70 font-semibold'
+                    }`}
+                  >
+                    Eligible
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMatchFilter('HighMatch')}
+                    className={`px-4 py-2 rounded-xl text-xs font-black transition-all shrink-0 cursor-pointer ${
+                      matchFilter === 'HighMatch' 
+                        ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/25 scale-[1.02]' 
+                        : isDark ? 'text-slate-400 hover:text-white hover:bg-white/5' : 'text-slate-600 hover:text-slate-900 hover:bg-white/70 font-semibold'
+                    }`}
+                  >
+                    High Match (&ge; 75%)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMatchFilter('LocalCity')}
+                    className={`px-4 py-2 rounded-xl text-xs font-black transition-all shrink-0 cursor-pointer inline-flex items-center gap-1.5 ${
+                      matchFilter === 'LocalCity' 
+                        ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/25 scale-[1.02]' 
+                        : isDark ? 'text-slate-400 hover:text-white hover:bg-white/5' : 'text-slate-600 hover:text-slate-900 hover:bg-white/70 font-semibold'
+                    }`}
+                  >
+                    <MapPin className="w-3.5 h-3.5" />
+                    <span>{submittedCandidateData?.location || 'Location'}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMatchFilter('All')}
+                    className={`px-4 py-2 rounded-xl text-xs font-black transition-all shrink-0 cursor-pointer ${
+                      matchFilter === 'All' 
+                        ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/25 scale-[1.02]' 
+                        : isDark ? 'text-slate-400 hover:text-white hover:bg-white/5' : 'text-slate-600 hover:text-slate-900 hover:bg-white/70 font-semibold'
+                    }`}
+                  >
+                    All ({matchedJobsList.length})
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Jobs List Grid */}
@@ -2706,6 +2734,27 @@ export default function PublicJobSeekerUpload() {
               }`}>
                 <RefreshCw className="w-8 h-8 animate-spin text-emerald-500 mx-auto" />
                 <p className="text-sm font-bold text-slate-400">Scoring active job openings...</p>
+              </div>
+            ) : isCandidateBanned ? (
+              <div className={`py-12 px-6 text-center space-y-4 rounded-3xl border shadow-xl ${
+                isDark ? 'bg-red-950/25 border-red-500/40 text-red-200' : 'bg-red-50/90 border-red-200 text-red-950'
+              }`}>
+                <div className="w-16 h-16 rounded-2xl bg-red-500/15 border border-red-500/30 flex items-center justify-center mx-auto text-red-500 shadow-md">
+                  <Ban className="w-9 h-9" strokeWidth={2.4} />
+                </div>
+                <div className="space-y-2">
+                  <h4 className="text-xl sm:text-2xl font-black text-red-600 dark:text-red-400 tracking-tight">
+                    You are banned. Contact Administrator.
+                  </h4>
+                  <p className="text-xs sm:text-sm text-slate-600 dark:text-zinc-300 max-w-md mx-auto leading-relaxed">
+                    Your candidate profile, email, and contact number are banned on this software. You are restricted from searching for jobs, receiving job recommendations, or applying to openings until unbanned.
+                  </p>
+                </div>
+                <div className="pt-2">
+                  <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20">
+                    <span>Contact: Please reach out to your administrator to request an account review.</span>
+                  </div>
+                </div>
               </div>
             ) : matchedJobsList.length === 0 ? (
               <div className={`py-10 text-center space-y-3 rounded-3xl border px-4 ${

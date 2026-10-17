@@ -8,6 +8,7 @@ import {
   Video,
   MessageSquare,
   Flame,
+  UserPlus,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
@@ -42,6 +43,13 @@ const recruiterNavGroups: NavGroupData[] = [
         icon: PlusCircle,
         href: '/recruiter/interview/create',
         match: (path) => path === '/recruiter/interview/create',
+      },
+      {
+        id: 'add-candidate',
+        title: 'Add Candidate',
+        icon: UserPlus,
+        href: '/recruiter/add-candidate',
+        match: (path) => path === '/recruiter/add-candidate',
       },
       {
         id: 'all-jobs',

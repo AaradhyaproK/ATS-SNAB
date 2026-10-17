@@ -440,7 +440,7 @@ const ActiveJobsPage: React.FC = () => {
         isDark ? 'border-white/10 bg-[#030303]/85' : 'border-slate-200 bg-white/85'
       }`}>
         <Link to="/" className="flex items-center group">
-          <Logo className="w-[130px] sm:w-[165px] h-auto" isDark={isDark} />
+          <Logo className="h-8 sm:h-9 w-auto object-contain" isDark={isDark} />
         </Link>
 
         <div className="flex items-center gap-1.5 sm:gap-3">

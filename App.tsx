@@ -39,6 +39,7 @@ import CandidateVoiceInterview from './pages/CandidateVoiceInterview';
 import RecruiterVoiceInterviews from './pages/RecruiterVoiceInterviews';
 import VoiceInterviewReport from './pages/VoiceInterviewReport';
 import ResumeDump, { ResumeDumpSkeleton } from './pages/ResumeDump';
+import AddCandidate from './pages/AddCandidate';
 import {
   InterviewCandidatesSkeleton,
   InterviewOverviewSkeleton,
@@ -76,7 +77,7 @@ const ProtectedRoute: React.FC<{
 
   if (!user) return <Navigate to="/auth" replace />;
 
-  const userRole: string = userProfile?.role || (user.email === 'admin@dsauce.io' || user.email?.includes('admin') ? 'admin' : 'recruiter');
+  const userRole: string = userProfile?.role || (user.email === 'admin@snab.co.in' || user.email?.includes('admin') ? 'admin' : 'recruiter');
   if (role && userRole !== role) {
     if (role === 'admin' && userRole !== 'admin') return <Navigate to="/recruiter/jobs" replace />;
     if (role === 'recruiter' && userRole === 'admin') return <Navigate to="/admin" replace />;
@@ -96,7 +97,7 @@ const HomeRoute: React.FC = () => {
   );
 
   if (user) {
-    const userRole: string = userProfile?.role || (user.email === 'admin@dsauce.io' || user.email?.includes('admin') ? 'admin' : 'recruiter');
+    const userRole: string = userProfile?.role || (user.email === 'admin@snab.co.in' || user.email?.includes('admin') ? 'admin' : 'recruiter');
     if (userRole === 'admin') return <Navigate to="/admin" replace />;
     return <Navigate to="/recruiter/jobs" replace />;
   }
@@ -277,6 +278,8 @@ const App: React.FC = () => {
                 <Routes>
                   {/* Recruiter Routes */}
                   <Route path="recruiter/jobs" element={<ProtectedRoute role="recruiter" loadingFallback={<RecruiterDashboardSkeleton />}><RecruiterDashboard /></ProtectedRoute>} />
+                  <Route path="recruiter/add-candidate" element={<ProtectedRoute><AddCandidate /></ProtectedRoute>} />
+                  <Route path="admin/add-candidate" element={<ProtectedRoute role="admin"><AddCandidate /></ProtectedRoute>} />
                   <Route path="recruiter/all-jobs" element={<ProtectedRoute role="recruiter" loadingFallback={<RecruiterInterviewsSkeleton />}><RecruiterAllJobs /></ProtectedRoute>} />
                   <Route path="recruiter/hot-leads" element={<ProtectedRoute role="recruiter" loadingFallback={<RecruiterInterviewsSkeleton />}><HotLeads /></ProtectedRoute>} />
                   <Route path="recruiter/interviews" element={<ProtectedRoute role="recruiter" loadingFallback={<RecruiterInterviewsSkeleton />}><RecruiterInterviews /></ProtectedRoute>} />

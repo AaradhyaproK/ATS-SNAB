@@ -1,9 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { collection, deleteDoc, doc, getDocs, onSnapshot, query, serverTimestamp, updateDoc, where } from 'firebase/firestore';
+import { collection, deleteDoc, deleteField, doc, getDocs, onSnapshot, query, serverTimestamp, setDoc, updateDoc, where } from 'firebase/firestore';
 import * as pdfjsLib from 'pdfjs-dist';
 import * as mammoth from 'mammoth';
-import { Award, Clock, Edit3, Filter, GraduationCap, MapPin, Plus, Archive, Briefcase, Check, CheckCircle2, CheckSquare, ChevronDown, Copy, ExternalLink, FileText, Mail, MessageSquare, RotateCcw, Search, Send, SlidersHorizontal, Sparkles, Square, Trash2, UploadCloud, UserCheck, UserX, XCircle } from 'lucide-react';
+import { Award, Ban, Clock, Edit3, Filter, GraduationCap, MapPin, Plus, Archive, Briefcase, Check, CheckCircle2, CheckSquare, ChevronDown, Copy, ExternalLink, FileText, Mail, MessageSquare, RotateCcw, Search, Send, SlidersHorizontal, Sparkles, Square, Trash2, UploadCloud, UserCheck, UserX, XCircle } from 'lucide-react';
 
 import { db } from '../services/firebase';
 import { useAuth } from '../context/AuthContext';
@@ -16,7 +16,7 @@ import { isEducationMatching } from '../utils/educationMatcher';
 import { MAHARASHTRA_CITIES } from '../data/maharashtraCities';
 import { ALL_JOB_DOMAINS, ALL_JOB_SECTORS, ALL_JOB_DEPARTMENTS, resolveCandidateSectorsAndDepartments } from '../data/jobDomains';
 import { SKILL_OPTIONS } from './Profile';
-import { analyzeResumeText, ingestResumeFile, saveResumeDumpCandidate, detectCandidateGender, EMPLOYMENT_TYPE_OPTIONS, normalizeEmploymentTypes } from '../services/resumeService';
+import { analyzeResumeText, ingestResumeFile, saveResumeDumpCandidate, detectCandidateGender, EMPLOYMENT_TYPE_OPTIONS, normalizeEmploymentTypes, normalizeResumeEmail } from '../services/resumeService';
 import { EmploymentTypeMultiSelect } from '../components/EmploymentTypeMultiSelect';
 import { calculateJobMatchScore, JobMatchResult, CandidateMatchProfile } from '../services/jobMatchService';
 import { sendBulkWhatsAppInvites } from '../services/waSenderService';
@@ -84,6 +84,11 @@ interface ResumeDumpCandidate {
   parsingMethod?: string;
   isHired?: boolean;
   doNotSuggest?: boolean;
+  isBlocked?: boolean;
+  isBanned?: boolean;
+  blockedAt?: TimestampLike;
+  blockedReason?: string;
+  status?: string;
   employmentStatus?: string;
   employmentType?: string;
   employmentTypes?: string[];
@@ -514,7 +519,7 @@ const ResumeDump: React.FC = () => {
 
   const [deletingCandidateId, setDeletingCandidateId] = useState<string | null>(null);
   const [isDraggingResume, setIsDraggingResume] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<'all' | 'available' | 'hired'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'available' | 'hired' | 'blocked'>('all');
   const [employmentTypeFilter, setEmploymentTypeFilter] = useState<string>('all');
   const [skillFilter, setSkillFilter] = useState<string>('all');
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
@@ -1249,8 +1254,12 @@ const ResumeDump: React.FC = () => {
       }
 
       // 2. Status filter
-      if (statusFilter === 'hired' && !(candidate.isHired || candidate.doNotSuggest)) return false;
-      if (statusFilter === 'available' && (candidate.isHired || candidate.doNotSuggest)) return false;
+      if (statusFilter === 'blocked' && !(candidate.isBlocked || candidate.isBanned)) return false;
+      if (statusFilter === 'hired' && !(candidate.isHired || (candidate.doNotSuggest && !candidate.isBlocked && !candidate.isBanned))) return false;
+      if (statusFilter === 'available' && (candidate.isHired || candidate.doNotSuggest || candidate.isBlocked || candidate.isBanned)) return false;
+
+      // When a job recommendation filter is selected, never recommend blocked/banned candidates
+      if (selectedJobId && selectedJobId !== 'all' && (candidate.isBlocked || candidate.isBanned)) return false;
 
       // 3. Match Score Filter (when custom match score filter is chosen)
       if (matchScoreFilter !== 'all') {
@@ -1888,6 +1897,123 @@ const ResumeDump: React.FC = () => {
     }
   };
 
+  const toggleBlockCandidate = async (candidate: ResumeDumpCandidate) => {
+    const isCurrentlyBlocked = Boolean(candidate.isBlocked || candidate.isBanned);
+    const actionText = isCurrentlyBlocked ? 'Unblock' : 'Block & Ban';
+
+    const confirmMessage = isCurrentlyBlocked
+      ? `Unblock candidate "${candidate.name || candidate.email}"? Their email (${candidate.email}) and phone (${candidate.phone || 'N/A'}) will be restored for job matching and recommendations.`
+      : `Block & Ban candidate "${candidate.name || candidate.email}"? Their email (${candidate.email}) and phone (${candidate.phone || 'N/A'}) will be banned from this software. They will NOT receive any job recommendations or be matched to jobs until unbanned.`;
+
+    messageBox.showConfirm(
+      confirmMessage,
+      async () => {
+        const newBlockedState = !isCurrentlyBlocked;
+        const cleanEmail = normalizeResumeEmail(candidate.email);
+        const rawPhone = (candidate.phone || '').trim();
+
+        // 1. Optimistic Local State Update
+        setCandidates((prev) =>
+          prev.map((c) =>
+            c.id === candidate.id
+              ? {
+                  ...c,
+                  isBlocked: newBlockedState,
+                  isBanned: newBlockedState,
+                  doNotSuggest: newBlockedState,
+                  status: newBlockedState ? 'Blocked' : 'Available',
+                }
+              : c
+          )
+        );
+
+        try {
+          const updatePayload: Record<string, any> = {
+            isBlocked: newBlockedState,
+            isBanned: newBlockedState,
+            doNotSuggest: newBlockedState,
+            status: newBlockedState ? 'Blocked' : 'Available',
+            updatedAt: serverTimestamp(),
+          };
+
+          if (newBlockedState) {
+            updatePayload.blockedAt = serverTimestamp();
+            updatePayload.blockedReason = 'Banned by recruiter';
+          } else {
+            updatePayload.blockedAt = deleteField();
+            updatePayload.blockedReason = deleteField();
+          }
+
+          // 2. Primary update: resumeDumpCandidates with merge: true fallback
+          try {
+            await updateDoc(doc(db, 'resumeDumpCandidates', candidate.id), updatePayload);
+          } catch (updateErr) {
+            await setDoc(doc(db, 'resumeDumpCandidates', candidate.id), updatePayload, { merge: true });
+          }
+
+          // Also update resumeDump legacy collection if present
+          try {
+            await updateDoc(doc(db, 'resumeDump', candidate.id), updatePayload).catch(() => null);
+          } catch (e) {
+            // ignore
+          }
+
+          // 3. Manage bannedCandidates blacklist entry (resilient, non-blocking)
+          try {
+            const banDocId = candidate.id;
+            if (newBlockedState) {
+              await setDoc(doc(db, 'bannedCandidates', banDocId), {
+                candidateId: candidate.id,
+                name: candidate.name || 'Candidate',
+                email: cleanEmail,
+                phone: rawPhone,
+                phoneDigits: rawPhone.replace(/\D/g, '').slice(-10),
+                isBlocked: true,
+                isBanned: true,
+                blockedAt: serverTimestamp(),
+                blockedBy: user?.email || user?.uid || 'recruiter',
+                reason: 'Banned by recruiter',
+              }, { merge: true });
+            } else {
+              await deleteDoc(doc(db, 'bannedCandidates', banDocId)).catch(() => null);
+            }
+          } catch (banListErr) {
+            console.warn('bannedCandidates collection update note:', banListErr);
+          }
+
+          // 4. Log Team Activity
+          try {
+            const creatorInfo = {
+              uid: user?.uid || '',
+              name: userProfile?.name || user?.email || 'Recruiter',
+              email: user?.email || '',
+              role: userProfile?.role || 'recruiter',
+              designation: userProfile?.designation || 'Recruiter',
+            };
+            logTeamActivity(
+              teamId,
+              'candidate_status_changed',
+              `${newBlockedState ? 'Banned / Blocked' : 'Unbanned'} candidate "${candidate.name || candidate.email}" (Email: ${cleanEmail}, Phone: ${rawPhone})`,
+              creatorInfo
+            );
+          } catch (activityErr) {
+            console.warn('logTeamActivity note:', activityErr);
+          }
+
+          if (newBlockedState) {
+            messageBox.showSuccess(`Candidate "${candidate.name || candidate.email}" is now BANNED. Email & phone blocked from all job recommendations.`);
+          } else {
+            messageBox.showSuccess(`Candidate "${candidate.name || candidate.email}" has been UNBLOCKED and restored for job matching.`);
+          }
+        } catch (error) {
+          console.error('Failed to update candidate block status:', error);
+          messageBox.showError('Failed to update candidate block status.');
+        }
+      },
+      `${actionText} Candidate`
+    );
+  };
+
   const actionButtonClass = 'geist-caption inline-flex h-8 items-center justify-center gap-2 rounded-[6px] border border-white/[0.11] bg-white/[0.03] px-3 font-medium text-[#d4d4d4] transition-colors hover:bg-white/[0.06] hover:text-white disabled:cursor-not-allowed disabled:opacity-40';
 
   if (loading) {
@@ -2110,23 +2236,30 @@ const ResumeDump: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setStatusFilter('all')}
-                className={`px-2 py-1 rounded-[4px] font-medium transition-colors ${statusFilter === 'all' ? 'bg-white dark:bg-white text-black font-semibold shadow-xs' : 'text-gray-600 dark:text-[#8f8f8f] hover:text-black dark:hover:text-white'}`}
+                className={`px-2 py-1 rounded-[4px] font-medium transition-colors cursor-pointer ${statusFilter === 'all' ? 'bg-white dark:bg-white text-black font-semibold shadow-xs' : 'text-gray-600 dark:text-[#8f8f8f] hover:text-black dark:hover:text-white'}`}
               >
                 All Status
               </button>
               <button
                 type="button"
                 onClick={() => setStatusFilter('available')}
-                className={`px-2 py-1 rounded-[4px] font-medium transition-colors ${statusFilter === 'available' ? 'bg-white dark:bg-white text-black font-semibold shadow-xs' : 'text-gray-600 dark:text-[#8f8f8f] hover:text-black dark:hover:text-white'}`}
+                className={`px-2 py-1 rounded-[4px] font-medium transition-colors cursor-pointer ${statusFilter === 'available' ? 'bg-white dark:bg-white text-black font-semibold shadow-xs' : 'text-gray-600 dark:text-[#8f8f8f] hover:text-black dark:hover:text-white'}`}
               >
                 Available
               </button>
               <button
                 type="button"
                 onClick={() => setStatusFilter('hired')}
-                className={`px-2 py-1 rounded-[4px] font-medium transition-colors ${statusFilter === 'hired' ? 'bg-emerald-600 dark:bg-emerald-500 text-white font-semibold shadow-xs' : 'text-gray-600 dark:text-[#8f8f8f] hover:text-black dark:hover:text-white'}`}
+                className={`px-2 py-1 rounded-[4px] font-medium transition-colors cursor-pointer ${statusFilter === 'hired' ? 'bg-emerald-600 dark:bg-emerald-500 text-white font-semibold shadow-xs' : 'text-gray-600 dark:text-[#8f8f8f] hover:text-black dark:hover:text-white'}`}
               >
                 Hired
+              </button>
+              <button
+                type="button"
+                onClick={() => setStatusFilter('blocked')}
+                className={`px-2 py-1 rounded-[4px] font-medium transition-colors cursor-pointer ${statusFilter === 'blocked' ? 'bg-red-600 dark:bg-red-500 text-white font-semibold shadow-xs' : 'text-gray-600 dark:text-[#8f8f8f] hover:text-red-500 dark:hover:text-red-400'}`}
+              >
+                Blocked 🚫
               </button>
             </div>
 
@@ -2834,7 +2967,7 @@ const ResumeDump: React.FC = () => {
 
                   <th className="geist-label whitespace-nowrap px-3 py-2 text-left uppercase text-[10px] tracking-wider font-semibold text-gray-500 dark:text-[#8f8f8f] border-b border-gray-200 dark:border-white/[0.08] bg-gray-50/70 dark:bg-white/[0.02]">Status</th>
                   <th className="geist-label whitespace-nowrap px-3 py-2 text-left uppercase text-[10px] tracking-wider font-semibold text-gray-500 dark:text-[#8f8f8f] border-b border-gray-200 dark:border-white/[0.08] bg-gray-50/70 dark:bg-white/[0.02]">Uploaded</th>
-                  <th className="geist-label whitespace-nowrap px-3 py-2 text-right uppercase text-[10px] tracking-wider font-semibold text-gray-500 dark:text-[#8f8f8f] border-b border-gray-200 dark:border-white/[0.08] bg-gray-50/70 dark:bg-white/[0.02] w-[175px] min-w-[175px]">Actions</th>
+                  <th className="geist-label whitespace-nowrap px-3 py-2 text-right uppercase text-[10px] tracking-wider font-semibold text-gray-500 dark:text-[#8f8f8f] border-b border-gray-200 dark:border-white/[0.08] bg-gray-50/70 dark:bg-white/[0.02] w-[205px] min-w-[205px]">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 dark:divide-white/[0.08]">
@@ -2964,13 +3097,19 @@ const ResumeDump: React.FC = () => {
                       </div>
                     </td>
                     <td className="px-3 py-1.5 whitespace-nowrap">
-                      {candidate.isHired || candidate.doNotSuggest ? (
-                        <span className="geist-small inline-flex items-center gap-1 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">
+                      {candidate.isBlocked || candidate.isBanned ? (
+                        <span className="geist-small inline-flex items-center gap-1 rounded-full border border-red-500/40 bg-red-500/10 px-2.5 py-0.5 text-[10px] text-red-600 dark:text-red-400 font-semibold shadow-xs">
+                          <Ban size={10} className="shrink-0" />
+                          <span>Blocked</span>
+                        </span>
+                      ) : candidate.isHired || candidate.doNotSuggest ? (
+                        <span className="geist-small inline-flex items-center gap-1 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-0.5 text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold shadow-xs">
                           Hired 🎉
                         </span>
                       ) : (
-                        <span className="geist-small inline-flex items-center gap-1 rounded-full border border-gray-200 dark:border-white/[0.11] bg-gray-100 dark:bg-white/[0.03] px-2 py-0.5 text-[10px] text-gray-600 dark:text-[#a1a1aa] whitespace-nowrap">
-                          Available
+                        <span className="geist-small inline-flex items-center gap-1.5 rounded-full border border-gray-200 dark:border-white/[0.11] bg-gray-100 dark:bg-white/[0.03] px-2.5 py-0.5 text-[10px] text-gray-600 dark:text-[#a1a1aa] whitespace-nowrap">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />
+                          <span>Available</span>
                         </span>
                       )}
                     </td>
@@ -2980,9 +3119,18 @@ const ResumeDump: React.FC = () => {
                         {candidate.resumeFileName}
                       </div>
                     </td>
-                    <td className="px-2 py-1.5 text-right w-[175px] min-w-[175px]" onClick={(e) => e.stopPropagation()}>
-                      <div className="flex flex-col gap-1 w-[165px] ml-auto">
-                        <div className="flex items-center gap-1">
+                    <td className="px-2.5 py-2 text-right w-[205px] min-w-[205px]" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center justify-end gap-1.5">
+                        {/* 1. Invite Action Button */}
+                        {candidate.isBlocked || candidate.isBanned ? (
+                          <span
+                            className="geist-caption inline-flex h-7 items-center gap-1 rounded-[6px] border border-red-500/30 bg-red-500/10 px-2 text-[10px] font-semibold text-red-400 cursor-not-allowed opacity-80"
+                            title="Candidate is banned / blocked from receiving job invites or recommendations"
+                          >
+                            <Ban size={11} strokeWidth={2} />
+                            <span>Banned</span>
+                          </span>
+                        ) : (
                           <button
                             type="button"
                             onClick={(e) => {
@@ -2990,59 +3138,88 @@ const ResumeDump: React.FC = () => {
                               setSelectedCandidateIds([candidate.id]);
                               setIsInviteModalOpen(true);
                             }}
-                            className="geist-caption flex-1 inline-flex h-6 items-center justify-center gap-1 rounded-[5px] border border-gray-200 dark:border-white/[0.12] bg-white dark:bg-white/[0.04] px-1.5 text-[10px] font-medium text-slate-800 dark:text-[#d4d4d4] transition-all hover:bg-gray-100 dark:hover:bg-white/[0.08] hover:text-black dark:hover:text-white shadow-2xs cursor-pointer"
+                            className="geist-caption inline-flex h-7 items-center justify-center gap-1 rounded-[6px] border border-gray-300 dark:border-white/[0.14] bg-white text-black dark:bg-white dark:text-black hover:bg-gray-100 dark:hover:bg-[#eaeaea] px-2.5 text-[11px] font-semibold transition-all shadow-xs cursor-pointer"
                             title="Send interview invitation"
                           >
-                            <Send size={10} strokeWidth={1.8} className="shrink-0 text-slate-500 dark:text-[#8f8f8f]" />
+                            <Send size={11} strokeWidth={2} />
                             <span>Invite</span>
                           </button>
-                          <button
-                            type="button"
-                            onClick={(e) => { e.stopPropagation(); toggleHiredStatus(candidate); }}
-                            className={`geist-caption flex-1 inline-flex h-6 items-center justify-center gap-1 rounded-[5px] border px-1.5 text-[10px] font-medium transition-all shadow-2xs cursor-pointer ${
-                              candidate.isHired || candidate.doNotSuggest
-                                ? 'border-emerald-500/40 bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/25'
-                                : 'border-gray-200 dark:border-white/[0.12] bg-white dark:bg-white/[0.04] text-slate-800 dark:text-[#d4d4d4] hover:bg-gray-100 dark:hover:bg-white/[0.08] hover:text-black dark:hover:text-white'
-                            }`}
-                            title={candidate.isHired || candidate.doNotSuggest ? 'Unmark Hired' : 'Mark candidate as Hired'}
-                          >
-                            <UserCheck size={10} className="text-emerald-600 dark:text-emerald-400 shrink-0" strokeWidth={1.8} />
-                            <span className="truncate">{candidate.isHired || candidate.doNotSuggest ? 'Hired 🎉' : 'Mark Hired'}</span>
-                          </button>
-                        </div>
-                        <div className="flex items-center gap-1">
+                        )}
+
+                        {/* 2. Hired Toggle */}
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); toggleHiredStatus(candidate); }}
+                          disabled={candidate.isBlocked || candidate.isBanned}
+                          className={`geist-caption inline-flex h-7 items-center justify-center gap-1 rounded-[6px] border px-2 text-[11px] font-medium transition-all cursor-pointer ${
+                            candidate.isHired || candidate.doNotSuggest
+                              ? 'border-emerald-500/40 bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/25 shadow-xs'
+                              : 'border-gray-200 dark:border-white/[0.12] bg-white dark:bg-white/[0.04] text-slate-700 dark:text-[#d4d4d4] hover:bg-gray-100 dark:hover:bg-white/[0.08] hover:text-black dark:hover:text-white'
+                          } disabled:opacity-40 disabled:cursor-not-allowed`}
+                          title={candidate.isHired || candidate.doNotSuggest ? 'Unmark Hired' : 'Mark candidate as Hired'}
+                        >
+                          <UserCheck size={11} className={candidate.isHired || candidate.doNotSuggest ? 'text-emerald-500' : 'text-slate-500 dark:text-[#8f8f8f]'} strokeWidth={1.8} />
+                          <span>{candidate.isHired || candidate.doNotSuggest ? 'Hired' : 'Hire'}</span>
+                        </button>
+
+                        {/* 3. Sleek Action Icons Toolbar */}
+                        <div className="flex items-center rounded-[6px] border border-gray-200 dark:border-white/[0.11] bg-gray-50 dark:bg-white/[0.03] p-0.5 shadow-2xs">
+                          {/* View Resume */}
                           <button
                             type="button"
                             onClick={(e) => {
                               e.stopPropagation();
                               setPreviewResumeCandidate(candidate);
                             }}
-                            className="geist-caption flex-1 inline-flex h-6 items-center justify-center gap-1 rounded-[5px] border border-gray-200 dark:border-white/[0.12] bg-white dark:bg-white/[0.04] px-1.5 text-[10px] font-medium text-slate-800 dark:text-[#d4d4d4] transition-all hover:bg-gray-100 dark:hover:bg-white/[0.08] hover:text-black dark:hover:text-white shadow-2xs cursor-pointer"
-                            title="View original resume"
+                            className="inline-flex h-6 w-6 items-center justify-center rounded-[4px] text-slate-600 dark:text-[#a1a1aa] hover:bg-white dark:hover:bg-white/10 hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer"
+                            title="View resume document"
                           >
-                            <ExternalLink size={10} strokeWidth={1.8} className="shrink-0 text-blue-600 dark:text-blue-400" />
-                            <span>Resume</span>
+                            <ExternalLink size={12} strokeWidth={1.8} />
                           </button>
+
+                          {/* Edit Details */}
                           <button
                             type="button"
                             onClick={(e) => {
                               e.stopPropagation();
                               handleOpenEditCandidateModal(candidate);
                             }}
-                            className="geist-caption flex-1 inline-flex h-6 items-center justify-center gap-1 rounded-[5px] border border-gray-200 dark:border-white/[0.12] bg-white dark:bg-white/[0.04] px-1.5 text-[10px] font-medium text-slate-800 dark:text-[#d4d4d4] transition-all hover:bg-gray-100 dark:hover:bg-white/[0.08] hover:text-black dark:hover:text-white shadow-2xs cursor-pointer"
-                            title="Edit candidate"
+                            className="inline-flex h-6 w-6 items-center justify-center rounded-[4px] text-slate-600 dark:text-[#a1a1aa] hover:bg-white dark:hover:bg-white/10 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors cursor-pointer"
+                            title="Edit candidate profile"
                           >
-                            <Edit3 size={10} strokeWidth={1.8} className="shrink-0 text-indigo-600 dark:text-indigo-400" />
-                            <span>Edit</span>
+                            <Edit3 size={12} strokeWidth={1.8} />
                           </button>
+
+                          {/* Block / Ban Candidate */}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleBlockCandidate(candidate);
+                            }}
+                            className={`inline-flex h-6 w-6 items-center justify-center rounded-[4px] transition-colors cursor-pointer ${
+                              candidate.isBlocked || candidate.isBanned
+                                ? 'bg-red-500/20 text-red-500 dark:text-red-400 hover:bg-red-500/30'
+                                : 'text-slate-600 dark:text-[#a1a1aa] hover:bg-red-500/10 hover:text-red-500 dark:hover:text-red-400'
+                            }`}
+                            title={
+                              candidate.isBlocked || candidate.isBanned
+                                ? 'Unban candidate (restore job matching & recommendations)'
+                                : 'Block & Ban candidate (bans email & phone from all job matching)'
+                            }
+                          >
+                            <Ban size={12} strokeWidth={2} />
+                          </button>
+
+                          {/* Delete Candidate */}
                           <button
                             type="button"
                             onClick={(e) => { e.stopPropagation(); confirmDeleteCandidate(candidate); }}
                             disabled={deletingCandidateId === candidate.id}
-                            className="geist-caption inline-flex h-6 w-6 items-center justify-center rounded-[5px] border border-gray-200 dark:border-white/[0.12] bg-white dark:bg-white/[0.04] text-slate-500 dark:text-[#8f8f8f] shrink-0 transition-all hover:border-red-300 dark:hover:border-red-500/40 hover:bg-red-50 dark:hover:bg-red-950/20 hover:text-red-600 dark:hover:text-red-400 disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer"
-                            title="Delete candidate"
+                            className="inline-flex h-6 w-6 items-center justify-center rounded-[4px] text-slate-600 dark:text-[#a1a1aa] hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400 transition-colors disabled:opacity-40 cursor-pointer"
+                            title="Delete candidate permanently"
                           >
-                            <Trash2 size={10} strokeWidth={1.8} />
+                            <Trash2 size={12} strokeWidth={1.8} />
                           </button>
                         </div>
                       </div>
@@ -3113,7 +3290,12 @@ const ResumeDump: React.FC = () => {
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <p className="geist-label uppercase tracking-wider text-gray-500 dark:text-[#6b7280]">Candidate Profile</p>
-                    {skillsPanelCandidate.isHired || skillsPanelCandidate.doNotSuggest ? (
+                    {skillsPanelCandidate.isBlocked || skillsPanelCandidate.isBanned ? (
+                      <span className="geist-small rounded-full border border-red-500/40 bg-red-50 dark:bg-red-500/10 px-2 py-0.5 text-xs font-semibold text-red-600 dark:text-red-400 flex items-center gap-1">
+                        <Ban size={11} strokeWidth={2} />
+                        <span>Banned & Blocked</span>
+                      </span>
+                    ) : skillsPanelCandidate.isHired || skillsPanelCandidate.doNotSuggest ? (
                       <span className="geist-small rounded-full border border-emerald-500/40 bg-emerald-50 dark:bg-emerald-500/10 px-2 py-0.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400">
                         🎉 Hired
                       </span>
@@ -3148,6 +3330,24 @@ const ResumeDump: React.FC = () => {
                   >
                     <UserCheck size={12} className="text-emerald-600 dark:text-emerald-400 shrink-0" strokeWidth={2} />
                     <span>{skillsPanelCandidate.isHired || skillsPanelCandidate.doNotSuggest ? 'Hired 🎉' : 'Mark Hired'}</span>
+                  </button>
+
+                  {/* Block / Ban Toggle in Drawer */}
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      await toggleBlockCandidate(skillsPanelCandidate);
+                      setSkillsPanelCandidate(prev => prev ? ({ ...prev, isBlocked: !prev.isBlocked, isBanned: !prev.isBanned }) : null);
+                    }}
+                    className={`geist-caption inline-flex h-7 items-center gap-1 rounded-[6px] border px-2.5 font-semibold text-xs transition-all cursor-pointer ${
+                      skillsPanelCandidate.isBlocked || skillsPanelCandidate.isBanned
+                        ? 'border-red-500/50 bg-red-500/20 text-red-400 hover:bg-red-500/30'
+                        : 'border-gray-300 dark:border-white/[0.15] bg-gray-100 dark:bg-white/[0.04] text-slate-800 dark:text-[#d4d4d4] hover:bg-red-500/10 hover:border-red-500/30 hover:text-red-400'
+                    }`}
+                    title={skillsPanelCandidate.isBlocked || skillsPanelCandidate.isBanned ? 'Click to unban candidate' : 'Block & Ban candidate (bans email & phone from jobs)'}
+                  >
+                    <Ban size={12} className={skillsPanelCandidate.isBlocked || skillsPanelCandidate.isBanned ? 'text-red-400' : 'text-slate-500 dark:text-[#8f8f8f]'} strokeWidth={2} />
+                    <span>{skillsPanelCandidate.isBlocked || skillsPanelCandidate.isBanned ? 'Banned 🚫' : 'Block'}</span>
                   </button>
 
                   {skillsPanelCandidate.resumeUrl && (

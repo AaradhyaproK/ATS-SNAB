@@ -5,15 +5,17 @@ interface LogoProps {
     className?: string;
     alt?: string;
     isDark?: boolean;
+    style?: React.CSSProperties;
 }
 
-const lightLogoSrc = '/assets/logo-cropped-night.png';
-const darkLogoSrc = '/assets/logo-cropped-day.png';
+const lightLogoSrc = '/assets/logo-cropped-day.png';
+const darkLogoSrc = '/assets/logo-cropped-night.png';
 
 const Logo: React.FC<LogoProps> = ({
     className = '',
     alt = 'SNAB hireX',
-    isDark: explicitIsDark
+    isDark: explicitIsDark,
+    style
 }) => {
     let contextIsDark: boolean | undefined = undefined;
     try {
@@ -63,11 +65,12 @@ const Logo: React.FC<LogoProps> = ({
             key={isDarkMode ? 'dark-logo' : 'light-logo'}
             src={currentSrc}
             alt={alt}
-            className={`object-contain ${className}`}
+            style={style}
+            className={`object-contain max-h-10 sm:max-h-11 w-auto ${className}`}
             onError={(e) => {
                 const target = e.currentTarget;
                 if (target.src.includes('/assets/')) {
-                    target.src = isDarkMode ? '/logo-cropped-night.png' : '/logo-cropped-day.png';
+                    target.src = isDarkMode ? '/logo-cropped-day.png' : '/logo-cropped-night.png';
                 }
             }}
         />

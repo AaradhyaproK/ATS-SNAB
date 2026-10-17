@@ -110,7 +110,7 @@ const TestAccess: React.FC = () => {
     <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-white p-4 text-[#111] dark:bg-[#050505] dark:text-white">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(0,0,0,0.06),transparent_32rem)] dark:bg-[radial-gradient(circle_at_50%_0%,rgba(255,255,255,0.08),transparent_32rem)]" />
       <div className="absolute top-6 left-6">
-        <Logo className="w-[118px] sm:w-[140px] h-auto" isDark={isDark} />
+        <Logo className="h-8 sm:h-9 w-auto object-contain" isDark={isDark} />
       </div>
       
       <div ref={containerRef} className="access-container relative w-full max-w-lg space-y-6 rounded-[14px] border border-black/[0.08] bg-white p-6 shadow-[0_24px_80px_rgba(0,0,0,0.08)] dark:border-white/[0.11] dark:bg-[#0a0a0a] md:p-10">

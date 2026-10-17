@@ -170,7 +170,7 @@ const AdminProfile: React.FC = () => {
                         <div className="absolute right-0 top-full mt-2 w-56 bg-white dark:bg-zinc-900 rounded-xl shadow-xl border border-gray-200 dark:border-white/10 overflow-hidden opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 transform translate-y-2 group-hover:translate-y-0">
                             <div className="p-4 border-b border-gray-100 dark:border-white/5">
                                 <p className="font-bold text-sm">{adminData?.fullname || 'Admin User'}</p>
-                                <p className="text-xs text-gray-500">{adminData?.email || 'admin@interviewxpert.com'}</p>
+                                <p className="text-xs text-gray-500">{adminData?.email || 'admin@snab.co.in'}</p>
                             </div>
 
                             {/* Theme Toggle */}
@@ -264,7 +264,7 @@ const AdminProfile: React.FC = () => {
                                 <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-blue-500/5 flex items-center justify-center transition-colors group-hover:bg-blue-500/10 shrink-0">
                                     <Mail className="w-4 h-4 sm:w-5 sm:h-5 text-blue-500" />
                                 </div>
-                                <span className="text-sm sm:text-base font-medium text-gray-700 dark:text-zinc-300 truncate">{adminData?.email || 'admin@interviewxpert.com'}</span>
+                                <span className="text-sm sm:text-base font-medium text-gray-700 dark:text-zinc-300 truncate">{adminData?.email || 'admin@snab.co.in'}</span>
                             </div>
                         </div>
 

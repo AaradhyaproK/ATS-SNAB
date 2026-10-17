@@ -75,6 +75,11 @@ export interface ParsedResumeProfile {
   reasonForJobChange?: string;
   employmentType?: string;
   employmentTypes?: string[];
+  department?: string;
+  departments?: string[];
+  sector?: string;
+  sectors?: string[];
+  state?: string;
   parsingMethod: 'deterministic' | 'hybrid';
   parserVersion: number;
 }
@@ -114,6 +119,10 @@ export interface ResumeDumpRecord extends ParsedResumeProfile {
   sourceJobTitle?: string;
   isHired?: boolean;
   doNotSuggest?: boolean;
+  isBlocked?: boolean;
+  isBanned?: boolean;
+  blockedAt?: unknown;
+  blockedReason?: string;
   createdAt?: unknown;
   updatedAt?: unknown;
 }
@@ -616,6 +625,130 @@ export const fetchExistingResumeDumpByEmail = async (email: string): Promise<Res
   return null;
 };
 
+export interface ExistingCandidateMatch {
+  matchType: 'email' | 'phone' | 'both';
+  matchedEmail?: string;
+  matchedPhone?: string;
+  candidate: ResumeDumpRecord;
+}
+
+export const findExistingCandidateByContact = async (
+  email?: string,
+  phone?: string
+): Promise<ExistingCandidateMatch | null> => {
+  const cleanEmail = normalizeResumeEmail(email || '');
+  const rawPhone = (phone || '').trim();
+  const digits = rawPhone.replace(/\D/g, '');
+  const last10 = digits.length >= 10 ? digits.slice(-10) : digits;
+
+  let matchedRecord: ResumeDumpRecord | null = null;
+  let matchType: 'email' | 'phone' | 'both' = 'email';
+  let matchedEmail: string | undefined = undefined;
+  let matchedPhone: string | undefined = undefined;
+
+  // 1. Check by email in resumeDumpCandidates and resumeDump
+  if (cleanEmail && cleanEmail.includes('@') && cleanEmail.includes('.')) {
+    try {
+      let snap = await getDocs(query(collection(db, 'resumeDumpCandidates'), where('email', '==', cleanEmail), limit(1))).catch(() => null);
+      if (!snap || snap.empty) {
+        snap = await getDocs(query(collection(db, 'resumeDumpCandidates'), where('profile.email', '==', cleanEmail), limit(1))).catch(() => null);
+      }
+      if (!snap || snap.empty) {
+        snap = await getDocs(query(collection(db, 'resumeDump'), where('email', '==', cleanEmail), limit(1))).catch(() => null);
+      }
+      if (snap && !snap.empty) {
+        const rawData: any = snap.docs[0].data();
+        matchedRecord = { ...rawData, id: snap.docs[0].id, ...(rawData.profile || {}) } as ResumeDumpRecord;
+        matchedEmail = cleanEmail;
+        matchType = 'email';
+      }
+    } catch (err) {
+      console.warn('Error checking existing candidate by email:', err);
+    }
+  }
+
+  // 2. Check by phone variants in resumeDumpCandidates and resumeDump
+  if (last10 && last10.length >= 10) {
+    const phoneVariants = Array.from(new Set([
+      rawPhone,
+      last10,
+      `+91 ${last10}`,
+      `+91${last10}`,
+      `0${last10}`
+    ])).filter(Boolean);
+
+    for (const pVariant of phoneVariants) {
+      try {
+        let snap = await getDocs(query(collection(db, 'resumeDumpCandidates'), where('phone', '==', pVariant), limit(1))).catch(() => null);
+        if (!snap || snap.empty) {
+          snap = await getDocs(query(collection(db, 'resumeDumpCandidates'), where('profile.phone', '==', pVariant), limit(1))).catch(() => null);
+        }
+        if (!snap || snap.empty) {
+          snap = await getDocs(query(collection(db, 'resumeDump'), where('phone', '==', pVariant), limit(1))).catch(() => null);
+        }
+        if (snap && !snap.empty) {
+          const rawData: any = snap.docs[0].data();
+          const pRecord = { ...rawData, id: snap.docs[0].id, ...(rawData.profile || {}) } as ResumeDumpRecord;
+          matchedPhone = pVariant;
+          if (matchedRecord) {
+            matchType = 'both';
+          } else {
+            matchedRecord = pRecord;
+            matchType = 'phone';
+          }
+          break;
+        }
+      } catch (err) {
+        console.warn('Error checking existing candidate by phone:', err);
+      }
+    }
+  }
+
+  // 3. Also check bannedCandidates collection
+  if (cleanEmail) {
+    try {
+      const banSnap = await getDocs(query(collection(db, 'bannedCandidates'), where('email', '==', cleanEmail), limit(1))).catch(() => null);
+      if (banSnap && !banSnap.empty) {
+        if (!matchedRecord) {
+          matchedRecord = { ...banSnap.docs[0].data(), id: banSnap.docs[0].id } as ResumeDumpRecord;
+          matchType = 'email';
+          matchedEmail = cleanEmail;
+        }
+        matchedRecord.isBlocked = true;
+        matchedRecord.isBanned = true;
+      }
+    } catch (err) {
+      console.warn('Error checking bannedCandidates by email:', err);
+    }
+  }
+
+  if (last10 && last10.length >= 7) {
+    try {
+      const banPhoneSnap = await getDocs(query(collection(db, 'bannedCandidates'), where('phoneDigits', '==', last10), limit(1))).catch(() => null);
+      if (banPhoneSnap && !banPhoneSnap.empty) {
+        if (!matchedRecord) {
+          matchedRecord = { ...banPhoneSnap.docs[0].data(), id: banPhoneSnap.docs[0].id } as ResumeDumpRecord;
+          matchType = matchedEmail ? 'both' : 'phone';
+          matchedPhone = rawPhone;
+        }
+        matchedRecord.isBlocked = true;
+        matchedRecord.isBanned = true;
+      }
+    } catch (err) {
+      console.warn('Error checking bannedCandidates by phone:', err);
+    }
+  }
+
+  if (!matchedRecord) return null;
+
+  return {
+    matchType,
+    matchedEmail,
+    matchedPhone,
+    candidate: matchedRecord
+  };
+};
+
 export const analyzeResumeText = async (
   text: string,
   fallbackFileName: string,
@@ -946,9 +1079,9 @@ export const ingestResumeFile = async (
 
 const safeDocumentKey = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 100);
 
-const normalizeResumeEmail = (value?: string | null) => (value || '').trim().toLowerCase();
+export const normalizeResumeEmail = (value?: string | null) => (value || '').trim().toLowerCase();
 
-const normalizeResumePhoneDigits = (value?: string | null) => {
+export const normalizeResumePhoneDigits = (value?: string | null) => {
   const digits = (value || '').replace(/\D/g, '');
   if (digits.length < 7) return '';
   return digits.length > 10 ? digits.slice(-10) : digits;

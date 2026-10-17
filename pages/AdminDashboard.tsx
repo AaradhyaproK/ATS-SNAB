@@ -7,7 +7,7 @@ import { getAuth, createUserWithEmailAndPassword, signOut } from 'firebase/auth'
 import { db, auth } from '../services/firebase';
 import { RevenueAreaChart, UserPieChart, JobBarChart } from '../components/AdminCharts';
 import { GShapeAnimation } from '../components/AdminAnimations';
-import { Users, FileText, DollarSign, UserPlus, Briefcase, CheckCircle, XCircle, Trash2, Bell, Sun, Moon, Monitor, Video, Menu, X, Search, ShieldCheck, ShieldX, BookOpen, MessageSquare as MessageSquareIcon, Bug, Star, Activity, Database, Key, Globe, Copy, Check, Code, Server, TrendingUp, Gauge, Download, HardDrive } from 'lucide-react';
+import { Users, FileText, DollarSign, UserPlus, UserCheck, Briefcase, CheckCircle, XCircle, Trash2, Bell, Sun, Moon, Monitor, Video, Menu, X, Search, ShieldCheck, ShieldX, BookOpen, MessageSquare as MessageSquareIcon, Bug, Star, Activity, Database, Key, Globe, Copy, Check, Code, Server, TrendingUp, Gauge, Download, HardDrive } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useMessageBox } from '../components/MessageBox';
 import Logo from '../components/Logo';
@@ -62,31 +62,34 @@ const AdminDashboard: React.FC = () => {
     const qRequests = query(collection(db, 'recruiterRequests'), where('status', '==', 'pending'));
     const unsubRequests = onSnapshot(qRequests, (snap) => {
       setRequests(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-    });
+    }, (err) => console.warn('recruiterRequests listener error:', err.message));
 
     // 2. Users
     const qUsers = query(collection(db, 'users'));
     const unsubUsers = onSnapshot(qUsers, (snap) => {
       setUsers(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-    });
+    }, (err) => console.warn('users listener error:', err.message));
 
     // 3. Posted Interviews (fetched instead of legacy jobs)
     const qJobs = query(collection(db, 'interviews'), orderBy('createdAt', 'desc'));
     const unsubJobs = onSnapshot(qJobs, (snap) => {
       setJobs(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-    });
+    }, (err) => console.warn('interviews listener error:', err.message));
 
     // 4. Transactions
     const qTransactions = query(collection(db, 'transactions'), orderBy('createdAt', 'desc'));
     const unsubTransactions = onSnapshot(qTransactions, (snap) => {
       setTransactions(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-    });
+    }, (err) => console.warn('transactions listener error:', err.message));
 
     // 5. Interviews - Real-time tracking
     const qInterviews = query(collection(db, 'interviews'), orderBy('createdAt', 'desc'));
     const unsubInterviews = onSnapshot(qInterviews, (snap) => {
       setInterviews(snap.docs.map(d => ({ id: d.id, ...d.data() })));
       setLoading(false); // Initial load done when interviews load
+    }, (err) => {
+      console.warn('interviews real-time listener error:', err.message);
+      setLoading(false);
     });
 
     // 6. Admin Profile - Real-time
@@ -96,7 +99,31 @@ const AdminDashboard: React.FC = () => {
       unsubAdmin = onSnapshot(doc(db, 'users', currentUser.uid), (docSnap) => {
         if (docSnap.exists()) {
           setAdminData({ id: docSnap.id, ...docSnap.data() });
+        } else {
+          setAdminData({
+            id: currentUser.uid,
+            email: currentUser.email || 'admin@snab.co.in',
+            role: 'admin',
+            fullname: 'Super Admin'
+          });
+          setDoc(doc(db, 'users', currentUser.uid), {
+            uid: currentUser.uid,
+            email: currentUser.email || 'admin@snab.co.in',
+            fullname: 'Super Admin',
+            role: 'admin',
+            adminVerified: true,
+            accountStatus: 'active',
+            createdAt: serverTimestamp()
+          }, { merge: true }).catch(() => {});
         }
+      }, (err) => {
+        console.warn('admin profile listener error:', err.message);
+        setAdminData({
+          id: currentUser.uid,
+          email: currentUser.email || 'admin@snab.co.in',
+          role: 'admin',
+          fullname: 'Super Admin'
+        });
       });
     }
 
@@ -104,32 +131,32 @@ const AdminDashboard: React.FC = () => {
     const qContact = query(collection(db, 'contactSubmissions'), orderBy('createdAt', 'desc'));
     const unsubContact = onSnapshot(qContact, (snap) => {
       setContactSubmissions(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-    });
+    }, (err) => console.warn('contactSubmissions listener error:', err.message));
 
     // 8. Bug Reports
     const qBugs = query(collection(db, 'bugReports'), orderBy('createdAt', 'desc'));
     const unsubBugs = onSnapshot(qBugs, (snap) => {
       setBugReports(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-    });
+    }, (err) => console.warn('bugReports listener error:', err.message));
 
     // 9. All Reviews
     const qReviews = query(collection(db, 'reviews'), orderBy('createdAt', 'desc'));
     const unsubReviews = onSnapshot(qReviews, (snap) => {
       setAllReviews(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-    });
+    }, (err) => console.warn('reviews listener error:', err.message));
 
     // 10. Universal Interview Price - Real-time
     const unsubPricing = onSnapshot(doc(db, 'settings', 'pricing'), (docSnap) => {
       if (docSnap.exists()) {
         setPerInterviewPrice(Number(docSnap.data().perInterviewPrice) || 150);
       }
-    });
+    }, (err) => console.warn('pricing listener error:', err.message));
 
     const qConsents = query(collection(db, 'candidateConsents'), orderBy('createdAt', 'desc'));
     const unsubConsents = onSnapshot(qConsents, (snap) => {
       setCandidateConsents(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     }, (error) => {
-      console.error('Error loading candidate consents:', error);
+      console.warn('Error loading candidate consents:', error.message);
     });
 
     return () => {
@@ -722,8 +749,8 @@ const AdminDashboard: React.FC = () => {
           >
             {isMobileSidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
-          <div className="w-[96px] sm:w-[132px] flex items-center justify-center">
-            <Logo className="w-full h-auto" />
+          <div className="h-9 sm:h-10 flex items-center justify-center">
+            <Logo className="h-full w-auto object-contain max-h-9 sm:max-h-10" />
           </div>
         </div>
 
@@ -777,7 +804,7 @@ const AdminDashboard: React.FC = () => {
             <div className="absolute right-0 top-full mt-2 w-44 sm:w-48 bg-white dark:bg-zinc-900 rounded-xl shadow-xl border border-gray-200 dark:border-white/10 overflow-hidden opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 transform translate-y-2 group-hover:translate-y-0">
               <div className="p-3 sm:p-4 border-b border-gray-100 dark:border-white/5">
                 <p className="font-bold text-xs sm:text-sm">{adminData?.fullname || 'Admin User'}</p>
-                <p className="text-[10px] sm:text-xs text-gray-500 truncate">{adminData?.email || 'admin@interviewxpert.com'}</p>
+                <p className="text-[10px] sm:text-xs text-gray-500 truncate">{adminData?.email || 'admin@snab.co.in'}</p>
               </div>
               <a href="/#/admin/profile" className="block px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
                 👤 View Profile
@@ -829,7 +856,8 @@ const AdminDashboard: React.FC = () => {
           <div className="flex flex-col gap-2">
             {[
               { id: 'overview', label: 'Overview', icon: Briefcase },
-              { id: 'requests', label: 'Requests', icon: UserPlus, count: requests.length },
+              { id: 'addCandidate', label: 'Add Candidate & Resume', icon: UserPlus },
+              { id: 'requests', label: 'Requests', icon: UserCheck, count: requests.length },
               { id: 'users', label: 'Users', icon: Users, count: users.length },
               { id: 'jobs', label: 'Interviews', icon: FileText, count: jobs.length },
               { id: 'consents', label: 'Candidate Consent', icon: ShieldCheck, count: candidateConsents.length },
@@ -847,7 +875,8 @@ const AdminDashboard: React.FC = () => {
               <button
                 key={item.id}
                 onClick={() => {
-                  if (item.id === 'blogs') navigate('/admin/blogs');
+                  if (item.id === 'addCandidate') navigate('/recruiter/add-candidate');
+                  else if (item.id === 'blogs') navigate('/admin/blogs');
                   else if (item.id === 'stats') navigate('/admin/stats');
                   else if (item.id === 'rateLimiting') navigate('/admin/rate-limiting');
                   else if (item.id === 'storage') navigate('/admin/storage');
@@ -877,7 +906,8 @@ const AdminDashboard: React.FC = () => {
         <nav ref={sidebarRef} className="hidden lg:flex flex-col w-64 h-[calc(100vh-73px)] sticky top-[73px] border-r border-gray-200 dark:border-white/10 p-4 gap-2">
           {[
             { id: 'overview', label: 'Overview', icon: Briefcase },
-            { id: 'requests', label: 'Requests', icon: UserPlus, count: requests.length },
+            { id: 'addCandidate', label: 'Add Candidate & Resume', icon: UserPlus },
+            { id: 'requests', label: 'Requests', icon: UserCheck, count: requests.length },
             { id: 'users', label: 'Users', icon: Users, count: users.length },
             { id: 'jobs', label: 'Interviews', icon: FileText, count: jobs.length },
             { id: 'consents', label: 'Candidate Consent', icon: ShieldCheck, count: candidateConsents.length },
@@ -895,7 +925,8 @@ const AdminDashboard: React.FC = () => {
             <button
               key={item.id}
               onClick={() => { 
-                if (item.id === 'blogs') navigate('/admin/blogs');
+                if (item.id === 'addCandidate') navigate('/recruiter/add-candidate');
+                else if (item.id === 'blogs') navigate('/admin/blogs');
                 else if (item.id === 'stats') navigate('/admin/stats');
                 else if (item.id === 'rateLimiting') navigate('/admin/rate-limiting');
                 else if (item.id === 'storage') navigate('/admin/storage');

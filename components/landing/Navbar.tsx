@@ -72,7 +72,7 @@ const Navbar: React.FC = () => {
         >
           {/* Logo */}
           <Link to="/" className="flex items-center shrink-0">
-            <Logo className={`transition-all duration-500 ${isScrolled ? 'w-[128px] md:w-[148px] h-auto' : 'w-[144px] md:w-[172px] h-auto'}`} isDark={isDark} />
+            <Logo className={`transition-all duration-500 object-contain ${isScrolled ? 'h-7 md:h-8 w-auto' : 'h-8 md:h-9 w-auto'}`} isDark={isDark} />
           </Link>
 
           {/* Desktop Links */}
