@@ -3,8 +3,8 @@ import { uploadToS3, isS3Configured } from './s3Service';
 
 // Config Constants (loaded from environment variables)
 const ASSEMBLYAI_API_KEY = import.meta.env.VITE_ASSEMBLYAI_API_KEY;
-const CLOUDINARY_CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
-const CLOUDINARY_UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
+const CLOUDINARY_CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || 'ljelkpy4';
+const CLOUDINARY_UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || 'resumes';
 
 const VIDEO_CLOUDINARY_UPLOAD_URL = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/video/upload`;
 const RESUME_CLOUDINARY_UPLOAD_URL = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`;
@@ -461,18 +461,8 @@ Output ONLY a valid JSON object where keys are Job IDs and values are integer ma
   }
 };
 
-// ── Storage (Amazon S3 Primary with Cloudinary Fallback) ──────────────────────────────────
+// ── Storage (Cloudinary Primary for Resumes with S3 Fallback) ──────────────────────────────────
 export const uploadToCloudinary = async (blob: Blob, resourceType: 'video' | 'image' | 'auto' | 'raw' = 'auto') => {
-  // If S3 is configured, upload directly to Amazon S3
-  if (isS3Configured()) {
-    try {
-      return await uploadToS3(blob, resourceType);
-    } catch (s3Err) {
-      console.warn("Amazon S3 Upload failed, attempting Cloudinary fallback...", s3Err);
-    }
-  }
-
-  // Cloudinary fallback logic
   const isVideo = resourceType === 'video';
   const isRaw = resourceType === 'raw';
   const uploadUrl = resourceType === 'auto'
@@ -490,6 +480,15 @@ export const uploadToCloudinary = async (blob: Blob, resourceType: 'video' | 'im
     return data.secure_url;
   } catch (error: any) {
     console.error("Cloudinary Upload Error:", error);
+    // If S3 is configured, attempt fallback
+    if (isS3Configured()) {
+      try {
+        console.warn("Cloudinary upload failed, attempting Amazon S3 fallback...", error);
+        return await uploadToS3(blob, resourceType);
+      } catch (s3Err) {
+        console.error("Amazon S3 fallback also failed:", s3Err);
+      }
+    }
     throw error;
   }
 };

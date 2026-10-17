@@ -524,7 +524,7 @@ export function buildWhatsAppInviteText(params: {
   const context: Record<string, string> = {
     candidate_name: candidateName,
     job_title: jobTitle,
-    company_name: 'Dsource',
+    company_name: options?.companyName || 'SNAB hireX',
     interview_link: interviewLink,
     access_code: accessCode,
     interview_deadline: '',
@@ -536,7 +536,7 @@ export function buildWhatsAppInviteText(params: {
     employment_type: options?.employmentType || 'Full Time',
     recruiter_name: options?.recruiterName || 'HR Recruiting Team',
     recruiter_phone: options?.recruiterPhone || '9762588623 / 8484888632',
-    recruiter_email: 'noreply@interviewxpert.in',
+    recruiter_email: 'noreply@snab.co.in',
     support_phone: '9762588623 / 8484888632'
   };
 
@@ -549,8 +549,8 @@ export function buildWhatsAppInviteText(params: {
   const body = custom?.body
     ? renderTemplateText(custom.body, context)
     : (isReminder
-        ? `Dear *${candidateName}*,\n\nFriendly reminder: You have been *shortlisted for ${jobTitle}* at *Dsource*, but your AI Video Interview is still pending!\n\nPlease complete your interview at your convenience to keep your application active.`
-        : `Dear *${candidateName}*,\n\nGreat news! Your profile has been *shortlisted for this interview round* for the *${jobTitle}* role at *Dsource*.\n\nPlease complete your 15-minute AI Video Interview from your phone or laptop at your convenience.\n\n- No HR scheduling needed\n- Complete anytime, anywhere`);
+        ? `Dear *${candidateName}*,\n\nFriendly reminder: You have been *shortlisted for ${jobTitle}* at *${options?.companyName || 'SNAB hireX'}*, but your AI Video Interview is still pending!\n\nPlease complete your interview at your convenience to keep your application active.`
+        : `Dear *${candidateName}*,\n\nGreat news! Your profile has been *shortlisted for this interview round* for the *${jobTitle}* role at *${options?.companyName || 'SNAB hireX'}*.\n\nPlease complete your 15-minute AI Video Interview from your phone or laptop at your convenience.\n\n- No HR scheduling needed\n- Complete anytime, anywhere`);
 
   const showJobDetails = custom ? custom.showJobDetails !== false : true;
   const showCredentials = custom ? custom.showCredentials !== false : true;
@@ -594,7 +594,7 @@ export function buildWhatsAppInviteText(params: {
 
   const signoffText = custom?.signoff
     ? renderTemplateText(custom.signoff, context)
-    : `Best regards,\n*Dsource Recruitment System*`;
+    : `Best regards,\n*${options?.companyName || 'SNAB hireX'} Recruitment Team*`;
 
   return `${headline}
 
@@ -603,7 +603,7 @@ ${body}${jobDetailsSection}${credentialsSection}${recruiterSection}
 *Instructions:*
 ${instructionsText}
 
-Need Technical Help? Call Dsource Support: 9762588623 / 8484888632
+Need Technical Help? Call Support: 9762588623 / 8484888632
 
 ${signoffText}`;
 }

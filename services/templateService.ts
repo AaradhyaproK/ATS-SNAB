@@ -82,10 +82,10 @@ export const DYNAMIC_VARIABLES = [
   { tag: '{{candidate_email}}', label: 'Candidate Email', example: 'rahul.sharma@example.com' },
   { tag: '{{candidate_phone}}', label: 'Candidate Phone', example: '+91 9876543210' },
   { tag: '{{job_title}}', label: 'Job Title / Post', example: 'Senior Software Engineer' },
-  { tag: '{{company_name}}', label: 'Company / Client Name', example: 'Dsource' },
-  { tag: '{{interview_link}}', label: 'Assessment Link', example: 'https://dsource.in/#/interview/inv-12345' },
-  { tag: '{{access_code}}', label: 'Access Code', example: 'DX-8921' },
-  { tag: '{{interview_code}}', label: 'Interview Code (Alias)', example: 'DX-8921' },
+  { tag: '{{company_name}}', label: 'Company / Client Name', example: 'SNAB hireX' },
+  { tag: '{{interview_link}}', label: 'Assessment Link', example: 'https://app.snabhirex.com/#/interview/inv-12345' },
+  { tag: '{{access_code}}', label: 'Access Code', example: 'SH-8921' },
+  { tag: '{{interview_code}}', label: 'Interview Code (Alias)', example: 'SH-8921' },
   { tag: '{{location}}', label: 'Job Location', example: 'Mumbai / Hybrid' },
   { tag: '{{qualification}}', label: 'Qualification', example: 'B.Tech / B.E. / MCA' },
   { tag: '{{experience}}', label: 'Experience Required', example: '3 - 5 Years' },
@@ -93,7 +93,7 @@ export const DYNAMIC_VARIABLES = [
   { tag: '{{employment_type}}', label: 'Employment Type', example: 'Full Time' },
   { tag: '{{recruiter_name}}', label: 'Recruiter Name', example: 'Anjali Verma (HR Head)' },
   { tag: '{{recruiter_phone}}', label: 'Recruiter Phone', example: '+91 9762588623' },
-  { tag: '{{recruiter_email}}', label: 'Recruiter Email', example: 'hr@dsource.in' },
+  { tag: '{{recruiter_email}}', label: 'Recruiter Email', example: 'hr@snab.co.in' },
   { tag: '{{support_phone}}', label: 'Support Contact Phone', example: '9762588623 / 8484888632' },
 ];
 
@@ -118,7 +118,7 @@ export const TEMPLATE_PRESETS = [
         'Keep a stable internet connection.',
         'Once the interview begins, avoid refreshing or closing the browser tab.'
       ],
-      customFooter: 'Need Technical Assistance? Call Dsource Support: {{support_phone}}'
+      customFooter: 'Need Technical Assistance? Call Support: {{support_phone}}'
     },
     whatsapp: {
       headline: '*CONGRATULATIONS! YOU ARE SHORTLISTED*',
@@ -186,7 +186,7 @@ export const TEMPLATE_PRESETS = [
         'Use a stable internet connection.',
         'If you have already completed your interview, please ignore this email.'
       ],
-      customFooter: 'Need Technical Assistance? Call Dsource Support: {{support_phone}}'
+      customFooter: 'Need Technical Assistance? Call Support: {{support_phone}}'
     },
     whatsapp: {
       headline: '*ACTION REQUIRED: INTERVIEW PENDING*',
@@ -219,7 +219,7 @@ export const TEMPLATE_PRESETS = [
         'Complete assessment at your earliest convenience.',
         'Takes approximately 15 minutes.'
       ],
-      customFooter: 'Need Technical Assistance? Call Dsource Support: {{support_phone}}'
+      customFooter: 'Need Technical Assistance? Call Support: {{support_phone}}'
     },
     whatsapp: {
       headline: '*FINAL REMINDER: INTERVIEW PENDING*',
@@ -313,7 +313,7 @@ export function renderTemplateText(templateText: string, context: Record<string,
     .replace(/\{\{candidate_email\}\}/gi, cleanContext.candidate_email || '')
     .replace(/\{\{candidate_phone\}\}/gi, cleanContext.candidate_phone || '')
     .replace(/\{\{job_title\}\}/gi, cleanContext.job_title || 'Position')
-    .replace(/\{\{company_name\}\}/gi, cleanContext.company_name || 'Dsource')
+    .replace(/\{\{company_name\}\}/gi, cleanContext.company_name || 'SNAB hireX')
     .replace(/\{\{interview_link\}\}/gi, cleanContext.interview_link || '#')
     .replace(/\{\{access_code\}\}/gi, cleanContext.access_code || cleanContext.interview_code || 'DX-8921')
     .replace(/\{\{interview_code\}\}/gi, cleanContext.interview_code || cleanContext.access_code || 'DX-8921')

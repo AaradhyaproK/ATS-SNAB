@@ -278,10 +278,10 @@ const SAMPLE_CONTEXT = {
   candidate_email: 'rahul.sharma@example.com',
   candidate_phone: '+91 9876543210',
   job_title: 'Senior Full Stack Engineer',
-  company_name: 'Dsource',
-  interview_link: 'https://dsource.in/#/interview/inv-89210',
-  access_code: 'DX-8921',
-  interview_code: 'DX-8921',
+  company_name: 'SNAB hireX',
+  interview_link: 'https://app.snabhirex.com/#/interview/inv-89210',
+  access_code: 'SH-8921',
+  interview_code: 'SH-8921',
   interview_deadline: '14/08/2026',
   location: 'Mumbai / Hybrid',
   qualification: 'B.Tech / MCA',
@@ -290,7 +290,7 @@ const SAMPLE_CONTEXT = {
   employment_type: 'Full Time',
   recruiter_name: 'Anjali Verma (Senior Talent Manager)',
   recruiter_phone: '+91 9762588623',
-  recruiter_email: 'recruitment@dsource.in',
+  recruiter_email: 'recruitment@snab.co.in',
   support_phone: '9762588623 / 8484888632'
 };
 
@@ -522,10 +522,10 @@ const RecruiterTemplatesPage: React.FC = () => {
         {/* WhatsApp Chat Header */}
         <div className="-mx-4 -mt-4 mb-3 flex items-center gap-3 border-b border-white/[0.08] bg-[#202c33] px-4 py-2.5">
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-600 text-xs font-bold text-white">
-            DS
+            SH
           </div>
           <div>
-            <div className="font-semibold text-[#e9edef]">Dsource Recruitment Bot</div>
+            <div className="font-semibold text-[#e9edef]">SNAB hireX Recruitment Bot</div>
             <div className="text-[11px] text-[#8696a0]">Official Business Account</div>
           </div>
         </div>
@@ -1115,7 +1115,7 @@ const RecruiterTemplatesPage: React.FC = () => {
                         [activeTab]: { ...prev[activeTab as 'emailInvite' | 'emailReminder'], customFooter: val }
                       }));
                     }}
-                    placeholder="e.g. Need Assistance? Call Dsource Support: {{support_phone}}"
+                    placeholder="e.g. Need Assistance? Call Support: {{support_phone}}"
                     className={`w-full rounded-md border px-3 py-2 text-xs sm:text-sm outline-none focus:border-emerald-500 transition-colors ${
                       isDark ? 'border-[#2e2e2e] bg-[#000] text-white' : 'border-slate-300 bg-slate-50 text-slate-900 focus:bg-white shadow-2xs'
                     }`}

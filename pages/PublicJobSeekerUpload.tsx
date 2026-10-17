@@ -62,7 +62,7 @@ export default function PublicJobSeekerUpload() {
   const { isDark, toggleTheme } = useTheme();
 
   useEffect(() => {
-    document.title = "Upload Resume | DSource - AI Interview Platform";
+    document.title = "Upload Resume | SNAB hireX - AI Recruitment Platform";
     const setMetaTag = (attr: string, value: string, content: string) => {
       let element = document.querySelector(`meta[${attr}='${value}']`) as HTMLMetaElement;
       if (!element) {
@@ -73,10 +73,10 @@ export default function PublicJobSeekerUpload() {
       element.setAttribute('content', content);
     };
 
-    setMetaTag('property', 'og:image', 'https://dsource.interviewxpert.in/logodsource.png');
-    setMetaTag('property', 'og:image:secure_url', 'https://dsource.interviewxpert.in/logodsource.png');
-    setMetaTag('property', 'og:url', 'https://dsource.interviewxpert.in/#/upload-resume');
-    setMetaTag('name', 'twitter:image', 'https://dsource.interviewxpert.in/logodsource.png');
+    setMetaTag('property', 'og:image', '/assets/logo-cropped-day.png');
+    setMetaTag('property', 'og:image:secure_url', '/assets/logo-cropped-day.png');
+    setMetaTag('property', 'og:url', '/#/upload-resume');
+    setMetaTag('name', 'twitter:image', '/assets/logo-cropped-day.png');
   }, []);
 
   // Mobile Navbar Drawer State
@@ -219,7 +219,7 @@ export default function PublicJobSeekerUpload() {
   // Auto-Restore Draft Form State & Submitted Match Results on Page Refresh
   useEffect(() => {
     try {
-      const savedDraft = sessionStorage.getItem('dsource_candidate_draft_form');
+      const savedDraft = sessionStorage.getItem('snab_hirex_candidate_draft_form') || sessionStorage.getItem('dsource_candidate_draft_form');
       if (savedDraft) {
         const parsed = JSON.parse(savedDraft);
         if (parsed.name) setCandidateName(parsed.name);
@@ -254,7 +254,7 @@ export default function PublicJobSeekerUpload() {
         if (parsed.extraBioText) setExtraBioText(parsed.extraBioText);
       }
 
-      const savedSubmitted = sessionStorage.getItem('dsource_candidate_submitted_data');
+      const savedSubmitted = sessionStorage.getItem('snab_hirex_candidate_submitted_data') || sessionStorage.getItem('dsource_candidate_submitted_data');
       if (savedSubmitted) {
         const parsedSubmitted = JSON.parse(savedSubmitted);
         if (parsedSubmitted && (parsedSubmitted.email || parsedSubmitted.name)) {
@@ -303,7 +303,7 @@ export default function PublicJobSeekerUpload() {
           skills: extractedSkills,
           extraBioText: extraBioText,
         };
-        sessionStorage.setItem('dsource_candidate_draft_form', JSON.stringify(draft));
+        sessionStorage.setItem('snab_hirex_candidate_draft_form', JSON.stringify(draft));
       }
     } catch (err) {
       console.warn("Save candidate draft error:", err);
@@ -319,7 +319,7 @@ export default function PublicJobSeekerUpload() {
   useEffect(() => {
     if (submittedCandidateData) {
       try {
-        sessionStorage.setItem('dsource_candidate_submitted_data', JSON.stringify(submittedCandidateData));
+        sessionStorage.setItem('snab_hirex_candidate_submitted_data', JSON.stringify(submittedCandidateData));
       } catch (err) {
         console.warn("Save submitted data error:", err);
       }
@@ -587,7 +587,7 @@ export default function PublicJobSeekerUpload() {
           id: doc.id,
           jobNo,
           title: data.title || 'Untitled Job Role',
-          company: data.company || data.companyName || 'DSource Partner',
+          company: data.company || data.companyName || 'Hiring Partner',
           recruiterName: resolvedEntryBy,
           entryBy: resolvedEntryBy,
           description: data.description || data.jobDescription || '',
@@ -646,7 +646,7 @@ export default function PublicJobSeekerUpload() {
           id: doc.id,
           jobNo,
           title: data.title || 'Untitled Job Role',
-          company: data.company || data.companyName || 'DSource Partner',
+          company: data.company || data.companyName || 'Hiring Partner',
           recruiterName: resolvedEntryBy,
           entryBy: resolvedEntryBy,
           description: data.description || data.jobDescription || '',
@@ -812,8 +812,8 @@ export default function PublicJobSeekerUpload() {
       };
 
       await saveResumeDumpCandidate({
-        recruiterUID: 'DSOURCE_PUBLIC_JOB_SEEKER_POOL',
-        teamId: 'DSOURCE_TALENT_ROSTER',
+        recruiterUID: 'PUBLIC_JOB_SEEKER_POOL',
+        teamId: 'TALENT_ROSTER',
         createdBy: {
           uid: 'PUBLIC_CANDIDATE',
           name: updatedProfile.name,
@@ -831,7 +831,7 @@ export default function PublicJobSeekerUpload() {
       });
 
       // Update sessionStorage so state persists on page refresh
-      sessionStorage.setItem('dsource_candidate_submitted_data', JSON.stringify(submittedCandidateData));
+      sessionStorage.setItem('snab_hirex_candidate_submitted_data', JSON.stringify(submittedCandidateData));
 
       messageBox.showSuccess(`Updated domains (${targetDomainStr || 'Selected'}) & criteria saved to your profile and resume dump!`);
     } catch (err: any) {
@@ -1200,8 +1200,8 @@ export default function PublicJobSeekerUpload() {
       finalProfile.isGlobalPublicCandidate = true;
 
       await saveResumeDumpCandidate({
-        recruiterUID: 'DSOURCE_PUBLIC_JOB_SEEKER_POOL',
-        teamId: 'DSOURCE_TALENT_ROSTER',
+        recruiterUID: 'PUBLIC_JOB_SEEKER_POOL',
+        teamId: 'TALENT_ROSTER',
         createdBy: {
           uid: 'PUBLIC_CANDIDATE',
           name: candidateName.trim(),
@@ -1300,7 +1300,7 @@ export default function PublicJobSeekerUpload() {
           <div className="flex items-center gap-2.5 sm:gap-3">
             <Logo className="h-8 sm:h-9 w-auto object-contain" isDark={isDark} />
             <div className="border-l pl-2.5 sm:pl-3 border-slate-200 dark:border-white/10">
-              <span className="font-extrabold text-sm sm:text-base tracking-tight block text-slate-900 dark:text-white">DSource</span>
+              <span className="font-extrabold text-sm sm:text-base tracking-tight block text-slate-900 dark:text-white">SNAB hireX</span>
               <span className="text-[10px] sm:text-[11px] font-mono text-emerald-500 font-bold block -mt-0.5 uppercase tracking-wider">Candidate Match Portal</span>
             </div>
           </div>
@@ -1512,7 +1512,7 @@ export default function PublicJobSeekerUpload() {
                 isDark ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' : 'bg-emerald-50 border-emerald-200 text-emerald-700'
               }`}>
                 <Sparkles className="w-3.5 h-3.5 text-emerald-500" />
-                <span>DSource Automated Candidate Match Portal</span>
+                <span>SNAB hireX Candidate Match Portal</span>
               </div>
               <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight">
                 Upload Resume & Get Best-Matched Jobs

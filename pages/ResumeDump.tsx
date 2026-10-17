@@ -2086,7 +2086,7 @@ const ResumeDump: React.FC = () => {
                                   </span>
                                 </div>
                                 <div className="text-[11px] text-gray-500 dark:text-[#8f8f8f] mt-0.5 truncate">
-                                  {j.company || j.companyName || 'DSource Partner'} • {j.city || j.location || 'Nashik'}
+                                  {j.company || j.companyName || 'Hiring Partner'} • {j.city || j.location || 'Nashik'}
                                 </div>
                                 <div className="flex items-center gap-2 mt-1 text-[10px] text-gray-400">
                                   {j.experience && <span>💼 {j.experience}</span>}

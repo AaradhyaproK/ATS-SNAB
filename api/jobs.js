@@ -24,13 +24,13 @@ import {
 } from 'firebase/firestore';
 
 const firebaseConfig = {
-  apiKey: process.env.VITE_FIREBASE_API_KEY || "AIzaSyDBo-Hbvw3MJdnSBx-cZq_hn_yUSSBduiE",
-  authDomain: process.env.VITE_FIREBASE_AUTH_DOMAIN || "dsource-main-db.firebaseapp.com",
-  projectId: process.env.VITE_FIREBASE_PROJECT_ID || process.env.FIREBASE_PROJECT_ID || "dsource-main-db",
-  storageBucket: process.env.VITE_FIREBASE_STORAGE_BUCKET || "dsource-main-db.firebasestorage.app",
-  messagingSenderId: process.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "555747926046",
-  appId: process.env.VITE_FIREBASE_APP_ID || "1:555747926046:web:0c5217a1834ce4db610e0f",
-  measurementId: process.env.VITE_FIREBASE_MEASUREMENT_ID || "G-RMZBWEWJW9"
+  apiKey: process.env.VITE_FIREBASE_API_KEY || "AIzaSyAsahVN3b4TfA_atPtKy8d5DPaJ0819F3w",
+  authDomain: process.env.VITE_FIREBASE_AUTH_DOMAIN || "ats-1-7d621.firebaseapp.com",
+  projectId: process.env.VITE_FIREBASE_PROJECT_ID || process.env.FIREBASE_PROJECT_ID || "ats-1-7d621",
+  storageBucket: process.env.VITE_FIREBASE_STORAGE_BUCKET || "ats-1-7d621.firebasestorage.app",
+  messagingSenderId: process.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "331729790419",
+  appId: process.env.VITE_FIREBASE_APP_ID || "1:331729790419:web:dc5d5000bd95054c123b26",
+  measurementId: process.env.VITE_FIREBASE_MEASUREMENT_ID || "G-DRJXJB5154"
 };
 
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();

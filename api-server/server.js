@@ -439,12 +439,12 @@ app.post('/api/jobs/update', authenticateApiKey, async (req, res) => {
     const deadline = (payload.deadlineDate || payload.deadline || payload.applyDeadline || '').toString().trim();
     const updatedJobId = String(docRef.id || targetId);
     const updatedJobNo = jobNo || updatedJobId;
-    const origin = process.env.IX_FRONTEND_URL || 'https://dsource.interviewxpert.in';
+    const origin = process.env.IX_FRONTEND_URL || 'https://app.snabhirex.com';
     const interviewLink = `${origin}/#/interview/${updatedJobId}`;
 
     return res.status(200).json({
       success: true,
-      message: `Job ${status === 'Active' ? 'activated' : 'deactivated'} / updated successfully inside InterviewXpert!`,
+      message: `Job ${status === 'Active' ? 'activated' : 'deactivated'} / updated successfully inside SNAB hireX!`,
       data: {
         id: updatedJobId,
         interviewId: updatedJobId,
@@ -593,7 +593,7 @@ async function handleJobUpdate(req, res, targetIdParam) {
 
     const updatedJobId = String(docRef.id || targetId);
     const updatedJobNo = jobNo || updatedJobId;
-    const origin = process.env.IX_FRONTEND_URL || 'https://dsource.interviewxpert.in';
+    const origin = process.env.IX_FRONTEND_URL || 'https://app.snabhirex.com';
     const interviewLink = `${origin}/#/interview/${updatedJobId}`;
 
     return res.status(200).json({

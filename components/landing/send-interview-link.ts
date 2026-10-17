@@ -25,17 +25,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const sendSmtpEmail = new Brevo.SendSmtpEmail();
 
-  sendSmtpEmail.subject = "Your Dsource Open Interview Link";
+  sendSmtpEmail.subject = "Your SNAB hireX Open Interview Link";
   sendSmtpEmail.htmlContent = `
     <html><body>
       <h1>Hello!</h1>
-      <p>Here is your link to start the interview for Dsource.</p>
+      <p>Here is your link to start your assessment on SNAB hireX.</p>
       <p><strong>Access Code:</strong> ${accessCode}</p>
       <p><a href="${interviewLink}?code=${accessCode}">Click here to open the interview</a></p>
       <p>Good luck!</p>
     </body></html>
   `;
-  sendSmtpEmail.sender = { name: "Dsource", email: "noreply@yourdomain.com" }; // Use an email address you have verified with Brevo
+  sendSmtpEmail.sender = { name: "SNAB hireX", email: "noreply@snab.co.in" }; // Use an email address you have verified with Brevo
   sendSmtpEmail.to = [{ email }];
 
   try {

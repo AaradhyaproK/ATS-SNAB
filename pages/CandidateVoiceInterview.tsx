@@ -1097,7 +1097,7 @@ export const CandidateVoiceInterview: React.FC = () => {
                 </span>
               </div>
               <p className="geist-small text-[#6b7280]">
-                {voiceInterview?.title || 'Phone Screening'} • {voiceInterview?.companyName || 'DSource'}
+                {voiceInterview?.title || 'Phone Screening'} • {voiceInterview?.companyName || 'SNAB hireX'}
               </p>
             </div>
           </div>
@@ -1661,7 +1661,7 @@ export const CandidateVoiceInterview: React.FC = () => {
 
       {/* Footer */}
       <footer className="border-t border-white/[0.08] py-3 text-center geist-small text-[#6b7280]">
-        Powered by DSource AI Voice Interviewer • Secure & Audio-Encrypted
+        Powered by SNAB hireX AI Voice Interviewer • Secure & Audio-Encrypted
       </footer>
     </div>
   );

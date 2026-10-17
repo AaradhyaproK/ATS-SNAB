@@ -23,6 +23,7 @@ import {
 } from 'firebase/auth';
 import { addDoc, collection, doc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { Link, useNavigate } from 'react-router-dom';
+import Logo from '../components/Logo';
 import { auth, db } from '../services/firebase';
 import { useAuth } from '../context/AuthContext';
 import '../styles/auth.css';
@@ -143,15 +144,15 @@ const AuthPage: React.FC = () => {
   const description = mode === 'reset'
     ? 'Enter your email and we’ll send you a secure reset link.'
     : mode === 'login'
-      ? 'Access the Dsauce recruiter and admin portal.'
+      ? 'Access the SNAB hireX recruiter and admin portal.'
       : 'Share your details for recruiter account approval.';
 
   return (
     <main className="ix-auth-page">
       <section className="ix-auth-form-panel" aria-label={`${title} form`}>
         <header className="ix-auth-brand">
-          <Link to="/" aria-label="InterviewXpert home">
-            <img src="/logo-partnership-dark.png" alt="InterviewXpert and DSource" />
+          <Link to="/" aria-label="SNAB hireX home">
+            <Logo className="h-9 w-auto object-contain" />
           </Link>
         </header>
 

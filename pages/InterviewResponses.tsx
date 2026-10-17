@@ -256,7 +256,7 @@ const InterviewResponses: React.FC = () => {
     const subject = `Resumes for ${jobTitleWithId}`;
 
     let body = `Dear Sir / Mam,\n\n`;
-    body += `Greetings of the day from DSource Training & Placement Services!\n\n`;
+    body += `Greetings of the day from SNAB hireX Recruitment Platform!\n\n`;
     body += `I am sharing resumes of the following candidates for the post of ${jobTitleWithId}:\n\n`;
 
     submissionsToExport.forEach((sub, index) => {
@@ -288,7 +288,7 @@ const InterviewResponses: React.FC = () => {
     body += `Link: ${jobLink}\n\n`;
 
     // Recruiter details from AuthContext and Profile
-    const recruiterName = recruiterProfile?.displayName || (userProfile as any)?.fullname || userProfile?.name || 'Team DSource';
+    const recruiterName = recruiterProfile?.displayName || (userProfile as any)?.fullname || userProfile?.name || 'Team SNAB hireX';
     const recruiterPhone = recruiterProfile?.phoneNumber || (userProfile as any)?.phone || 'N/A';
     body += `Recruiter Name: ${recruiterName}\n`;
     body += `Contact Number: ${recruiterPhone}\n`;

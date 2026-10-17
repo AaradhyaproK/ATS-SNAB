@@ -8,6 +8,7 @@ import { useAuth } from '../context/AuthContext';
 import { createPortal } from 'react-dom';
 import { jsPDF } from 'jspdf';
 import DayNightToggle from '../components/DayNightToggle';
+import Logo from '../components/Logo';
 import { useMessageBox } from '../components/MessageBox';
 import { ArrowLeft, Download, Share2, User, FileText, MessageSquare, Brain, Shield, Video, VideoOff, Eye, EyeOff, CheckCircle, XCircle, Briefcase, MapPin, GraduationCap, DollarSign, Calendar, Award, Link as LinkIcon, Maximize2, Minimize2, Globe, Volume2, Sparkles, BookOpen, Headphones, UserCheck, Mic, Zap, Phone, Users, CheckCircle2 } from 'lucide-react';
 import { isLocationMatching } from '../data/maharashtraCities';
@@ -1003,25 +1004,13 @@ const InterviewReport: React.FC = () => {
                     <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 hover:text-primary transition-colors mr-2" title="Go Back">
                         <ArrowLeft size={18} /> Back
                     </button>
-                    <a 
-                        href="https://interviewxpert.in" 
-                        target="_blank" 
-                        rel="noopener noreferrer" 
+                    <Link 
+                        to="/" 
                         className="flex items-center hover:opacity-85 transition-opacity"
-                        title="Visit InterviewXpert"
+                        title="SNAB hireX Home"
                     >
-                        <img 
-                            src={isDark ? 'http://localhost:3000/logo-partnership-dark.png' : 'http://localhost:3000/logo-partnership-light.png'} 
-                            alt="InterviewXpert Logo" 
-                            className="h-7 sm:h-9 object-contain"
-                            onError={(e) => {
-                                const origin = window.location.origin;
-                                e.currentTarget.src = isDark 
-                                    ? `${origin}/logo-partnership-dark.png` 
-                                    : `${origin}/logo-partnership-light.png`;
-                            }}
-                        />
-                    </a>
+                        <Logo className="h-7 sm:h-9 w-auto object-contain" isDark={isDark} />
+                    </Link>
                 </div>
                 <div className="flex items-center gap-3">
                     <DayNightToggle />

@@ -10,13 +10,13 @@ import { AuditLog, UserProfile } from '../types';
 import { Users, UserPlus, Shield, Activity, Clock, CheckCircle2, AlertCircle, X, Sparkles, Briefcase, Mail, Phone, Key } from 'lucide-react';
 
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
-  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyAsahVN3b4TfA_atPtKy8d5DPaJ0819F3w",
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "ats-1-7d621.firebaseapp.com",
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "ats-1-7d621",
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "ats-1-7d621.firebasestorage.app",
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "331729790419",
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:331729790419:web:dc5d5000bd95054c123b26",
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || "G-DRJXJB5154"
 };
 
 export const RecruiterTeamPanel: React.FC = () => {

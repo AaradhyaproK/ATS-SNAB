@@ -6,6 +6,7 @@ import { resolveJobOrInterviewDocument } from '../services/jobResolutionService'
 import { InterviewSubmission } from '../types';
 import { useTheme } from '../context/ThemeContext';
 import DayNightToggle from '../components/DayNightToggle';
+import Logo from '../components/Logo';
 
 const ClientView: React.FC = () => {
   const { theme, setTheme } = useTheme();
@@ -104,7 +105,7 @@ const ClientView: React.FC = () => {
                 </div>
                 <div className="flex flex-col md:flex-row items-center gap-4">
                     <div className="flex items-center gap-2 mr-2">
-                        <img src="/logo-partnership-light.png" alt="DSource Partnership" className="h-8 md:h-10 object-contain dark:brightness-200" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                        <Logo className="h-8 md:h-10 w-auto object-contain" />
                     </div>
                     <div className="px-4 py-1.5 bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 font-bold rounded-full text-sm flex items-center gap-2">
                         <i className="fas fa-check-circle"></i> {submissions.length} Shortlisted

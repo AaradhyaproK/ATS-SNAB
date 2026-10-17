@@ -1348,7 +1348,7 @@ const CreateInterview: React.FC = () => {
                   className={inputClass}
                   value={formData.jobLink}
                   onChange={handleFormChange}
-                  placeholder="e.g. https://dsource.in/careers/job-101 (Added manually by job creator, not AI)"
+                  placeholder="e.g. https://careers.company.com/job-101 (Added manually by job creator, not AI)"
                 />
               </div>
 

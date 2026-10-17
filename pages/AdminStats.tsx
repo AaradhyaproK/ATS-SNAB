@@ -75,8 +75,8 @@ const AdminStats: React.FC = () => {
   const [billConfig, setBillConfig] = useState({
     invoiceNumber: generateDefaultInvoiceId(),
     invoiceDate: getTodayFormattedDate(),
-    logoUrl: '/logosnab.png',
-    companyName: 'interviewxpert.in',
+    logoUrl: '/assets/logo-cropped-night.png',
+    companyName: 'SNAB hireX',
     companyEmail: 'hackathon746@gmail.com',
     companyPhone: '+91 95455 56045',
     companyAddress: 'SNAB Innovations',
@@ -482,7 +482,7 @@ const AdminStats: React.FC = () => {
         </table>
 
         <div className="pt-4 text-center mt-auto border-t-2 border-black">
-          <h4 className="font-black text-black mb-1 uppercase tracking-widest text-sm">DSource Platform Statistics</h4>
+          <h4 className="font-black text-black mb-1 uppercase tracking-widest text-sm">SNAB hireX Platform Statistics</h4>
           <p className="text-xs font-bold text-gray-500">This is a system-generated report.</p>
         </div>
       </div>
@@ -562,7 +562,7 @@ const AdminStats: React.FC = () => {
         </table>
 
         <div className="pt-4 text-center mt-auto border-t-2 border-black">
-          <h4 className="font-black text-black mb-1 uppercase tracking-widest text-sm">DSource Platform Statistics</h4>
+          <h4 className="font-black text-black mb-1 uppercase tracking-widest text-sm">SNAB hireX Platform Statistics</h4>
           <p className="text-xs font-bold text-gray-500">This is a system-generated report.</p>
         </div>
       </div>

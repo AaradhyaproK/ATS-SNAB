@@ -2569,7 +2569,7 @@ const CandidateInterviewFlow: React.FC = () => {
                            (interview as any).createdBy?.uid || 
                            (interview as any).userId || 
                            (interview as any).teamId || 
-                           'DSOURCE_PUBLIC_JOB_SEEKER_POOL';
+                           'PUBLIC_JOB_SEEKER_POOL';
       const parsedProfilePromise = analyzeResumeText(
         resumeTextContent,
         submittedFile?.name || resumeUrlToSave.split('/').pop()?.split('?')[0] || 'candidate-resume',
@@ -4071,7 +4071,7 @@ const InterviewSubmission: React.FC<{
                                   (state as any).recruiterUID ||
                                   (state as any).createdByUID ||
                                   (state as any).createdBy?.uid ||
-                                  'DSOURCE_PUBLIC_JOB_SEEKER_POOL';
+                                  'PUBLIC_JOB_SEEKER_POOL';
 
         if (targetRecruiterUID && candidateInfo?.email) {
           saveResumeDumpCandidate({

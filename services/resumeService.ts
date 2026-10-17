@@ -1104,7 +1104,7 @@ export const saveResumeDumpCandidate = async ({
     summaryText = `${nameStr} is a ${titleStr} with ${expStr} years of experience${locStr ? ` in ${locStr}` : ''}.${topSkills ? ` Key skills: ${topSkills}.` : ''}`;
   }
 
-  const isPublic = source === 'public_job_seeker_upload' || recruiterUID === 'DSOURCE_PUBLIC_JOB_SEEKER_POOL' || Boolean((normalizedProfile as any).isPublicUpload || (normalizedProfile as any).isGlobalPublicCandidate);
+  const isPublic = source === 'public_job_seeker_upload' || recruiterUID === 'PUBLIC_JOB_SEEKER_POOL' || recruiterUID === 'DSOURCE_PUBLIC_JOB_SEEKER_POOL' || Boolean((normalizedProfile as any).isPublicUpload || (normalizedProfile as any).isGlobalPublicCandidate);
 
   const resolvedDomain = normalizedProfile.domain || detectDomainFromText(`${normalizedProfile.currentTitle || ''} ${skillsArray.join(' ')} ${resumeText}`);
   const { sectors: resolvedSectors, departments: resolvedDepartments } = resolveCandidateSectorsAndDepartments({
