@@ -1,12 +1,12 @@
-# InterviewXpert.
+# ATS-SNAB
 
-AI-powered interview preparation and recruitment platform.
+Modern AI-Powered Applicant Tracking System (ATS) and Recruitment Platform.
 
 ## Features
 
-- **Candidates**: AI mock interviews, resume analyzer/builder, job matching, performance reports
-- **Recruiters**: Job posting, candidate management, AI-generated interview reports
-- **Admins**: Platform analytics, user management, transaction tracking
+- **Recruiters & Hiring Managers**: Job posting, resume parsing, candidate scoring, applicant tracking, and AI-assisted screening
+- **Candidates**: Application management, job matching, and candidate portal
+- **Admins**: Platform analytics, user management, and system tracking
 
 ## Tech Stack
 
@@ -30,4 +30,3 @@ Aaradhya Pathak, Nimesh Kulkarni & Bhavesh Patil
 ## License
 
 MIT
-# ixp-s3
