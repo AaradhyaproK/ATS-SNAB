@@ -5,7 +5,6 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { createPortal } from 'react-dom';
 import { SKILL_OPTIONS, JOB_CATEGORIES } from './Profile';
-import { ALL_JOB_SECTORS, ALL_JOB_DEPARTMENTS } from '../data/jobDomains';
 import { EDUCATION_QUALIFICATIONS, EDUCATION_SPECIALIZATIONS, EducationQualification } from '../data/allEducationDegrees';
 import { parseJobDescriptionText, ParsedJdResult, compileCompanyProfile } from '../services/geminiService';
 import { resolveStrictListedCity } from '../data/maharashtraCities';
@@ -818,19 +817,6 @@ const EditJobModal: React.FC<EditJobModalProps> = ({ jobId, onClose }) => {
                       placeholder="e.g. Design Engineer - Electrical"
                       className={inputClass}
                     />
-                  </div>
-
-                  <div>
-                    <label className={labelClass}>Functional Department</label>
-                    <select 
-                      name="category" 
-                      value={formData.category} 
-                      onChange={handleFormChange}
-                      className={inputClass}
-                    >
-                      <option value="">Select Department</option>
-                      {ALL_JOB_DEPARTMENTS.map(dept => <option key={dept} value={dept}>{dept}</option>)}
-                    </select>
                   </div>
                 </div>
               </div>

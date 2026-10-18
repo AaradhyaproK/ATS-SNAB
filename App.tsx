@@ -59,6 +59,7 @@ import RecruiterAllJobs from './pages/RecruiterAllJobs';
 import PublicJobSeekerUpload from './pages/PublicJobSeekerUpload';
 import RecruiterTemplatesPage from './pages/RecruiterTemplates';
 import HotLeads from './pages/HotLeads';
+import CandidatePortal from './pages/CandidatePortal';
 
 const DefaultRouteLoader = () => (
   <div className="flex items-center justify-center min-h-screen bg-background text-foreground">
@@ -70,7 +71,7 @@ const ProtectedRoute: React.FC<{
   children: React.ReactNode;
   role?: 'recruiter' | 'admin';
   loadingFallback?: React.ReactNode;
-}> = ({ children, role, loadingFallback }) => {
+}> = React.memo(({ children, role, loadingFallback }) => {
   const { user, userProfile, loading } = useAuth();
 
   if (loading) return <>{loadingFallback || <DefaultRouteLoader />}</>;
@@ -85,7 +86,7 @@ const ProtectedRoute: React.FC<{
   }
 
   return <>{children}</>;
-};
+});
 
 const HomeRoute: React.FC = () => {
   const { user, userProfile, loading } = useAuth();
@@ -174,6 +175,25 @@ const App: React.FC = () => {
                 <PublicJobSeekerUpload />
               </ThemeProvider>
             } />
+
+            {/* Candidate Portal & Dedicated Candidate Login */}
+            <Route path="candidate" element={
+              <ThemeProvider>
+                <CandidatePortal />
+              </ThemeProvider>
+            } />
+            <Route path="candidate/login" element={
+              <ThemeProvider>
+                <CandidatePortal initialTab="login" />
+              </ThemeProvider>
+            } />
+            <Route path="candidate/dashboard" element={
+              <ThemeProvider>
+                <CandidatePortal initialTab="dashboard" />
+              </ThemeProvider>
+            } />
+            <Route path="candidate-login" element={<Navigate to="/candidate/login" replace />} />
+            <Route path="candidate-portal" element={<Navigate to="/candidate" replace />} />
 
             {/* Admin Routes (No Standard Layout) */}
             <Route path="admin" element={

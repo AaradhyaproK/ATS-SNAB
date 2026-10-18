@@ -512,5 +512,7 @@ speak.isSpeaking = (): boolean => {
 speak.isMuted = getMuteTTS;
 speak.setMuted = setMuteTTS;
 
+export const stopSpeech = speak.stop;
 export { speak };
+
 

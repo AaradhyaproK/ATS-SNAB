@@ -1,6 +1,6 @@
 import { isEducationMatching, getEducationMatchDetails } from '../utils/educationMatcher';
 import { detectCandidateGender } from './resumeService';
-import { isJobMatchingDomain, resolveCandidateSectorsAndDepartments } from '../data/jobDomains';
+import { isJobMatchingDomain } from '../data/jobDomains';
 import { isLocationMatching } from '../data/maharashtraCities';
 
 export interface CandidateMatchProfile {
@@ -235,56 +235,7 @@ export function calculateJobMatchScore(job: any, candidate: CandidateMatchProfil
     failReasons.push(genResult.label);
   }
 
-  // 2. Industry Sector & Functional Department Matching (Weight: 25 points)
-  const { sectors: candSectors, departments: candDepts } = resolveCandidateSectorsAndDepartments(candidate);
-  
-  const jobSec = (job.industrySector || job.sector || job.industry || job.industryName || '').toLowerCase().trim();
-  const jobDept = (job.department || job.departments || job.category || job.roleCategory || job.roleName || '').toLowerCase().trim();
-  const jobText = `${job.title || ''} ${job.description || ''} ${jobDept} ${jobSec}`.toLowerCase();
-
-  let sectorMatched = false;
-  let matchedSectorName = '';
-  if (candSectors.length > 0) {
-    for (const sec of candSectors) {
-      const sLower = sec.toLowerCase();
-      const sParts = sLower.split(/[\s\/&]+/).filter(p => p.length > 2);
-      if (jobSec.includes(sLower) || sParts.some(p => jobText.includes(p))) {
-        sectorMatched = true;
-        matchedSectorName = sec;
-        break;
-      }
-    }
-  }
-
-  let deptMatched = false;
-  let matchedDeptName = '';
-  if (candDepts.length > 0) {
-    for (const dept of candDepts) {
-      const dLower = dept.toLowerCase();
-      const dParts = dLower.split(/[\s\/&]+/).filter(p => p.length > 2);
-      if (jobDept.includes(dLower) || dParts.some(p => jobText.includes(p))) {
-        deptMatched = true;
-        matchedDeptName = dept;
-        break;
-      }
-    }
-  }
-
-  let sectorDeptScore = 12; // Base baseline
-  if (sectorMatched && deptMatched) {
-    sectorDeptScore = 25;
-    matchReasons.unshift(`Industry Sector & Department Match (${matchedSectorName} • ${matchedDeptName})`);
-  } else if (sectorMatched) {
-    sectorDeptScore = 22;
-    matchReasons.unshift(`Industry Sector Matches (${matchedSectorName})`);
-  } else if (deptMatched) {
-    sectorDeptScore = 20;
-    matchReasons.unshift(`Functional Department Matches (${matchedDeptName})`);
-  } else if (candSectors.length === 0 && candDepts.length === 0) {
-    sectorDeptScore = 18;
-  }
-
-  // 3. Skills Matching (Weight: 25 points)
+  // 2. Skills Matching (Weight: 40 points)
   let rawJobSkills: string[] = [];
   if (Array.isArray(job.skills)) {
     rawJobSkills = job.skills;
@@ -313,14 +264,14 @@ export function calculateJobMatchScore(job: any, candidate: CandidateMatchProfil
 
   const totalReqSkills = rawJobSkills.length;
   const skillMatchCoverage = totalReqSkills > 0 ? matchedSkills.length / totalReqSkills : 0.75;
-  const skillScore = Math.round(skillMatchCoverage * 25);
+  const skillScore = Math.round(skillMatchCoverage * 40);
   const ratioText = totalReqSkills > 0 ? `${matchedSkills.length}/${totalReqSkills} skills matched` : 'Skills match';
 
   if (totalReqSkills > 0 && matchedSkills.length > 0) {
     matchReasons.push(`Matched ${matchedSkills.length} of ${totalReqSkills} skills (${matchedSkills.slice(0, 3).join(', ')})`);
   }
 
-  // 4. City & Location Matching (Weight: 10 points)
+  // 3. City & Location Matching (Weight: 10 points)
   const jobLoc = job.location || (job.city && job.state ? `${job.city}, ${job.state}` : job.city || job.state || '');
   const candLoc = candidate.location || candidate.city || '';
   const locResult = checkLocationMatch(candLoc, jobLoc);
@@ -331,7 +282,7 @@ export function calculateJobMatchScore(job: any, candidate: CandidateMatchProfil
     failReasons.push(locResult.details);
   }
 
-  // 5. Education Qualification & Specialization Matching (Weight: 15 points)
+  // 4. Education Qualification & Specialization Matching (Weight: 15 points)
   const reqEdu = (job.education || job.qualification || job.qualifications || '').toString().trim();
   
   let candEduStr = '';
@@ -369,7 +320,7 @@ export function calculateJobMatchScore(job: any, candidate: CandidateMatchProfil
     matchReasons.push('Open education requirements');
   }
 
-  // 6. Experience Matching (Weight: 15 points)
+  // 5. Experience Matching (Weight: 25 points)
   let minExp = 0;
   let maxExp = 0;
 
@@ -399,14 +350,14 @@ export function calculateJobMatchScore(job: any, candidate: CandidateMatchProfil
   const candExpNum = Math.max(0, parseFloat(String(rawCandExp).replace(/[^0-9.]/g, '')) || 0);
 
   let expMatch = true;
-  let expScore = 15;
+  let expScore = 25;
   let expLabel = `Experience Fits (${candExpNum} Yrs)`;
   const reqExpText = minExp > 0 ? (maxExp > minExp ? `${minExp} - ${maxExp} Yrs` : `${minExp}+ Yrs`) : 'Fresher / Any Experience';
 
   if (minExp > 0) {
     if (candExpNum >= minExp) {
       expMatch = true;
-      expScore = 15;
+      expScore = 25;
       expLabel = `Meets Experience (${candExpNum} Yrs vs ${minExp}+ Yrs required)`;
       matchReasons.push(`Meets experience criteria (${candExpNum} Yrs)`);
     } else {
@@ -418,12 +369,12 @@ export function calculateJobMatchScore(job: any, candidate: CandidateMatchProfil
     }
   } else {
     expMatch = true;
-    expScore = 15;
+    expScore = 25;
     matchReasons.push(`Experience eligible (${candExpNum} Yrs)`);
   }
 
   // Composite Score (0 - 100)
-  let compositeScore = genderScore + sectorDeptScore + skillScore + locationScore + eduScore + expScore;
+  let compositeScore = genderScore + skillScore + locationScore + eduScore + expScore;
 
   // If hard gender or education conflict, adjust
   if (isGenderStrictBlocked) {
@@ -471,16 +422,16 @@ export function calculateJobMatchScore(job: any, candidate: CandidateMatchProfil
     matchGrade,
     badgeColor,
     domainMatch: {
-      isMatch: domainMatched || sectorMatched || deptMatched,
-      domain: candDomainsList.join(', ') || matchedSectorName || matchedDeptName
+      isMatch: domainMatched,
+      domain: candDomainsList.join(', ') || 'General'
     },
     sectorMatch: {
-      isMatch: sectorMatched,
-      label: matchedSectorName ? `Sector: ${matchedSectorName}` : 'Sector Open'
+      isMatch: true,
+      label: 'Sector Open'
     },
     deptMatch: {
-      isMatch: deptMatched,
-      label: matchedDeptName ? `Dept: ${matchedDeptName}` : 'Dept Open'
+      isMatch: true,
+      label: 'Dept Open'
     },
     skillMatch: {
       score: skillScore,

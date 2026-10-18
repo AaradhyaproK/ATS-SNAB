@@ -7,7 +7,6 @@ import { SKILL_OPTIONS } from './Profile';
 import * as pdfjsLib from 'pdfjs-dist';
 import { ExternalLink, Sparkles, Building2, Check } from 'lucide-react';
 import { LocationCityInput } from '../components/LocationCityInput';
-import { ALL_JOB_SECTORS, ALL_JOB_DEPARTMENTS, detectSectorsFromText, detectDepartmentsFromText } from '../data/jobDomains';
 import { EDUCATION_QUALIFICATIONS, EDUCATION_SPECIALIZATIONS, EducationQualification } from '../data/allEducationDegrees';
 import { resolveStrictListedCity } from '../data/maharashtraCities';
 import { useCompanyRateLimits } from '../hooks/useRecruiterRateLimits';
@@ -229,28 +228,6 @@ const CreateInterview: React.FC = () => {
 
   const [eduInput, setEduInput] = useState('');
   const [selectedQualForEdu, setSelectedQualForEdu] = useState<string>('Graduate');
-  const [selectedJobSectors, setSelectedJobSectors] = useState<string[]>([]);
-  const [selectedJobDepartments, setSelectedJobDepartments] = useState<string[]>([]);
-
-  const toggleJobSector = (sectorName: string) => {
-    setSelectedJobSectors(prev => {
-      const updated = prev.includes(sectorName)
-        ? prev.filter(s => s !== sectorName)
-        : [...prev, sectorName];
-      setFormData(f => ({ ...f, sector: updated.join(', ') } as any));
-      return updated;
-    });
-  };
-
-  const toggleJobDepartment = (deptName: string) => {
-    setSelectedJobDepartments(prev => {
-      const updated = prev.includes(deptName)
-        ? prev.filter(d => d !== deptName)
-        : [...prev, deptName];
-      setFormData(f => ({ ...f, department: updated.join(', ') }));
-      return updated;
-    });
-  };
 
   const [formData, setFormData] = useState({
     jobNo: '',
@@ -641,12 +618,6 @@ const CreateInterview: React.FC = () => {
 
     const rawLocCandidate = `${parsed.location || ''} ${parsed.city || ''} ${parsed.state || ''} ${fullJdText}`;
     const resolvedStrictCity = resolveStrictListedCity(rawLocCandidate);
-
-    const autoSecs = detectSectorsFromText(`${parsed.title || ''} ${parsed.description || ''} ${parsed.department || ''}`);
-    const autoDepts = detectDepartmentsFromText(`${parsed.title || ''} ${parsed.description || ''} ${parsed.department || ''}`);
-
-    if (autoSecs.length > 0) setSelectedJobSectors(autoSecs);
-    if (autoDepts.length > 0) setSelectedJobDepartments(autoDepts);
 
     setFormData(prev => ({
       ...prev,
@@ -1248,86 +1219,6 @@ const CreateInterview: React.FC = () => {
               <div>
                 <label className={labelClass}>Job title / role</label>
                 <input name="title" type="text" required className={inputClass} value={formData.title} onChange={handleFormChange} placeholder="Senior Frontend Engineer" />
-              </div>
-
-              {/* Industry Sectors Multi-Select Checkmark Grid */}
-              <div className="xl:col-span-2 space-y-2.5 p-4 rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-white/[0.02]">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1">
-                  <label className="block text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
-                    Target Industry Sectors ({ALL_JOB_SECTORS.length}) <span className="text-red-500">*</span>
-                  </label>
-                  {selectedJobSectors.length > 0 && (
-                    <span className="text-[11px] font-extrabold text-emerald-500 bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
-                      {selectedJobSectors.length} Sectors Selected
-                    </span>
-                  )}
-                </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-1.5 sm:gap-2 pt-1">
-                  {ALL_JOB_SECTORS.map((sectorName) => {
-                    const isChecked = selectedJobSectors.some(s => s.toLowerCase() === sectorName.toLowerCase());
-                    return (
-                      <button
-                        key={sectorName}
-                        type="button"
-                        onClick={() => toggleJobSector(sectorName)}
-                        className={`flex items-center justify-between p-2 sm:p-2.5 rounded-xl border text-[10px] sm:text-[11px] leading-tight transition-all text-left cursor-pointer ${
-                          isChecked
-                            ? 'bg-emerald-600 text-white border-emerald-500 shadow-sm ring-1 ring-emerald-400 font-bold'
-                            : 'bg-white dark:bg-[#141414] border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300 hover:border-emerald-500/40 font-semibold'
-                        }`}
-                      >
-                        <span className="break-words font-semibold text-[10px] sm:text-[11px] min-w-0 flex-1 pr-1">{sectorName}</span>
-                        <div className={`w-3.5 h-3.5 rounded flex items-center justify-center shrink-0 border transition-all ${
-                          isChecked
-                            ? 'bg-white text-emerald-600 border-white'
-                            : 'border-slate-300 dark:border-white/20 bg-slate-100 dark:bg-white/5'
-                        }`}>
-                          {isChecked && <Check className="w-2.5 h-2.5 stroke-[3]" />}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Functional Departments Multi-Select Checkmark Grid */}
-              <div className="xl:col-span-2 space-y-2.5 p-4 rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-white/[0.02]">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1">
-                  <label className="block text-xs font-bold uppercase tracking-wider text-teal-600 dark:text-teal-400">
-                    Functional Departments ({ALL_JOB_DEPARTMENTS.length}) <span className="text-red-500">*</span>
-                  </label>
-                  {selectedJobDepartments.length > 0 && (
-                    <span className="text-[11px] font-extrabold text-teal-500 bg-teal-500/10 px-2.5 py-0.5 rounded-full border border-teal-500/20">
-                      {selectedJobDepartments.length} Departments Selected
-                    </span>
-                  )}
-                </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-1.5 sm:gap-2 pt-1">
-                  {ALL_JOB_DEPARTMENTS.map((deptName) => {
-                    const isChecked = selectedJobDepartments.some(d => d.toLowerCase() === deptName.toLowerCase());
-                    return (
-                      <button
-                        key={deptName}
-                        type="button"
-                        onClick={() => toggleJobDepartment(deptName)}
-                        className={`flex items-center justify-between p-2 sm:p-2.5 rounded-xl border text-[10px] sm:text-[11px] leading-tight transition-all text-left cursor-pointer ${
-                          isChecked
-                            ? 'bg-teal-600 text-white border-teal-500 shadow-sm ring-1 ring-teal-400 font-bold'
-                            : 'bg-white dark:bg-[#141414] border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300 hover:border-teal-500/40 font-semibold'
-                        }`}
-                      >
-                        <span className="break-words font-semibold text-[10px] sm:text-[11px] min-w-0 flex-1 pr-1">{deptName}</span>
-                        <div className={`w-3.5 h-3.5 rounded flex items-center justify-center shrink-0 border transition-all ${
-                          isChecked
-                            ? 'bg-white text-teal-600 border-white'
-                            : 'border-slate-300 dark:border-white/20 bg-slate-100 dark:bg-white/5'
-                        }`}>
-                          {isChecked && <Check className="w-2.5 h-2.5 stroke-[3]" />}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
               </div>
 
               <div className="xl:col-span-2">

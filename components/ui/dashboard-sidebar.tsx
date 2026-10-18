@@ -1,3 +1,5 @@
+import React, { memo } from 'react';
+import { Link } from 'react-router-dom';
 import {
   BriefcaseBusiness,
   ClipboardList,
@@ -64,7 +66,7 @@ const recruiterNavGroups: NavGroupData[] = [
       },
       {
         id: 'hot-leads',
-        title: 'Hot Leads',
+        title: 'Candidate Responses',
         icon: Flame,
         href: '/recruiter/hot-leads',
         match: (path) => path === '/recruiter/hot-leads',
@@ -87,7 +89,7 @@ const recruiterNavGroups: NavGroupData[] = [
   },
 ];
 
-function NavItem({
+const NavItem = memo(function NavItem({
   item,
   activePath,
   onNavigate,
@@ -99,14 +101,14 @@ function NavItem({
   const isActive = item.match ? item.match(activePath) : activePath === item.href;
 
   return (
-    <button
-      type="button"
+    <Link
+      to={item.href}
       onClick={() => onNavigate(item.href)}
       className={cn(
-        'group flex w-full items-center justify-between rounded-[6px] px-2 py-1.5 text-left transition-all duration-200',
+        'group flex w-full items-center justify-between rounded-[6px] px-2 py-1.5 text-left transition-colors duration-150 active:scale-[0.98] select-none cursor-pointer',
         isActive
-          ? 'bg-white/[0.07] text-white font-medium'
-          : 'text-[#8f8f8f] hover:bg-white/[0.04] hover:text-white'
+          ? 'bg-white/[0.08] text-white font-medium shadow-2xs'
+          : 'text-[#8f8f8f] hover:bg-white/[0.04] hover:text-white active:bg-white/[0.06]'
       )}
     >
       <span className="flex min-w-0 items-center gap-2">
@@ -132,11 +134,11 @@ function NavItem({
           </span>
         )}
       </span>
-    </button>
+    </Link>
   );
-}
+});
 
-export function DashboardSidebar({
+export const DashboardSidebar = memo(function DashboardSidebar({
   className,
   activePath,
   onNavigate,
@@ -191,19 +193,19 @@ export function DashboardSidebar({
                         {manageSubItems.map((subItem) => {
                           const isActive = activeManageSection === subItem.id;
                           return (
-                            <button
+                            <Link
                               key={subItem.id}
-                              type="button"
+                              to={subItem.href}
                               onClick={() => handleNavigate(subItem.href)}
                               className={cn(
-                                'group flex w-full items-center rounded-[6px] px-2 py-1.5 text-left transition-colors',
+                                'group flex w-full items-center rounded-[6px] px-2 py-1.5 text-left transition-colors duration-150 active:scale-[0.98] select-none cursor-pointer',
                                 isActive
-                                  ? 'bg-white/[0.07] text-white font-medium'
+                                  ? 'bg-white/[0.08] text-white font-medium'
                                   : 'text-[#8f8f8f] hover:bg-white/[0.04] hover:text-white'
                               )}
                             >
                               <span className="geist-small truncate">{subItem.title}</span>
-                            </button>
+                            </Link>
                           );
                         })}
                       </div>
@@ -215,19 +217,19 @@ export function DashboardSidebar({
                         {assessmentSubItems.map((subItem) => {
                           const isActive = activeAssessmentSection === subItem.id;
                           return (
-                            <button
+                            <Link
                               key={subItem.id}
-                              type="button"
+                              to={subItem.href}
                               onClick={() => handleNavigate(subItem.href)}
                               className={cn(
-                                'group flex w-full items-center rounded-[6px] px-2 py-1.5 text-left transition-colors',
+                                'group flex w-full items-center rounded-[6px] px-2 py-1.5 text-left transition-colors duration-150 active:scale-[0.98] select-none cursor-pointer',
                                 isActive
-                                  ? 'bg-white/[0.07] text-white font-medium'
+                                  ? 'bg-white/[0.08] text-white font-medium'
                                   : 'text-[#8f8f8f] hover:bg-white/[0.04] hover:text-white'
                               )}
                             >
                               <span className="geist-small truncate">{subItem.title}</span>
-                            </button>
+                            </Link>
                           );
                         })}
                       </div>
@@ -240,6 +242,6 @@ export function DashboardSidebar({
         </div>
       </aside>
   );
-}
+});
 
 export default DashboardSidebar;

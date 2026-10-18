@@ -182,7 +182,7 @@ export default function HotLeads() {
           accessCode: job?.accessCode || job?.jobNo || '',
           interviewLink: job?.interviewLink || `${window.location.origin}/#/interview/${jobId}`,
           deadline,
-          isJobActive: isJobStatusActive(job),
+          isJobActive: job ? isJobStatusActive(job) : true,
           appliedAt: app.appliedAt || app.createdAt,
           hasSubmitted: false,
           source: app.source || 'Job Application',
@@ -309,7 +309,7 @@ export default function HotLeads() {
 
       const list = Array.from(leadsMap.values());
       // Active jobs policy: candidates are active if job is active or if they have already submitted, and not deleted
-      const validLeads = list.filter((lead) => !deletedLeadKeysRef.current.has(lead.id) && (lead.hasSubmitted || lead.isJobActive));
+      const validLeads = list.filter((lead) => !deletedLeadKeysRef.current.has(lead.id) && (lead.hasSubmitted || lead.isJobActive !== false));
       validLeads.sort((a, b) => {
         const timeA = a.submittedAt?.toMillis
           ? a.submittedAt.toMillis()
@@ -436,21 +436,48 @@ export default function HotLeads() {
       }
     }
 
-    // B. Query Candidate Applications
-    const appsQ = query(collection(db, 'candidateApplications'), orderBy('appliedAt', 'desc'));
+    // B. Query Candidate Applications & Job Applications
+    let candidateAppsList: any[] = [];
+    let jobAppsList: any[] = [];
+
+    const updateMergedApplications = () => {
+      const combinedMap = new Map<string, any>();
+      candidateAppsList.forEach((a) => combinedMap.set(a.id, a));
+      jobAppsList.forEach((a) => {
+        if (!combinedMap.has(a.id)) {
+          combinedMap.set(a.id, a);
+        }
+      });
+      applicationsList = Array.from(combinedMap.values());
+      mergeAllData();
+    };
+
+    const appsQ = query(collection(db, 'candidateApplications'));
     const unsubApps = onSnapshot(
       appsQ,
       (snap) => {
-        applicationsList = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-        mergeAllData();
+        candidateAppsList = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        updateMergedApplications();
       },
       () => {
-        mergeAllData();
+        updateMergedApplications();
+      }
+    );
+
+    const jobAppsQ = query(collection(db, 'jobApplications'));
+    const unsubJobApps = onSnapshot(
+      jobAppsQ,
+      (snap) => {
+        jobAppsList = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        updateMergedApplications();
+      },
+      () => {
+        updateMergedApplications();
       }
     );
 
     // C. Query Top-Level Candidate Responses
-    const respQ = query(collection(db, 'candidateResponses'), orderBy('savedAt', 'desc'));
+    const respQ = query(collection(db, 'candidateResponses'));
     const unsubResp = onSnapshot(
       respQ,
       (snap) => {
@@ -465,6 +492,7 @@ export default function HotLeads() {
     return () => {
       unsubsJobsList.forEach((u) => u());
       unsubApps();
+      unsubJobApps();
       unsubResp();
     };
   }, [userUid, userTeamId, userParentRecruiterId, isAdmin, (userProfile as any)?.primaryRecruiterUID]);
@@ -1026,10 +1054,10 @@ export default function HotLeads() {
             </div>
             <h1 className="geist-page-title mt-1 text-gray-900 dark:text-white flex items-center gap-2">
               <Flame className="w-5 h-5 text-amber-500 fill-amber-500/20 animate-pulse" />
-              <span>Hot Leads & Responses</span>
+              <span>Candidate Responses</span>
             </h1>
             <p className="geist-small mt-0.5 text-gray-600 dark:text-[#8f8f8f] max-w-3xl text-xs">
-              Track candidate applications across all posted jobs, view AI interview responses at a glance, and send one-click WhatsApp and Email reminders for pending submissions.
+              Track candidate applications, entire interview responses & submissions across all posted jobs in one place.
             </p>
           </div>
 
@@ -1051,7 +1079,7 @@ export default function HotLeads() {
           <div className="px-4 py-4 sm:px-6 lg:px-7">
             <p className="geist-label uppercase text-[10px] text-gray-500 dark:text-[#8f8f8f] font-semibold tracking-wider flex items-center gap-1.5">
               <User className="size-3 text-gray-400 dark:text-[#8f8f8f]" />
-              <span>Total Hot Leads</span>
+              <span>Total Candidate Responses</span>
             </p>
             <div className="geist-page-title mt-1.5 text-gray-900 dark:text-white font-bold">{stats.total}</div>
             <p className="geist-small mt-0.5 text-[11px] text-gray-500 dark:text-[#6b7280]">All candidate applicants across jobs</p>
@@ -1367,7 +1395,7 @@ export default function HotLeads() {
               <p className="geist-small mt-1 text-gray-500 dark:text-[#8f8f8f] max-w-sm mx-auto">
                 {searchTerm || selectedJobId !== 'all' || scoreFilter !== 'all'
                   ? 'No applicants match the selected filters. Try clearing your search or filter options.'
-                  : 'When candidates apply for your posted jobs or submit AI video interviews, they will automatically appear here as hot leads!'}
+                  : 'When candidates apply for your posted jobs or submit AI video interviews, entire responses will automatically appear here!'}
               </p>
             </div>
           ) : (

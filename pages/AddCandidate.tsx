@@ -43,7 +43,6 @@ import {
 import { uploadToCloudinary } from '../services/api';
 import { LocationCityInput } from '../components/LocationCityInput';
 import { EducationInput } from '../components/EducationInput';
-import { ALL_JOB_DEPARTMENTS, ALL_JOB_SECTORS } from '../data/jobDomains';
 
 type TabMode = 'upload' | 'manual' | 'bulk';
 
@@ -1048,7 +1047,7 @@ export const AddCandidate: React.FC = () => {
               <p className="geist-label uppercase text-[11px] text-[#6b7280] font-semibold tracking-wider">
                 2. Professional Role, Department & Location (Key Matching Criteria)
               </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+              <div className="grid grid-cols-1 gap-3.5">
                 <div>
                   <label className="geist-label text-xs uppercase text-[#8f8f8f] block mb-1 font-semibold">
                     Current Designation / Role
@@ -1060,38 +1059,6 @@ export const AddCandidate: React.FC = () => {
                     onChange={(e) => setManualForm({ ...manualForm, currentTitle: e.target.value })}
                     className="geist-caption h-9 w-full rounded-[6px] border border-white/[0.11] bg-white/[0.03] px-3 text-xs text-white placeholder:text-[#6b7280] focus:border-white/[0.28] focus:bg-white/[0.05] outline-none"
                   />
-                </div>
-                <div>
-                  <label className="geist-label text-xs uppercase text-[#8f8f8f] block mb-1 font-semibold">
-                    Functional Department (Matches Job Department)
-                  </label>
-                  <select
-                    value={manualForm.department}
-                    onChange={(e) => setManualForm({ ...manualForm, department: e.target.value })}
-                    className="geist-caption h-9 w-full rounded-[6px] border border-white/[0.11] bg-white/[0.03] px-3 text-xs text-white outline-none focus:border-white/[0.28] focus:bg-white/[0.05] cursor-pointer"
-                  >
-                    {ALL_JOB_DEPARTMENTS.map((dept) => (
-                      <option key={dept} value={dept} className="bg-[#111] text-white">
-                        {dept}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="geist-label text-xs uppercase text-[#8f8f8f] block mb-1 font-semibold">
-                    Industry / Sector
-                  </label>
-                  <select
-                    value={manualForm.sector}
-                    onChange={(e) => setManualForm({ ...manualForm, sector: e.target.value })}
-                    className="geist-caption h-9 w-full rounded-[6px] border border-white/[0.11] bg-white/[0.03] px-3 text-xs text-white outline-none focus:border-white/[0.28] focus:bg-white/[0.05] cursor-pointer"
-                  >
-                    {ALL_JOB_SECTORS.map((sec) => (
-                      <option key={sec} value={sec} className="bg-[#111] text-white">
-                        {sec}
-                      </option>
-                    ))}
-                  </select>
                 </div>
               </div>
 

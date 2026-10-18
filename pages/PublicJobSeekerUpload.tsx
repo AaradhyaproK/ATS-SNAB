@@ -15,7 +15,7 @@ import { EmploymentTypeMultiSelect } from '../components/EmploymentTypeMultiSele
 import { uploadToCloudinary } from '../services/api';
 import { ALL_EDUCATION_DEGREES } from '../data/allEducationDegrees';
 import { MAHARASHTRA_CITIES } from '../data/maharashtraCities';
-import { ALL_JOB_DOMAINS, ALL_JOB_SECTORS, ALL_JOB_DEPARTMENTS, detectDomainFromText, detectDomainsFromText, detectSectorsFromText, detectDepartmentsFromText } from '../data/jobDomains';
+import { ALL_JOB_DOMAINS, detectDomainFromText, detectDomainsFromText, detectSectorsFromText, detectDepartmentsFromText } from '../data/jobDomains';
 import { useMessageBox } from '../components/MessageBox';
 import { useTheme } from '../context/ThemeContext';
 import { Link, useNavigate } from 'react-router-dom';
@@ -1122,22 +1122,6 @@ export default function PublicJobSeekerUpload() {
       messageBox.showError("Please enter your Expected Salary.");
       return;
     }
-    if (candidateSectors.length < 2) {
-      messageBox.showError("Please select at least 2 Target Industry Sectors (Min 2, Max 5).");
-      return;
-    }
-    if (candidateSectors.length > 5) {
-      messageBox.showError("Please select a maximum of 5 Target Industry Sectors.");
-      return;
-    }
-    if (candidateDepartments.length < 2) {
-      messageBox.showError("Please select at least 2 Functional Departments (Min 2, Max 5).");
-      return;
-    }
-    if (candidateDepartments.length > 5) {
-      messageBox.showError("Please select a maximum of 5 Functional Departments.");
-      return;
-    }
     if (!selectedFile && !existingEmailCandidate) {
       messageBox.showError("Please attach your Resume file (PDF, DOCX, TXT).");
       return;
@@ -1330,6 +1314,18 @@ export default function PublicJobSeekerUpload() {
               {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4 text-indigo-600" />}
             </button>
 
+            <Link
+              to="/candidate/login"
+              className={`inline-flex items-center gap-1.5 text-xs font-bold px-3.5 py-2 rounded-xl transition-all shadow-sm border ${
+                isDark 
+                  ? 'bg-purple-500/15 border-purple-500/30 text-purple-300 hover:bg-purple-500/25' 
+                  : 'bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100'
+              }`}
+            >
+              <User className="w-4 h-4 text-purple-500" />
+              <span>Candidate Login</span>
+            </Link>
+
             <button
               onClick={() => setShowEmailLookup(!showEmailLookup)}
               className={`inline-flex items-center gap-1.5 text-xs font-bold px-3.5 py-2 rounded-xl transition-all shadow-sm cursor-pointer border ${
@@ -1339,7 +1335,7 @@ export default function PublicJobSeekerUpload() {
               }`}
             >
               <Mail className="w-4 h-4" />
-              <span>Already Submitted Resume?</span>
+              <span>Lookup Profile</span>
             </button>
 
             <Link
@@ -2105,142 +2101,12 @@ export default function PublicJobSeekerUpload() {
                 </div>
               </div>
 
-              {/* CARD BLOCK 5: TARGET INDUSTRY SECTORS (MULTI-SELECT: MIN 2, MAX 5) */}
-              <div className={`rounded-3xl p-4 sm:p-6 border shadow-lg space-y-4 ${
-                isDark ? 'bg-[#0d0d0d] border-white/[0.1]' : 'bg-white border-slate-200'
-              }`}>
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1.5 border-b border-slate-200 dark:border-white/10 pb-3">
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider">
-                      5. Select Target Industry Sectors <span className="text-red-500">*</span>
-                    </label>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                      Select minimum 2 and maximum 5 target industry sectors:
-                    </p>
-                  </div>
-                  <span className={`text-xs font-extrabold px-3 py-1 rounded-full border shrink-0 ${
-                    candidateSectors.length >= 2 && candidateSectors.length <= 5
-                      ? 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20'
-                      : 'text-amber-500 bg-amber-500/10 border-amber-500/20'
-                  }`}>
-                    {candidateSectors.length} / 5 Selected (Min 2, Max 5)
-                  </span>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <label className="block text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
-                      Industry Sectors ({ALL_JOB_SECTORS.length}) <span className="text-red-500">*</span>
-                    </label>
-                    <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400">
-                      {candidateSectors.length} Active (Min 2, Max 5)
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-1.5 sm:gap-2">
-                    {ALL_JOB_SECTORS.map((sectorName) => {
-                      const isSelected = candidateSectors.some(s => s.toLowerCase() === sectorName.toLowerCase());
-                      return (
-                        <button
-                          key={sectorName}
-                          type="button"
-                          onClick={() => toggleSector(sectorName)}
-                          className={`flex items-center justify-between p-2 sm:p-2.5 rounded-xl border text-[10px] sm:text-[11px] leading-tight transition-all text-left cursor-pointer ${
-                            isSelected
-                              ? 'bg-emerald-600 text-white border-emerald-500 shadow-sm ring-1 ring-emerald-400 font-bold'
-                              : isDark
-                              ? 'bg-[#141414] border-white/10 text-slate-300 hover:border-emerald-500/40 hover:bg-[#1a1a1a] font-semibold'
-                              : 'bg-slate-50 border-slate-200 text-slate-700 hover:border-emerald-400 hover:bg-emerald-50/50 font-semibold'
-                          }`}
-                        >
-                          <span className="break-words font-semibold text-[10px] sm:text-[11px] min-w-0 flex-1 pr-1">{sectorName}</span>
-                          <div className={`w-3.5 h-3.5 rounded flex items-center justify-center shrink-0 border transition-all ${
-                            isSelected
-                              ? 'bg-white text-emerald-600 border-white'
-                              : isDark
-                              ? 'border-white/20 bg-white/5'
-                              : 'border-slate-300 bg-white'
-                          }`}>
-                            {isSelected && <Check className="w-2.5 h-2.5 stroke-[3]" />}
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-
-              {/* CARD BLOCK 6: TARGET FUNCTIONAL DEPARTMENTS (MULTI-SELECT: MIN 2, MAX 5) */}
-              <div className={`rounded-3xl p-4 sm:p-6 border shadow-lg space-y-4 ${
-                isDark ? 'bg-[#0d0d0d] border-white/[0.1]' : 'bg-white border-slate-200'
-              }`}>
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1.5 border-b border-slate-200 dark:border-white/10 pb-3">
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider">
-                      6. Select Functional Departments ({ALL_JOB_DEPARTMENTS.length}) <span className="text-red-500">*</span>
-                    </label>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                      Select minimum 2 and maximum 5 functional departments:
-                    </p>
-                  </div>
-                  <span className={`text-xs font-extrabold px-3 py-1 rounded-full border shrink-0 ${
-                    candidateDepartments.length >= 2 && candidateDepartments.length <= 5
-                      ? 'text-teal-500 bg-teal-500/10 border-teal-500/20'
-                      : 'text-amber-500 bg-amber-500/10 border-amber-500/20'
-                  }`}>
-                    {candidateDepartments.length} / 5 Selected (Min 2, Max 5)
-                  </span>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <label className="block text-xs font-bold uppercase tracking-wider text-teal-600 dark:text-teal-400">
-                      Functional Departments ({ALL_JOB_DEPARTMENTS.length}) <span className="text-red-500">*</span>
-                    </label>
-                    <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400">
-                      {candidateDepartments.length} Active (Min 2, Max 5)
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-1.5 sm:gap-2">
-                    {ALL_JOB_DEPARTMENTS.map((deptName) => {
-                      const isSelected = candidateDepartments.some(d => d.toLowerCase() === deptName.toLowerCase());
-                      return (
-                        <button
-                          key={deptName}
-                          type="button"
-                          onClick={() => toggleDepartment(deptName)}
-                          className={`flex items-center justify-between p-2 sm:p-2.5 rounded-xl border text-[10px] sm:text-[11px] leading-tight transition-all text-left cursor-pointer ${
-                            isSelected
-                              ? 'bg-teal-600 text-white border-teal-500 shadow-sm ring-1 ring-teal-400 font-bold'
-                              : isDark
-                              ? 'bg-[#141414] border-white/10 text-slate-300 hover:border-teal-500/40 hover:bg-[#1a1a1a] font-semibold'
-                              : 'bg-slate-50 border-slate-200 text-slate-700 hover:border-teal-400 hover:bg-teal-50/50 font-semibold'
-                          }`}
-                        >
-                          <span className="break-words font-semibold text-[10px] sm:text-[11px] min-w-0 flex-1 pr-1">{deptName}</span>
-                          <div className={`w-3.5 h-3.5 rounded flex items-center justify-center shrink-0 border transition-all ${
-                            isSelected
-                              ? 'bg-white text-teal-600 border-white'
-                              : isDark
-                              ? 'border-white/20 bg-white/5'
-                              : 'border-slate-300 bg-white'
-                          }`}>
-                            {isSelected && <Check className="w-2.5 h-2.5 stroke-[3]" />}
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-
-              {/* CARD BLOCK 7: NOTES & PREFERRED DOMAIN ROLES */}
+              {/* CARD BLOCK 5: NOTES & PREFERRED DOMAIN ROLES */}
               <div className={`rounded-3xl p-4 sm:p-6 border shadow-lg space-y-2.5 ${
                 isDark ? 'bg-[#0d0d0d] border-white/[0.1]' : 'bg-white border-slate-200'
               }`}>
                 <label className="block text-xs font-bold uppercase tracking-wider">
-                  7. Preferred Domain Roles & Additional Notes (Optional)
+                  5. Preferred Domain Roles & Additional Notes (Optional)
                 </label>
                 <textarea
                   rows={2}
@@ -2382,118 +2248,6 @@ export default function PublicJobSeekerUpload() {
                     >
                       <X className="w-5 h-5" />
                     </button>
-                  </div>
-
-                  {/* Multi-Domain Interactive Live Selection Grid */}
-                  <div className="space-y-4 pb-3 border-b border-slate-200 dark:border-white/10">
-                    {/* Sectors Live */}
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <label className="block text-[11px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
-                          Target Industry Sectors ({ALL_JOB_SECTORS.length})
-                        </label>
-                        <span className="text-[11px] font-extrabold text-emerald-500 bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
-                          {(submittedCandidateData.domains || candidateDomains).length} Criteria Active
-                        </span>
-                      </div>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-1.5 max-h-44 overflow-y-auto pr-1">
-                        {ALL_JOB_SECTORS.map((sectorName) => {
-                          const activeDomains = submittedCandidateData.domains || candidateDomains;
-                          const isSelected = activeDomains.some(d => d.toLowerCase() === sectorName.toLowerCase());
-
-                          const handleToggleSectorLive = () => {
-                            let updated: string[];
-                            if (isSelected) {
-                              updated = activeDomains.filter(d => d.toLowerCase() !== sectorName.toLowerCase());
-                            } else {
-                              updated = [...activeDomains, sectorName];
-                            }
-                            setCandidateDomains(updated);
-                            setCandidateDomain(updated.join(', '));
-                            handleUpdateCandidateCriteria('domains', updated);
-                          };
-
-                          return (
-                            <button
-                              key={sectorName}
-                              type="button"
-                              onClick={handleToggleSectorLive}
-                              className={`flex items-center justify-between p-2 rounded-lg border text-[11px] transition-all cursor-pointer ${
-                                isSelected
-                                  ? 'bg-emerald-600 text-white border-emerald-500 shadow-sm font-bold'
-                                  : isDark
-                                  ? 'bg-[#141414] border-white/10 text-slate-300 hover:border-emerald-500/40 hover:bg-[#1a1a1a] font-semibold'
-                                  : 'bg-slate-50 border-slate-200 text-slate-700 hover:border-emerald-400 hover:bg-emerald-50/50 font-semibold'
-                              }`}
-                            >
-                              <span className="truncate pr-1">{sectorName}</span>
-                              <div className={`w-3.5 h-3.5 rounded flex items-center justify-center shrink-0 border transition-all ${
-                                isSelected
-                                  ? 'bg-white text-emerald-600 border-white'
-                                  : isDark
-                                  ? 'border-white/20 bg-white/5'
-                                  : 'border-slate-300 bg-white'
-                              }`}>
-                                {isSelected && <Check className="w-2.5 h-2.5 stroke-[3]" />}
-                              </div>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    {/* Departments Live */}
-                    <div className="space-y-2 pt-2 border-t border-slate-200 dark:border-white/10">
-                      <div className="flex items-center justify-between">
-                        <label className="block text-[11px] font-bold uppercase tracking-wider text-teal-600 dark:text-teal-400">
-                          Target Functional Departments ({ALL_JOB_DEPARTMENTS.length})
-                        </label>
-                      </div>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-1.5 max-h-44 overflow-y-auto pr-1">
-                        {ALL_JOB_DEPARTMENTS.map((deptName) => {
-                          const activeDomains = submittedCandidateData.domains || candidateDomains;
-                          const isSelected = activeDomains.some(d => d.toLowerCase() === deptName.toLowerCase());
-
-                          const handleToggleDeptLive = () => {
-                            let updated: string[];
-                            if (isSelected) {
-                              updated = activeDomains.filter(d => d.toLowerCase() !== deptName.toLowerCase());
-                            } else {
-                              updated = [...activeDomains, deptName];
-                            }
-                            setCandidateDomains(updated);
-                            setCandidateDomain(updated.join(', '));
-                            handleUpdateCandidateCriteria('domains', updated);
-                          };
-
-                          return (
-                            <button
-                              key={deptName}
-                              type="button"
-                              onClick={handleToggleDeptLive}
-                              className={`flex items-center justify-between p-2 rounded-lg border text-[11px] transition-all cursor-pointer ${
-                                isSelected
-                                  ? 'bg-teal-600 text-white border-teal-500 shadow-sm font-bold'
-                                  : isDark
-                                  ? 'bg-[#141414] border-white/10 text-slate-300 hover:border-teal-500/40 hover:bg-[#1a1a1a] font-semibold'
-                                  : 'bg-slate-50 border-slate-200 text-slate-700 hover:border-teal-400 hover:bg-teal-50/50 font-semibold'
-                              }`}
-                            >
-                              <span className="truncate pr-1">{deptName}</span>
-                              <div className={`w-3.5 h-3.5 rounded flex items-center justify-center shrink-0 border transition-all ${
-                                isSelected
-                                  ? 'bg-white text-teal-600 border-white'
-                                  : isDark
-                                  ? 'border-white/20 bg-white/5'
-                                  : 'border-slate-300 bg-white'
-                              }`}>
-                                {isSelected && <Check className="w-2.5 h-2.5 stroke-[3]" />}
-                              </div>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">

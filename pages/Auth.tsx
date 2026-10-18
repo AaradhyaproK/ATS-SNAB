@@ -284,6 +284,15 @@ const AuthPage: React.FC = () => {
                   {mode === 'login' ? 'Request it' : 'Sign in'}
                 </button>
               </p>
+
+              <div className="mt-4 pt-3 border-t border-slate-200 dark:border-white/10 text-center">
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Are you a Job Seeker?{' '}
+                  <Link to="/candidate/login" className="font-bold text-emerald-600 dark:text-emerald-400 hover:underline">
+                    Candidate Login →
+                  </Link>
+                </p>
+              </div>
             </form>
           )}
         </div>

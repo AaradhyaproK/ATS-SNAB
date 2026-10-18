@@ -66,10 +66,12 @@ const LayoutContent: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   const showRecruiterSidebar = location.pathname.startsWith('/recruiter/') || Boolean(user && userProfile?.role === 'recruiter');
   const isRecruiterPath = showRecruiterSidebar;
   const isRecruiterDashboard = location.pathname === '/recruiter/jobs';
-  const navigateFromSidebar = (href: string) => {
-    navigate(href);
+  const navigateFromSidebar = React.useCallback((href: string) => {
+    React.startTransition(() => {
+      navigate(href);
+    });
     setIsMobileMenuOpen(false);
-  };
+  }, [navigate]);
 
   return (
     <div className={`${isRecruiterPath ? 'recruiter-shell' : ''} min-h-screen bg-background text-foreground font-sans selection:bg-primary/20 selection:text-foreground flex flex-col transition-colors duration-300`}>
@@ -126,7 +128,7 @@ const LayoutContent: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                       All Jobs
                     </Link>
                     <Link to="/recruiter/hot-leads" className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-300 ${isActive('/recruiter/hot-leads') ? 'bg-white dark:bg-white/10 text-gray-900 dark:text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-white/5'}`}>
-                      Hot Leads
+                      Candidate Responses
                     </Link>
                     <Link to="/recruiter/resume-dump" className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-300 ${isActive('/recruiter/resume-dump') ? 'bg-white dark:bg-white/10 text-gray-900 dark:text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-white/5'}`}>
                       Resume Dump
@@ -373,7 +375,7 @@ const LayoutContent: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                     <Link to="/recruiter/interview/create" onClick={() => setIsMobileMenuOpen(false)} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium ${isActive('/recruiter/interview/create') ? 'bg-primary/10 text-primary' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-white'}`}><i className="fas fa-plus-circle w-5 text-center"></i> Post Job</Link>
                     <Link to="/recruiter/add-candidate" onClick={() => setIsMobileMenuOpen(false)} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium ${isActive('/recruiter/add-candidate') ? 'bg-primary/10 text-primary' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-white'}`}><i className="fas fa-user-plus w-5 text-center"></i> Add Candidate</Link>
                     <Link to="/recruiter/all-jobs" onClick={() => setIsMobileMenuOpen(false)} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium ${isActive('/recruiter/all-jobs') || isActive('/recruiter/interviews') ? 'bg-primary/10 text-primary' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-white'}`}><i className="fas fa-briefcase w-5 text-center"></i> All Jobs</Link>
-                    <Link to="/recruiter/hot-leads" onClick={() => setIsMobileMenuOpen(false)} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium ${isActive('/recruiter/hot-leads') ? 'bg-primary/10 text-primary' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-white'}`}><i className="fas fa-fire w-5 text-center text-amber-500"></i> Hot Leads</Link>
+                    <Link to="/recruiter/hot-leads" onClick={() => setIsMobileMenuOpen(false)} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium ${isActive('/recruiter/hot-leads') ? 'bg-primary/10 text-primary' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-white'}`}><i className="fas fa-fire w-5 text-center text-amber-500"></i> Candidate Responses</Link>
                     <Link to="/recruiter/resume-dump" onClick={() => setIsMobileMenuOpen(false)} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium ${isActive('/recruiter/resume-dump') ? 'bg-primary/10 text-primary' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-white'}`}><i className="fas fa-archive w-5 text-center"></i> Resume Dump</Link>
                     <Link to="/recruiter/tests" onClick={() => setIsMobileMenuOpen(false)} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium ${isActive('/recruiter/tests') ? 'bg-primary/10 text-primary' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-white'}`}><i className="fas fa-clipboard-list w-5 text-center"></i> Assessments</Link>
                   </>
@@ -452,8 +454,8 @@ const LayoutContent: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   );
 };
 
-const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+const Layout: React.FC<{ children: React.ReactNode }> = React.memo(({ children }) => (
   <LayoutContent>{children}</LayoutContent>
-);
+));
 
 export default Layout;

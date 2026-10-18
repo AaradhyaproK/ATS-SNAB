@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { collection, deleteDoc, deleteField, doc, getDocs, onSnapshot, query, serverTimestamp, setDoc, updateDoc, where } from 'firebase/firestore';
 import * as pdfjsLib from 'pdfjs-dist';
 import * as mammoth from 'mammoth';
-import { Award, Ban, Clock, Edit3, Filter, GraduationCap, MapPin, Plus, Archive, Briefcase, Check, CheckCircle2, CheckSquare, ChevronDown, Copy, ExternalLink, FileText, Mail, MessageSquare, RotateCcw, Search, Send, SlidersHorizontal, Sparkles, Square, Trash2, UploadCloud, UserCheck, UserX, Wand2, XCircle } from 'lucide-react';
+import { Award, Ban, Building2, Clock, Edit3, Filter, GraduationCap, MapPin, Plus, Archive, Briefcase, Check, CheckCircle2, CheckSquare, ChevronDown, Copy, ExternalLink, FileText, Mail, MessageSquare, Phone, RotateCcw, Search, Send, SlidersHorizontal, Sparkles, Square, Trash2, UploadCloud, UserCheck, UserX, Wand2, X, XCircle } from 'lucide-react';
 
 import { db } from '../services/firebase';
 import { useAuth } from '../context/AuthContext';
@@ -14,7 +14,7 @@ import { ALL_EDUCATION_DEGREES, EDUCATION_QUALIFICATIONS, EDUCATION_SPECIALIZATI
 import { isEducationMatching } from '../utils/educationMatcher';
 
 import { MAHARASHTRA_CITIES } from '../data/maharashtraCities';
-import { ALL_JOB_DOMAINS, ALL_JOB_SECTORS, ALL_JOB_DEPARTMENTS, resolveCandidateSectorsAndDepartments } from '../data/jobDomains';
+import { ALL_JOB_DOMAINS } from '../data/jobDomains';
 import { SKILL_OPTIONS } from './Profile';
 import { analyzeResumeText, ingestResumeFile, saveResumeDumpCandidate, detectCandidateGender, EMPLOYMENT_TYPE_OPTIONS, normalizeEmploymentTypes, normalizeResumeEmail } from '../services/resumeService';
 import { EmploymentTypeMultiSelect } from '../components/EmploymentTypeMultiSelect';
@@ -520,7 +520,7 @@ const ResumeDump: React.FC = () => {
 
   const [deletingCandidateId, setDeletingCandidateId] = useState<string | null>(null);
   const [isDraggingResume, setIsDraggingResume] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<'all' | 'available' | 'hired' | 'blocked'>('all');
+  const [statusFilter, setStatusFilter] = useState<'available' | 'hired' | 'blocked'>('available');
   const [employmentTypeFilter, setEmploymentTypeFilter] = useState<string>('all');
   const [skillFilter, setSkillFilter] = useState<string>('all');
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
@@ -1083,7 +1083,7 @@ const ResumeDump: React.FC = () => {
   const activeFiltersCount = useMemo(() => {
     let count = 0;
     if (selectedJobId !== 'all') count++;
-    if (statusFilter !== 'all') count++;
+    if (statusFilter !== 'available') count++;
     if (skillFilter !== 'all') count++;
     if (selectedSkills.length > 0) count++;
     if (titleFilter !== 'all') count++;
@@ -1108,7 +1108,7 @@ const ResumeDump: React.FC = () => {
 
   const handleClearAllFilters = () => {
     setSelectedJobId('all');
-    setStatusFilter('all');
+    setStatusFilter('available');
     setEmploymentTypeFilter('all');
     setSkillFilter('all');
     setSelectedSkills([]);
@@ -1237,6 +1237,19 @@ const ResumeDump: React.FC = () => {
     });
   }, [candidates, activeSelectedJob]);
 
+  // Live status counts for segregated toggle tabs
+  const availableCandidatesCount = useMemo(() => {
+    return candidates.filter(c => !c.isBlocked && !c.isBanned && !c.isHired && !c.doNotSuggest).length;
+  }, [candidates]);
+
+  const hiredCandidatesCount = useMemo(() => {
+    return candidates.filter(c => (c.isHired || c.doNotSuggest) && !c.isBlocked && !c.isBanned).length;
+  }, [candidates]);
+
+  const blockedCandidatesCount = useMemo(() => {
+    return candidates.filter(c => c.isBlocked || c.isBanned).length;
+  }, [candidates]);
+
   const filteredCandidates = useMemo(() => {
     let result = candidatesWithScores.filter((candidate) => {
       // 1. Keyword search term
@@ -1255,10 +1268,15 @@ const ResumeDump: React.FC = () => {
         if (!matchSearch) return false;
       }
 
-      // 2. Status filter
-      if (statusFilter === 'blocked' && !(candidate.isBlocked || candidate.isBanned)) return false;
-      if (statusFilter === 'hired' && !(candidate.isHired || (candidate.doNotSuggest && !candidate.isBlocked && !candidate.isBanned))) return false;
-      if (statusFilter === 'available' && (candidate.isHired || candidate.doNotSuggest || candidate.isBlocked || candidate.isBanned)) return false;
+      // 2. Status filter: Strict segregation so banned and hired candidates only show when their toggle is active
+      if (statusFilter === 'blocked') {
+        if (!(candidate.isBlocked || candidate.isBanned)) return false;
+      } else if (statusFilter === 'hired') {
+        if (!(candidate.isHired || (candidate.doNotSuggest && !candidate.isBlocked && !candidate.isBanned))) return false;
+      } else {
+        // default 'available': strictly active available candidates only! Banned and hired candidates are never shown here.
+        if (candidate.isHired || candidate.doNotSuggest || candidate.isBlocked || candidate.isBanned) return false;
+      }
 
       // When a job recommendation filter is selected, never recommend blocked/banned candidates
       if (selectedJobId && selectedJobId !== 'all' && (candidate.isBlocked || candidate.isBanned)) return false;
@@ -1500,7 +1518,7 @@ const ResumeDump: React.FC = () => {
     return Boolean(
       selectedJobId !== 'all' ||
       searchTerm.trim() ||
-      statusFilter !== 'all' ||
+      statusFilter !== 'available' ||
       employmentTypeFilter !== 'all' ||
       skillFilter !== 'all' ||
       selectedSkills.length > 0 ||
@@ -2233,35 +2251,67 @@ const ResumeDump: React.FC = () => {
               )}
             </div>
 
-            {/* Status Filter */}
-            <div className="flex items-center gap-1 bg-gray-200/70 dark:bg-[#111] border border-gray-300 dark:border-white/[0.11] rounded-[6px] p-0.5 text-xs">
-              <button
-                type="button"
-                onClick={() => setStatusFilter('all')}
-                className={`px-2 py-1 rounded-[4px] font-medium transition-colors cursor-pointer ${statusFilter === 'all' ? 'bg-white dark:bg-white text-black font-semibold shadow-xs' : 'text-gray-600 dark:text-[#8f8f8f] hover:text-black dark:hover:text-white'}`}
-              >
-                All Status
-              </button>
+            {/* Status Filter Segregated Toggles */}
+            <div className="flex items-center gap-1 bg-gray-200/80 dark:bg-[#111] border border-gray-300 dark:border-white/[0.11] rounded-[8px] p-0.5 text-xs">
               <button
                 type="button"
                 onClick={() => setStatusFilter('available')}
-                className={`px-2 py-1 rounded-[4px] font-medium transition-colors cursor-pointer ${statusFilter === 'available' ? 'bg-white dark:bg-white text-black font-semibold shadow-xs' : 'text-gray-600 dark:text-[#8f8f8f] hover:text-black dark:hover:text-white'}`}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-[6px] font-semibold transition-all cursor-pointer ${
+                  statusFilter === 'available'
+                    ? 'bg-white dark:bg-white text-slate-900 dark:text-black shadow-xs'
+                    : 'text-gray-600 dark:text-[#8f8f8f] hover:text-black dark:hover:text-white'
+                }`}
+                title="Active available candidates ready for job matching"
               >
-                Available
+                <span>Active</span>
+                <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded-full ${
+                  statusFilter === 'available'
+                    ? 'bg-blue-100 dark:bg-black/15 text-blue-700 dark:text-black'
+                    : 'bg-gray-300/70 dark:bg-white/10 text-gray-700 dark:text-gray-300'
+                }`}>
+                  {availableCandidatesCount}
+                </span>
               </button>
+
               <button
                 type="button"
                 onClick={() => setStatusFilter('hired')}
-                className={`px-2 py-1 rounded-[4px] font-medium transition-colors cursor-pointer ${statusFilter === 'hired' ? 'bg-emerald-600 dark:bg-emerald-500 text-white font-semibold shadow-xs' : 'text-gray-600 dark:text-[#8f8f8f] hover:text-black dark:hover:text-white'}`}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-[6px] font-semibold transition-all cursor-pointer ${
+                  statusFilter === 'hired'
+                    ? 'bg-emerald-600 text-white shadow-xs'
+                    : 'text-gray-600 dark:text-[#8f8f8f] hover:text-emerald-600 dark:hover:text-emerald-400'
+                }`}
+                title="Candidates marked as Hired (excluded from automated job suggestions)"
               >
-                Hired
+                <span>Hired 🎉</span>
+                <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded-full ${
+                  statusFilter === 'hired'
+                    ? 'bg-white/20 text-white'
+                    : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400'
+                }`}>
+                  {hiredCandidatesCount}
+                </span>
               </button>
+
               <button
                 type="button"
                 onClick={() => setStatusFilter('blocked')}
-                className={`px-2 py-1 rounded-[4px] font-medium transition-colors cursor-pointer ${statusFilter === 'blocked' ? 'bg-red-600 dark:bg-red-500 text-white font-semibold shadow-xs' : 'text-gray-600 dark:text-[#8f8f8f] hover:text-red-500 dark:hover:text-red-400'}`}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-[6px] font-semibold transition-all cursor-pointer ${
+                  statusFilter === 'blocked'
+                    ? 'bg-red-600 text-white shadow-xs'
+                    : 'text-gray-600 dark:text-[#8f8f8f] hover:text-red-500 dark:hover:text-red-400'
+                }`}
+                title="Candidates who have been banned and blocked from all job matching"
               >
-                Blocked 🚫
+                <Ban size={11} className={statusFilter === 'blocked' ? 'text-white' : 'text-red-500'} />
+                <span>Banned 🚫</span>
+                <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded-full ${
+                  statusFilter === 'blocked'
+                    ? 'bg-white/20 text-white'
+                    : 'bg-red-500/15 text-red-700 dark:text-red-400'
+                }`}>
+                  {blockedCandidatesCount}
+                </span>
               </button>
             </div>
 
@@ -2383,255 +2433,7 @@ const ResumeDump: React.FC = () => {
               ))}
             </select>
 
-            {/* Target Domain, Industry Sectors & Departments Checkmark Filter Button */}
-            <div className="flex items-center gap-1.5 shrink-0">
-              <button
-                type="button"
-                onClick={() => setIsDomainRecBoxOpen(true)}
-                className={`geist-caption h-8 rounded-[6px] border px-3 text-xs outline-none transition-colors flex items-center gap-2 cursor-pointer ${
-                  selectedDomains.length > 0 || domainFilter !== 'all'
-                    ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 font-bold'
-                    : 'border-gray-300 dark:border-white/[0.11] bg-white dark:bg-[#111] text-slate-800 dark:text-white hover:border-gray-400 dark:hover:border-white/30'
-                }`}
-              >
-                <Briefcase size={13} className={selectedDomains.length > 0 || domainFilter !== 'all' ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-500 dark:text-[#8f8f8f]'} />
-                <span>
-                  {selectedDomains.length > 0
-                    ? `${selectedDomains.length} Sector/Dept Selected`
-                    : domainFilter !== 'all'
-                    ? `Domain: ${domainFilter}`
-                    : 'All Domains & Sectors (Checkmarks)'}
-                </span>
-                {selectedDomains.length > 0 && (
-                  <span className="w-4 h-4 rounded-full bg-emerald-500 text-white dark:text-black text-[10px] font-black flex items-center justify-center">
-                    {selectedDomains.length}
-                  </span>
-                )}
-                <ChevronDown size={12} className="text-gray-500 dark:text-[#8f8f8f]" />
-              </button>
-            </div>
 
-                {isDomainRecBoxOpen && createPortal(
-                  <div 
-                    className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/60 dark:bg-black/80 backdrop-blur-sm animate-in fade-in duration-200"
-                    onClick={() => setIsDomainRecBoxOpen(false)}
-                  >
-                    <div 
-                      className="bg-white dark:bg-[#0f0f0f] border border-gray-200 dark:border-white/10 text-slate-900 dark:text-white rounded-3xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      {/* Header */}
-                      <div className="p-4 sm:p-5 border-b border-gray-200 dark:border-white/10 flex items-center justify-between gap-4 bg-slate-50 dark:bg-white/[0.02]">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-500 shrink-0">
-                            <Briefcase className="w-5 h-5" />
-                          </div>
-                          <div>
-                            <h3 className="text-base sm:text-lg font-extrabold flex items-center gap-2 text-slate-900 dark:text-white">
-                              <span>Filter Sectors & Departments</span>
-                              {selectedDomains.length > 0 && (
-                                <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
-                                  {selectedDomains.length} Active
-                                </span>
-                              )}
-                            </h3>
-                            <p className="text-xs text-slate-600 dark:text-slate-400">
-                              Checkmark options to filter candidate resumes live by industry sectors and functional departments.
-                            </p>
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => setIsDomainRecBoxOpen(false)}
-                          className="w-8 h-8 rounded-full bg-slate-200 hover:bg-slate-300 dark:bg-white/10 dark:hover:bg-white/20 flex items-center justify-center text-slate-700 dark:text-slate-300 transition-colors cursor-pointer shrink-0"
-                        >
-                          <XCircle className="w-5 h-5" />
-                        </button>
-                      </div>
-
-                      {/* Search & Actions Bar */}
-                      <div className="p-3.5 sm:p-4 border-b border-gray-200 dark:border-white/10 flex flex-col sm:flex-row items-center justify-between gap-3 bg-white dark:bg-[#121212]">
-                        <div className="relative w-full sm:w-80">
-                          <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
-                          <input
-                            type="text"
-                            value={domainRecSearch}
-                            onChange={(e) => setDomainRecSearch(e.target.value)}
-                            placeholder="Search sector or department..."
-                            className="w-full pl-9 pr-3 py-1.5 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-300 dark:border-white/10 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
-                          />
-                          {domainRecSearch && (
-                            <button
-                              type="button"
-                              onClick={() => setDomainRecSearch('')}
-                              className="absolute right-2.5 top-2 text-xs text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
-                            >
-                              Clear
-                            </button>
-                          )}
-                        </div>
-
-                        <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-                          {selectedDomains.length > 0 && (
-                            <button
-                              type="button"
-                              onClick={() => setSelectedDomains([])}
-                              className="px-3 py-1.5 rounded-xl bg-red-50 hover:bg-red-100 dark:bg-red-500/10 dark:hover:bg-red-500/20 text-red-600 dark:text-red-400 font-bold text-xs border border-red-200 dark:border-red-500/20 transition-all cursor-pointer"
-                            >
-                              Clear All Checkmarks ({selectedDomains.length})
-                            </button>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Scrollable Checkmarks Grid Container */}
-                      <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 bg-slate-50/50 dark:bg-transparent">
-                        {/* 1. Industry Sectors Grid */}
-                        <div className="space-y-3">
-                          <div className="flex items-center justify-between border-b border-slate-200 dark:border-white/10 pb-2">
-                            <label className="text-xs font-extrabold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
-                              Industry Sectors ({ALL_JOB_SECTORS.length})
-                            </label>
-                          </div>
-                          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
-                            {ALL_JOB_SECTORS.filter(s => s.toLowerCase().includes(domainRecSearch.toLowerCase())).map((sectorName) => {
-                              const isChecked = selectedDomains.some(d => d.toLowerCase() === sectorName.toLowerCase());
-                              return (
-                                <button
-                                  key={sectorName}
-                                  type="button"
-                                  onClick={() => {
-                                    setSelectedDomains(prev =>
-                                      isChecked
-                                        ? prev.filter(d => d.toLowerCase() !== sectorName.toLowerCase())
-                                        : [...prev, sectorName]
-                                    );
-                                  }}
-                                  className={`flex items-center justify-between p-2.5 sm:p-3 rounded-xl border text-xs transition-all text-left cursor-pointer shadow-2xs ${
-                                    isChecked
-                                      ? 'bg-emerald-600 text-white border-emerald-600 shadow-md shadow-emerald-600/20 ring-2 ring-emerald-500/30 font-bold'
-                                      : 'bg-white dark:bg-[#181818] border-slate-200 dark:border-white/10 text-slate-800 dark:text-slate-300 hover:border-emerald-500/40 hover:bg-emerald-50/40 dark:hover:bg-white/5 font-semibold'
-                                  }`}
-                                >
-                                  <span className="break-words font-semibold text-[11px] sm:text-xs min-w-0 flex-1 pr-1">{sectorName}</span>
-                                  <div className={`w-4 h-4 rounded flex items-center justify-center shrink-0 border transition-all ${
-                                    isChecked
-                                      ? 'bg-white text-emerald-600 border-white shadow-xs'
-                                      : 'border-slate-300 dark:border-white/20 bg-slate-50 dark:bg-white/5'
-                                  }`}>
-                                    {isChecked && <Check className="w-3 h-3 stroke-[3]" />}
-                                  </div>
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-
-                        {/* 2. Functional Departments Grid */}
-                        <div className="space-y-3 pt-4 border-t border-slate-200 dark:border-white/10">
-                          <div className="flex items-center justify-between border-b border-slate-200 dark:border-white/10 pb-2">
-                            <label className="text-xs font-extrabold uppercase tracking-wider text-teal-700 dark:text-teal-400">
-                              Functional Departments ({ALL_JOB_DEPARTMENTS.length})
-                            </label>
-                          </div>
-                          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
-                            {ALL_JOB_DEPARTMENTS.filter(d => d.toLowerCase().includes(domainRecSearch.toLowerCase())).map((deptName) => {
-                              const isChecked = selectedDomains.some(d => d.toLowerCase() === deptName.toLowerCase());
-                              return (
-                                <button
-                                  key={deptName}
-                                  type="button"
-                                  onClick={() => {
-                                    setSelectedDomains(prev =>
-                                      isChecked
-                                        ? prev.filter(d => d.toLowerCase() !== deptName.toLowerCase())
-                                        : [...prev, deptName]
-                                    );
-                                  }}
-                                  className={`flex items-center justify-between p-2.5 sm:p-3 rounded-xl border text-xs transition-all text-left cursor-pointer shadow-2xs ${
-                                    isChecked
-                                      ? 'bg-teal-600 text-white border-teal-600 shadow-md shadow-teal-600/20 ring-2 ring-teal-500/30 font-bold'
-                                      : 'bg-white dark:bg-[#181818] border-slate-200 dark:border-white/10 text-slate-800 dark:text-slate-300 hover:border-teal-500/40 hover:bg-teal-50/40 dark:hover:bg-white/5 font-semibold'
-                                  }`}
-                                >
-                                  <span className="break-words font-semibold text-[11px] sm:text-xs min-w-0 flex-1 pr-1">{deptName}</span>
-                                  <div className={`w-4 h-4 rounded flex items-center justify-center shrink-0 border transition-all ${
-                                    isChecked
-                                      ? 'bg-white text-teal-600 border-white shadow-xs'
-                                      : 'border-slate-300 dark:border-white/20 bg-slate-50 dark:bg-white/5'
-                                  }`}>
-                                    {isChecked && <Check className="w-3 h-3 stroke-[3]" />}
-                                  </div>
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-                        {/* 3. Active Candidate Database Domains */}
-                        {allAvailableDomains.length > 0 && (
-                          <div className="space-y-3 pt-4 border-t border-slate-200 dark:border-white/10">
-                            <div className="flex items-center justify-between border-b border-slate-200 dark:border-white/10 pb-2">
-                              <label className="text-xs font-extrabold uppercase tracking-wider text-blue-700 dark:text-blue-400">
-                                Active Database Candidate Domains ({allAvailableDomains.length})
-                              </label>
-                            </div>
-                            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
-                              {allAvailableDomains.filter(d => d.toLowerCase().includes(domainRecSearch.toLowerCase())).map((domName) => {
-                                const isChecked = selectedDomains.some(d => d.toLowerCase() === domName.toLowerCase()) || domainFilter.toLowerCase() === domName.toLowerCase();
-                                return (
-                                  <button
-                                    key={domName}
-                                    type="button"
-                                    onClick={() => {
-                                      if (domainFilter !== 'all') setDomainFilter('all');
-                                      setSelectedDomains(prev =>
-                                        isChecked
-                                          ? prev.filter(d => d.toLowerCase() !== domName.toLowerCase())
-                                          : [...prev, domName]
-                                      );
-                                    }}
-                                    className={`flex items-center justify-between p-2.5 sm:p-3 rounded-xl border text-xs transition-all text-left cursor-pointer shadow-2xs ${
-                                      isChecked
-                                        ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-600/20 ring-2 ring-blue-500/30 font-bold'
-                                        : 'bg-white dark:bg-[#181818] border-slate-200 dark:border-white/10 text-slate-800 dark:text-slate-300 hover:border-blue-500/40 hover:bg-blue-50/40 dark:hover:bg-white/5 font-semibold'
-                                    }`}
-                                  >
-                                    <span className="break-words font-semibold text-[11px] sm:text-xs min-w-0 flex-1 pr-1">{domName}</span>
-                                    <div className={`w-4 h-4 rounded flex items-center justify-center shrink-0 border transition-all ${
-                                      isChecked
-                                        ? 'bg-white text-blue-600 border-white shadow-xs'
-                                        : 'border-slate-300 dark:border-white/20 bg-slate-50 dark:bg-white/5'
-                                    }`}>
-                                      {isChecked && <Check className="w-3 h-3 stroke-[3]" />}
-                                    </div>
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Modal Footer */}
-                      <div className="p-4 border-t border-gray-200 dark:border-white/10 flex items-center justify-between gap-3 bg-slate-50 dark:bg-white/[0.02]">
-                        <span className="text-xs text-slate-600 dark:text-slate-400 font-semibold">
-                          {selectedDomains.length} Checkmark Filters Active
-                        </span>
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => setIsDomainRecBoxOpen(false)}
-                            className="px-5 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs transition-all shadow-md cursor-pointer flex items-center gap-1.5"
-                          >
-                            <Check className="w-4 h-4 stroke-[3]" />
-                            <span>Apply & Show Resumes</span>
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>,
-                  document.body
-                )}
 
             {/* Experience Range Filter */}
             <div className="flex items-center gap-1 shrink-0">
@@ -2910,8 +2712,91 @@ const ResumeDump: React.FC = () => {
         </section>
       )}
 
+      {/* Contextual Status Banner for Hired Candidates */}
+      {statusFilter === 'hired' && (
+        <section className="border-b border-emerald-500/20 bg-emerald-500/10 dark:bg-emerald-950/20 px-4 py-2.5 sm:px-6 lg:px-7">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-600 text-white text-[11px] font-semibold">
+                <UserCheck size={12} />
+                Hired Candidates ({filteredCandidates.length})
+              </span>
+              <span className="text-xs text-emerald-800 dark:text-emerald-300">
+                Viewing placed / hired candidates. These candidates are excluded from active job matching and recommendations.
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setStatusFilter('available')}
+              className="text-xs text-emerald-700 dark:text-emerald-400 font-semibold underline hover:text-emerald-900 dark:hover:text-emerald-200 cursor-pointer"
+            >
+              ← Back to Active Candidates
+            </button>
+          </div>
+        </section>
+      )}
+
+      {/* Contextual Status Banner for Banned / Blocked Candidates */}
+      {statusFilter === 'blocked' && (
+        <section className="border-b border-red-500/20 bg-red-500/10 dark:bg-red-950/20 px-4 py-2.5 sm:px-6 lg:px-7">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-red-600 text-white text-[11px] font-semibold">
+                <Ban size={12} />
+                Banned / Blocked Candidates ({filteredCandidates.length})
+              </span>
+              <span className="text-xs text-red-800 dark:text-red-300">
+                Viewing candidates whose email/phone numbers are banned. They will not receive job recommendations.
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setStatusFilter('available')}
+              className="text-xs text-red-700 dark:text-red-400 font-semibold underline hover:text-red-900 dark:hover:text-red-200 cursor-pointer"
+            >
+              ← Back to Active Candidates
+            </button>
+          </div>
+        </section>
+      )}
+
       <section className="flex min-h-[360px] flex-col">
         {filteredCandidates.length === 0 && !uploading ? (
+          statusFilter === 'hired' ? (
+            <div className="flex min-h-[380px] flex-col items-center justify-center p-8 text-center border-b border-white/[0.11]">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-500 mb-3 border border-emerald-500/20">
+                <UserCheck size={24} />
+              </div>
+              <h3 className="text-base font-semibold text-white">No Hired Candidates Found</h3>
+              <p className="text-xs text-[#8f8f8f] mt-1 max-w-sm">
+                Candidates marked as Hired appear exclusively in this view and are excluded from active job matching.
+              </p>
+              <button
+                type="button"
+                onClick={() => setStatusFilter('available')}
+                className="mt-4 px-3.5 py-1.5 rounded-md bg-white text-black font-semibold text-xs hover:bg-neutral-200 transition-colors cursor-pointer"
+              >
+                Switch to Active Candidates ({availableCandidatesCount})
+              </button>
+            </div>
+          ) : statusFilter === 'blocked' ? (
+            <div className="flex min-h-[380px] flex-col items-center justify-center p-8 text-center border-b border-white/[0.11]">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-500/10 text-red-500 mb-3 border border-red-500/20">
+                <Ban size={24} />
+              </div>
+              <h3 className="text-base font-semibold text-white">No Banned Candidates Found</h3>
+              <p className="text-xs text-[#8f8f8f] mt-1 max-w-sm">
+                Candidates who have been banned and blocked will appear here exclusively.
+              </p>
+              <button
+                type="button"
+                onClick={() => setStatusFilter('available')}
+                className="mt-4 px-3.5 py-1.5 rounded-md bg-white text-black font-semibold text-xs hover:bg-neutral-200 transition-colors cursor-pointer"
+              >
+                Switch to Active Candidates ({availableCandidatesCount})
+              </button>
+            </div>
+          ) : (
           <label
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
@@ -2936,6 +2821,7 @@ const ResumeDump: React.FC = () => {
               Drop PDF, DOCX, or TXT resumes anywhere in this box. Missing email, phone, or skills will not block saving.
             </p>
           </label>
+          )
         ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-white/[0.11] text-left">
@@ -2965,8 +2851,6 @@ const ResumeDump: React.FC = () => {
                   <th className="geist-label whitespace-nowrap px-3 py-2 text-left uppercase text-[10px] tracking-wider font-semibold text-gray-500 dark:text-[#8f8f8f] border-b border-gray-200 dark:border-white/[0.08] bg-gray-50/70 dark:bg-white/[0.02]">Phone & Email</th>
                   <th className="geist-label whitespace-nowrap px-3 py-2 text-left uppercase text-[10px] tracking-wider font-semibold text-gray-500 dark:text-[#8f8f8f] border-b border-gray-200 dark:border-white/[0.08] bg-gray-50/70 dark:bg-white/[0.02]">Experience</th>
                   <th className="geist-label whitespace-nowrap px-3 py-2 text-left uppercase text-[10px] tracking-wider font-semibold text-gray-500 dark:text-[#8f8f8f] border-b border-gray-200 dark:border-white/[0.08] bg-gray-50/70 dark:bg-white/[0.02]">Education</th>
-                  <th className="geist-label whitespace-nowrap px-3 py-2 text-left uppercase text-[10px] tracking-wider font-semibold text-gray-500 dark:text-[#8f8f8f] border-b border-gray-200 dark:border-white/[0.08] bg-gray-50/70 dark:bg-white/[0.02]">Skills</th>
-
                   <th className="geist-label whitespace-nowrap px-3 py-2 text-left uppercase text-[10px] tracking-wider font-semibold text-gray-500 dark:text-[#8f8f8f] border-b border-gray-200 dark:border-white/[0.08] bg-gray-50/70 dark:bg-white/[0.02]">Status</th>
                   <th className="geist-label whitespace-nowrap px-3 py-2 text-left uppercase text-[10px] tracking-wider font-semibold text-gray-500 dark:text-[#8f8f8f] border-b border-gray-200 dark:border-white/[0.08] bg-gray-50/70 dark:bg-white/[0.02]">Uploaded</th>
                   <th className="geist-label whitespace-nowrap px-3 py-2 text-right uppercase text-[10px] tracking-wider font-semibold text-gray-500 dark:text-[#8f8f8f] border-b border-gray-200 dark:border-white/[0.08] bg-gray-50/70 dark:bg-white/[0.02] w-[235px] min-w-[235px]">Actions</th>
@@ -3083,21 +2967,6 @@ const ResumeDump: React.FC = () => {
                           : 'Not Specified'}
                       </div>
                     </td>
-
-                    <td className="px-3 py-1.5">
-                      <div className="flex flex-wrap gap-1 max-w-[240px]">
-                        {candidate.skills.slice(0, 3).map((skill, idx) => (
-                          <span key={idx} className="geist-small rounded border border-gray-200 dark:border-white/[0.1] bg-gray-100 dark:bg-white/[0.04] px-1.5 py-0.5 text-[10px] font-medium text-slate-700 dark:text-[#d4d4d4]">
-                            {skill}
-                          </span>
-                        ))}
-                        {candidate.skills.length > 3 && (
-                          <span key="more" className="geist-small rounded border border-gray-200 dark:border-white/[0.1] bg-gray-50 dark:bg-white/[0.02] px-1.5 py-0.5 text-[10px] text-gray-500 dark:text-[#8f8f8f]">
-                            +{candidate.skills.length - 3}
-                          </span>
-                        )}
-                      </div>
-                    </td>
                     <td className="px-3 py-1.5 whitespace-nowrap">
                       {candidate.isBlocked || candidate.isBanned ? (
                         <span className="geist-small inline-flex items-center gap-1 rounded-full border border-red-500/40 bg-red-500/10 px-2.5 py-0.5 text-[10px] text-red-600 dark:text-red-400 font-semibold shadow-xs">
@@ -3122,119 +2991,125 @@ const ResumeDump: React.FC = () => {
                       </div>
                     </td>
                     <td className="px-2.5 py-2 text-right w-[235px] min-w-[235px]" onClick={(e) => e.stopPropagation()}>
-                      <div className="flex items-center justify-end gap-1.5">
-                        {/* 1. Invite Action Button */}
-                        {candidate.isBlocked || candidate.isBanned ? (
-                          <span
-                            className="geist-caption inline-flex h-7 items-center gap-1 rounded-[6px] border border-red-500/30 bg-red-500/10 px-2 text-[10px] font-semibold text-red-400 cursor-not-allowed opacity-80"
-                            title="Candidate is banned / blocked from receiving job invites or recommendations"
-                          >
-                            <Ban size={11} strokeWidth={2} />
-                            <span>Banned</span>
-                          </span>
-                        ) : (
+                      <div className="flex flex-col items-end gap-1.5">
+                        {/* Top Action Row: Invite, Hire & Toolbar */}
+                        <div className="flex items-center justify-end gap-1.5">
+                          {/* 1. Invite Action Button */}
+                          {candidate.isBlocked || candidate.isBanned ? (
+                            <span
+                              className="geist-caption inline-flex h-7 items-center gap-1 rounded-[6px] border border-red-500/30 bg-red-500/10 px-2 text-[10px] font-semibold text-red-400 cursor-not-allowed opacity-80"
+                              title="Candidate is banned / blocked from receiving job invites or recommendations"
+                            >
+                              <Ban size={11} strokeWidth={2} />
+                              <span>Banned</span>
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedCandidateIds([candidate.id]);
+                                setIsInviteModalOpen(true);
+                              }}
+                              className="geist-caption inline-flex h-7 items-center justify-center gap-1 rounded-[6px] border border-gray-300 dark:border-white/[0.14] bg-white text-black dark:bg-white dark:text-black hover:bg-gray-100 dark:hover:bg-[#eaeaea] px-2.5 text-[11px] font-semibold transition-all shadow-xs cursor-pointer"
+                              title="Send interview invitation"
+                            >
+                              <Send size={11} strokeWidth={2} />
+                              <span>Invite</span>
+                            </button>
+                          )}
+
+                          {/* 2. Hired Toggle */}
                           <button
                             type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedCandidateIds([candidate.id]);
-                              setIsInviteModalOpen(true);
-                            }}
-                            className="geist-caption inline-flex h-7 items-center justify-center gap-1 rounded-[6px] border border-gray-300 dark:border-white/[0.14] bg-white text-black dark:bg-white dark:text-black hover:bg-gray-100 dark:hover:bg-[#eaeaea] px-2.5 text-[11px] font-semibold transition-all shadow-xs cursor-pointer"
-                            title="Send interview invitation"
+                            onClick={(e) => { e.stopPropagation(); toggleHiredStatus(candidate); }}
+                            disabled={candidate.isBlocked || candidate.isBanned}
+                            className={`geist-caption inline-flex h-7 items-center justify-center gap-1 rounded-[6px] border px-2 text-[11px] font-medium transition-all cursor-pointer ${
+                              candidate.isHired || candidate.doNotSuggest
+                                ? 'border-emerald-500/40 bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/25 shadow-xs'
+                                : 'border-gray-200 dark:border-white/[0.12] bg-white dark:bg-white/[0.04] text-slate-700 dark:text-[#d4d4d4] hover:bg-gray-100 dark:hover:bg-white/[0.08] hover:text-black dark:hover:text-white'
+                            } disabled:opacity-40 disabled:cursor-not-allowed`}
+                            title={candidate.isHired || candidate.doNotSuggest ? 'Unmark Hired' : 'Mark candidate as Hired'}
                           >
-                            <Send size={11} strokeWidth={2} />
-                            <span>Invite</span>
-                          </button>
-                        )}
-
-                        {/* 2. Hired Toggle */}
-                        <button
-                          type="button"
-                          onClick={(e) => { e.stopPropagation(); toggleHiredStatus(candidate); }}
-                          disabled={candidate.isBlocked || candidate.isBanned}
-                          className={`geist-caption inline-flex h-7 items-center justify-center gap-1 rounded-[6px] border px-2 text-[11px] font-medium transition-all cursor-pointer ${
-                            candidate.isHired || candidate.doNotSuggest
-                              ? 'border-emerald-500/40 bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/25 shadow-xs'
-                              : 'border-gray-200 dark:border-white/[0.12] bg-white dark:bg-white/[0.04] text-slate-700 dark:text-[#d4d4d4] hover:bg-gray-100 dark:hover:bg-white/[0.08] hover:text-black dark:hover:text-white'
-                          } disabled:opacity-40 disabled:cursor-not-allowed`}
-                          title={candidate.isHired || candidate.doNotSuggest ? 'Unmark Hired' : 'Mark candidate as Hired'}
-                        >
-                          <UserCheck size={11} className={candidate.isHired || candidate.doNotSuggest ? 'text-emerald-500' : 'text-slate-500 dark:text-[#8f8f8f]'} strokeWidth={1.8} />
-                          <span>{candidate.isHired || candidate.doNotSuggest ? 'Hired' : 'Hire'}</span>
-                        </button>
-
-                        {/* 3. Sleek Action Icons Toolbar */}
-                        <div className="flex items-center rounded-[6px] border border-gray-200 dark:border-white/[0.11] bg-gray-50 dark:bg-white/[0.03] p-0.5 shadow-2xs">
-                          {/* View Resume */}
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setPreviewResumeCandidate(candidate);
-                            }}
-                            className="inline-flex h-6 w-6 items-center justify-center rounded-[4px] text-slate-600 dark:text-[#a1a1aa] hover:bg-white dark:hover:bg-white/10 hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer"
-                            title="View resume document"
-                          >
-                            <ExternalLink size={12} strokeWidth={1.8} />
+                            <UserCheck size={11} className={candidate.isHired || candidate.doNotSuggest ? 'text-emerald-500' : 'text-slate-500 dark:text-[#8f8f8f]'} strokeWidth={1.8} />
+                            <span>{candidate.isHired || candidate.doNotSuggest ? 'Hired' : 'Hire'}</span>
                           </button>
 
-                          {/* Morph Resume (Redact email, phone & links for client) */}
+                          {/* 3. Sleek Action Icons Toolbar */}
+                          <div className="flex items-center rounded-[6px] border border-gray-200 dark:border-white/[0.11] bg-gray-50 dark:bg-white/[0.03] p-0.5 shadow-2xs">
+                            {/* View Resume */}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setPreviewResumeCandidate(candidate);
+                              }}
+                              className="inline-flex h-6 w-6 items-center justify-center rounded-[4px] text-slate-600 dark:text-[#a1a1aa] hover:bg-white dark:hover:bg-white/10 hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer"
+                              title="View resume document"
+                            >
+                              <ExternalLink size={12} strokeWidth={1.8} />
+                            </button>
+
+                            {/* Edit Details */}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenEditCandidateModal(candidate);
+                              }}
+                              className="inline-flex h-6 w-6 items-center justify-center rounded-[4px] text-slate-600 dark:text-[#a1a1aa] hover:bg-white dark:hover:bg-white/10 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors cursor-pointer"
+                              title="Edit candidate profile"
+                            >
+                              <Edit3 size={12} strokeWidth={1.8} />
+                            </button>
+
+                            {/* Block / Ban Candidate */}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleBlockCandidate(candidate);
+                              }}
+                              className={`inline-flex h-6 w-6 items-center justify-center rounded-[4px] transition-colors cursor-pointer ${
+                                candidate.isBlocked || candidate.isBanned
+                                  ? 'bg-red-500/20 text-red-500 dark:text-red-400 hover:bg-red-500/30'
+                                  : 'text-slate-600 dark:text-[#a1a1aa] hover:bg-red-500/10 hover:text-red-500 dark:hover:text-red-400'
+                              }`}
+                              title={
+                                candidate.isBlocked || candidate.isBanned
+                                  ? 'Unban candidate (restore job matching & recommendations)'
+                                  : 'Block & Ban candidate (bans email & phone from all job matching)'
+                              }
+                            >
+                              <Ban size={12} strokeWidth={2} />
+                            </button>
+
+                            {/* Delete Candidate */}
+                            <button
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); confirmDeleteCandidate(candidate); }}
+                              disabled={deletingCandidateId === candidate.id}
+                              className="inline-flex h-6 w-6 items-center justify-center rounded-[4px] text-slate-600 dark:text-[#a1a1aa] hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400 transition-colors disabled:opacity-40 cursor-pointer"
+                              title="Delete candidate permanently"
+                            >
+                              <Trash2 size={12} strokeWidth={1.8} />
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Bottom Row: Directly below Invite & Hire options */}
+                        <div className="flex items-center justify-start w-full">
                           <button
                             type="button"
                             onClick={(e) => {
                               e.stopPropagation();
                               setMorphResumeCandidate(candidate);
                             }}
-                            className="inline-flex h-6 w-6 items-center justify-center rounded-[4px] text-purple-600 dark:text-purple-400 hover:bg-purple-500/15 hover:text-purple-700 dark:hover:text-purple-300 transition-colors cursor-pointer"
-                            title="Morph Resume (Blind client copy: remove email, phone & all links)"
+                            className="inline-flex h-6 items-center justify-center gap-1.5 rounded-[6px] border border-purple-500/35 bg-purple-500/10 hover:bg-purple-500/20 text-purple-700 dark:text-purple-300 px-2.5 text-[10px] font-bold transition-all shadow-xs cursor-pointer active:scale-95"
+                            title="Masked Resume (Blind Client Copy: Auto-blanks email, phone & web links)"
                           >
-                            <Wand2 size={12} strokeWidth={2} />
-                          </button>
-
-                          {/* Edit Details */}
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleOpenEditCandidateModal(candidate);
-                            }}
-                            className="inline-flex h-6 w-6 items-center justify-center rounded-[4px] text-slate-600 dark:text-[#a1a1aa] hover:bg-white dark:hover:bg-white/10 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors cursor-pointer"
-                            title="Edit candidate profile"
-                          >
-                            <Edit3 size={12} strokeWidth={1.8} />
-                          </button>
-
-                          {/* Block / Ban Candidate */}
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              toggleBlockCandidate(candidate);
-                            }}
-                            className={`inline-flex h-6 w-6 items-center justify-center rounded-[4px] transition-colors cursor-pointer ${
-                              candidate.isBlocked || candidate.isBanned
-                                ? 'bg-red-500/20 text-red-500 dark:text-red-400 hover:bg-red-500/30'
-                                : 'text-slate-600 dark:text-[#a1a1aa] hover:bg-red-500/10 hover:text-red-500 dark:hover:text-red-400'
-                            }`}
-                            title={
-                              candidate.isBlocked || candidate.isBanned
-                                ? 'Unban candidate (restore job matching & recommendations)'
-                                : 'Block & Ban candidate (bans email & phone from all job matching)'
-                            }
-                          >
-                            <Ban size={12} strokeWidth={2} />
-                          </button>
-
-                          {/* Delete Candidate */}
-                          <button
-                            type="button"
-                            onClick={(e) => { e.stopPropagation(); confirmDeleteCandidate(candidate); }}
-                            disabled={deletingCandidateId === candidate.id}
-                            className="inline-flex h-6 w-6 items-center justify-center rounded-[4px] text-slate-600 dark:text-[#a1a1aa] hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400 transition-colors disabled:opacity-40 cursor-pointer"
-                            title="Delete candidate permanently"
-                          >
-                            <Trash2 size={12} strokeWidth={1.8} />
+                            <Wand2 size={11} className="text-purple-500 shrink-0" strokeWidth={2.2} />
+                            <span>Masked Resume</span>
                           </button>
                         </div>
                       </div>
@@ -3292,335 +3167,394 @@ const ResumeDump: React.FC = () => {
         )}
       </section>
 
-      {/* Candidate Details Modal */}
+      {/* Candidate Profile / Details Drawer / Modal Popup */}
       {skillsPanelCandidate &&
         createPortal(
-          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/65 p-4 backdrop-blur-sm" onClick={() => setSkillsPanelCandidate(null)}>
+          <div
+            className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/75 p-3 sm:p-6 backdrop-blur-sm animate-in fade-in duration-150 overflow-y-auto"
+            onClick={() => setSkillsPanelCandidate(null)}
+          >
             <div
-              className="w-full max-w-2xl overflow-hidden rounded-[12px] border border-gray-200 dark:border-white/[0.13] bg-white dark:bg-[#090909] text-slate-900 dark:text-white shadow-2xl animate-in fade-in zoom-in duration-150"
+              className="w-full max-w-4xl max-h-[92vh] flex flex-col overflow-hidden rounded-2xl border border-gray-200 dark:border-white/[0.13] bg-white dark:bg-[#090909] text-slate-900 dark:text-white shadow-2xl animate-in zoom-in-95 duration-150"
               onClick={(event) => event.stopPropagation()}
             >
-              {/* Modal Top Header with Responsive Non-Overflowing Action Buttons */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-200 dark:border-white/[0.11] px-5 py-4 bg-gray-50 dark:bg-[#0d0d0d]">
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <p className="geist-label uppercase tracking-wider text-gray-500 dark:text-[#6b7280]">Candidate Profile</p>
-                    {skillsPanelCandidate.isBlocked || skillsPanelCandidate.isBanned ? (
-                      <span className="geist-small rounded-full border border-red-500/40 bg-red-50 dark:bg-red-500/10 px-2 py-0.5 text-xs font-semibold text-red-600 dark:text-red-400 flex items-center gap-1">
-                        <Ban size={11} strokeWidth={2} />
-                        <span>Banned & Blocked</span>
+              {/* Header: Tier 1 (Candidate Status, Full Name, Contact Info, Close Button) */}
+              <div className="border-b border-gray-200 dark:border-white/[0.11] px-6 py-5 bg-gradient-to-b from-gray-50/90 to-gray-50/30 dark:from-[#131313] dark:to-[#0a0a0a]">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap mb-1.5">
+                      <span className="text-[11px] font-semibold tracking-wider uppercase text-gray-500 dark:text-gray-400">
+                        Candidate Profile
                       </span>
-                    ) : skillsPanelCandidate.isHired || skillsPanelCandidate.doNotSuggest ? (
-                      <span className="geist-small rounded-full border border-emerald-500/40 bg-emerald-50 dark:bg-emerald-500/10 px-2 py-0.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400">
-                        🎉 Hired
-                      </span>
-                    ) : (
-                      <span className="geist-small rounded-full border border-gray-200 dark:border-white/[0.11] bg-gray-100 dark:bg-white/[0.04] px-2 py-0.5 text-xs text-gray-700 dark:text-[#a1a1aa]">
-                        Available
-                      </span>
-                    )}
+                      {skillsPanelCandidate.isBlocked || skillsPanelCandidate.isBanned ? (
+                        <span className="rounded-full border border-red-500/40 bg-red-50 dark:bg-red-500/10 px-2.5 py-0.5 text-xs font-semibold text-red-600 dark:text-red-400 flex items-center gap-1.5">
+                          <Ban size={12} strokeWidth={2} />
+                          <span>Banned & Blocked</span>
+                        </span>
+                      ) : skillsPanelCandidate.isHired || skillsPanelCandidate.doNotSuggest ? (
+                        <span className="rounded-full border border-emerald-500/40 bg-emerald-50 dark:bg-emerald-500/10 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5">
+                          <UserCheck size={12} strokeWidth={2} />
+                          <span>Hired 🎉</span>
+                        </span>
+                      ) : (
+                        <span className="rounded-full border border-blue-500/30 bg-blue-50 dark:bg-blue-500/10 px-2.5 py-0.5 text-xs font-semibold text-blue-700 dark:text-blue-300 flex items-center gap-1.5">
+                          <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                          <span>Active / Available</span>
+                        </span>
+                      )}
+                    </div>
+
+                    <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white tracking-tight break-words leading-snug">
+                      {skillsPanelCandidate.name || 'Unknown Candidate'}
+                    </h2>
+
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 mt-2 text-xs text-slate-600 dark:text-gray-300">
+                      {skillsPanelCandidate.email && (
+                        <a
+                          href={`mailto:${skillsPanelCandidate.email}`}
+                          className="inline-flex items-center gap-1.5 text-blue-600 dark:text-blue-400 hover:underline"
+                        >
+                          <Mail size={13} className="shrink-0 text-gray-400 dark:text-gray-500" />
+                          <span>{skillsPanelCandidate.email}</span>
+                        </a>
+                      )}
+                      {skillsPanelCandidate.phone && (
+                        <a
+                          href={`tel:${skillsPanelCandidate.phone}`}
+                          className="inline-flex items-center gap-1.5 hover:text-slate-900 dark:hover:text-white"
+                        >
+                          <Phone size={13} className="shrink-0 text-gray-400 dark:text-gray-500" />
+                          <span>{skillsPanelCandidate.phone}</span>
+                        </a>
+                      )}
+                      {(skillsPanelCandidate.currentCity || skillsPanelCandidate.location) && (
+                        <span className="inline-flex items-center gap-1.5 text-gray-500 dark:text-gray-400">
+                          <MapPin size={13} className="shrink-0 text-gray-400 dark:text-gray-500" />
+                          <span>{skillsPanelCandidate.currentCity || skillsPanelCandidate.location}</span>
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  <h3 className="text-lg font-bold mt-0.5 text-slate-900 dark:text-white truncate">
-                    {skillsPanelCandidate.name || 'Unknown Candidate'}
-                  </h3>
-                  <p className="text-xs text-blue-600 dark:text-[#8bbde8] mt-0.5 truncate">
-                    {skillsPanelCandidate.email || 'Email not available'} {skillsPanelCandidate.phone ? `· ${skillsPanelCandidate.phone}` : ''}
-                  </p>
-                </div>
-                
-                {/* Top Action Buttons - Wrapped and Constrained so they NEVER overflow */}
-                <div className="flex flex-wrap items-center gap-1.5 shrink-0 max-w-full">
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      await toggleHiredStatus(skillsPanelCandidate);
-                      setSkillsPanelCandidate(prev => prev ? ({ ...prev, isHired: !prev.isHired, doNotSuggest: !prev.isHired }) : null);
-                    }}
-                    className={`geist-caption inline-flex h-7 items-center gap-1 rounded-[6px] border px-2.5 font-semibold text-xs transition-all cursor-pointer ${
-                      skillsPanelCandidate.isHired || skillsPanelCandidate.doNotSuggest
-                        ? 'border-emerald-500/50 bg-emerald-50 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-500/30'
-                        : 'border-emerald-600/40 dark:border-emerald-500/40 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-500/25'
-                    }`}
-                    title={skillsPanelCandidate.isHired || skillsPanelCandidate.doNotSuggest ? 'Click to unmark as Hired' : 'Mark candidate as Hired'}
-                  >
-                    <UserCheck size={12} className="text-emerald-600 dark:text-emerald-400 shrink-0" strokeWidth={2} />
-                    <span>{skillsPanelCandidate.isHired || skillsPanelCandidate.doNotSuggest ? 'Hired 🎉' : 'Mark Hired'}</span>
-                  </button>
-
-                  {/* Block / Ban Toggle in Drawer */}
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      await toggleBlockCandidate(skillsPanelCandidate);
-                      setSkillsPanelCandidate(prev => prev ? ({ ...prev, isBlocked: !prev.isBlocked, isBanned: !prev.isBanned }) : null);
-                    }}
-                    className={`geist-caption inline-flex h-7 items-center gap-1 rounded-[6px] border px-2.5 font-semibold text-xs transition-all cursor-pointer ${
-                      skillsPanelCandidate.isBlocked || skillsPanelCandidate.isBanned
-                        ? 'border-red-500/50 bg-red-500/20 text-red-400 hover:bg-red-500/30'
-                        : 'border-gray-300 dark:border-white/[0.15] bg-gray-100 dark:bg-white/[0.04] text-slate-800 dark:text-[#d4d4d4] hover:bg-red-500/10 hover:border-red-500/30 hover:text-red-400'
-                    }`}
-                    title={skillsPanelCandidate.isBlocked || skillsPanelCandidate.isBanned ? 'Click to unban candidate' : 'Block & Ban candidate (bans email & phone from jobs)'}
-                  >
-                    <Ban size={12} className={skillsPanelCandidate.isBlocked || skillsPanelCandidate.isBanned ? 'text-red-400' : 'text-slate-500 dark:text-[#8f8f8f]'} strokeWidth={2} />
-                    <span>{skillsPanelCandidate.isBlocked || skillsPanelCandidate.isBanned ? 'Banned 🚫' : 'Block'}</span>
-                  </button>
-
-                  {skillsPanelCandidate.resumeUrl && (
-                    <button
-                      type="button"
-                      onClick={() => setPreviewResumeCandidate(skillsPanelCandidate)}
-                      className="geist-caption inline-flex h-7 items-center gap-1 rounded-[6px] border border-blue-500/40 bg-blue-50 dark:bg-blue-600/20 px-2.5 font-semibold text-xs text-blue-700 dark:text-blue-300 transition-colors hover:bg-blue-100 dark:hover:bg-blue-600/30 cursor-pointer"
-                      title="View resume in popup modal"
-                    >
-                      <ExternalLink size={12} strokeWidth={1.8} className="shrink-0" />
-                      <span>Resume</span>
-                    </button>
-                  )}
-
-                  <button
-                    type="button"
-                    onClick={() => setMorphResumeCandidate(skillsPanelCandidate)}
-                    className="geist-caption inline-flex h-7 items-center gap-1 rounded-[6px] border border-purple-500/40 bg-purple-50 dark:bg-purple-600/20 px-2.5 font-semibold text-xs text-purple-700 dark:text-purple-300 transition-colors hover:bg-purple-100 dark:hover:bg-purple-600/30 cursor-pointer"
-                    title="Morph resume: remove email, phone, and all links for client submission"
-                  >
-                    <Wand2 size={12} strokeWidth={2} className="shrink-0 text-purple-600 dark:text-purple-400" />
-                    <span>Morph Resume</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleOpenEditCandidateModal(skillsPanelCandidate)}
-                    className="geist-caption inline-flex h-7 items-center gap-1 rounded-[6px] border border-gray-300 dark:border-white/[0.15] bg-gray-100 dark:bg-white/[0.04] px-2.5 font-semibold text-xs text-slate-800 dark:text-[#d4d4d4] transition-colors hover:bg-gray-200 dark:hover:bg-white/[0.08] hover:text-black dark:hover:text-white cursor-pointer"
-                    title="Edit candidate details"
-                  >
-                    <Edit3 size={12} className="text-indigo-600 dark:text-indigo-400 shrink-0" strokeWidth={1.8} />
-                    <span>Edit</span>
-                  </button>
 
                   <button
                     type="button"
                     onClick={() => setSkillsPanelCandidate(null)}
-                    className="flex h-7 w-7 items-center justify-center rounded-[6px] border border-gray-200 dark:border-white/[0.11] bg-gray-100 dark:bg-white/[0.03] text-gray-500 dark:text-[#8f8f8f] transition-colors hover:bg-gray-200 dark:hover:bg-white/[0.06] hover:text-black dark:hover:text-white text-lg leading-none cursor-pointer"
+                    className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.04] text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10 hover:text-black dark:hover:text-white transition-colors cursor-pointer shrink-0"
                     title="Close details popup"
                   >
-                    &times;
+                    <X size={18} />
                   </button>
+                </div>
+
+                {/* Header: Tier 2 (Dedicated Status Toggles & Quick Actions Toolbar) */}
+                <div className="mt-4 pt-3.5 border-t border-gray-200/80 dark:border-white/[0.08] flex flex-wrap items-center justify-between gap-3">
+                  {/* Status Toggles: Hired Toggle & Banned Toggle */}
+                  <div className="flex flex-wrap items-center gap-2">
+                    {/* Hired Toggle Button */}
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        await toggleHiredStatus(skillsPanelCandidate);
+                        setSkillsPanelCandidate(prev => prev ? ({ ...prev, isHired: !prev.isHired, doNotSuggest: !prev.isHired }) : null);
+                      }}
+                      className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all cursor-pointer ${
+                        skillsPanelCandidate.isHired || skillsPanelCandidate.doNotSuggest
+                          ? 'border-emerald-500/60 bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 shadow-xs'
+                          : 'border-gray-300 dark:border-white/15 bg-white dark:bg-white/[0.04] text-slate-700 dark:text-[#d4d4d4] hover:border-emerald-500/50 hover:text-emerald-600'
+                      }`}
+                      title={skillsPanelCandidate.isHired || skillsPanelCandidate.doNotSuggest ? 'Click to toggle off Hired status' : 'Toggle candidate as Hired'}
+                    >
+                      <UserCheck size={14} className={skillsPanelCandidate.isHired || skillsPanelCandidate.doNotSuggest ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400'} strokeWidth={2} />
+                      <span>{skillsPanelCandidate.isHired || skillsPanelCandidate.doNotSuggest ? 'Status: Hired 🎉' : 'Mark as Hired'}</span>
+                      <span className={`w-2 h-2 rounded-full ${skillsPanelCandidate.isHired || skillsPanelCandidate.doNotSuggest ? 'bg-emerald-500 animate-pulse' : 'bg-gray-300 dark:bg-gray-600'}`} />
+                    </button>
+
+                    {/* Block / Ban Toggle Button */}
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        await toggleBlockCandidate(skillsPanelCandidate);
+                        setSkillsPanelCandidate(prev => prev ? ({ ...prev, isBlocked: !prev.isBlocked, isBanned: !prev.isBanned }) : null);
+                      }}
+                      className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all cursor-pointer ${
+                        skillsPanelCandidate.isBlocked || skillsPanelCandidate.isBanned
+                          ? 'border-red-500/60 bg-red-500/15 text-red-600 dark:text-red-400 shadow-xs'
+                          : 'border-gray-300 dark:border-white/15 bg-white dark:bg-white/[0.04] text-slate-700 dark:text-[#d4d4d4] hover:border-red-500/50 hover:text-red-500'
+                      }`}
+                      title={skillsPanelCandidate.isBlocked || skillsPanelCandidate.isBanned ? 'Click to unban candidate' : 'Block & Ban candidate from jobs'}
+                    >
+                      <Ban size={14} className={skillsPanelCandidate.isBlocked || skillsPanelCandidate.isBanned ? 'text-red-500' : 'text-gray-400'} strokeWidth={2} />
+                      <span>{skillsPanelCandidate.isBlocked || skillsPanelCandidate.isBanned ? 'Status: Banned 🚫' : 'Block / Ban'}</span>
+                      <span className={`w-2 h-2 rounded-full ${skillsPanelCandidate.isBlocked || skillsPanelCandidate.isBanned ? 'bg-red-500 animate-pulse' : 'bg-gray-300 dark:bg-gray-600'}`} />
+                    </button>
+                  </div>
+
+                  {/* Quick Action Buttons */}
+                  <div className="flex flex-wrap items-center gap-2">
+                    {skillsPanelCandidate.resumeUrl && (
+                      <button
+                        type="button"
+                        onClick={() => setPreviewResumeCandidate(skillsPanelCandidate)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-blue-500/30 bg-blue-50 dark:bg-blue-600/20 text-xs font-semibold text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-600/30 transition-colors cursor-pointer"
+                        title="View resume in popup modal"
+                      >
+                        <ExternalLink size={13} strokeWidth={2} />
+                        <span>Resume</span>
+                      </button>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={() => setMorphResumeCandidate(skillsPanelCandidate)}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-purple-500/30 bg-purple-50 dark:bg-purple-600/20 text-xs font-semibold text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-600/30 transition-colors cursor-pointer"
+                      title="Morph resume: remove email, phone, and all links for client submission"
+                    >
+                      <Wand2 size={13} strokeWidth={2} className="text-purple-600 dark:text-purple-400" />
+                      <span>Morph Resume</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleOpenEditCandidateModal(skillsPanelCandidate)}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-300 dark:border-white/15 bg-white dark:bg-white/[0.04] text-xs font-semibold text-slate-700 dark:text-[#d4d4d4] hover:bg-gray-100 dark:hover:bg-white/[0.08] hover:text-black dark:hover:text-white transition-colors cursor-pointer"
+                      title="Edit candidate details"
+                    >
+                      <Edit3 size={13} className="text-indigo-600 dark:text-indigo-400" strokeWidth={2} />
+                      <span>Edit</span>
+                    </button>
+                  </div>
                 </div>
               </div>
 
               {/* Modal Body */}
-              <div className="max-h-[70vh] space-y-4 overflow-y-auto p-5 geist-small">
-                <div className="grid gap-3 sm:grid-cols-4">
-                  <div className="rounded-[8px] border border-gray-200 dark:border-white/[0.11] bg-gray-50/70 dark:bg-white/[0.025] p-3 min-w-0 overflow-hidden">
-                    <p className="geist-label uppercase text-gray-500 dark:text-[#6b7280]">Name & Contact</p>
-                    <p className="geist-caption mt-1 font-semibold text-slate-900 dark:text-white truncate">{skillsPanelCandidate.name || 'N/A'}</p>
-                    <p className="geist-small text-blue-600 dark:text-[#8bbde8] mt-0.5 truncate" title={skillsPanelCandidate.email}>{skillsPanelCandidate.email || 'N/A'}</p>
-                    <p className="geist-small text-slate-700 dark:text-[#d4d4d4] mt-0.5 truncate">{skillsPanelCandidate.phone || 'N/A'}</p>
-                  </div>
-                  <div className="rounded-[8px] border border-gray-200 dark:border-white/[0.11] bg-gray-50/70 dark:bg-white/[0.025] p-3 min-w-0 overflow-hidden">
-                    <p className="geist-label uppercase text-gray-500 dark:text-[#6b7280]">Experience</p>
-                    <p className="geist-caption mt-1 font-semibold text-emerald-700 dark:text-[#83d0a3] truncate">
+              <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-5">
+                {/* 4 Primary Highlight Cards */}
+                <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+                  <div className="rounded-xl border border-gray-200 dark:border-white/[0.11] bg-slate-50/70 dark:bg-white/[0.025] p-3.5">
+                    <div className="flex items-center gap-1.5 text-gray-500 dark:text-[#8f8f8f] text-[11px] font-semibold uppercase tracking-wider">
+                      <Briefcase size={13} className="text-emerald-500" />
+                      <span>Experience</span>
+                    </div>
+                    <p className="mt-1.5 text-base font-bold text-emerald-600 dark:text-[#83d0a3]">
                       {skillsPanelCandidate.totalExperienceYears !== undefined && skillsPanelCandidate.totalExperienceYears !== null && !isNaN(Number(skillsPanelCandidate.totalExperienceYears))
-                        ? `${skillsPanelCandidate.totalExperienceYears} Years`
-                        : 'N/A'}
+                        ? `${skillsPanelCandidate.totalExperienceYears} Years ${skillsPanelCandidate.experienceMonths ? `${skillsPanelCandidate.experienceMonths} Mos` : ''}`
+                        : skillsPanelCandidate.isFresher ? 'Fresher' : 'Not specified'}
                     </p>
                   </div>
-                  <div className="rounded-[8px] border border-gray-200 dark:border-white/[0.11] bg-gray-50/70 dark:bg-white/[0.025] p-3 min-w-0 overflow-hidden">
-                    <p className="geist-label uppercase text-gray-500 dark:text-[#6b7280]">Current Role</p>
-                    <p className="geist-caption mt-1 font-semibold text-slate-800 dark:text-[#d4d4d4] truncate" title={skillsPanelCandidate.currentTitle}>{skillsPanelCandidate.currentTitle || 'Not specified'}</p>
+
+                  <div className="rounded-xl border border-gray-200 dark:border-white/[0.11] bg-slate-50/70 dark:bg-white/[0.025] p-3.5">
+                    <div className="flex items-center gap-1.5 text-gray-500 dark:text-[#8f8f8f] text-[11px] font-semibold uppercase tracking-wider">
+                      <Building2 size={13} className="text-blue-500" />
+                      <span>Current Role</span>
+                    </div>
+                    <p className="mt-1.5 text-sm font-bold text-slate-900 dark:text-white break-words" title={skillsPanelCandidate.currentTitle}>
+                      {skillsPanelCandidate.currentTitle || 'Not specified'}
+                    </p>
+                    {skillsPanelCandidate.currentCompanyName && (
+                      <p className="text-xs text-gray-500 dark:text-[#8f8f8f] mt-0.5 truncate">
+                        {skillsPanelCandidate.currentCompanyName}
+                      </p>
+                    )}
                   </div>
-                  <div className="rounded-[8px] border border-gray-200 dark:border-white/[0.11] bg-gray-50/70 dark:bg-white/[0.025] p-3 min-w-0 overflow-hidden">
-                    <p className="geist-label uppercase text-gray-500 dark:text-[#6b7280]">Location & Source</p>
-                    <p className="geist-caption mt-1 text-slate-800 dark:text-[#d4d4d4] truncate" title={skillsPanelCandidate.location}>{skillsPanelCandidate.location || 'Not specified'}</p>
-                    <p className="geist-small text-gray-500 dark:text-[#6b7280] mt-0.5 truncate" title={skillsPanelCandidate.resumeFileName}>{skillsPanelCandidate.resumeFileName}</p>
+
+                  <div className="rounded-xl border border-gray-200 dark:border-white/[0.11] bg-slate-50/70 dark:bg-white/[0.025] p-3.5">
+                    <div className="flex items-center gap-1.5 text-gray-500 dark:text-[#8f8f8f] text-[11px] font-semibold uppercase tracking-wider">
+                      <GraduationCap size={13} className="text-indigo-500" />
+                      <span>Qualification</span>
+                    </div>
+                    <p className="mt-1.5 text-sm font-bold text-slate-900 dark:text-white break-words">
+                      {skillsPanelCandidate.qualificationBasic || skillsPanelCandidate.highestEducation || (Array.isArray(skillsPanelCandidate.education) && skillsPanelCandidate.education[0]?.degree) || 'Not specified'}
+                    </p>
+                    {skillsPanelCandidate.qualificationPG && (
+                      <p className="text-xs text-indigo-600 dark:text-indigo-400 mt-0.5 truncate">
+                        PG: {skillsPanelCandidate.qualificationPG}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="rounded-xl border border-gray-200 dark:border-white/[0.11] bg-slate-50/70 dark:bg-white/[0.025] p-3.5">
+                    <div className="flex items-center gap-1.5 text-gray-500 dark:text-[#8f8f8f] text-[11px] font-semibold uppercase tracking-wider">
+                      <MapPin size={13} className="text-amber-500" />
+                      <span>Location</span>
+                    </div>
+                    <p className="mt-1.5 text-sm font-bold text-slate-900 dark:text-white break-words">
+                      {skillsPanelCandidate.currentCity || skillsPanelCandidate.location || 'Not specified'}
+                    </p>
+                    {skillsPanelCandidate.nativePlace && (
+                      <p className="text-xs text-gray-500 dark:text-[#8f8f8f] mt-0.5 truncate">
+                        Native: {skillsPanelCandidate.nativePlace}
+                      </p>
+                    )}
                   </div>
                 </div>
 
-                {/* Candidate Detailed Registration & Professional Information */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs p-3.5 rounded-[10px] bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/40">
-                  <div>
-                    <span className="text-[10px] uppercase font-bold text-gray-500 dark:text-[#6b7280] block">Gender & Marital</span>
-                    <span className="font-semibold text-slate-800 dark:text-[#d4d4d4]">
-                      {skillsPanelCandidate.gender || 'Not specified'}
-                      {skillsPanelCandidate.maritalStatus ? ` · ${skillsPanelCandidate.maritalStatus}` : ''}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] uppercase font-bold text-gray-500 dark:text-[#6b7280] block">DOB / Age</span>
-                    <span className="font-semibold text-slate-800 dark:text-[#d4d4d4]">
-                      {skillsPanelCandidate.dob || skillsPanelCandidate.dateOfBirth || (skillsPanelCandidate as any).age ? `${skillsPanelCandidate.dob || skillsPanelCandidate.dateOfBirth || ''} ${ (skillsPanelCandidate as any).age ? `(${ (skillsPanelCandidate as any).age} yrs)` : ''}` : 'N/A'}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] uppercase font-bold text-gray-500 dark:text-[#6b7280] block">City & Native Place</span>
-                    <span className="font-semibold text-slate-800 dark:text-[#d4d4d4]">
-                      {skillsPanelCandidate.currentCity || skillsPanelCandidate.location || 'N/A'}
-                      {skillsPanelCandidate.nativePlace ? ` (Native: ${skillsPanelCandidate.nativePlace})` : ''}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] uppercase font-bold text-gray-500 dark:text-[#6b7280] block">Highest Qualification</span>
-                    <span className="font-semibold text-slate-800 dark:text-[#d4d4d4]">
-                      {skillsPanelCandidate.qualificationBasic || skillsPanelCandidate.highestEducation || (Array.isArray(skillsPanelCandidate.education) && skillsPanelCandidate.education[0]?.degree) || 'N/A'}
-                      {skillsPanelCandidate.qualificationPG ? ` / ${skillsPanelCandidate.qualificationPG}` : ''}
-                    </span>
-                  </div>
-
-                  <div>
-                    <span className="text-[10px] uppercase font-bold text-gray-500 dark:text-[#6b7280] block">Current Company</span>
-                    <span className="font-semibold text-slate-800 dark:text-[#d4d4d4]">
-                      {skillsPanelCandidate.currentCompanyName || skillsPanelCandidate.company || 'N/A'}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] uppercase font-bold text-gray-500 dark:text-[#6b7280] block">Designation</span>
-                    <span className="font-semibold text-slate-800 dark:text-[#d4d4d4]">
-                      {skillsPanelCandidate.designation || skillsPanelCandidate.currentTitle || 'N/A'}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] uppercase font-bold text-gray-500 dark:text-[#6b7280] block">Experience / Status</span>
-                    <span className="font-semibold text-slate-800 dark:text-[#d4d4d4]">
-                      {skillsPanelCandidate.isFresher ? 'Fresher' : `${skillsPanelCandidate.totalExperienceYears ?? 0} Yrs ${skillsPanelCandidate.experienceMonths ? `${skillsPanelCandidate.experienceMonths} M` : ''}`} ({skillsPanelCandidate.employmentStatus || 'N/A'})
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] uppercase font-bold text-gray-500 dark:text-[#6b7280] block">Salary (Cur / Exp)</span>
-                    <span className="font-semibold text-slate-800 dark:text-[#d4d4d4]">
-                      {skillsPanelCandidate.currentSalary || 'N/A'} / {skillsPanelCandidate.expectedSalary || 'N/A'}
-                    </span>
-                  </div>
-
-                  <div>
-                    <span className="text-[10px] uppercase font-bold text-gray-500 dark:text-[#6b7280] block">Notice Period</span>
-                    <span className="font-semibold text-slate-800 dark:text-[#d4d4d4]">
-                      {skillsPanelCandidate.noticePeriod || (skillsPanelCandidate.noticePeriodDays ? `${skillsPanelCandidate.noticePeriodDays} Days` : 'N/A')}
-                    </span>
-                  </div>
-                  <div className="col-span-1 sm:col-span-2">
-                    <span className="text-[10px] uppercase font-bold text-gray-500 dark:text-[#6b7280] block mb-1">Employment Type Preferences</span>
-                    <div className="flex flex-wrap gap-1.5">
-                      {normalizeEmploymentTypes(skillsPanelCandidate).length > 0 ? (
-                        normalizeEmploymentTypes(skillsPanelCandidate).map((t, idx) => (
-                          <span
-                            key={idx}
-                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-900/40"
-                          >
-                            💼 {t}
-                          </span>
-                        ))
-                      ) : (
-                        <span className="text-xs text-gray-500 dark:text-[#6b7280]">Not specified</span>
-                      )}
-                    </div>
-                  </div>
-                  {skillsPanelCandidate.reasonForJobChange && (
-                    <div className="col-span-3">
-                      <span className="text-[10px] uppercase font-bold text-gray-500 dark:text-[#6b7280] block">Reason for Job Change</span>
-                      <span className="font-semibold text-slate-800 dark:text-[#d4d4d4]">
-                        {skillsPanelCandidate.reasonForJobChange}
+                {/* Detailed Professional & Personal Information Panel */}
+                <div className="rounded-xl border border-gray-200 dark:border-white/[0.1] bg-slate-50/60 dark:bg-white/[0.02] p-4">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3">
+                    Professional & Demographic Details
+                  </h4>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5 text-xs">
+                    <div>
+                      <span className="text-[10px] uppercase font-bold text-gray-400 dark:text-[#6b7280] block">Gender & Marital</span>
+                      <span className="font-semibold text-slate-800 dark:text-[#d4d4d4] mt-0.5 block">
+                        {skillsPanelCandidate.gender || 'Not specified'}
+                        {skillsPanelCandidate.maritalStatus ? ` · ${skillsPanelCandidate.maritalStatus}` : ''}
                       </span>
                     </div>
-                  )}
-                </div>
 
-                {/* Target Industry Sectors & Functional Departments */}
-                <div className="p-3.5 rounded-[12px] bg-slate-50 dark:bg-white/[0.03] border border-gray-200 dark:border-white/[0.08] space-y-2.5">
-                  <div className="flex items-center gap-2 border-b border-gray-200 dark:border-white/10 pb-1.5">
-                    <Briefcase className="w-4 h-4 text-emerald-500 shrink-0" />
-                    <span className="text-xs font-extrabold uppercase tracking-wider text-slate-800 dark:text-white">
-                      Target Industry Sectors & Functional Departments
-                    </span>
-                  </div>
+                    <div>
+                      <span className="text-[10px] uppercase font-bold text-gray-400 dark:text-[#6b7280] block">DOB / Age</span>
+                      <span className="font-semibold text-slate-800 dark:text-[#d4d4d4] mt-0.5 block">
+                        {skillsPanelCandidate.dob || skillsPanelCandidate.dateOfBirth || (skillsPanelCandidate as any).age ? `${skillsPanelCandidate.dob || skillsPanelCandidate.dateOfBirth || ''} ${ (skillsPanelCandidate as any).age ? `(${ (skillsPanelCandidate as any).age} yrs)` : ''}` : 'N/A'}
+                      </span>
+                    </div>
 
-                  {(() => {
-                    const { sectors: modalSecs, departments: modalDepts } = resolveCandidateSectorsAndDepartments(skillsPanelCandidate);
-                    return (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                        {/* Industry Sectors */}
-                        <div>
-                          <span className="text-[10px] uppercase font-bold text-emerald-600 dark:text-emerald-400 block mb-1">
-                            Industry Sectors {modalSecs.length > 0 ? `(${modalSecs.length})` : ''}
-                          </span>
-                          {modalSecs.length > 0 ? (
-                            <div className="flex flex-wrap gap-1">
-                              {modalSecs.map(sec => (
-                                <span key={sec} className="px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[11px] font-bold">
-                                  {sec}
-                                </span>
-                              ))}
-                            </div>
-                          ) : (
-                            <span className="text-gray-400 text-[11px]">Not specified</span>
-                          )}
-                        </div>
+                    <div>
+                      <span className="text-[10px] uppercase font-bold text-gray-400 dark:text-[#6b7280] block">City & Native</span>
+                      <span className="font-semibold text-slate-800 dark:text-[#d4d4d4] mt-0.5 block">
+                        {skillsPanelCandidate.currentCity || skillsPanelCandidate.location || 'N/A'}
+                        {skillsPanelCandidate.nativePlace ? ` (Native: ${skillsPanelCandidate.nativePlace})` : ''}
+                      </span>
+                    </div>
 
-                        {/* Functional Departments / Domain */}
-                        <div>
-                          <span className="text-[10px] uppercase font-bold text-teal-600 dark:text-teal-400 block mb-1">
-                            Functional Departments / Domain {modalDepts.length > 0 ? `(${modalDepts.length})` : ''}
-                          </span>
-                          {modalDepts.length > 0 ? (
-                            <div className="flex flex-wrap gap-1">
-                              {modalDepts.map(dept => (
-                                <span key={dept} className="px-2.5 py-0.5 rounded-full bg-teal-500/15 text-teal-700 dark:text-teal-300 border border-teal-500/30 text-[11px] font-bold">
-                                  {dept}
-                                </span>
-                              ))}
-                            </div>
-                          ) : (
-                            <span className="text-gray-400 text-[11px]">Not specified</span>
-                          )}
-                        </div>
+                    <div>
+                      <span className="text-[10px] uppercase font-bold text-gray-400 dark:text-[#6b7280] block">Salary (Cur / Exp)</span>
+                      <span className="font-semibold text-slate-800 dark:text-[#d4d4d4] mt-0.5 block">
+                        {skillsPanelCandidate.currentSalary || 'N/A'} / {skillsPanelCandidate.expectedSalary || 'N/A'}
+                      </span>
+                    </div>
+
+                    <div>
+                      <span className="text-[10px] uppercase font-bold text-gray-400 dark:text-[#6b7280] block">Current Company</span>
+                      <span className="font-semibold text-slate-800 dark:text-[#d4d4d4] mt-0.5 block">
+                        {skillsPanelCandidate.currentCompanyName || skillsPanelCandidate.company || 'N/A'}
+                      </span>
+                    </div>
+
+                    <div>
+                      <span className="text-[10px] uppercase font-bold text-gray-400 dark:text-[#6b7280] block">Designation</span>
+                      <span className="font-semibold text-slate-800 dark:text-[#d4d4d4] mt-0.5 block">
+                        {skillsPanelCandidate.designation || skillsPanelCandidate.currentTitle || 'N/A'}
+                      </span>
+                    </div>
+
+                    <div>
+                      <span className="text-[10px] uppercase font-bold text-gray-400 dark:text-[#6b7280] block">Experience / Status</span>
+                      <span className="font-semibold text-slate-800 dark:text-[#d4d4d4] mt-0.5 block">
+                        {skillsPanelCandidate.isFresher ? 'Fresher' : `${skillsPanelCandidate.totalExperienceYears ?? 0} Yrs ${skillsPanelCandidate.experienceMonths ? `${skillsPanelCandidate.experienceMonths} M` : ''}`} ({skillsPanelCandidate.employmentStatus || 'N/A'})
+                      </span>
+                    </div>
+
+                    <div>
+                      <span className="text-[10px] uppercase font-bold text-gray-400 dark:text-[#6b7280] block">Notice Period</span>
+                      <span className="font-semibold text-slate-800 dark:text-[#d4d4d4] mt-0.5 block">
+                        {skillsPanelCandidate.noticePeriod || (skillsPanelCandidate.noticePeriodDays ? `${skillsPanelCandidate.noticePeriodDays} Days` : 'N/A')}
+                      </span>
+                    </div>
+
+                    <div className="col-span-2">
+                      <span className="text-[10px] uppercase font-bold text-gray-400 dark:text-[#6b7280] block mb-1">Employment Preferences</span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {normalizeEmploymentTypes(skillsPanelCandidate).length > 0 ? (
+                          normalizeEmploymentTypes(skillsPanelCandidate).map((t, idx) => (
+                            <span
+                              key={idx}
+                              className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-xs font-semibold bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-900/40"
+                            >
+                              💼 {t}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="text-xs text-gray-500 dark:text-[#6b7280]">Not specified</span>
+                        )}
                       </div>
-                    );
-                  })()}
+                    </div>
+
+                    {skillsPanelCandidate.reasonForJobChange && (
+                      <div className="col-span-2">
+                        <span className="text-[10px] uppercase font-bold text-gray-400 dark:text-[#6b7280] block">Reason for Job Change</span>
+                        <span className="font-semibold text-slate-800 dark:text-[#d4d4d4] mt-0.5 block">
+                          {skillsPanelCandidate.reasonForJobChange}
+                        </span>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
+                {/* Professional Summary */}
                 {skillsPanelCandidate.summary && (
-                  <div className="min-w-0">
-                    <p className="geist-label uppercase text-gray-500 dark:text-[#6b7280]">Professional Summary</p>
-                    <p className="geist-caption mt-2 leading-relaxed text-slate-800 dark:text-[#d4d4d4] bg-gray-50 dark:bg-white/[0.02] p-3 rounded-[6px] border border-gray-200 dark:border-white/[0.06] break-words whitespace-pre-wrap">{skillsPanelCandidate.summary}</p>
+                  <div className="rounded-xl border border-gray-200 dark:border-white/[0.1] bg-slate-50/60 dark:bg-white/[0.02] p-4">
+                    <p className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Professional Summary</p>
+                    <p className="mt-2 text-xs leading-relaxed text-slate-800 dark:text-[#d4d4d4] whitespace-pre-wrap">{skillsPanelCandidate.summary}</p>
                   </div>
                 )}
 
-                <div className="min-w-0">
-                  <p className="geist-label uppercase text-gray-500 dark:text-[#6b7280]">Skills & Tech Stack ({(skillsPanelCandidate.skills || []).length})</p>
-                  <div className="mt-2 flex flex-wrap gap-1.5">
-                    {(skillsPanelCandidate.skills || []).length > 0 ? skillsPanelCandidate.skills.map((skill) => (
-                      <span key={skill} className="geist-caption rounded-[6px] border border-gray-300 dark:border-white/[0.11] bg-gray-100 dark:bg-white/[0.04] px-2.5 py-1 font-medium text-slate-800 dark:text-[#d4d4d4] break-all">
-                        {skill}
-                      </span>
-                    )) : <span className="geist-caption text-gray-500 dark:text-[#6b7280]">No explicit skills extracted.</span>}
+                {/* Skills & Tech Stack */}
+                <div className="rounded-xl border border-gray-200 dark:border-white/[0.1] bg-slate-50/60 dark:bg-white/[0.02] p-4">
+                  <div className="flex items-center justify-between mb-2.5">
+                    <p className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                      Skills & Tech Stack
+                    </p>
+                    <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-gray-200 dark:bg-white/10 text-gray-700 dark:text-gray-300">
+                      {(skillsPanelCandidate.skills || []).length} Skills
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {(skillsPanelCandidate.skills || []).length > 0 ? (
+                      skillsPanelCandidate.skills.map((skill) => (
+                        <span key={skill} className="rounded-md border border-gray-200 dark:border-white/[0.11] bg-white dark:bg-white/[0.05] px-2.5 py-1 text-xs font-medium text-slate-800 dark:text-[#d4d4d4] shadow-2xs">
+                          {skill}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-xs text-gray-500 dark:text-[#6b7280]">No explicit skills extracted.</span>
+                    )}
                   </div>
                 </div>
 
+                {/* Education History */}
                 {(skillsPanelCandidate.education || []).length > 0 && (
-                  <div className="min-w-0">
-                    <p className="geist-label uppercase text-gray-500 dark:text-[#6b7280]">Education</p>
-                    <div className="mt-2 space-y-1.5">
+                  <div className="rounded-xl border border-gray-200 dark:border-white/[0.1] bg-slate-50/60 dark:bg-white/[0.02] p-4">
+                    <p className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Education History</p>
+                    <div className="space-y-2">
                       {skillsPanelCandidate.education!.map((entry, index) => (
-                        <p key={`${entry.degree}-${index}`} className="geist-caption text-slate-800 dark:text-[#d4d4d4] break-words">{[entry.degree, entry.institution, entry.year].filter(Boolean).join(' · ')}</p>
+                        <div key={`${entry.degree}-${index}`} className="flex items-start gap-2 text-xs text-slate-800 dark:text-[#d4d4d4]">
+                          <GraduationCap size={14} className="text-indigo-500 shrink-0 mt-0.5" />
+                          <span>{[entry.degree, entry.institution, entry.year].filter(Boolean).join(' · ')}</span>
+                        </div>
                       ))}
                     </div>
                   </div>
                 )}
+              </div>
 
-                {skillsPanelCandidate.resumeUrl && (
-                  <div className="pt-2 border-t border-gray-200 dark:border-white/[0.08] flex flex-wrap items-center justify-between gap-2 min-w-0">
-                    <p className="geist-small text-gray-500 dark:text-[#6b7280] truncate max-w-[280px]">
-                      File: <span className="text-slate-800 dark:text-[#a1a1aa] truncate">{skillsPanelCandidate.resumeFileName}</span>
-                    </p>
+              {/* Modal Footer */}
+              <div className="border-t border-gray-200 dark:border-white/[0.11] px-6 py-3.5 bg-gray-50 dark:bg-[#0c0c0d] flex flex-wrap items-center justify-between gap-3 shrink-0">
+                <div className="flex items-center gap-2 min-w-0">
+                  <FileText size={14} className="text-gray-400 shrink-0" />
+                  <span className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-xs">
+                    {skillsPanelCandidate.resumeFileName || 'Resume file'}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {skillsPanelCandidate.resumeUrl && (
                     <button
                       type="button"
                       onClick={() => setPreviewResumeCandidate(skillsPanelCandidate)}
-                      className="geist-caption inline-flex items-center gap-1.5 text-blue-600 dark:text-blue-400 hover:underline font-semibold"
+                      className="inline-flex items-center gap-1.5 text-xs text-blue-600 dark:text-blue-400 hover:underline font-semibold"
                     >
                       <ExternalLink size={13} />
-                      View Full Resume Document in Popup
+                      <span>Open Document Preview</span>
                     </button>
-                  </div>
-                )}
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setSkillsPanelCandidate(null)}
+                    className="px-3.5 py-1.5 rounded-lg bg-gray-200 hover:bg-gray-300 dark:bg-white/10 dark:hover:bg-white/15 text-slate-800 dark:text-white text-xs font-semibold transition-colors cursor-pointer"
+                  >
+                    Close
+                  </button>
+                </div>
               </div>
             </div>
           </div>,
