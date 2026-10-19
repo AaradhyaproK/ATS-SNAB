@@ -3808,15 +3808,15 @@ const ResumeDump: React.FC = () => {
                       </div>
                     )}
                     <div className="geist-caption">
-                      <span className="text-gray-500 dark:text-[#8f8f8f] block mb-1">Interview Link:</span>
+                      <span className="text-gray-500 dark:text-[#8f8f8f] block mb-1">Job Application Link:</span>
                       <div className="flex items-center gap-2 bg-gray-100 dark:bg-[#050505] border border-gray-200 dark:border-white/[0.11] p-2 rounded-[6px] text-slate-900 dark:text-[#d4d4d4] font-mono text-[11px] break-all">
                         <span className="flex-1 truncate">
-                          {`${window.location.origin}/#/interview/${activeSelectedJob.id}${activeSelectedJob.accessCode ? `?code=${activeSelectedJob.accessCode}` : ''}`}
+                          {`${window.location.origin}/#/candidate?job=${activeSelectedJob.id}`}
                         </span>
                         <button
                           type="button"
                           onClick={() => {
-                            navigator.clipboard.writeText(`${window.location.origin}/#/interview/${activeSelectedJob.id}${activeSelectedJob.accessCode ? `?code=${activeSelectedJob.accessCode}` : ''}`);
+                            navigator.clipboard.writeText(`${window.location.origin}/#/candidate?job=${activeSelectedJob.id}`);
                             setCopiedInviteLink(true);
                             setTimeout(() => setCopiedInviteLink(false), 2500);
                           }}
@@ -3851,13 +3851,13 @@ const ResumeDump: React.FC = () => {
                       type="button"
                       disabled={isSendingInvites}
                       onClick={() => {
-                        const jobTitle = activeSelectedJob.title || activeSelectedJob.jobRole || 'AI Interview';
+                        const jobTitle = activeSelectedJob.title || activeSelectedJob.jobRole || 'Open Position';
                         const accessCode = activeSelectedJob.accessCode || '';
-                        const interviewLink = `${window.location.origin}/#/interview/${activeSelectedJob.id}${accessCode ? `?code=${accessCode}` : ''}`;
-                        const messageText = `Hello! You have been invited for an AI Interview for the position of *${jobTitle}*.\n\n` +
-                          `📌 Access Code: *${accessCode || 'N/A'}*\n` +
-                          `🔗 Interview Link: ${interviewLink}\n\n` +
-                          `Please open the link to start your interview!`;
+                        const jobLink = `${window.location.origin}/#/candidate?job=${activeSelectedJob.id}`;
+                        const messageText = `Hello! You have been invited to apply for the position of *${jobTitle}*.\n\n` +
+                          (accessCode ? `📌 Job Code: *${accessCode}*\n` : '') +
+                          `🔗 Application Link: ${jobLink}\n\n` +
+                          `Please open the link to view the job requirements and submit your application!`;
                         window.open(`https://wa.me/?text=${encodeURIComponent(messageText)}`, '_blank');
                       }}
                       className="geist-caption inline-flex h-9 items-center justify-center gap-1.5 rounded-[6px] border border-amber-600/40 dark:border-amber-500/40 bg-amber-50 dark:bg-amber-500/10 text-amber-800 dark:text-amber-300 font-semibold text-xs px-3 hover:bg-amber-100 dark:hover:bg-amber-500/20 transition-colors disabled:opacity-50 cursor-pointer"
@@ -3889,9 +3889,9 @@ const ResumeDump: React.FC = () => {
                           return;
                         }
 
-                        const jobTitle = activeSelectedJob.title || activeSelectedJob.jobRole || 'AI Interview';
+                        const jobTitle = activeSelectedJob.title || activeSelectedJob.jobRole || 'Open Position';
                         const accessCode = activeSelectedJob.accessCode || '';
-                        const interviewLink = `${window.location.origin}/#/interview/${activeSelectedJob.id}${accessCode ? `?code=${accessCode}` : ''}`;
+                        const jobLink = `${window.location.origin}/#/candidate?job=${activeSelectedJob.id}`;
 
                         const waOptions = {
                           recruiterName: userProfile?.name || (user as any)?.displayName || (user as any)?.email || 'Recruiting Team',
@@ -3907,7 +3907,7 @@ const ResumeDump: React.FC = () => {
                           const waResult = await sendBulkWhatsAppInvites(
                             candidatesWithPhones,
                             jobTitle,
-                            interviewLink,
+                            jobLink,
                             accessCode,
                             false,
                             (sentCount, totalCount, currentCand, isWait) => {
@@ -3930,10 +3930,10 @@ const ResumeDump: React.FC = () => {
                             
                             // Fallback to WhatsApp Web
                             const firstPhone = candidatesWithPhones[0]?.phone || '';
-                            const msgText = `Hello! You have been invited for an AI Interview for the position of *${jobTitle}*.\n\n` +
-                              `📌 Access Code: *${accessCode || 'N/A'}*\n` +
-                              `🔗 Interview Link: ${interviewLink}\n\n` +
-                              `Please open the link to start your interview!`;
+                            const msgText = `Hello! You have been invited to apply for the position of *${jobTitle}*.\n\n` +
+                              (accessCode ? `📌 Job Code: *${accessCode}*\n` : '') +
+                              `🔗 Application Link: ${jobLink}\n\n` +
+                              `Please open the link to view the job requirements and submit your application!`;
                             window.open(`https://web.whatsapp.com/send?phone=${firstPhone.replace(/[^0-9]/g, '')}&text=${encodeURIComponent(msgText)}`, '_blank');
                           }
                         } catch (err: any) {
@@ -3987,19 +3987,19 @@ const ResumeDump: React.FC = () => {
                           }));
                         }
 
-                        const jobTitle = activeSelectedJob.title || activeSelectedJob.jobRole || 'AI Interview';
+                        const jobTitle = activeSelectedJob.title || activeSelectedJob.jobRole || 'Open Position';
                         const accessCode = activeSelectedJob.accessCode || '';
-                        const interviewLink = `${window.location.origin}/#/interview/${activeSelectedJob.id}${accessCode ? `?code=${accessCode}` : ''}`;
+                        const interviewLink = `${window.location.origin}/#/candidate?job=${activeSelectedJob.id}`;
 
                         let waSentCount = 0;
                         let emailSentCount = 0;
                         let waErrorMsg = '';
 
                         if (inviteDeliveryMode === 'whatsapp_web') {
-                          const messageText = `Hello! You have been invited for an AI Interview for the position of *${jobTitle}*.\n\n` +
-                            `📌 Access Code: *${accessCode || 'N/A'}*\n` +
-                            `🔗 Interview Link: ${interviewLink}\n\n` +
-                            `Please open the link to start your interview!`;
+                          const messageText = `Hello! You have been invited to apply for the position of *${jobTitle}*.\n\n` +
+                            (accessCode ? `📌 Job Code: *${accessCode}*\n` : '') +
+                            `🔗 Application Link: ${interviewLink}\n\n` +
+                            `Please open the link to view the job requirements and submit your application!`;
                           window.open(`https://wa.me/?text=${encodeURIComponent(messageText)}`, '_blank');
                           messageBox.showSuccess('WhatsApp Web app opened with pre-filled message!');
                           setIsInviteModalOpen(false);

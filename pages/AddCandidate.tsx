@@ -34,6 +34,9 @@ import { useAuth } from '../context/AuthContext';
 import { useMessageBox } from '../components/MessageBox';
 import {
   parseResumeFileLocally,
+  fastParseResumeFileLocally,
+  deterministicParse,
+  readResumeText,
   ingestResumeFile,
   saveResumeDumpCandidate,
   findExistingCandidateByContact,
@@ -137,21 +140,30 @@ export const AddCandidate: React.FC = () => {
   const handleSingleFileSelect = async (file: File) => {
     setSelectedFile(file);
     setIsProcessing(true);
-    setProcessStep('Reading & extracting resume text...');
+    setProcessStep('Reading & extracting resume instantly...');
     setParsedCandidate(null);
     setUploadedResumeUrl('');
     setExistingCandidateAlert(null);
 
     try {
-      setProcessStep('Extracting candidate details via AI parser...');
-      // ONLY parse the resume data locally/via AI - DO NOT upload to Cloudinary yet
-      const result = await parseResumeFileLocally(file, {}, additionalNotes);
+      // 1. FAST LOCAL EXTRACTION (< 150ms): Read text and parse deterministically
+      const resumeText = await readResumeText(file, file.name);
+      if (!resumeText) {
+        throw new Error('No readable text was found in this resume.');
+      }
 
-      // Keep parsed education, contact info, and skills from AI
-      // Gender, Total Experience, and City/Location must be added manually by recruiter
-      const profile = result.profile;
+      const textToAnalyze = additionalNotes.trim()
+        ? `${resumeText}\n\n[Additional Candidate Details & Recruiter Notes]:\n${additionalNotes.trim()}`
+        : resumeText;
+
+      const profile = deterministicParse(textToAnalyze, file.name);
+      if (additionalNotes.trim()) {
+        profile.additionalText = additionalNotes.trim();
+      }
+
       const initialEdu = profile.highestEducation || (Array.isArray(profile.education) && profile.education[0]?.degree) || '';
 
+      // Immediately populate form state so the recruiter sees extracted details in ~150ms!
       setParsedCandidate({
         ...profile,
         gender: 'Any', // Set manually by recruiter
@@ -160,25 +172,60 @@ export const AddCandidate: React.FC = () => {
         city: '', // Selected manually by recruiter
         highestEducation: initialEdu
       });
-      setRawResumeText(result.resumeText);
+      setRawResumeText(resumeText);
+      setIsProcessing(false);
+      setProcessStep('⚡ Extracted instantly! Review details and click Save to upload document.');
 
-      // DIRECT CHECK: If email or contact already exists in database, show popup immediately!
+      // 2. Run Duplicate Check non-blockingly (asynchronously)
       const candEmail = (profile.email || '').trim().toLowerCase();
       const candPhone = (profile.phone || '').trim();
 
       if (candEmail || candPhone) {
-        setProcessStep('Checking for existing candidate in database...');
-        const duplicateMatch = await findExistingCandidateByContact(candEmail, candPhone);
-        if (duplicateMatch) {
-          setExistingCandidateAlert(duplicateMatch);
-        }
+        findExistingCandidateByContact(candEmail, candPhone)
+          .then((duplicateMatch) => {
+            if (duplicateMatch) {
+              setExistingCandidateAlert(duplicateMatch);
+            }
+          })
+          .catch((e) => console.warn('Duplicate check error:', e));
       }
 
-      setProcessStep('Extraction complete! Review details and click Save to upload document.');
+      // 3. In the background, run fast enricher (existing dump lookup or smart skill enrichment)
+      fastParseResumeFileLocally(file, {}, additionalNotes)
+        .then((fastResult) => {
+          if (!fastResult?.profile) return;
+          const enriched = fastResult.profile;
+          setParsedCandidate((prev) => {
+            if (!prev) return prev;
+            const currentSkills = new Set((prev.skills || []).map((s) => s.toLowerCase()));
+            const addedSkills = (enriched.skills || []).filter((s) => !currentSkills.has(s.toLowerCase()));
+            const newEdu =
+              prev.highestEducation ||
+              enriched.highestEducation ||
+              (Array.isArray(enriched.education) && enriched.education[0]?.degree) ||
+              '';
+
+            return {
+              ...prev,
+              name: prev.name || enriched.name,
+              email: prev.email || enriched.email,
+              phone: prev.phone || enriched.phone,
+              currentTitle: prev.currentTitle || enriched.currentTitle,
+              highestEducation: newEdu,
+              summary: prev.summary || enriched.summary,
+              skills: addedSkills.length > 0 ? [...(prev.skills || []), ...addedSkills] : prev.skills,
+              experience: (prev.experience && prev.experience.length > 0) ? prev.experience : enriched.experience,
+              education: (prev.education && prev.education.length > 0) ? prev.education : enriched.education
+            };
+          });
+        })
+        .catch((e) => {
+          console.warn('Background enrichment skipped:', e);
+        });
+
     } catch (err: any) {
       console.error('Resume parsing failed:', err);
       messageBox.showError(`Parsing failed: ${err.message || 'Could not parse document'}`);
-    } finally {
       setIsProcessing(false);
     }
   };

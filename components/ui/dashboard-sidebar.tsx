@@ -151,7 +151,7 @@ export const DashboardSidebar = memo(function DashboardSidebar({
     onNavigate(href);
   };
 
-  const manageMatch = activePath.match(/^\/recruiter\/interview\/([^/]+)(?:\/(overview|responses|candidates|voice-interview))?$/);
+  const manageMatch = activePath.match(/^\/recruiter\/interview\/([^/]+)(?:\/(overview|responses|candidates))?$/);
   const legacyResponsesMatch = activePath.match(/^\/recruiter\/interview\/responses\/([^/]+)$/);
   const managedInterviewId = legacyResponsesMatch?.[1] || (manageMatch && !['create', 'responses'].includes(manageMatch[1]) ? manageMatch[1] : null);
   const activeManageSection = legacyResponsesMatch ? 'responses' : manageMatch?.[2] || (managedInterviewId ? 'overview' : '');
@@ -160,7 +160,6 @@ export const DashboardSidebar = memo(function DashboardSidebar({
         { id: 'overview', title: 'Overview', href: `/recruiter/interview/${managedInterviewId}/overview` },
         { id: 'responses', title: 'Responses', href: `/recruiter/interview/${managedInterviewId}/responses` },
         { id: 'candidates', title: 'Candidates', href: `/recruiter/interview/${managedInterviewId}/candidates` },
-        { id: 'voice-interview', title: 'Voice Interview', href: `/recruiter/interview/${managedInterviewId}/voice-interview` },
       ]
     : [];
 

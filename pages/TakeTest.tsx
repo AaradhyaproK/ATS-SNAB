@@ -521,7 +521,7 @@ const TakeTest: React.FC = () => {
             const nextRoundAccessCode = interviewData?.accessCode || '';
             const interviewTitle = interviewData?.title || test.title;
             // Build the interview link directly (no token needed for access-code-based interviews)
-            const interviewLink = `${window.location.origin}/#/interview/${fullTestData.nextInterviewId}`;
+            const interviewLink = `${window.location.origin}/#/candidate?job=${fullTestData.nextInterviewId}`;
             console.log('[Assessment] Interview title:', interviewTitle, '| Access code:', nextRoundAccessCode);
             console.log('[Assessment] Interview link:', interviewLink);
 

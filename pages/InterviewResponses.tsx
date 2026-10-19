@@ -283,7 +283,7 @@ const InterviewResponses: React.FC = () => {
 
     body += `The candidates are made aware about the job profile, location & timing through the following link.\n`;
     
-    const jobLink = `${window.location.origin}/#/interview/${interviewId}`;
+    const jobLink = `${window.location.origin}/#/candidate?job=${interviewId}`;
     body += `The Job details shared with the candidates are on the following link:\n`;
     body += `Link: ${jobLink}\n\n`;
 

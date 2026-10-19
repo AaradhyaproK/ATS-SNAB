@@ -1,5 +1,5 @@
 import React from 'react';
-import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { HashRouter, Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { BackgroundSendProvider } from './context/BackgroundSendContext';
@@ -8,8 +8,6 @@ import Layout from './components/Layout';
 import ErrorBoundary from './components/ErrorBoundary';
 import AuthPage from './pages/Auth';
 import RecruiterDashboard, { RecruiterDashboardSkeleton } from './pages/RecruiterDashboard';
-import InterviewWizard from './pages/Interview';
-import InterviewReport from './pages/Report';
 import EditJob from './pages/EditJob';
 import Profile from './pages/Profile';
 import AdminDashboard from './pages/AdminDashboard';
@@ -29,15 +27,10 @@ import ContactUs from './pages/ContactUs';
 import ReportBug from './pages/ReportBug';
 import CreateInterview, { CreateInterviewSkeleton } from './pages/CreateInterview';
 import RecruiterInterviews, { RecruiterInterviewsSkeleton } from './pages/RecruiterInterviews';
-import InterviewAccess from './pages/InterviewAccess';
 import TestAccess from './pages/TestAccess';
 import InterviewResponses from './pages/InterviewResponses';
 import InterviewOverview from './pages/InterviewOverview';
 import InterviewCandidates from './pages/InterviewCandidates';
-import InterviewVoiceInterview from './pages/InterviewVoiceInterview';
-import CandidateVoiceInterview from './pages/CandidateVoiceInterview';
-import RecruiterVoiceInterviews from './pages/RecruiterVoiceInterviews';
-import VoiceInterviewReport from './pages/VoiceInterviewReport';
 import ResumeDump, { ResumeDumpSkeleton } from './pages/ResumeDump';
 import AddCandidate from './pages/AddCandidate';
 import {
@@ -88,6 +81,11 @@ const ProtectedRoute: React.FC<{
   return <>{children}</>;
 });
 
+const JobToCandidatePortalRedirect: React.FC = () => {
+  const { interviewId } = useParams<{ interviewId: string }>();
+  return <Navigate to={interviewId ? `/candidate?job=${interviewId}` : '/candidate'} replace />;
+};
+
 const HomeRoute: React.FC = () => {
   const { user, userProfile, loading } = useAuth();
 
@@ -129,7 +127,7 @@ const App: React.FC = () => {
                 <BlogDetail />
               </ThemeProvider>
             } />
-            <Route path="interview/:interviewId" element={<InterviewAccess />} />
+            <Route path="interview/:interviewId" element={<JobToCandidatePortalRedirect />} />
             <Route path="reviews" element={
               <ThemeProvider>
                 <ReviewsPage />
@@ -232,24 +230,12 @@ const App: React.FC = () => {
               </ThemeProvider>
             } />
 
-            {/* Interview Route (No Layout) */}
-            <Route path="interview/start/:interviewId" element={
-              <ThemeProvider>
-                <InterviewWizard />
-              </ThemeProvider>
-            } />
-
-            {/* Candidate Voice Interview Route (Audio-Only Screening, No Layout) */}
-            <Route path="voice-interview/:voiceInterviewId" element={
-              <ThemeProvider>
-                <CandidateVoiceInterview />
-              </ThemeProvider>
-            } />
-            <Route path="voice-interview/start/:voiceInterviewId" element={
-              <ThemeProvider>
-                <CandidateVoiceInterview />
-              </ThemeProvider>
-            } />
+            {/* Public Candidate Job Application Redirects (Directly to Candidate Portal) */}
+            <Route path="interview/start/:interviewId" element={<JobToCandidatePortalRedirect />} />
+            <Route path="voice-interview/*" element={<Navigate to="/candidate" replace />} />
+            <Route path="voice-report/*" element={<Navigate to="/candidate" replace />} />
+            <Route path="report/*" element={<Navigate to="/candidate" replace />} />
+            <Route path="client-view/*" element={<Navigate to="/candidate" replace />} />
 
             {/* Public Test Taking Routes (No Layout) */}
             <Route path="test/:testId" element={
@@ -263,35 +249,6 @@ const App: React.FC = () => {
               </ThemeProvider>
             } />
 
-            {/* Public Report Route (No Auth Required) */}
-            <Route path="report/:interviewId" element={
-              <ThemeProvider>
-                <InterviewReport />
-              </ThemeProvider>
-            } />
-            <Route path="report/:interviewId/:submissionId" element={
-              <ThemeProvider>
-                <InterviewReport />
-              </ThemeProvider>
-            } />
-            <Route path="client-view/:interviewId" element={
-              <ThemeProvider>
-                <ClientView />
-              </ThemeProvider>
-            } />
-
-            {/* Public Voice Screening Report Route (Shareable, No Auth Required) */}
-            <Route path="voice-report/:responseId" element={
-              <ThemeProvider>
-                <VoiceInterviewReport />
-              </ThemeProvider>
-            } />
-            <Route path="voice-interview/report/:responseId" element={
-              <ThemeProvider>
-                <VoiceInterviewReport />
-              </ThemeProvider>
-            } />
-
             {/* Protected Routes (With Layout) */}
             <Route path="/*" element={
               <Layout>
@@ -302,8 +259,7 @@ const App: React.FC = () => {
                   <Route path="admin/add-candidate" element={<ProtectedRoute role="admin"><AddCandidate /></ProtectedRoute>} />
                   <Route path="recruiter/all-jobs" element={<ProtectedRoute role="recruiter" loadingFallback={<RecruiterInterviewsSkeleton />}><RecruiterAllJobs /></ProtectedRoute>} />
                   <Route path="recruiter/hot-leads" element={<ProtectedRoute role="recruiter" loadingFallback={<RecruiterInterviewsSkeleton />}><HotLeads /></ProtectedRoute>} />
-                  <Route path="recruiter/interviews" element={<ProtectedRoute role="recruiter" loadingFallback={<RecruiterInterviewsSkeleton />}><RecruiterInterviews /></ProtectedRoute>} />
-                  <Route path="recruiter/voice-interviews" element={<ProtectedRoute role="recruiter" loadingFallback={<RecruiterInterviewsSkeleton />}><RecruiterVoiceInterviews /></ProtectedRoute>} />
+                  <Route path="recruiter/interviews" element={<ProtectedRoute role="recruiter" loadingFallback={<RecruiterInterviewsSkeleton />}><RecruiterAllJobs /></ProtectedRoute>} />
                   <Route path="recruiter/job/:jobId/edit" element={<ProtectedRoute role="recruiter"><EditJob /></ProtectedRoute>} />
                   <Route path="recruiter/invites" element={<ProtectedRoute role="recruiter" loadingFallback={<RecruiterInterviewsSkeleton />}><InvitedCandidates /></ProtectedRoute>} />
                   <Route path="recruiter/resume-dump" element={<ProtectedRoute role="recruiter" loadingFallback={<ResumeDumpSkeleton />}><ResumeDump /></ProtectedRoute>} />
@@ -311,7 +267,6 @@ const App: React.FC = () => {
                   <Route path="recruiter/interview/:interviewId/overview" element={<ProtectedRoute role="recruiter" loadingFallback={<InterviewOverviewSkeleton />}><InterviewOverview /></ProtectedRoute>} />
                   <Route path="recruiter/interview/:interviewId/responses" element={<ProtectedRoute role="recruiter" loadingFallback={<InterviewResponsesSkeleton />}><InterviewResponses /></ProtectedRoute>} />
                   <Route path="recruiter/interview/:interviewId/candidates" element={<ProtectedRoute role="recruiter" loadingFallback={<InterviewCandidatesSkeleton />}><InterviewCandidates /></ProtectedRoute>} />
-                  <Route path="recruiter/interview/:interviewId/voice-interview" element={<ProtectedRoute role="recruiter" loadingFallback={<InterviewOverviewSkeleton />}><InterviewVoiceInterview /></ProtectedRoute>} />
                   <Route path="recruiter/interview/responses/:interviewId" element={<ProtectedRoute role="recruiter" loadingFallback={<InterviewResponsesSkeleton />}><InterviewResponses /></ProtectedRoute>} />
                   <Route path="recruiter/interview/create" element={<ProtectedRoute role="recruiter" loadingFallback={<CreateInterviewSkeleton />}><CreateInterview /></ProtectedRoute>} />
                   <Route path="recruiter/tests" element={<ProtectedRoute role="recruiter" loadingFallback={<RecruiterInterviewsSkeleton />}><RecruiterTests /></ProtectedRoute>} />

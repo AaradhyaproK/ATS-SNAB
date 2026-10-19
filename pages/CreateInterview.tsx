@@ -862,9 +862,9 @@ const CreateInterview: React.FC = () => {
     setLoading(true);
 
     try {
-      // 1. Generate Interview ID, Link, and Access Code locally
+      // 1. Generate Job ID, Link, and Access Code locally
       const newRand = Math.random().toString(36).substring(2, 15);
-      const newInterviewLink = `${window.location.origin}/#/interview/${newRand}`;
+      const newInterviewLink = `${window.location.origin}/#/candidate?job=${newRand}`;
       const newAccessCode = Math.random().toString(36).substring(2, 8).toUpperCase();
 
       // 2. Save to Firestore
@@ -1054,7 +1054,7 @@ const CreateInterview: React.FC = () => {
           <p className="geist-label uppercase text-gray-500 dark:text-[#6b7280]">Job setup</p>
           <h1 className="geist-page-title mt-2 text-gray-900 dark:text-white">Create Job</h1>
           <p className="geist-small mt-1 max-w-2xl text-gray-600 dark:text-[#8f8f8f]">
-            Build a structured interview brief, tune the question rules, and prepare candidate invitations from one focused workspace.
+            Post a new job opening, define role requirements, and prepare candidate invitations from one focused ATS workspace.
           </p>
         </div>
         {interviewLimitReached && (
@@ -1532,75 +1532,14 @@ const CreateInterview: React.FC = () => {
           </section>
 
           <section className="border-b border-gray-200 dark:border-white/[0.11] px-4 py-5 sm:px-6 lg:px-7">
-            <p className={panelHeaderClass}>Questions</p>
-            <h2 className={panelTitleClass}>Interview rules</h2>
-            <p className={helperTextClass}>Set the generated question count, report behavior, and any manual prompts.</p>
-
-            <div className="mt-5 grid grid-cols-1 gap-4 xl:grid-cols-3">
-              <div>
-                <label className={labelClass}>AI-generated questions</label>
-                <div className="flex h-9 items-center rounded-[6px] border border-gray-300 dark:border-white/[0.11] bg-white dark:bg-[#050505]">
-                  <button type="button" disabled={formData.numQuestions <= 1} onClick={() => setFormData(prev => ({ ...prev, numQuestions: Math.max(1, prev.numQuestions - 1) }))} className="h-full w-10 border-r border-gray-200 dark:border-white/[0.11] text-gray-600 dark:text-[#8f8f8f] transition-colors hover:bg-gray-100 dark:hover:bg-white/[0.06] hover:text-gray-900 dark:hover:text-white disabled:cursor-not-allowed disabled:opacity-30">-</button>
-                  <input name="numQuestions" type="number" min="1" max="25" className="geist-caption h-full min-w-0 flex-1 border-none bg-transparent px-3 text-center font-medium text-gray-900 dark:text-white outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none" value={formData.numQuestions} onChange={handleFormChange} />
-                  <button type="button" disabled={formData.numQuestions >= 25} onClick={() => setFormData(prev => ({ ...prev, numQuestions: Math.min(25, prev.numQuestions + 1) }))} className="h-full w-10 border-l border-gray-200 dark:border-white/[0.11] text-gray-600 dark:text-[#8f8f8f] transition-colors hover:bg-gray-100 dark:hover:bg-white/[0.06] hover:text-gray-900 dark:hover:text-white disabled:cursor-not-allowed disabled:opacity-30">+</button>
-                </div>
-              </div>
-
-              <div>
-                <label className={labelClass}>Difficulty level</label>
-                <select name="difficulty" value={formData.difficulty} onChange={handleFormChange} className={selectClass}>
-                  <option value="Easy">Easy</option>
-                  <option value="Medium">Medium</option>
-                  <option value="Hard">Hard</option>
-                </select>
-              </div>
-
-              <div>
-                <label className={labelClass}>Report check strictness</label>
-                <select name="strictness" value={formData.strictness} onChange={handleFormChange} className={selectClass}>
-                  <option value="Low">Low (Ignore minor issues)</option>
-                  <option value="Medium">Medium (Balanced)</option>
-                  <option value="Hard">Hard (Strict feedback)</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="mt-5 rounded-[6px] border border-gray-200 dark:border-white/[0.11] bg-gray-50 dark:bg-white/[0.025] p-3">
-              <label className={labelClass}>Manual interview questions</label>
-              <div className="flex flex-col gap-2 sm:flex-row">
-                <input
-                  type="text"
-                  className={inputClass}
-                  placeholder="Tell us about your experience with React"
-                  value={currentManualQuestion}
-                  onChange={e => setCurrentManualQuestion(e.target.value)}
-                  onKeyDown={e => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      handleAddManualQuestion();
-                    }
-                  }}
-                />
-                <button type="button" onClick={handleAddManualQuestion} className={secondaryButtonClass}>Add</button>
-              </div>
-
-              {manualQuestions.length > 0 && (
-                <div className="mt-3 max-h-60 space-y-2 overflow-y-auto pr-1 custom-scrollbar">
-                  {manualQuestions.map((q, index) => (
-                    <div key={index} className="flex items-start justify-between gap-3 rounded-[6px] border border-gray-200 dark:border-white/[0.11] bg-white dark:bg-[#050505] px-3 py-2.5">
-                      <p className="geist-caption min-w-0 text-gray-800 dark:text-[#d4d4d4] font-medium">{q}</p>
-                      <button type="button" onClick={() => handleRemoveManualQuestion(index)} className="geist-small shrink-0 text-red-500 dark:text-[#8f8f8f] transition-colors hover:text-red-700 dark:hover:text-white font-semibold">Remove</button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+            <p className={panelHeaderClass}>Additional Info</p>
+            <h2 className={panelTitleClass}>Custom fields</h2>
+            <p className={helperTextClass}>Attach optional custom fields to this job post (e.g. Perks, Working Hours, Client Code).</p>
 
             <div className="mt-4 rounded-[6px] border border-gray-200 dark:border-white/[0.11] bg-gray-50 dark:bg-white/[0.025] p-3">
-              <label className={labelClass}>Custom fields</label>
               <div className="grid grid-cols-1 gap-2 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
-                <input type="text" className={inputClass} placeholder="Field name, e.g. Salary range" value={tempCustomField.key} onChange={e => setTempCustomField({ ...tempCustomField, key: e.target.value })} />
-                <input type="text" className={inputClass} placeholder="Field value, e.g. $80k - $120k" value={tempCustomField.value} onChange={e => setTempCustomField({ ...tempCustomField, value: e.target.value })} />
+                <input type="text" className={inputClass} placeholder="Field name, e.g. Perks" value={tempCustomField.key} onChange={e => setTempCustomField({ ...tempCustomField, key: e.target.value })} />
+                <input type="text" className={inputClass} placeholder="Field value, e.g. Flexible shifts, Cab facility" value={tempCustomField.value} onChange={e => setTempCustomField({ ...tempCustomField, value: e.target.value })} />
                 <button type="button" onClick={handleAddCustomField} className={secondaryButtonClass}>Add</button>
               </div>
 

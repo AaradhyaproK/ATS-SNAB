@@ -173,7 +173,9 @@ const InvitedCandidates: React.FC = () => {
                 phone: validPhone,
                 candidateName: email.split('@')[0] || 'Candidate',
                 jobTitle: selectedInterview.title,
-                interviewLink: selectedInterview.interviewLink || `${window.location.origin}/#/interview/${selectedInterview.id}`,
+                interviewLink: (selectedInterview.interviewLink && !selectedInterview.interviewLink.includes('/#/interview/'))
+                    ? selectedInterview.interviewLink
+                    : `${window.location.origin}/#/candidate?job=${selectedInterview.id}`,
                 accessCode: selectedInterview.accessCode,
                 options: {
                     gender: (selectedInterview as any).gender || (selectedInterview as any).genderRequirement,
@@ -808,8 +810,8 @@ const InvitedCandidates: React.FC = () => {
                                 ))}
                             </select>
                             {selectedInterview && (() => {
-                                const link = window.location.origin + '/#/interview/' + selectedInterview.id;
-                                const template = `👋 Hi there!\n\nWe're actively hiring for the *${selectedInterview.title}* role and your profile caught our eye! 🌟\n\nWe'd love to invite you to take our next-gen AI-powered interview to fast-track your application. It only takes a few minutes and you can complete it whenever you're ready!\n\n🚀 *Start your interview here:* \n${link}\n\n🔑 *Your Access Code:* \n${selectedInterview.accessCode}\n\nBest of luck, and we can't wait to see your skills in action! 🎉`;
+                                const link = `${window.location.origin}/#/candidate?job=${selectedInterview.id}`;
+                                const template = `👋 Hi there!\n\nWe're actively hiring for the *${selectedInterview.title}* role and your profile caught our eye! 🌟\n\nWe invite you to submit your application directly on our Candidate Portal to fast-track your profile.\n\n🚀 *Apply here:* \n${link}\n\n🔑 *Job Code:* \n${selectedInterview.accessCode}\n\nBest of luck, and we look forward to reviewing your application! 🎉`;
                                 return (
                                     <button
                                         onClick={() => {
@@ -1140,8 +1142,8 @@ const InvitedCandidates: React.FC = () => {
                                                                  onClick={() => {
                                                                      const selectedInterview = interviews.find(i => i.id === candidate.interviewId);
                                                                      if (!selectedInterview) return;
-                                                                     const link = `${window.location.origin}/#/interview/${selectedInterview.id}`;
-                                                                     const msg = `👋 Hi there!\n\nWe're actively hiring for the *${selectedInterview.title}* role and we'd love to invite you to take our AI-powered interview to fast-track your application! 🌟\n\n🚀 *Start your interview here:* \n${link}\n\n🔑 *Your Access Code:* \n${selectedInterview.accessCode}\n\nIt only takes a few minutes and you can complete it whenever you're ready. Best of luck! 🎉`;
+                                                                     const link = `${window.location.origin}/#/candidate?job=${selectedInterview.id}`;
+                                                                     const msg = `👋 Hi there!\n\nWe're actively hiring for the *${selectedInterview.title}* role and we'd love to invite you to apply for the role! 🌟\n\n🚀 *Apply here:* \n${link}\n\n🔑 *Your Access Code:* \n${selectedInterview.accessCode}\n\nIt only takes a few minutes and you can complete it whenever you're ready. Best of luck! 🎉`;
                                                                      setWhatsappModal({
                                                                          isOpen: true,
                                                                          email: candidate.email,

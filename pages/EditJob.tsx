@@ -550,7 +550,7 @@ const EditJobModal: React.FC<EditJobModalProps> = ({ jobId, onClose }) => {
         recruiterUID: user.uid,
         recruiterName: formData.entryBy || userProfile?.fullname || (userProfile as any)?.name || user.email,
         recruiterEmail: user.email,
-        interviewLink: `${window.location.origin}/#/interview/${jobId}`,
+        interviewLink: `${window.location.origin}/#/candidate?job=${jobId}`,
         isMock: false,
       };
 

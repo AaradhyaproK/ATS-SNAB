@@ -299,7 +299,7 @@ const InterviewOverview: React.FC = () => {
   }
 
   const anyInterview = interview as any;
-  const interviewLink = interview.interviewLink || `${window.location.origin}/#/interview/${interview.id}`;
+  const interviewLink = `${window.location.origin}/#/candidate?job=${interview.id}`;
   const manualQuestions = anyInterview.manualQuestions || [];
   const generatedQuestions = interview.questions?.map((question: any) => question.text || question) || [];
   const customFields = anyInterview.customFields || [];
@@ -399,23 +399,23 @@ const InterviewOverview: React.FC = () => {
                 </button>
                 <button
                   type="button"
-                  onClick={() => navigator.clipboard.writeText(interviewLink).then(() => messageBox.showSuccess('Interview link copied'))}
+                  onClick={() => navigator.clipboard.writeText(interviewLink).then(() => messageBox.showSuccess('Job link copied'))}
                   className="geist-small inline-flex items-center gap-2 rounded-[6px] border border-slate-200 dark:border-white/[0.11] bg-slate-100 dark:bg-white/[0.03] px-2 py-1 font-medium text-slate-700 dark:text-[#d4d4d4] transition-colors hover:bg-slate-200 dark:hover:bg-white/[0.06] hover:text-slate-900 dark:hover:text-white"
                 >
                   <i className="fas fa-link text-[10px] text-slate-400 dark:text-[#8f8f8f]"></i>
-                  <span>Copy link</span>
+                  <span>Copy Job Link</span>
                 </button>
               </div>
             </div>
 
             <div className="flex flex-wrap gap-2">
               <ActionLink
-                to={`/interview/${interview.id}`}
+                to={`/candidate?job=${interview.id}`}
                 target="_blank"
                 className="border-slate-900 bg-slate-900 text-white hover:bg-slate-800 dark:border-white dark:bg-white dark:text-black dark:hover:bg-[#ededed]"
               >
                 <i className="fas fa-external-link-alt text-[11px]"></i>
-                <span>Open link</span>
+                <span>Candidate View</span>
               </ActionLink>
               <ActionButton
                 type="button"
@@ -446,8 +446,8 @@ const InterviewOverview: React.FC = () => {
           <StatCell label="Responses" value={responsesCount} tone="text-emerald-600 dark:text-[#83d0a3]" />
           <StatCell label="Candidates" value={candidateCount} />
           <StatCell label="Pending" value={pendingCount} tone="text-amber-600 dark:text-[#f5c76b]" />
-          <StatCell label="Questions" value={getQuestionsCount(interview)} />
-          <StatCell label="Difficulty" value={interview.difficulty || 'Medium'} tone="text-blue-600 dark:text-[#8bbde8]" />
+          <StatCell label="Location" value={interview.location || 'Anywhere'} />
+          <StatCell label="Status" value={anyInterview.status || 'Active'} tone="text-blue-600 dark:text-[#8bbde8]" />
         </div>
       </div>
 
@@ -511,9 +511,7 @@ const InterviewOverview: React.FC = () => {
         </dl>
       </section>
 
-      <section className="grid grid-cols-1 border-b border-slate-200 dark:border-white/[0.11] xl:grid-cols-3 xl:divide-x xl:divide-slate-200 dark:xl:divide-white/[0.11]">
-        <ListBlock label="Manual questions" items={manualQuestions} />
-        <ListBlock label="Generated questions" items={generatedQuestions} />
+      <section className="border-b border-slate-200 dark:border-white/[0.11]">
         <ListBlock label="Candidate emails" items={candidateEmails} />
       </section>
 
