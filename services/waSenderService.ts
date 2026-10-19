@@ -68,13 +68,20 @@ export interface WhatsAppAuditResponse {
 }
 
 /**
- * Formats a phone number for the WhatsApp Serverless API.
+ * Validates and formats a phone number for the WhatsApp Serverless API.
  * The phone field must include country code without + or spaces (e.g. 919876543210 for India, 15551234567 for US).
  */
-export function formatPhoneForWhatsApp(phone: string): string {
-  if (!phone) return '';
-  let cleaned = phone.replace(/[^0-9]/g, '');
+export function validatePhoneForWhatsApp(phone: string): { isValid: boolean; formatted: string; error?: string } {
+  if (!phone || !phone.trim()) {
+    return { isValid: false, formatted: '', error: 'Phone number is required.' };
+  }
 
+  let cleaned = phone.replace(/[^0-9]/g, '');
+  if (!cleaned) {
+    return { isValid: false, formatted: '', error: 'Phone number contains no numeric digits.' };
+  }
+
+  // Strip leading 0091, 091, or leading 0s
   if (cleaned.startsWith('0091')) {
     cleaned = cleaned.substring(4);
   } else if (cleaned.startsWith('091')) {
@@ -83,14 +90,61 @@ export function formatPhoneForWhatsApp(phone: string): string {
     cleaned = cleaned.replace(/^0+/, '');
   }
 
-  // If 10 digits standard Indian mobile, prepend country code 91
-  if (cleaned.length === 10 && /^[6-9]/.test(cleaned)) {
-    cleaned = '91' + cleaned;
-  } else if (cleaned.length === 10) {
-    cleaned = '91' + cleaned;
+  // Check Indian number with country code 91:
+  if (cleaned.startsWith('91')) {
+    const nationalPart = cleaned.substring(2);
+    if (nationalPart.length === 10) {
+      return { isValid: true, formatted: cleaned };
+    }
+    if (nationalPart.length === 9) {
+      return {
+        isValid: false,
+        formatted: cleaned,
+        error: `Incomplete phone number (+91 ${nationalPart}). Indian mobile numbers must be exactly 10 digits (you have 9 digits). Please check for a missing digit.`
+      };
+    }
+    if (nationalPart.length < 10) {
+      return {
+        isValid: false,
+        formatted: cleaned,
+        error: `Phone number (+91 ${nationalPart}) is too short (${nationalPart.length} digits). 10-digit mobile number required.`
+      };
+    }
   }
 
-  return cleaned;
+  // Check 10-digit Indian standard mobile number:
+  if (cleaned.length === 10) {
+    return { isValid: true, formatted: '91' + cleaned };
+  }
+
+  // Check 9-digit incomplete number:
+  if (cleaned.length === 9) {
+    return {
+      isValid: false,
+      formatted: '91' + cleaned,
+      error: `Incomplete phone number (${cleaned}). Indian mobile numbers must be exactly 10 digits (you entered 9 digits). Please check for a missing digit.`
+    };
+  }
+
+  // International numbers (E.164: typically 10 to 15 digits)
+  if (cleaned.length >= 10 && cleaned.length <= 15) {
+    return { isValid: true, formatted: cleaned };
+  }
+
+  return {
+    isValid: false,
+    formatted: cleaned,
+    error: `Invalid phone number length (${cleaned.length} digits). Standard phone numbers must be between 10 and 15 digits.`
+  };
+}
+
+/**
+ * Formats a phone number for the WhatsApp Serverless API.
+ * The phone field must include country code without + or spaces (e.g. 919876543210 for India, 15551234567 for US).
+ */
+export function formatPhoneForWhatsApp(phone: string): string {
+  const result = validatePhoneForWhatsApp(phone);
+  return result.formatted;
 }
 
 /**
@@ -430,11 +484,12 @@ export async function sendWhatsAppMessage(
   text: string,
   credentials?: { sessionId?: string; passcode?: string }
 ): Promise<SendWhatsAppResponse> {
-  const formattedPhone = formatPhoneForWhatsApp(phone);
-  if (!formattedPhone) {
-    console.error('[WhatsApp API] Invalid phone number provided:', phone);
-    return { success: false, error: 'Invalid or missing phone number (must include valid country code).' };
+  const phoneValidation = validatePhoneForWhatsApp(phone);
+  if (!phoneValidation.isValid) {
+    console.warn('[WhatsApp API] Phone validation failed for:', phone, phoneValidation.error);
+    return { success: false, error: phoneValidation.error || 'Invalid or missing phone number.' };
   }
+  const formattedPhone = phoneValidation.formatted;
 
   const activeSessionId = getStoredSessionId(credentials?.sessionId);
   const activePasscode = getStoredPasscode(credentials?.passcode);
@@ -464,7 +519,9 @@ export async function sendWhatsAppMessage(
       return { success: true, data: data.data || data, messageId: data.messageId };
     } else {
       let errMsg = data.message || data.error;
-      if (!errMsg) {
+      if (data.error === 'NUMBER_NOT_ON_WHATSAPP' || (typeof errMsg === 'string' && (errMsg.includes('not registered') || errMsg.includes('NUMBER_NOT_ON_WHATSAPP')))) {
+        errMsg = `The phone number (+${formattedPhone}) is not registered on WhatsApp. Please check that the number has all 10 digits and has an active WhatsApp account.`;
+      } else if (!errMsg) {
         if (response.status === 401) errMsg = '401 Unauthorized: Access locked. Please enter your session passcode.';
         else if (response.status === 503) errMsg = '503 Service Unavailable: WhatsApp socket is not connected (QR scan required).';
         else errMsg = `Failed to send (HTTP ${response.status})`;

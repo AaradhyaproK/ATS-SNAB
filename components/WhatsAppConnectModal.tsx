@@ -21,7 +21,8 @@ import {
   DEFAULT_WHATSAPP_PASSCODE,
   WhatsAppStatusResponse, 
   WhatsAppAuditMessage,
-  WHATSAPP_API_BASE_URL 
+  WHATSAPP_API_BASE_URL,
+  validatePhoneForWhatsApp
 } from '../services/waSenderService';
 import { 
   X, CheckCircle2, AlertTriangle, Key, ShieldCheck, 
@@ -273,8 +274,9 @@ export const WhatsAppConnectModal: React.FC<WhatsAppConnectModalProps> = ({ isOp
 
   // Handle Send Test Message
   const handleSendTestMessage = async () => {
-    if (!testPhone.trim()) {
-      messageBox.showError('Please enter a recipient phone number with country code (e.g. 919876543210).');
+    const phoneVal = validatePhoneForWhatsApp(testPhone.trim());
+    if (!phoneVal.isValid) {
+      messageBox.showError(phoneVal.error || 'Please enter a valid 10-digit phone number with country code (e.g. 919876543210).');
       return;
     }
     if (!testMessage.trim()) {
@@ -300,8 +302,9 @@ export const WhatsAppConnectModal: React.FC<WhatsAppConnectModalProps> = ({ isOp
 
   // Handle Send Test Task Alert
   const handleSendTaskAlert = async () => {
-    if (!testPhone.trim()) {
-      messageBox.showError('Please enter a recipient phone number with country code.');
+    const phoneVal = validatePhoneForWhatsApp(testPhone.trim());
+    if (!phoneVal.isValid) {
+      messageBox.showError(phoneVal.error || 'Please enter a valid 10-digit phone number with country code.');
       return;
     }
 

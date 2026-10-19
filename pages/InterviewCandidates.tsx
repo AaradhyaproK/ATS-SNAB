@@ -8,7 +8,7 @@ import { subscribeToJobOrInterview } from '../services/jobResolutionService';
 import { useAuth } from '../context/AuthContext';
 import { useMessageBox } from '../components/MessageBox';
 import { sendInterviewInvitations } from '../services/brevoService';
-import { sendWhatsAppMessage, sendBulkWhatsAppInvites, sendInterviewWhatsAppInvite, buildWhatsAppInviteText } from '../services/waSenderService';
+import { sendWhatsAppMessage, sendBulkWhatsAppInvites, sendInterviewWhatsAppInvite, buildWhatsAppInviteText, validatePhoneForWhatsApp } from '../services/waSenderService';
 import { evaluateResumeMatch } from '../services/api';
 import { formatExtractedPhone, ingestResumeFile, saveResumeDumpCandidate, scoreCandidateForRole, extractSkillSignals, ResumeDumpRecord, EMPLOYMENT_TYPE_OPTIONS, normalizeEmploymentTypes } from '../services/resumeService';
 import { EmploymentTypeMultiSelect } from '../components/EmploymentTypeMultiSelect';
@@ -989,8 +989,10 @@ const InterviewCandidates: React.FC = () => {
   };
 
   const handleWhatsAppSend = async () => {
-    if (!whatsappModal || !whatsappModal.phone.trim()) {
-      messageBox.showError('Please enter a valid phone number');
+    if (!whatsappModal) return;
+    const phoneVal = validatePhoneForWhatsApp(whatsappModal.phone);
+    if (!phoneVal.isValid) {
+      messageBox.showError(phoneVal.error || 'Please enter a valid 10-digit phone number');
       return;
     }
 
@@ -1010,15 +1012,12 @@ const InterviewCandidates: React.FC = () => {
     }
 
     // Send message via WhatsApp API
-    const res = await sendWhatsAppMessage(whatsappModal.phone, whatsappModal.message);
-    setWhatsappModal(null);
+    const res = await sendWhatsAppMessage(phoneVal.formatted, whatsappModal.message);
     if (res.success) {
+      setWhatsappModal(null);
       messageBox.showSuccess('✅ WhatsApp invitation sent successfully!');
     } else {
-      messageBox.showError(`WhatsApp API error: ${res.error || 'Failed to send'}. Opening WhatsApp Web fallback.`);
-      const cleanedPhone = whatsappModal.phone.replace(/[^0-9]/g, '');
-      const targetPhone = cleanedPhone.length === 10 ? `91${cleanedPhone}` : cleanedPhone;
-      window.open(`https://web.whatsapp.com/send?phone=${targetPhone}&text=${encodeURIComponent(whatsappModal.message)}`, '_blank');
+      messageBox.showError(`WhatsApp error: ${res.error || 'Failed to send'}`);
     }
   };
 

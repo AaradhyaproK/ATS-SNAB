@@ -9,7 +9,7 @@ import { Interview } from '../types';
 import { useMessageBox } from '../components/MessageBox';
 import { createPortal } from 'react-dom';
 import { sendInterviewInvitations } from '../services/brevoService';
-import { sendWhatsAppMessage, sendInterviewWhatsAppInvite, buildWhatsAppInviteText, openWhatsAppWebInvite, formatPhoneForWhatsApp, sendBulkWhatsAppInvites } from '../services/waSenderService';
+import { sendWhatsAppMessage, sendInterviewWhatsAppInvite, buildWhatsAppInviteText, openWhatsAppWebInvite, formatPhoneForWhatsApp, sendBulkWhatsAppInvites, validatePhoneForWhatsApp } from '../services/waSenderService';
 
 import EditJobModal from './EditJob';
 import { useBackgroundSend } from '../context/BackgroundSendContext';
@@ -2474,8 +2474,10 @@ const RecruiterInterviews: React.FC = () => {
                     </button>
                     <button 
                         onClick={async () => {
-                            if (!whatsappModal.phone.trim()) {
-                                messageBox.showError("Please enter a valid phone number");
+                            if (!whatsappModal) return;
+                            const phoneVal = validatePhoneForWhatsApp(whatsappModal.phone);
+                            if (!phoneVal.isValid) {
+                                messageBox.showError(phoneVal.error || "Please enter a valid 10-digit phone number");
                                 return;
                             }
                             
@@ -2508,15 +2510,12 @@ const RecruiterInterviews: React.FC = () => {
                             }
                             
                             // Send message via WhatsApp API
-                            const res = await sendWhatsAppMessage(whatsappModal.phone, whatsappModal.message);
-                            setWhatsappModal(null);
+                            const res = await sendWhatsAppMessage(phoneVal.formatted, whatsappModal.message);
                             if (res.success) {
+                                setWhatsappModal(null);
                                 messageBox.showSuccess("✅ WhatsApp invitation sent successfully!");
                             } else {
-                                messageBox.showError(`WhatsApp API error: ${res.error || 'Failed to send'}. Opening WhatsApp Web fallback.`);
-                                const cleanedPhone = whatsappModal.phone.replace(/[^0-9]/g, '');
-                                const targetPhone = cleanedPhone.length === 10 ? '91' + cleanedPhone : cleanedPhone;
-                                window.open(`https://web.whatsapp.com/send?phone=${targetPhone}&text=${encodeURIComponent(whatsappModal.message)}`, '_blank');
+                                messageBox.showError(`WhatsApp error: ${res.error || 'Failed to send'}`);
                             }
                         }}
                         className="px-5 py-2 text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-500 rounded-lg shadow-lg shadow-emerald-500/20 transition-all flex items-center gap-2"
