@@ -42,7 +42,7 @@ export const InterviewVoiceInterview: React.FC = () => {
   const [selectedResponse, setSelectedResponse] = useState<VoiceInterviewResponse | null>(null);
 
   // Candidate Link
-  const candidateLink = `${window.location.origin}/#/voice-interview/${interviewId}`;
+  const candidateLink = `${window.location.origin}/voice-interview/${interviewId}`;
 
   // Load Job / Interview details
   useEffect(() => {
@@ -618,7 +618,7 @@ export const InterviewVoiceInterview: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => {
-                    const url = `${window.location.origin}/#/voice-report/${selectedResponse.id}`;
+                    const url = `${window.location.origin}/voice-report/${selectedResponse.id}`;
                     navigator.clipboard.writeText(url);
                     messageBox.showSuccess('Shareable report link copied to clipboard!');
                   }}

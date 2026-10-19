@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { HashRouter, Routes, Route, Navigate, useParams, useLocation, useNavigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useParams, useNavigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { BackgroundSendProvider } from './context/BackgroundSendContext';
@@ -87,13 +87,30 @@ const JobToCandidatePortalRedirect: React.FC = () => {
   return <Navigate to={interviewId ? `/candidate?job=${interviewId}` : '/candidate'} replace />;
 };
 
+const LegacyHashRedirect: React.FC = () => {
+  const navigate = useNavigate();
+  useEffect(() => {
+    const handleHash = () => {
+      if (typeof window !== 'undefined' && window.location.hash && window.location.hash.startsWith('#/')) {
+        const cleanPath = window.location.hash.slice(1);
+        navigate(cleanPath, { replace: true });
+      }
+    };
+    handleHash();
+    window.addEventListener('hashchange', handleHash);
+    return () => window.removeEventListener('hashchange', handleHash);
+  }, [navigate]);
+  return null;
+};
+
 const App: React.FC = () => {
   return (
     <MessageBoxProvider>
       <ThemeProvider>
         <AuthProvider>
           <BackgroundSendProvider>
-            <HashRouter>
+            <BrowserRouter>
+              <LegacyHashRedirect />
               <ErrorBoundary>
                 <Routes>
             {/* Public Routes (No Layout) */}
@@ -265,7 +282,7 @@ const App: React.FC = () => {
             </Route>
             </Routes>
             </ErrorBoundary>
-          </HashRouter>
+          </BrowserRouter>
         </BackgroundSendProvider>
         </AuthProvider>
       </ThemeProvider>

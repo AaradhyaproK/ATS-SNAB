@@ -199,7 +199,7 @@ app.post('/api/jobs/receive', authenticateApiKey, async (req, res) => {
   if (!db) {
     console.warn("⚠️ Firestore connection unavailable. Returning mock response for testing/demo.");
     const mockRand = Math.random().toString(36).substring(2, 15);
-    const mockLink = `http://localhost:3000/#/interview/${mockRand}`;
+    const mockLink = `http://localhost:3000/interview/${mockRand}`;
     
     return res.status(201).json({
       success: true,
@@ -223,7 +223,7 @@ app.post('/api/jobs/receive', authenticateApiKey, async (req, res) => {
 
   try {
     const newRand = Math.random().toString(36).substring(2, 15);
-    const newInterviewLink = `${process.env.IX_FRONTEND_URL || 'http://localhost:5173'}/#/interview/${newRand}`;
+    const newInterviewLink = `${process.env.IX_FRONTEND_URL || 'http://localhost:5173'}/interview/${newRand}`;
 
     const jobData = {
       title,
@@ -440,7 +440,7 @@ app.post('/api/jobs/update', authenticateApiKey, async (req, res) => {
     const updatedJobId = String(docRef.id || targetId);
     const updatedJobNo = jobNo || updatedJobId;
     const origin = process.env.IX_FRONTEND_URL || 'https://app.snabhirex.com';
-    const interviewLink = `${origin}/#/interview/${updatedJobId}`;
+    const interviewLink = `${origin}/interview/${updatedJobId}`;
 
     return res.status(200).json({
       success: true,
@@ -594,7 +594,7 @@ async function handleJobUpdate(req, res, targetIdParam) {
     const updatedJobId = String(docRef.id || targetId);
     const updatedJobNo = jobNo || updatedJobId;
     const origin = process.env.IX_FRONTEND_URL || 'https://app.snabhirex.com';
-    const interviewLink = `${origin}/#/interview/${updatedJobId}`;
+    const interviewLink = `${origin}/interview/${updatedJobId}`;
 
     return res.status(200).json({
       success: true,

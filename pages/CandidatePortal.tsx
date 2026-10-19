@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   Mail,
   Lock,
@@ -143,6 +143,7 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
   const [minScoreFilter, setMinScoreFilter] = useState<number>(0);
   const [matchFilter, setMatchFilter] = useState<'EligibleOnly' | 'All' | 'HighMatch' | 'LocalCity'>('EligibleOnly');
   const [selectedJobModal, setSelectedJobModal] = useState<JobMatchResult | null>(null);
+  const hasDismissedJobModalRef = useRef(false);
 
   const [appliedJobIds, setAppliedJobIds] = useState<string[]>(() => {
     try {
@@ -718,9 +719,12 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
     return eligibleResults;
   }, [candidate, allJobs, editForm]);
 
-  // Auto-open target job modal if ?job= or ?jobId= is in URL query parameters
+  // Auto-open target job modal if ?job= or ?jobId= is in URL query parameters (only on initial authorized load)
   useEffect(() => {
     if (!allJobs.length) return;
+    if (hasDismissedJobModalRef.current) return;
+    if (!candidate) return;
+
     const hashPart = window.location.hash.includes('?') ? window.location.hash.split('?')[1] : '';
     const params = new URLSearchParams(location.search || hashPart || window.location.search);
     const targetJobId = params.get('job') || params.get('jobId');
@@ -751,7 +755,7 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
       const result = calculateJobMatchScore(targetJob, prof);
       setSelectedJobModal(result);
     }
-  }, [allJobs, matchedJobs, location.search, candidate, editForm]);
+  }, [allJobs]);
 
   // Keep selectedJobModal in sync with latest allJobs candidateData/status
   useEffect(() => {
@@ -1120,6 +1124,11 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
       setCandidate(matchedDoc);
       if (rememberMe) {
         localStorage.setItem(CANDIDATE_SESSION_KEY, JSON.stringify(matchedDoc));
+      }
+      setSelectedJobModal(null);
+      hasDismissedJobModalRef.current = true;
+      if (window.location.search) {
+        window.history.replaceState(null, '', window.location.pathname);
       }
       setAuthLoading(false);
     } catch (err: any) {
@@ -1625,197 +1634,153 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
 
       {/* Main Body */}
       <div className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 pb-28 sm:pb-12 space-y-6">
-        {/* Hero Candidate Profile Card */}
-        <div className={`p-5 sm:p-7 rounded-2xl border relative overflow-hidden transition-all ${
-          isDark ? 'bg-gradient-to-br from-[#121218] to-[#0c0c10] border-white/10' : 'bg-gradient-to-br from-white to-slate-50 border-slate-200 shadow-sm'
-        }`}>
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="space-y-1.5">
-              <div className="flex items-center gap-2">
-                <h2 className="text-xl sm:text-2xl font-black tracking-tight">
-                  {editForm.name || candidate.name || 'Candidate Profile'}
-                </h2>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
-                  Active Job Seeker
-                </span>
-              </div>
+        {/* Clean Welcome Header - ONLY on Home (Matched roles) tab */}
+        {activeTab === 'matches' && (
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-2">
+            <div>
+              <h1 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 dark:text-white">
+                Welcome, {editForm.name || candidate.name || 'Candidate'} 👋
+              </h1>
               <p className={`text-xs sm:text-sm ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-                {editForm.currentTitle || 'Professional'} • {editForm.totalExperienceYears ? `${editForm.totalExperienceYears} Yrs Experience` : 'Fresh Graduate'} • 📍 {editForm.location || 'Maharashtra, India'}
+                Explore your personalized AI-matched job opportunities.
               </p>
-              <div className="flex flex-wrap items-center gap-2 pt-1 text-xs">
-                <span className="inline-flex items-center gap-1 text-slate-400 font-medium">
-                  <Mail size={12} className="text-slate-400" />
-                  <span>{editForm.email || candidate.email}</span>
-                </span>
-                <span className="text-slate-400 select-none">•</span>
-                <span className="inline-flex items-center gap-1 text-slate-400 font-medium">
-                  <Phone size={12} className="text-slate-400" />
-                  <span>{editForm.phone || candidate.phone || 'Phone not set'}</span>
-                </span>
-                {candidate.resumeFileName && (
-                  <>
-                    <span className="text-slate-400 select-none">•</span>
-                    <span className="inline-flex items-center gap-1 text-purple-600 dark:text-purple-400 font-semibold text-[11px]">
-                      <FileText size={12} />
-                      <span className="truncate max-w-[160px]">{candidate.resumeFileName}</span>
-                    </span>
-                  </>
-                )}
-              </div>
-            </div>
-
-            {/* Action Buttons in Hero */}
-            <div className="flex items-center gap-2.5 shrink-0">
-              <button
-                type="button"
-                onClick={() => setActiveTab('resume')}
-                className={`px-3.5 py-2 rounded-xl text-xs font-bold border transition-colors flex items-center gap-1.5 cursor-pointer ${
-                  isDark ? 'border-white/10 bg-white/5 hover:bg-white/10 text-slate-200' : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700 shadow-xs'
-                }`}
-              >
-                <FileText size={14} className="text-purple-500" />
-                <span>My Resume</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setActiveTab('edit-profile')}
-                className="px-3.5 py-2 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 shadow-md shadow-emerald-500/20 transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
-              >
-                <Edit3 size={14} />
-                <span>Edit Profile</span>
-              </button>
             </div>
           </div>
-        </div>
+        )}
 
-        {/* Quick App-like Metric Cards Grid (Mobile responsive 2x2, desktop 4 columns) */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-          {/* Card 1: Matched Jobs */}
-          <button
-            type="button"
-            onClick={() => setActiveTab('matches')}
-            className={`p-4 rounded-2xl border text-left transition-all cursor-pointer relative overflow-hidden group ${
-              activeTab === 'matches'
-                ? isDark ? 'bg-emerald-500/10 border-emerald-500/40 ring-1 ring-emerald-500/30' : 'bg-emerald-50 border-emerald-300 ring-2 ring-emerald-500/20'
-                : isDark ? 'bg-[#101014] border-white/10 hover:border-white/20' : 'bg-white border-slate-200 hover:border-slate-300 shadow-xs'
-            }`}
-          >
-            <div className="flex items-center justify-between mb-2">
-              <div className="w-9 h-9 rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
-                <Sparkles size={18} />
-              </div>
-              <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full">
-                AI Match
-              </span>
-            </div>
-            <div className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">
-              {matchedJobs.length}
-            </div>
-            <div className="text-xs font-bold text-slate-700 dark:text-slate-300 mt-0.5">
-              Matched Roles
-            </div>
-            <div className="text-[10px] text-slate-400 mt-1 truncate">
-              {matchedJobs.length > 0 ? `${matchedJobs[0].overallScore}% top fit score` : 'Open roles matching criteria'}
-            </div>
-          </button>
-
-          {/* Card 2: Applied Jobs */}
-          <button
-            type="button"
-            onClick={() => {
-              setActiveTab('applied');
-              setAppliedStageFilter('all');
-            }}
-            className={`p-4 rounded-2xl border text-left transition-all cursor-pointer relative overflow-hidden group ${
-              activeTab === 'applied' && appliedStageFilter === 'all'
-                ? isDark ? 'bg-blue-500/10 border-blue-500/40 ring-1 ring-blue-500/30' : 'bg-blue-50 border-blue-300 ring-2 ring-blue-500/20'
-                : isDark ? 'bg-[#101014] border-white/10 hover:border-white/20' : 'bg-white border-slate-200 hover:border-slate-300 shadow-xs'
-            }`}
-          >
-            <div className="flex items-center justify-between mb-2">
-              <div className="w-9 h-9 rounded-xl bg-blue-500/15 text-blue-600 dark:text-blue-400 flex items-center justify-center">
-                <Briefcase size={18} />
-              </div>
-              <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded-full">
-                Track
-              </span>
-            </div>
-            <div className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">
-              {myApplicationsList.length}
-            </div>
-            <div className="text-xs font-bold text-slate-700 dark:text-slate-300 mt-0.5">
-              My Applications
-            </div>
-            <div className="text-[10px] text-slate-400 mt-1 truncate">
-              {underReviewCount > 0 ? `${underReviewCount} under review` : 'Total submitted jobs'}
-            </div>
-          </button>
-
-          {/* Card 3: Shortlisted & Interviews */}
-          <button
-            type="button"
-            onClick={() => {
-              setActiveTab('applied');
-              setAppliedStageFilter('shortlisted');
-            }}
-            className={`p-4 rounded-2xl border text-left transition-all cursor-pointer relative overflow-hidden group ${
-              activeTab === 'applied' && appliedStageFilter === 'shortlisted'
-                ? isDark ? 'bg-indigo-500/10 border-indigo-500/40 ring-1 ring-indigo-500/30' : 'bg-indigo-50 border-indigo-300 ring-2 ring-indigo-500/20'
-                : isDark ? 'bg-[#101014] border-white/10 hover:border-white/20' : 'bg-white border-slate-200 hover:border-slate-300 shadow-xs'
-            }`}
-          >
-            <div className="flex items-center justify-between mb-2">
-              <div className="w-9 h-9 rounded-xl bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
-                <Calendar size={18} />
-              </div>
-              {shortlistedCount > 0 && (
-                <span className="flex items-center gap-1 text-[10px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded-full">
-                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
-                  Active
+        {/* Quick App-like Metric Cards Grid - ONLY shown on Home (Matched roles) tab */}
+        {activeTab === 'matches' && (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3.5">
+            {/* Card 1: Matched Jobs */}
+            <button
+              type="button"
+              onClick={() => setActiveTab('matches')}
+              className={`p-2.5 sm:p-3.5 rounded-xl sm:rounded-2xl border text-left transition-all cursor-pointer relative overflow-hidden group ${
+                activeTab === 'matches'
+                  ? isDark ? 'bg-emerald-500/10 border-emerald-500/40 ring-1 ring-emerald-500/30' : 'bg-emerald-50 border-emerald-300 ring-1 ring-emerald-500/20'
+                  : isDark ? 'bg-[#101014] border-white/10 hover:border-white/20' : 'bg-white border-slate-200 hover:border-slate-300 shadow-xs'
+              }`}
+            >
+              <div className="flex items-center justify-between mb-1 sm:mb-2">
+                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                  <Sparkles size={14} className="sm:hidden" />
+                  <Sparkles size={16} className="hidden sm:block" />
+                </div>
+                <span className="text-[9px] sm:text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded-full">
+                  AI Match
                 </span>
-              )}
-            </div>
-            <div className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">
-              {shortlistedCount}
-            </div>
-            <div className="text-xs font-bold text-slate-700 dark:text-slate-300 mt-0.5">
-              Shortlisted / Rounds
-            </div>
-            <div className="text-[10px] text-slate-400 mt-1 truncate">
-              {shortlistedCount > 0 ? 'Upcoming interview rounds' : 'No active rounds'}
-            </div>
-          </button>
-
-          {/* Card 4: Resume */}
-          <button
-            type="button"
-            onClick={() => setActiveTab('resume')}
-            className={`p-4 rounded-2xl border text-left transition-all cursor-pointer relative overflow-hidden group ${
-              activeTab === 'resume'
-                ? isDark ? 'bg-purple-500/10 border-purple-500/40 ring-1 ring-purple-500/30' : 'bg-purple-50 border-purple-300 ring-2 ring-purple-500/20'
-                : isDark ? 'bg-[#101014] border-white/10 hover:border-white/20' : 'bg-white border-slate-200 hover:border-slate-300 shadow-xs'
-            }`}
-          >
-            <div className="flex items-center justify-between mb-2">
-              <div className="w-9 h-9 rounded-xl bg-purple-500/15 text-purple-600 dark:text-purple-400 flex items-center justify-center">
-                <FileText size={18} />
               </div>
-              <span className="text-[10px] font-bold text-purple-600 dark:text-purple-400 bg-purple-500/10 px-2 py-0.5 rounded-full">
-                CV
-              </span>
-            </div>
-            <div className="text-base sm:text-lg font-black text-slate-900 dark:text-white truncate">
-              {candidate?.resumeUrl ? 'Attached & Ready' : 'Upload CV'}
-            </div>
-            <div className="text-xs font-bold text-slate-700 dark:text-slate-300 mt-0.5">
-              Resume Document
-            </div>
-            <div className="text-[10px] text-slate-400 mt-1 truncate">
-              {candidate?.resumeFileName || 'View, preview & replace'}
-            </div>
-          </button>
-        </div>
+              <div className="text-lg sm:text-2xl font-black text-slate-900 dark:text-white leading-tight">
+                {matchedJobs.length}
+              </div>
+              <div className="text-[11px] sm:text-xs font-bold text-slate-700 dark:text-slate-300 mt-0.5 truncate">
+                Matched Roles
+              </div>
+              <div className="hidden sm:block text-[10px] text-slate-400 mt-0.5 truncate">
+                {matchedJobs.length > 0 ? `${matchedJobs[0].overallScore}% top fit score` : 'Open roles matching criteria'}
+              </div>
+            </button>
+
+            {/* Card 2: Applied Jobs */}
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab('applied');
+                setAppliedStageFilter('all');
+              }}
+              className={`p-2.5 sm:p-3.5 rounded-xl sm:rounded-2xl border text-left transition-all cursor-pointer relative overflow-hidden group ${
+                activeTab === 'applied' && appliedStageFilter === 'all'
+                  ? isDark ? 'bg-blue-500/10 border-blue-500/40 ring-1 ring-blue-500/30' : 'bg-blue-50 border-blue-300 ring-1 ring-blue-500/20'
+                  : isDark ? 'bg-[#101014] border-white/10 hover:border-white/20' : 'bg-white border-slate-200 hover:border-slate-300 shadow-xs'
+              }`}
+            >
+              <div className="flex items-center justify-between mb-1 sm:mb-2">
+                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-blue-500/15 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+                  <Briefcase size={14} className="sm:hidden" />
+                  <Briefcase size={16} className="hidden sm:block" />
+                </div>
+                <span className="text-[9px] sm:text-[10px] font-bold text-blue-600 dark:text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded-full">
+                  Track
+                </span>
+              </div>
+              <div className="text-lg sm:text-2xl font-black text-slate-900 dark:text-white leading-tight">
+                {myApplicationsList.length}
+              </div>
+              <div className="text-[11px] sm:text-xs font-bold text-slate-700 dark:text-slate-300 mt-0.5 truncate">
+                My Applications
+              </div>
+              <div className="hidden sm:block text-[10px] text-slate-400 mt-0.5 truncate">
+                {underReviewCount > 0 ? `${underReviewCount} under review` : 'Total submitted jobs'}
+              </div>
+            </button>
+
+            {/* Card 3: Shortlisted & Interviews */}
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab('applied');
+                setAppliedStageFilter('shortlisted');
+              }}
+              className={`p-2.5 sm:p-3.5 rounded-xl sm:rounded-2xl border text-left transition-all cursor-pointer relative overflow-hidden group ${
+                activeTab === 'applied' && appliedStageFilter === 'shortlisted'
+                  ? isDark ? 'bg-indigo-500/10 border-indigo-500/40 ring-1 ring-indigo-500/30' : 'bg-indigo-50 border-indigo-300 ring-1 ring-indigo-500/20'
+                  : isDark ? 'bg-[#101014] border-white/10 hover:border-white/20' : 'bg-white border-slate-200 hover:border-slate-300 shadow-xs'
+              }`}
+            >
+              <div className="flex items-center justify-between mb-1 sm:mb-2">
+                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+                  <Calendar size={14} className="sm:hidden" />
+                  <Calendar size={16} className="hidden sm:block" />
+                </div>
+                {shortlistedCount > 0 && (
+                  <span className="flex items-center gap-1 text-[9px] sm:text-[10px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-500/10 px-1.5 py-0.5 rounded-full">
+                    <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
+                    Active
+                  </span>
+                )}
+              </div>
+              <div className="text-lg sm:text-2xl font-black text-slate-900 dark:text-white leading-tight">
+                {shortlistedCount}
+              </div>
+              <div className="text-[11px] sm:text-xs font-bold text-slate-700 dark:text-slate-300 mt-0.5 truncate">
+                Shortlisted
+              </div>
+              <div className="hidden sm:block text-[10px] text-slate-400 mt-0.5 truncate">
+                {shortlistedCount > 0 ? 'Upcoming interview rounds' : 'No active rounds'}
+              </div>
+            </button>
+
+            {/* Card 4: Resume */}
+            <button
+              type="button"
+              onClick={() => setActiveTab('resume')}
+              className={`p-2.5 sm:p-3.5 rounded-xl sm:rounded-2xl border text-left transition-all cursor-pointer relative overflow-hidden group ${
+                activeTab === 'resume'
+                  ? isDark ? 'bg-purple-500/10 border-purple-500/40 ring-1 ring-purple-500/30' : 'bg-purple-50 border-purple-300 ring-1 ring-purple-500/20'
+                  : isDark ? 'bg-[#101014] border-white/10 hover:border-white/20' : 'bg-white border-slate-200 hover:border-slate-300 shadow-xs'
+              }`}
+            >
+              <div className="flex items-center justify-between mb-1 sm:mb-2">
+                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-purple-500/15 text-purple-600 dark:text-purple-400 flex items-center justify-center">
+                  <FileText size={14} className="sm:hidden" />
+                  <FileText size={16} className="hidden sm:block" />
+                </div>
+                <span className="text-[9px] sm:text-[10px] font-bold text-purple-600 dark:text-purple-400 bg-purple-500/10 px-1.5 py-0.5 rounded-full">
+                  CV
+                </span>
+              </div>
+              <div className="text-xs sm:text-base font-black text-slate-900 dark:text-white leading-tight truncate">
+                {candidate?.resumeUrl ? 'Attached' : 'Upload CV'}
+              </div>
+              <div className="text-[11px] sm:text-xs font-bold text-slate-700 dark:text-slate-300 mt-0.5 truncate">
+                Resume CV
+              </div>
+              <div className="hidden sm:block text-[10px] text-slate-400 mt-0.5 truncate">
+                {candidate?.resumeFileName || 'View, preview & replace'}
+              </div>
+            </button>
+          </div>
+        )}
 
         {/* Global Notifications */}
         {applySuccessMsg && (
@@ -3034,9 +2999,66 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
 
         {/* TAB 4: Edit Profile & Skills */}
         {activeTab === 'edit-profile' && (
-          <div className={`p-5 sm:p-8 rounded-2xl border transition-all ${
-            isDark ? 'bg-[#101014] border-white/10' : 'bg-white border-slate-200 shadow-sm'
-          }`}>
+          <div className="space-y-6">
+            {/* Full Profile Overview Card */}
+            <div className={`p-5 sm:p-7 rounded-2xl border relative overflow-hidden transition-all ${
+              isDark ? 'bg-gradient-to-br from-[#121218] to-[#0c0c10] border-white/10' : 'bg-gradient-to-br from-white to-slate-50 border-slate-200 shadow-sm'
+            }`}>
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 dark:text-white">
+                      {editForm.name || candidate.name || 'Candidate Profile'}
+                    </h2>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                      Active Job Seeker
+                    </span>
+                  </div>
+                  <p className={`text-xs sm:text-sm ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                    {editForm.currentTitle || 'Professional'} • {editForm.totalExperienceYears ? `${editForm.totalExperienceYears} Yrs Experience` : 'Fresh Graduate'} • 📍 {editForm.location || 'Maharashtra, India'}
+                  </p>
+                  <div className="flex flex-wrap items-center gap-2 pt-1 text-xs">
+                    <span className="inline-flex items-center gap-1 text-slate-400 font-medium">
+                      <Mail size={12} className="text-slate-400" />
+                      <span>{editForm.email || candidate.email}</span>
+                    </span>
+                    <span className="text-slate-400 select-none">•</span>
+                    <span className="inline-flex items-center gap-1 text-slate-400 font-medium">
+                      <Phone size={12} className="text-slate-400" />
+                      <span>{editForm.phone || candidate.phone || 'Phone not set'}</span>
+                    </span>
+                    {candidate.resumeFileName && (
+                      <>
+                        <span className="text-slate-400 select-none">•</span>
+                        <span className="inline-flex items-center gap-1 text-purple-600 dark:text-purple-400 font-semibold text-[11px]">
+                          <FileText size={12} />
+                          <span className="truncate max-w-[160px]">{candidate.resumeFileName}</span>
+                        </span>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {/* Quick Action Button */}
+                <div className="flex items-center gap-2.5 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('resume')}
+                    className={`px-3.5 py-2 rounded-xl text-xs font-bold border transition-colors flex items-center gap-1.5 cursor-pointer ${
+                      isDark ? 'border-white/10 bg-white/5 hover:bg-white/10 text-slate-200' : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700 shadow-xs'
+                    }`}
+                  >
+                    <FileText size={14} className="text-purple-500" />
+                    <span>View Resume</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Edit Candidate Profile & Skills Form */}
+            <div className={`p-5 sm:p-8 rounded-2xl border transition-all ${
+              isDark ? 'bg-[#101014] border-white/10' : 'bg-white border-slate-200 shadow-sm'
+            }`}>
             <div className="flex items-center justify-between border-b border-slate-200 dark:border-white/10 pb-4 mb-6">
               <div>
                 <h3 className="text-lg font-black tracking-tight">Edit Candidate Profile & Skills</h3>
@@ -3410,51 +3432,118 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
               </div>
             </form>
           </div>
-        )}
+        </div>
+      )}
       </div>
 
       {/* Full Job Details Modal */}
       {selectedJobModal && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in"
-          onClick={() => setSelectedJobModal(null)}
+          className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-5 bg-black/80 backdrop-blur-sm overflow-hidden animate-in fade-in"
+          onClick={() => {
+            setSelectedJobModal(null);
+            hasDismissedJobModalRef.current = true;
+          }}
+          role="dialog"
+          aria-modal="true"
         >
           <div
-            className={`w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl border p-6 sm:p-7 shadow-2xl relative ${
+            className={`relative flex flex-col w-full max-w-2xl max-h-[calc(100dvh-2rem)] sm:max-h-[calc(100vh-4rem)] rounded-2xl border shadow-2xl overflow-hidden my-auto ${
               isDark ? 'bg-[#121217] border-white/10 text-white' : 'bg-white border-slate-200 text-slate-900'
             }`}
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Modal Close Button */}
-            <button
-              onClick={() => setSelectedJobModal(null)}
-              className="absolute top-5 right-5 p-1.5 rounded-lg border border-slate-200 dark:border-white/10 text-slate-400 hover:text-white cursor-pointer"
-            >
-              <X size={16} />
-            </button>
-
             {/* Modal Header */}
             {(() => {
               const modalJob: any = (selectedJobModal as any).job || selectedJobModal;
               const overallScore = selectedJobModal.overallScore ?? 85;
               const matchGrade = selectedJobModal.matchGrade || 'Strong Recommendation';
+              const liveJob = allJobs.find(j =>
+                (modalJob.id && j.id === modalJob.id) ||
+                (modalJob.jobNo && j.jobNo === modalJob.jobNo) ||
+                (modalJob.accessCode && j.accessCode === modalJob.accessCode)
+              ) || modalJob;
+
+              const candEmail = (candidate?.email || candidate?.profile?.email || editForm.email || '').trim().toLowerCase();
+              const candPhoneNorm = (candidate?.phone || candidate?.profile?.phone || editForm.phone || '').replace(/\D/g, '');
+
+              const isCandMatch = (c: any) => {
+                if (!c) return false;
+                const cEmail = (c.email || '').toLowerCase().trim();
+                if (candEmail && cEmail && cEmail === candEmail) return true;
+                const cPhone = String(c.phone || '').replace(/\D/g, '');
+                if (candPhoneNorm && cPhone && (cPhone === candPhoneNorm || cPhone.endsWith(candPhoneNorm) || candPhoneNorm.endsWith(cPhone))) return true;
+                return false;
+              };
+
+              const candInJobData = (Array.isArray(liveJob.candidateData) ? liveJob.candidateData.find(isCandMatch) : null) ||
+                (Array.isArray(modalJob.candidateData) ? modalJob.candidateData.find(isCandMatch) : null);
+
+              const candInJobEmails = (Array.isArray(liveJob.candidateEmails) && liveJob.candidateEmails.some((e: any) => candEmail && String(e).toLowerCase().trim() === candEmail)) ||
+                (Array.isArray(modalJob.candidateEmails) && modalJob.candidateEmails.some((e: any) => candEmail && String(e).toLowerCase().trim() === candEmail));
+
+              const isModalApplied = appliedJobIds.includes(modalJob.id) ||
+                (modalJob.jobNo && appliedJobIds.includes(modalJob.jobNo)) ||
+                (modalJob.accessCode && appliedJobIds.includes(modalJob.accessCode)) ||
+                Boolean(appliedApplications[modalJob.id]) ||
+                Boolean(modalJob.jobNo && appliedApplications[modalJob.jobNo]) ||
+                Boolean(modalJob.accessCode && appliedApplications[modalJob.accessCode]) ||
+                Boolean(candInJobData) ||
+                candInJobEmails;
+
+              const modalAppInfo = appliedApplications[modalJob.id] ||
+                (modalJob.jobNo && appliedApplications[modalJob.jobNo]) ||
+                (modalJob.accessCode && appliedApplications[modalJob.accessCode]) ||
+                (candInJobData ? {
+                  jobId: modalJob.id,
+                  status: candInJobData.status || 'Under Review',
+                  appliedAt: candInJobData.appliedAt,
+                  statusUpdatedAt: candInJobData.statusUpdatedAt,
+                  scheduledInterview: candInJobData.scheduledInterview,
+                  recruiterNotes: candInJobData.recruiterNotes,
+                  matchScore: candInJobData.matchScore,
+                } : (candInJobEmails ? { jobId: modalJob.id, status: 'Under Review' } : undefined));
+
+              const modalStatus = modalAppInfo?.status || (isModalApplied ? 'Under Review' : '');
+
               return (
                 <>
-                  <div className="space-y-2 pr-8">
-                    <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-extrabold ${
-                      overallScore >= 80
-                        ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
-                        : 'bg-teal-500/15 text-teal-600 dark:text-teal-400 border border-teal-500/30'
-                    }`}>
-                      <Sparkles size={11} />
-                      <span>{overallScore}% Match • {matchGrade}</span>
-                    </span>
+                  <div className={`flex items-start justify-between gap-3 px-5 sm:px-6 py-4 border-b shrink-0 ${
+                    isDark ? 'border-white/10 bg-[#121217]' : 'border-slate-200 bg-white'
+                  }`}>
+                    <div className="space-y-1.5 pr-2">
+                      <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-extrabold ${
+                        overallScore >= 80
+                          ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
+                          : 'bg-teal-500/15 text-teal-600 dark:text-teal-400 border border-teal-500/30'
+                      }`}>
+                        <Sparkles size={11} />
+                        <span>{overallScore}% Match • {matchGrade}</span>
+                      </span>
 
-                    <h3 className="text-xl font-black">{modalJob.title || 'Job Opening'}</h3>
-                    <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-                      {modalJob.company || 'Company'} • {modalJob.location || 'Location'} • Job Code #{modalJob.accessCode || modalJob.jobNo || 'N/A'}
-                    </p>
+                      <h3 className="text-lg sm:text-xl font-black leading-snug">{modalJob.title || 'Job Opening'}</h3>
+                      <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                        {modalJob.company || 'Company'} • {modalJob.location || 'Location'} • Job Code #{modalJob.accessCode || modalJob.jobNo || 'N/A'}
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedJobModal(null);
+                        hasDismissedJobModalRef.current = true;
+                      }}
+                      className={`p-2 rounded-xl border transition-colors cursor-pointer shrink-0 ${
+                        isDark ? 'border-white/10 text-slate-400 hover:text-white hover:bg-white/5' : 'border-slate-200 text-slate-500 hover:text-slate-900 hover:bg-slate-100'
+                      }`}
+                      aria-label="Close modal"
+                    >
+                      <X size={18} />
+                    </button>
                   </div>
+
+                  {/* Scrollable Body Wrapper */}
+                  <div className="flex-1 overflow-y-auto px-5 sm:px-6 py-4 space-y-4 overscroll-contain">
 
                   {/* Modal Info Grid */}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 my-5 text-xs">
@@ -3523,63 +3612,7 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
                       {modalJob.description || 'No detailed description provided.'}
                     </div>
                   </div>
-                </>
-              );
-            })()}
 
-            {/* Modal Actions */}
-            {(() => {
-              const modalJob: any = (selectedJobModal as any).job || selectedJobModal;
-              const liveJob = allJobs.find(j =>
-                (modalJob.id && j.id === modalJob.id) ||
-                (modalJob.jobNo && j.jobNo === modalJob.jobNo) ||
-                (modalJob.accessCode && j.accessCode === modalJob.accessCode)
-              ) || modalJob;
-
-              const candEmail = (candidate?.email || candidate?.profile?.email || editForm.email || '').trim().toLowerCase();
-              const candPhoneNorm = (candidate?.phone || candidate?.profile?.phone || editForm.phone || '').replace(/\D/g, '');
-
-              const isCandMatch = (c: any) => {
-                if (!c) return false;
-                const cEmail = (c.email || '').toLowerCase().trim();
-                if (candEmail && cEmail && cEmail === candEmail) return true;
-                const cPhone = String(c.phone || '').replace(/\D/g, '');
-                if (candPhoneNorm && cPhone && (cPhone === candPhoneNorm || cPhone.endsWith(candPhoneNorm) || candPhoneNorm.endsWith(cPhone))) return true;
-                return false;
-              };
-
-              const candInJobData = (Array.isArray(liveJob.candidateData) ? liveJob.candidateData.find(isCandMatch) : null) ||
-                (Array.isArray(modalJob.candidateData) ? modalJob.candidateData.find(isCandMatch) : null);
-
-              const candInJobEmails = (Array.isArray(liveJob.candidateEmails) && liveJob.candidateEmails.some((e: any) => candEmail && String(e).toLowerCase().trim() === candEmail)) ||
-                (Array.isArray(modalJob.candidateEmails) && modalJob.candidateEmails.some((e: any) => candEmail && String(e).toLowerCase().trim() === candEmail));
-
-              const isModalApplied = appliedJobIds.includes(modalJob.id) ||
-                (modalJob.jobNo && appliedJobIds.includes(modalJob.jobNo)) ||
-                (modalJob.accessCode && appliedJobIds.includes(modalJob.accessCode)) ||
-                Boolean(appliedApplications[modalJob.id]) ||
-                Boolean(modalJob.jobNo && appliedApplications[modalJob.jobNo]) ||
-                Boolean(modalJob.accessCode && appliedApplications[modalJob.accessCode]) ||
-                Boolean(candInJobData) ||
-                candInJobEmails;
-
-              const modalAppInfo = appliedApplications[modalJob.id] ||
-                (modalJob.jobNo && appliedApplications[modalJob.jobNo]) ||
-                (modalJob.accessCode && appliedApplications[modalJob.accessCode]) ||
-                (candInJobData ? {
-                  jobId: modalJob.id,
-                  status: candInJobData.status || 'Under Review',
-                  appliedAt: candInJobData.appliedAt,
-                  statusUpdatedAt: candInJobData.statusUpdatedAt,
-                  scheduledInterview: candInJobData.scheduledInterview,
-                  recruiterNotes: candInJobData.recruiterNotes,
-                  matchScore: candInJobData.matchScore,
-                } : (candInJobEmails ? { jobId: modalJob.id, status: 'Under Review' } : undefined));
-
-              const modalStatus = modalAppInfo?.status || (isModalApplied ? 'Under Review' : '');
-
-              return (
-                <>
                   {/* Confirmed Interview or Application Status in Modal */}
                   {isModalApplied && (
                     <div className="mt-4 p-3.5 rounded-xl border border-emerald-500/30 bg-emerald-50/70 dark:bg-emerald-950/20 text-slate-800 dark:text-slate-200">
@@ -3691,20 +3724,34 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
                     </div>
                   )}
 
-                  <div className="mt-6 pt-4 border-t border-slate-200 dark:border-white/10 flex flex-wrap items-center justify-between gap-3">
-                    {isModalApplied ? (
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-slate-500">Application Status:</span>
-                        <span className="text-xs font-black px-2.5 py-0.5 rounded-full bg-emerald-600 text-white">
-                          {modalStatus === 'pending' || modalStatus === 'interested' ? 'Applied • Under Review' : modalStatus}
-                        </span>
-                      </div>
-                    ) : <div />}
+                  </div>
 
-                    <div className="flex items-center gap-3">
+                  {/* Sticky Fixed Bottom Actions Footer */}
+                  <div className={`px-5 sm:px-6 py-3.5 border-t shrink-0 flex flex-wrap items-center justify-between gap-3 ${
+                    isDark ? 'border-white/10 bg-[#0e0e13]' : 'border-slate-200 bg-slate-50'
+                  }`}>
+                    <div className="flex items-center gap-2">
+                      {isModalApplied ? (
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-slate-500">Status:</span>
+                          <span className="text-xs font-black px-2.5 py-0.5 rounded-full bg-emerald-600 text-white">
+                            {modalStatus === 'pending' || modalStatus === 'interested' ? 'Applied • Under Review' : modalStatus}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-slate-500 dark:text-slate-400">
+                          Submit your 1-click application now.
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-2.5 ml-auto">
                       <button
                         type="button"
-                        onClick={() => setSelectedJobModal(null)}
+                        onClick={() => {
+                          setSelectedJobModal(null);
+                          hasDismissedJobModalRef.current = true;
+                        }}
                         className={`px-4 py-2 rounded-xl text-xs font-bold border transition-colors cursor-pointer ${
                           isDark ? 'border-white/10 text-slate-300 hover:bg-white/5' : 'border-slate-200 text-slate-700 hover:bg-slate-100'
                         }`}
@@ -3718,6 +3765,7 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
                         onClick={() => {
                           handleApplyToJob(selectedJobModal);
                           setSelectedJobModal(null);
+                          hasDismissedJobModalRef.current = true;
                         }}
                         className={`px-5 py-2 rounded-xl text-xs font-bold text-white transition-all ${
                           isModalApplied

@@ -173,9 +173,9 @@ const InvitedCandidates: React.FC = () => {
                 phone: validPhone,
                 candidateName: email.split('@')[0] || 'Candidate',
                 jobTitle: selectedInterview.title,
-                interviewLink: (selectedInterview.interviewLink && !selectedInterview.interviewLink.includes('/#/interview/'))
+                interviewLink: (selectedInterview.interviewLink && !selectedInterview.interviewLink.includes('/interview/') && !selectedInterview.interviewLink.includes('/#/interview/'))
                     ? selectedInterview.interviewLink
-                    : `${window.location.origin}/#/candidate?job=${selectedInterview.id}`,
+                    : `${window.location.origin}/candidate?job=${selectedInterview.id}`,
                 accessCode: selectedInterview.accessCode,
                 options: {
                     gender: (selectedInterview as any).gender || (selectedInterview as any).genderRequirement,
@@ -707,7 +707,7 @@ const InvitedCandidates: React.FC = () => {
                 const resumeScore = c.hasSubmitted ? `"${c.resumeScore?.toFixed(0) || '0'}"` : '"-"';
                 const qnaScore = c.hasSubmitted ? `"${c.qnaScore?.toFixed(0) || '0'}"` : '"-"';
                 const resumeLink = c.hasSubmitted ? `"${(c.resumeLink || "N/A").replace(/"/g, '""')}"` : '"-"';
-                const reportUrl = c.hasSubmitted ? `"${window.location.origin}/#/report/${c.interviewId}/${c.submissionId}"` : '"-"';
+                const reportUrl = c.hasSubmitted ? `"${window.location.origin}/report/${c.interviewId}/${c.submissionId}"` : '"-"';
                 
                 return [name, email, phone, role, status, score, resumeScore, qnaScore, resumeLink, reportUrl].join(",");
             })
@@ -810,7 +810,7 @@ const InvitedCandidates: React.FC = () => {
                                 ))}
                             </select>
                             {selectedInterview && (() => {
-                                const link = `${window.location.origin}/#/candidate?job=${selectedInterview.id}`;
+                                const link = `${window.location.origin}/candidate?job=${selectedInterview.id}`;
                                 const template = `👋 Hi there!\n\nWe're actively hiring for the *${selectedInterview.title}* role and your profile caught our eye! 🌟\n\nWe invite you to submit your application directly on our Candidate Portal to fast-track your profile.\n\n🚀 *Apply here:* \n${link}\n\n🔑 *Job Code:* \n${selectedInterview.accessCode}\n\nBest of luck, and we look forward to reviewing your application! 🎉`;
                                 return (
                                     <button
@@ -1142,7 +1142,7 @@ const InvitedCandidates: React.FC = () => {
                                                                  onClick={() => {
                                                                      const selectedInterview = interviews.find(i => i.id === candidate.interviewId);
                                                                      if (!selectedInterview) return;
-                                                                     const link = `${window.location.origin}/#/candidate?job=${selectedInterview.id}`;
+                                                                     const link = `${window.location.origin}/candidate?job=${selectedInterview.id}`;
                                                                      const msg = `👋 Hi there!\n\nWe're actively hiring for the *${selectedInterview.title}* role and we'd love to invite you to apply for the role! 🌟\n\n🚀 *Apply here:* \n${link}\n\n🔑 *Your Access Code:* \n${selectedInterview.accessCode}\n\nIt only takes a few minutes and you can complete it whenever you're ready. Best of luck! 🎉`;
                                                                      setWhatsappModal({
                                                                          isOpen: true,

@@ -2068,7 +2068,7 @@ const ResumeDump: React.FC = () => {
               <button
                 type="button"
                 onClick={() => {
-                  navigator.clipboard.writeText(`${window.location.origin}/#/upload-resume`);
+                  navigator.clipboard.writeText(`${window.location.origin}/upload-resume`);
                   setCopiedUploadPortalLink(true);
                   setTimeout(() => setCopiedUploadPortalLink(false), 2500);
                 }}
@@ -2082,7 +2082,7 @@ const ResumeDump: React.FC = () => {
               <div className="h-4 w-[1px] bg-white/[0.16]" />
 
               <a
-                href={`${window.location.origin}/#/upload-resume`}
+                href={`${window.location.origin}/upload-resume`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="geist-caption inline-flex h-8 cursor-pointer items-center justify-center gap-1.5 rounded-[4px] px-2.5 font-medium text-[#d4d4d4] transition-colors hover:bg-white/[0.08] hover:text-white"
@@ -3811,12 +3811,12 @@ const ResumeDump: React.FC = () => {
                       <span className="text-gray-500 dark:text-[#8f8f8f] block mb-1">Job Application Link:</span>
                       <div className="flex items-center gap-2 bg-gray-100 dark:bg-[#050505] border border-gray-200 dark:border-white/[0.11] p-2 rounded-[6px] text-slate-900 dark:text-[#d4d4d4] font-mono text-[11px] break-all">
                         <span className="flex-1 truncate">
-                          {`${window.location.origin}/#/candidate?job=${activeSelectedJob.id}`}
+                          {`${window.location.origin}/candidate?job=${activeSelectedJob.id}`}
                         </span>
                         <button
                           type="button"
                           onClick={() => {
-                            navigator.clipboard.writeText(`${window.location.origin}/#/candidate?job=${activeSelectedJob.id}`);
+                            navigator.clipboard.writeText(`${window.location.origin}/candidate?job=${activeSelectedJob.id}`);
                             setCopiedInviteLink(true);
                             setTimeout(() => setCopiedInviteLink(false), 2500);
                           }}
@@ -3853,7 +3853,7 @@ const ResumeDump: React.FC = () => {
                       onClick={() => {
                         const jobTitle = activeSelectedJob.title || activeSelectedJob.jobRole || 'Open Position';
                         const accessCode = activeSelectedJob.accessCode || '';
-                        const jobLink = `${window.location.origin}/#/candidate?job=${activeSelectedJob.id}`;
+                        const jobLink = `${window.location.origin}/candidate?job=${activeSelectedJob.id}`;
                         const messageText = `Hello! You have been invited to apply for the position of *${jobTitle}*.\n\n` +
                           (accessCode ? `📌 Job Code: *${accessCode}*\n` : '') +
                           `🔗 Application Link: ${jobLink}\n\n` +
@@ -3891,7 +3891,7 @@ const ResumeDump: React.FC = () => {
 
                         const jobTitle = activeSelectedJob.title || activeSelectedJob.jobRole || 'Open Position';
                         const accessCode = activeSelectedJob.accessCode || '';
-                        const jobLink = `${window.location.origin}/#/candidate?job=${activeSelectedJob.id}`;
+                        const jobLink = `${window.location.origin}/candidate?job=${activeSelectedJob.id}`;
 
                         const waOptions = {
                           recruiterName: userProfile?.name || (user as any)?.displayName || (user as any)?.email || 'Recruiting Team',
@@ -3989,7 +3989,7 @@ const ResumeDump: React.FC = () => {
 
                         const jobTitle = activeSelectedJob.title || activeSelectedJob.jobRole || 'Open Position';
                         const accessCode = activeSelectedJob.accessCode || '';
-                        const interviewLink = `${window.location.origin}/#/candidate?job=${activeSelectedJob.id}`;
+                        const interviewLink = `${window.location.origin}/candidate?job=${activeSelectedJob.id}`;
 
                         let waSentCount = 0;
                         let emailSentCount = 0;

@@ -40,7 +40,7 @@ const BlogsContent: React.FC = () => {
         setMetaTag('name', 'keywords', 'interview tips, career advice, resume help, job search, interviewxpert blog');
         setMetaTag('property', 'og:title', 'Blog | InterviewXpert');
         setMetaTag('property', 'og:description', 'Insights, strategies, and tips for your career journey and interview preparation.');
-        setMetaTag('property', 'og:url', 'https://interviewxpert.in/#/blogs');
+        setMetaTag('property', 'og:url', 'https://interviewxpert.in/blogs');
         setMetaTag('property', 'og:image', 'https://i.ibb.co/3y9DKsB6/Yellow-and-Black-Illustrative-Education-Logo-1.png');
         setMetaTag('name', 'twitter:card', 'summary');
         setMetaTag('property', 'twitter:title', 'Blog | InterviewXpert');

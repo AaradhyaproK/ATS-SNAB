@@ -76,7 +76,7 @@ export const RecruiterVoiceInterviews: React.FC = () => {
   }, [recruiterUID]);
 
   const handleCopyLink = (interviewId: string) => {
-    const link = `${window.location.origin}/#/voice-interview/${interviewId}`;
+    const link = `${window.location.origin}/voice-interview/${interviewId}`;
     navigator.clipboard.writeText(link);
     messageBox.showSuccess('Candidate Voice Interview Link copied to clipboard!');
   };

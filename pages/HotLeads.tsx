@@ -263,9 +263,9 @@ export default function HotLeads() {
           jobTitle: app.jobTitle || job?.title || 'General Role',
           companyName: job?.companyName || job?.company || userProfile?.company || 'Company',
           accessCode: job?.accessCode || job?.jobNo || '',
-          interviewLink: (job?.interviewLink && !job.interviewLink.includes('/#/interview/'))
+          interviewLink: (job?.interviewLink && !job.interviewLink.includes('/interview/'))
             ? job.interviewLink
-            : `${window.location.origin}/#/candidate?job=${jobId}`,
+            : `${window.location.origin}/candidate?job=${jobId}`,
           deadline,
           isJobActive: job ? isJobStatusActive(job) : true,
           appliedAt: app.appliedAt || app.createdAt,
@@ -301,9 +301,9 @@ export default function HotLeads() {
               jobTitle: job.title || 'Role',
               companyName: job.companyName || job.company || userProfile?.company || 'Company',
               accessCode: job.accessCode || job.jobNo || '',
-              interviewLink: (job.interviewLink && !job.interviewLink.includes('/#/interview/'))
+              interviewLink: (job.interviewLink && !job.interviewLink.includes('/interview/'))
                 ? job.interviewLink
-                : `${window.location.origin}/#/candidate?job=${job.id}`,
+                : `${window.location.origin}/candidate?job=${job.id}`,
               deadline,
               isJobActive: isJobStatusActive(job),
               appliedAt: c.appliedAt || c.invitedAt || job.createdAt,
@@ -333,9 +333,9 @@ export default function HotLeads() {
               jobTitle: job.title || 'Role',
               companyName: job.companyName || job.company || userProfile?.company || 'Company',
               accessCode: job.accessCode || job.jobNo || '',
-              interviewLink: (job.interviewLink && !job.interviewLink.includes('/#/interview/'))
+              interviewLink: (job.interviewLink && !job.interviewLink.includes('/interview/'))
                 ? job.interviewLink
-                : `${window.location.origin}/#/candidate?job=${job.id}`,
+                : `${window.location.origin}/candidate?job=${job.id}`,
               deadline,
               isJobActive: isJobStatusActive(job),
               appliedAt: job.createdAt,
@@ -767,7 +767,7 @@ export default function HotLeads() {
           recruiterName: userProfile?.name || userProfile?.fullname || (user as any)?.displayName || 'Recruiter',
           recruiterPhone: userProfile?.phone || '',
           recruiterEmail: userProfile?.email || user?.email,
-          candidatePortalLink: `${window.location.origin}/#/candidate?job=${lead.jobId}`,
+          candidatePortalLink: `${window.location.origin}/candidate?job=${lead.jobId}`,
         });
         emailDispatched = emailRes.success;
       }
@@ -812,7 +812,7 @@ export default function HotLeads() {
                 scheduleDetails: options?.scheduleDetails,
                 recruiterNotes: options?.recruiterNotes,
                 recruiterName: userProfile?.name || userProfile?.fullname || (user as any)?.displayName || 'Recruiter',
-                candidatePortalLink: `${window.location.origin}/#/candidate?job=${lead.jobId}`,
+                candidatePortalLink: `${window.location.origin}/candidate?job=${lead.jobId}`,
                 sessionId: activeSessionId,
                 passcode: activePasscode,
               });

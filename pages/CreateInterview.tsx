@@ -935,7 +935,7 @@ const CreateInterview: React.FC = () => {
     try {
       // 1. Generate Job ID, Link, and Access Code locally
       const newRand = Math.random().toString(36).substring(2, 15);
-      const newInterviewLink = `${window.location.origin}/#/candidate?job=${newRand}`;
+      const newInterviewLink = `${window.location.origin}/candidate?job=${newRand}`;
       const newAccessCode = Math.random().toString(36).substring(2, 8).toUpperCase();
 
       // 2. Save to Firestore

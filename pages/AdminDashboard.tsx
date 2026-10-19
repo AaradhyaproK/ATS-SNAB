@@ -688,7 +688,7 @@ const AdminDashboard: React.FC = () => {
       `"${a.status || "Completed"}"`,
       `"${a.submittedAt?.toDate ? a.submittedAt.toDate().toLocaleString() : 'N/A'}"`,
       `"${(a.candidateResumeURL || "N/A").replace(/"/g, '""')}"`,
-      `"${window.location.origin}/#/report/${a.interviewId}/${a.id}"`
+      `"${window.location.origin}/report/${a.interviewId}/${a.id}"`
     ]);
     downloadCSV("DB_Candidate_Submissions_Export.csv", [headers.join(","), ...rows.map(r => r.join(","))].join("\n"));
   };
@@ -806,7 +806,7 @@ const AdminDashboard: React.FC = () => {
                 <p className="font-bold text-xs sm:text-sm">{adminData?.fullname || 'Admin User'}</p>
                 <p className="text-[10px] sm:text-xs text-gray-500 truncate">{adminData?.email || 'admin@snab.co.in'}</p>
               </div>
-              <a href="/#/admin/profile" className="block px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
+              <a href="/admin/profile" className="block px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
                 👤 View Profile
               </a>
               <button
@@ -2008,7 +2008,7 @@ push_job_description()`
                             </td>
                             <td className="px-6 py-4 text-right">
                               <a
-                                href={`/#/report/${item.interviewId}/${item.id}`}
+                                href={`/report/${item.interviewId}/${item.id}`}
                                 target="_blank"
                                 rel="noreferrer"
                                 className="inline-flex items-center gap-1 text-xs bg-primary/10 text-primary hover:bg-primary/20 px-3 py-1.5 rounded-lg transition-colors font-bold"

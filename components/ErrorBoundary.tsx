@@ -83,7 +83,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
                 Reload Page
               </button>
               <a
-                href="#/recruiter/dashboard"
+                href="/recruiter/jobs"
                 onClick={() => this.setState({ hasError: false, error: null, errorInfo: null })}
                 className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-[#333] bg-[#141414] hover:bg-[#222] text-white font-medium text-sm transition-colors"
               >

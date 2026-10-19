@@ -434,7 +434,7 @@ export function normalizeJobData(rawId: string, data: any, collectionName: 'jobs
     ...data,
     ...normalizedApiData,
     accessCode: normalizedApiData.jobNo || data.accessCode || 'ACCESS',
-    interviewLink: data.interviewLink || `${window.location.origin}/#/interview/${rawId}`,
+    interviewLink: data.interviewLink || `${window.location.origin}/interview/${rawId}`,
     collectionName
   };
 }

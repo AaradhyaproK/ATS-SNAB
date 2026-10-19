@@ -379,7 +379,7 @@ export default async function handler(req, res) {
       const deadline = (payload.deadlineDate || payload.deadline || payload.applyDeadline || existingJob?.deadline || existingJob?.deadlineDate || '').toString().trim();
 
       const origin = req.headers['origin'] || (req.headers['host'] ? `https://${req.headers['host']}` : 'https://interviewxpert.in');
-      const interviewLink = existingJob?.interviewLink || `${origin}/#/interview/${jobId}`;
+      const interviewLink = existingJob?.interviewLink || `${origin}/interview/${jobId}`;
       const updatedTimestamp = new Date().toISOString();
 
       const updatedJobData = {
@@ -524,7 +524,7 @@ export default async function handler(req, res) {
     const status = isDeactivated ? 'Inactive' : 'Active';
 
     const origin = req.headers['origin'] || (req.headers['host'] ? `https://${req.headers['host']}` : 'https://interviewxpert.in');
-    const interviewLink = `${origin}/#/interview/${jobId}`;
+    const interviewLink = `${origin}/interview/${jobId}`;
 
     const jobData = {
       id: jobId,

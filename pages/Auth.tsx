@@ -101,7 +101,11 @@ const AuthPage: React.FC = () => {
         return;
       }
 
-      navigate('/');
+      if (userRole === 'admin') {
+        navigate('/admin');
+      } else {
+        navigate('/recruiter/jobs');
+      }
     } catch (err: any) {
       setError(`Login failed: ${err.message}`);
     } finally {

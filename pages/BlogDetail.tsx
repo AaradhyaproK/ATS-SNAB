@@ -36,7 +36,7 @@ const BlogDetail: React.FC = () => {
             setMetaTag('property', 'og:title', blog.title);
             setMetaTag('property', 'og:description', blog.excerpt);
             setMetaTag('property', 'og:type', 'article');
-            setMetaTag('property', 'og:url', `https://interviewxpert.in/#/blog/${blog.id}`);
+            setMetaTag('property', 'og:url', `https://interviewxpert.in/blog/${blog.id}`);
             if (blog.imageUrl) {
                 setMetaTag('property', 'og:image', blog.imageUrl);
                 setMetaTag('name', 'twitter:image', blog.imageUrl);

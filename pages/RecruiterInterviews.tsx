@@ -969,7 +969,7 @@ const RecruiterInterviews: React.FC = () => {
     const messageText = buildWhatsAppInviteText({
       candidateName: targetCandidateName,
       jobTitle: selectedInterview.title,
-      interviewLink: selectedInterview.interviewLink || `${window.location.origin}/#/candidate?job=${selectedInterview.id}`,
+      interviewLink: selectedInterview.interviewLink || `${window.location.origin}/candidate?job=${selectedInterview.id}`,
       accessCode: selectedInterview.accessCode || '',
       isReminder: true,
       options: inviteOptions
@@ -986,7 +986,7 @@ const RecruiterInterviews: React.FC = () => {
         phone: formattedPhone,
         candidateName: targetCandidateName,
         jobTitle: selectedInterview.title,
-        interviewLink: selectedInterview.interviewLink || `${window.location.origin}/#/candidate?job=${selectedInterview.id}`,
+        interviewLink: selectedInterview.interviewLink || `${window.location.origin}/candidate?job=${selectedInterview.id}`,
         accessCode: selectedInterview.accessCode || '',
         isReminder: true,
         options: inviteOptions
@@ -1160,7 +1160,7 @@ const RecruiterInterviews: React.FC = () => {
           ]);
         }
 
-        const targetLink = selectedInterview.interviewLink || `${window.location.origin}/#/candidate?job=${selectedInterview.id}`;
+        const targetLink = selectedInterview.interviewLink || `${window.location.origin}/candidate?job=${selectedInterview.id}`;
         let candidatesPayload = candidateDataToAdd.map(c => ({
           email: c.email,
           phone: c.phone,
@@ -1626,10 +1626,10 @@ const RecruiterInterviews: React.FC = () => {
                             <h4 className="geist-label uppercase text-gray-500 dark:text-[#6b7280] mb-1">Interview Link</h4>
                             <div className="flex items-center justify-between bg-gray-100 dark:bg-[#111111] p-2.5 rounded-[6px] border border-gray-200 dark:border-white/[0.11]">
                                 <span className="text-xs font-mono truncate mr-2 text-slate-800 dark:text-[#d4d4d4]">
-                                    {selectedInterview.interviewLink || `${window.location.origin}/#/candidate?job=${selectedInterview.id}`}
+                                    {selectedInterview.interviewLink || `${window.location.origin}/candidate?job=${selectedInterview.id}`}
                                 </span>
                                 <button onClick={() => {
-                                    const link = selectedInterview.interviewLink || `${window.location.origin}/#/candidate?job=${selectedInterview.id}`;
+                                    const link = selectedInterview.interviewLink || `${window.location.origin}/candidate?job=${selectedInterview.id}`;
                                     navigator.clipboard.writeText(link);
                                     messageBox.showSuccess('Interview link copied!');
                                 }} className="text-gray-500 dark:text-[#8f8f8f] hover:text-slate-900 dark:hover:text-white transition-colors" title="Copy Interview Link">
@@ -1639,7 +1639,7 @@ const RecruiterInterviews: React.FC = () => {
                         </div>
                         <div className="pt-1 text-right">
                              <button onClick={() => {
-                                    const link = selectedInterview.interviewLink || `${window.location.origin}/#/candidate?job=${selectedInterview.id}`;
+                                    const link = selectedInterview.interviewLink || `${window.location.origin}/candidate?job=${selectedInterview.id}`;
                                     const text = `You've been invited to an interview for ${selectedInterview.title}.\n\nInterview Link: ${link}\nAccess Code: ${selectedInterview.accessCode}`;
                                     navigator.clipboard.writeText(text);
                                     messageBox.showSuccess('Full invite details copied!');
@@ -2728,7 +2728,7 @@ const FullRosterModalContent: React.FC<FullRosterModalContentProps> = ({ intervi
                                                     const msg = buildWhatsAppInviteText({
                                                       candidateName: targetCandidateName,
                                                       jobTitle: interview.title,
-                                                      interviewLink: interview.interviewLink || `${window.location.origin}/#/candidate?job=${interview.id}`,
+                                                      interviewLink: interview.interviewLink || `${window.location.origin}/candidate?job=${interview.id}`,
                                                       accessCode: interview.accessCode,
                                                       options
                                                     });
@@ -2748,7 +2748,7 @@ const FullRosterModalContent: React.FC<FullRosterModalContentProps> = ({ intervi
                                                         phone: phone,
                                                         candidateName: targetCandidateName,
                                                         jobTitle: interview.title,
-                                                        interviewLink: interview.interviewLink || `${window.location.origin}/#/candidate?job=${interview.id}`,
+                                                        interviewLink: interview.interviewLink || `${window.location.origin}/candidate?job=${interview.id}`,
                                                         accessCode: interview.accessCode,
                                                         options
                                                     });

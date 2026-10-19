@@ -529,7 +529,7 @@ export const AddCandidate: React.FC = () => {
             <button
               type="button"
               onClick={() => {
-                navigator.clipboard.writeText(`${window.location.origin}/#/upload-resume`);
+                navigator.clipboard.writeText(`${window.location.origin}/upload-resume`);
                 setCopiedUploadPortalLink(true);
                 setTimeout(() => setCopiedUploadPortalLink(false), 2500);
               }}
@@ -1598,7 +1598,7 @@ export const AddCandidate: React.FC = () => {
               </button>
 
               <a
-                href={`/#/recruiter/resume-dump?search=${encodeURIComponent(existingCandidateAlert.candidate.email || existingCandidateAlert.candidate.phone || '')}`}
+                href={`/recruiter/resume-dump?search=${encodeURIComponent(existingCandidateAlert.candidate.email || existingCandidateAlert.candidate.phone || '')}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-full sm:w-auto geist-caption h-9 px-3.5 rounded-[6px] border border-white/[0.18] bg-white/[0.08] text-xs font-medium text-white hover:bg-white/[0.14] inline-flex items-center justify-center gap-1.5 transition-colors cursor-pointer"

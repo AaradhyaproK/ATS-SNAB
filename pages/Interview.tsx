@@ -1177,7 +1177,7 @@ const CandidateInfoForm: React.FC<{
                   You may still proceed to take the interview, or explore positions tailored to your profile:
                 </span>
                 <a
-                  href="/#/jobs"
+                  href="/jobs"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1.5 font-extrabold text-xs text-blue-700 dark:text-blue-400 hover:underline bg-white/90 dark:bg-black/40 px-3 py-1.5 rounded-xl border border-blue-200 dark:border-blue-800 shadow-sm"

@@ -226,7 +226,7 @@ const InterviewResponses: React.FC = () => {
         const email = `"${(sub.candidateInfo?.email || "N/A").replace(/"/g, '""')}"`;
         const resumeURL = `"${(sub.candidateResumeURL || "N/A").replace(/"/g, '""')}"`;
         const score = `"${getScoreValue(sub.score).toFixed(0)}"`;
-        const reportUrl = `"${window.location.origin}/#/report/${sub.interviewId}/${sub.id}"`;
+        const reportUrl = `"${window.location.origin}/report/${sub.interviewId}/${sub.id}"`;
         return [jobName, name, contact, email, resumeURL, score, reportUrl].join(",");
       })
     ].join("\n");
@@ -263,7 +263,7 @@ const InterviewResponses: React.FC = () => {
         const info = sub.candidateInfo as any;
         const currentSalary = info?.currentSalary || 'N/A';
         const expectedSalary = info?.expectedSalary || 'N/A';
-        const reportUrl = `${window.location.origin}/#/report/${sub.interviewId}/${sub.id}`;
+        const reportUrl = `${window.location.origin}/report/${sub.interviewId}/${sub.id}`;
         
         body += `--- Candidate ${index + 1} ---\n`;
         body += `Name: ${info?.name || 'N/A'}\n`;
@@ -283,7 +283,7 @@ const InterviewResponses: React.FC = () => {
 
     body += `The candidates are made aware about the job profile, location & timing through the following link.\n`;
     
-    const jobLink = `${window.location.origin}/#/candidate?job=${interviewId}`;
+    const jobLink = `${window.location.origin}/candidate?job=${interviewId}`;
     body += `The Job details shared with the candidates are on the following link:\n`;
     body += `Link: ${jobLink}\n\n`;
 
@@ -381,7 +381,7 @@ const InterviewResponses: React.FC = () => {
   };
 
   const handleShareClientLink = async () => {
-    const link = `${window.location.origin}/#/client-view/${interviewId}`;
+    const link = `${window.location.origin}/client-view/${interviewId}`;
     try {
       await navigator.clipboard.writeText(link);
       messageBox.showSuccess("Client sharing link copied to clipboard!");

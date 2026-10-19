@@ -939,14 +939,14 @@ const ActiveJobsPage: React.FC = () => {
       </section>
 
       {selectedJobModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4" onClick={() => setSelectedJobModal(null)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-3 sm:p-4 overflow-hidden" onClick={() => setSelectedJobModal(null)}>
           <div 
-            className={`max-w-2xl w-full max-h-[85vh] rounded-3xl border p-6 sm:p-8 shadow-2xl overflow-y-auto space-y-6 transition-colors ${
+            className={`relative flex flex-col max-w-2xl w-full max-h-[calc(100dvh-2rem)] sm:max-h-[calc(100vh-4rem)] rounded-3xl border shadow-2xl overflow-hidden my-auto transition-colors ${
               isDark ? 'bg-[#0d0d0d] border-white/[0.15] text-white' : 'bg-white border-slate-200 text-slate-900'
             }`} 
             onClick={e => e.stopPropagation()}
           >
-            <div className={`flex items-start justify-between gap-4 border-b pb-5 ${isDark ? 'border-white/[0.1]' : 'border-slate-200'}`}>
+            <div className={`flex items-start justify-between gap-4 border-b p-5 sm:p-6 shrink-0 ${isDark ? 'border-white/[0.1] bg-[#0d0d0d]' : 'border-slate-200 bg-white'}`}>
               <div>
                 <div className="flex items-center gap-2 flex-wrap mb-1">
                   {selectedJobModal.jobNo && (
@@ -970,10 +970,12 @@ const ActiveJobsPage: React.FC = () => {
                 </div>
               </div>
 
-              <button onClick={() => setSelectedJobModal(null)} className={`p-1 transition-colors ${isDark ? 'text-slate-400 hover:text-white' : 'text-slate-500 hover:text-slate-900'}`}>
-                <X size={20} />
+              <button onClick={() => setSelectedJobModal(null)} className={`p-1.5 rounded-lg border transition-colors cursor-pointer shrink-0 ${isDark ? 'border-white/10 text-slate-400 hover:text-white hover:bg-white/5' : 'border-slate-200 text-slate-500 hover:text-slate-900 hover:bg-slate-100'}`}>
+                <X size={18} />
               </button>
             </div>
+
+            <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-5 overscroll-contain">
 
             {selectedJobModal.accessCode && (
               <div className={`p-4 rounded-2xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md ${
@@ -1055,7 +1057,9 @@ const ActiveJobsPage: React.FC = () => {
               </div>
             )}
 
-            <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-4 border-t ${isDark ? 'border-white/[0.1]' : 'border-slate-200'}`}>
+            </div>
+
+            <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 sm:p-5 border-t shrink-0 ${isDark ? 'border-white/[0.1] bg-[#0d0d0d]' : 'border-slate-200 bg-slate-50'}`}>
               <div className="flex items-center gap-2">
                 <span className="h-2 w-2 rounded-full bg-emerald-500" />
                 <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">Open for Candidates</span>

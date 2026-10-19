@@ -61,7 +61,7 @@ export const generateAtsStatusEmailHtml = (params: AtsStatusEmailParams): string
   } = params;
 
   const theme = getStatusColorTheme(newStatus);
-  const portalUrl = candidatePortalLink || `${window.location.origin}/#/candidate`;
+  const portalUrl = candidatePortalLink || `${window.location.origin}/candidate`;
 
   let statusExplanation = `Your application status has been updated to: <strong>${newStatus}</strong>.`;
   if (newStatus === 'Shortlisted') {

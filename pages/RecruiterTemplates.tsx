@@ -279,7 +279,7 @@ const SAMPLE_CONTEXT = {
   candidate_phone: '+91 9876543210',
   job_title: 'Senior Full Stack Engineer',
   company_name: 'SNAB hireX',
-  interview_link: 'https://app.snabhirex.com/#/interview/inv-89210',
+  interview_link: 'https://app.snabhirex.com/interview/inv-89210',
   access_code: 'SH-8921',
   interview_code: 'SH-8921',
   interview_deadline: '14/08/2026',

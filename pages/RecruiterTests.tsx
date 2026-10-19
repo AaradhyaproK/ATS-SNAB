@@ -55,7 +55,7 @@ const chunkArray = <T,>(items: T[], size: number) => {
   return chunks;
 };
 
-const getAssessmentLink = (testId: string) => `${window.location.origin}/#/test/${testId}`;
+const getAssessmentLink = (testId: string) => `${window.location.origin}/test/${testId}`;
 
 const getStats = (test: any, submissions: any[]) => {
   const passingScore = Number(test.passingScore ?? 70);

@@ -75,7 +75,7 @@ export default function PublicJobSeekerUpload() {
 
     setMetaTag('property', 'og:image', '/assets/logo-cropped-day.png');
     setMetaTag('property', 'og:image:secure_url', '/assets/logo-cropped-day.png');
-    setMetaTag('property', 'og:url', '/#/upload-resume');
+    setMetaTag('property', 'og:url', '/upload-resume');
     setMetaTag('name', 'twitter:image', '/assets/logo-cropped-day.png');
   }, []);
 

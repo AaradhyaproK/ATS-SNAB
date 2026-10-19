@@ -83,7 +83,7 @@ export const DYNAMIC_VARIABLES = [
   { tag: '{{candidate_phone}}', label: 'Candidate Phone', example: '+91 9876543210' },
   { tag: '{{job_title}}', label: 'Job Title / Post', example: 'Senior Software Engineer' },
   { tag: '{{company_name}}', label: 'Company / Client Name', example: 'SNAB hireX' },
-  { tag: '{{interview_link}}', label: 'Assessment Link', example: 'https://app.snabhirex.com/#/interview/inv-12345' },
+  { tag: '{{interview_link}}', label: 'Assessment Link', example: 'https://app.snabhirex.com/interview/inv-12345' },
   { tag: '{{access_code}}', label: 'Access Code', example: 'SH-8921' },
   { tag: '{{interview_code}}', label: 'Interview Code (Alias)', example: 'SH-8921' },
   { tag: '{{location}}', label: 'Job Location', example: 'Mumbai / Hybrid' },

@@ -423,9 +423,9 @@ const RecruiterAllJobs: React.FC = () => {
 
   const handleSendEmailReminder = async (candidateEmail: string) => {
     if (!invitingJob) return;
-    const targetLink = (invitingJob.interviewLink && !invitingJob.interviewLink.includes('/#/interview/'))
+    const targetLink = (invitingJob.interviewLink && !invitingJob.interviewLink.includes('/interview/'))
       ? invitingJob.interviewLink
-      : `${window.location.origin}/#/candidate?job=${invitingJob.id}`;
+      : `${window.location.origin}/candidate?job=${invitingJob.id}`;
     
     setRemindingCandidateEmail(candidateEmail);
     try {
@@ -497,9 +497,9 @@ const RecruiterAllJobs: React.FC = () => {
     const messageText = buildWhatsAppInviteText({
       candidateName: targetCandidateName,
       jobTitle: invitingJob.title,
-      interviewLink: (invitingJob.interviewLink && !invitingJob.interviewLink.includes('/#/interview/'))
+      interviewLink: (invitingJob.interviewLink && !invitingJob.interviewLink.includes('/interview/'))
         ? invitingJob.interviewLink
-        : `${window.location.origin}/#/candidate?job=${invitingJob.id}`,
+        : `${window.location.origin}/candidate?job=${invitingJob.id}`,
       accessCode: invitingJob.accessCode || '',
       isReminder: true,
       options: inviteOptions
@@ -516,9 +516,9 @@ const RecruiterAllJobs: React.FC = () => {
         phone: formattedPhone,
         candidateName: targetCandidateName,
         jobTitle: invitingJob.title,
-        interviewLink: (invitingJob.interviewLink && !invitingJob.interviewLink.includes('/#/interview/'))
+        interviewLink: (invitingJob.interviewLink && !invitingJob.interviewLink.includes('/interview/'))
           ? invitingJob.interviewLink
-          : `${window.location.origin}/#/candidate?job=${invitingJob.id}`,
+          : `${window.location.origin}/candidate?job=${invitingJob.id}`,
         accessCode: invitingJob.accessCode || '',
         isReminder: true,
         options: inviteOptions
@@ -540,9 +540,9 @@ const RecruiterAllJobs: React.FC = () => {
   };
   const handleSendRosterBulkEmailReminders = async () => {
     if (!invitingJob || !invitingJob.candidateEmails || invitingJob.candidateEmails.length === 0) return;
-    const targetLink = (invitingJob.interviewLink && !invitingJob.interviewLink.includes('/#/interview/'))
+    const targetLink = (invitingJob.interviewLink && !invitingJob.interviewLink.includes('/interview/'))
       ? invitingJob.interviewLink
-      : `${window.location.origin}/#/candidate?job=${invitingJob.id}`;
+      : `${window.location.origin}/candidate?job=${invitingJob.id}`;
     const candidatesPayload = invitingJob.candidateEmails.map((email: string) => ({ email }));
 
     startBackgroundSend({
@@ -587,9 +587,9 @@ const RecruiterAllJobs: React.FC = () => {
       return;
     }
 
-    const targetLink = (invitingJob.interviewLink && !invitingJob.interviewLink.includes('/#/interview/'))
+    const targetLink = (invitingJob.interviewLink && !invitingJob.interviewLink.includes('/interview/'))
       ? invitingJob.interviewLink
-      : `${window.location.origin}/#/candidate?job=${invitingJob.id}`;
+      : `${window.location.origin}/candidate?job=${invitingJob.id}`;
 
     startBackgroundSend({
       candidates: candidatesWithPhones,
@@ -626,9 +626,9 @@ const RecruiterAllJobs: React.FC = () => {
       return { email, phone: match?.phone, name: match?.name || email.split('@')[0] };
     });
 
-    const targetLink = (invitingJob.interviewLink && !invitingJob.interviewLink.includes('/#/interview/'))
+    const targetLink = (invitingJob.interviewLink && !invitingJob.interviewLink.includes('/interview/'))
       ? invitingJob.interviewLink
-      : `${window.location.origin}/#/candidate?job=${invitingJob.id}`;
+      : `${window.location.origin}/candidate?job=${invitingJob.id}`;
 
     startBackgroundSend({
       candidates: candidatesPayload,
@@ -806,9 +806,9 @@ const RecruiterAllJobs: React.FC = () => {
           salaryRange: norm.salaryRange || '',
           accessCode: norm.accessCode || (norm.jobNo ? String(norm.jobNo) : ''),
           jobNo: norm.jobNo ? String(norm.jobNo) : '',
-          interviewLink: (norm.interviewLink && !norm.interviewLink.includes('/#/interview/'))
+          interviewLink: (norm.interviewLink && !norm.interviewLink.includes('/interview/'))
             ? norm.interviewLink
-            : `${window.location.origin}/#/candidate?job=${j.id}`,
+            : `${window.location.origin}/candidate?job=${j.id}`,
           candidateEmails: j.candidateEmails || [],
           candidateData: j.candidateData || [],
           createdAt: j.createdAt || j.postedAt || j.updatedAt,
@@ -853,11 +853,11 @@ const RecruiterAllJobs: React.FC = () => {
           salaryRange: i.salaryRange || i.salary || existing?.salaryRange || '',
           accessCode: i.accessCode || existing?.accessCode || (i.jobNo ? String(i.jobNo) : ''),
           jobNo: i.jobNo ? String(i.jobNo) : (existing?.jobNo || ''),
-          interviewLink: (i.interviewLink && !i.interviewLink.includes('/#/interview/'))
+          interviewLink: (i.interviewLink && !i.interviewLink.includes('/interview/'))
             ? i.interviewLink
-            : (existing?.interviewLink && !existing.interviewLink.includes('/#/interview/'))
+            : (existing?.interviewLink && !existing.interviewLink.includes('/interview/'))
               ? existing.interviewLink
-              : `${window.location.origin}/#/candidate?job=${i.id}`,
+              : `${window.location.origin}/candidate?job=${i.id}`,
           candidateEmails: i.candidateEmails || existing?.candidateEmails || [],
           candidateData: i.candidateData || existing?.candidateData || [],
 
@@ -1687,9 +1687,9 @@ const RecruiterAllJobs: React.FC = () => {
         ]);
       }
 
-      const targetLink = (invitingJob.interviewLink && !invitingJob.interviewLink.includes('/#/interview/'))
+      const targetLink = (invitingJob.interviewLink && !invitingJob.interviewLink.includes('/interview/'))
         ? invitingJob.interviewLink
-        : `${window.location.origin}/#/candidate?job=${invitingJob.id}`;
+        : `${window.location.origin}/candidate?job=${invitingJob.id}`;
 
       let candidatesPayload = finalEmails.map(email => {
         const parsed = parsedCandidates.find(c => c.email.toLowerCase() === email.toLowerCase()) ||

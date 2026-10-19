@@ -25,7 +25,7 @@ type CandidateDraft = { name?: string; email: string; phone: string; experience?
 type RosterCandidate = { email: string; hasSubmitted: boolean; attemptId?: string; allowReattempt?: boolean };
 
 const buildWhatsAppMessage = (interview: Interview) => {
-  const link = `${window.location.origin}/#/candidate?job=${interview.id}`;
+  const link = `${window.location.origin}/candidate?job=${interview.id}`;
   return `Hi there!\n\nWe're actively hiring for the ${interview.title} role and we'd love to invite you to take our AI-powered interview.\n\nStart your interview here:\n${link}\n\nAccess Code:\n${interview.accessCode}\n\nYou can complete it whenever you're ready. Best of luck!`;
 };
 
@@ -616,7 +616,7 @@ const InterviewCandidates: React.FC = () => {
     startBackgroundSend({
       candidates: candidatesPayload,
       jobTitle: interview.title,
-      interviewLink: interview.interviewLink || `${window.location.origin}/#/candidate?job=${interview.id}`,
+      interviewLink: interview.interviewLink || `${window.location.origin}/candidate?job=${interview.id}`,
       accessCode: interview.accessCode || '',
       isReminder: true,
       sendEmailChannel: true,
@@ -659,7 +659,7 @@ const InterviewCandidates: React.FC = () => {
     startBackgroundSend({
       candidates: pendingWithPhones,
       jobTitle: interview.title,
-      interviewLink: interview.interviewLink || `${window.location.origin}/#/candidate?job=${interview.id}`,
+      interviewLink: interview.interviewLink || `${window.location.origin}/candidate?job=${interview.id}`,
       accessCode: interview.accessCode || '',
       isReminder: true,
       sendEmailChannel: false,
@@ -702,7 +702,7 @@ const InterviewCandidates: React.FC = () => {
     startBackgroundSend({
       candidates: candidatesPayload,
       jobTitle: interview.title,
-      interviewLink: interview.interviewLink || `${window.location.origin}/#/candidate?job=${interview.id}`,
+      interviewLink: interview.interviewLink || `${window.location.origin}/candidate?job=${interview.id}`,
       accessCode: interview.accessCode || '',
       isReminder: true,
       sendEmailChannel: true,
@@ -917,7 +917,7 @@ const InterviewCandidates: React.FC = () => {
         message: buildWhatsAppInviteText({
           candidateName: candidateName,
           jobTitle: interview.title,
-          interviewLink: interview.interviewLink || `${window.location.origin}/#/candidate?job=${interview.id}`,
+          interviewLink: interview.interviewLink || `${window.location.origin}/candidate?job=${interview.id}`,
           accessCode: interview.accessCode,
           options: {
             gender: (interview as any).gender || (interview as any).genderRequirement,
@@ -943,7 +943,7 @@ const InterviewCandidates: React.FC = () => {
         phone: phone,
         candidateName: candidateName,
         jobTitle: interview.title,
-        interviewLink: interview.interviewLink || `${window.location.origin}/#/candidate?job=${interview.id}`,
+        interviewLink: interview.interviewLink || `${window.location.origin}/candidate?job=${interview.id}`,
         accessCode: interview.accessCode,
         options: {
           gender: (interview as any).gender || (interview as any).genderRequirement,
@@ -1078,7 +1078,7 @@ const InterviewCandidates: React.FC = () => {
   const submittedCount = submissions.length;
   const pendingCount = pendingEmails.length;
   const queuedCount = parsedCandidates.length > 0 ? parsedCandidates.length : newEmails.length;
-  const interviewLink = interview.interviewLink || `${window.location.origin}/#/candidate?job=${interview.id}`;
+  const interviewLink = interview.interviewLink || `${window.location.origin}/candidate?job=${interview.id}`;
   const actionButtonClass = "geist-caption inline-flex h-8 items-center justify-center gap-2 rounded-[6px] border border-white/[0.11] bg-white/[0.03] px-3 font-medium text-[#d4d4d4] transition-colors hover:bg-white/[0.06] hover:text-white disabled:cursor-not-allowed disabled:opacity-40";
   const primaryButtonClass = "geist-caption inline-flex h-8 items-center justify-center gap-2 rounded-[6px] border border-white bg-white px-3 font-medium text-black transition-colors hover:bg-[#eaeaea] disabled:cursor-not-allowed disabled:opacity-40";
 

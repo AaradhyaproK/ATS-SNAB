@@ -299,7 +299,7 @@ const InterviewOverview: React.FC = () => {
   }
 
   const anyInterview = interview as any;
-  const interviewLink = `${window.location.origin}/#/candidate?job=${interview.id}`;
+  const interviewLink = `${window.location.origin}/candidate?job=${interview.id}`;
   const manualQuestions = anyInterview.manualQuestions || [];
   const generatedQuestions = interview.questions?.map((question: any) => question.text || question) || [];
   const customFields = anyInterview.customFields || [];
