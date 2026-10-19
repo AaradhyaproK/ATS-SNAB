@@ -89,7 +89,7 @@ const recruiterNavGroups: NavGroupData[] = [
   },
 ];
 
-const NavItem = memo(function NavItem({
+function NavItem({
   item,
   activePath,
   onNavigate,
@@ -136,9 +136,9 @@ const NavItem = memo(function NavItem({
       </span>
     </Link>
   );
-});
+}
 
-export const DashboardSidebar = memo(function DashboardSidebar({
+export function DashboardSidebar({
   className,
   activePath,
   onNavigate,
@@ -241,6 +241,6 @@ export const DashboardSidebar = memo(function DashboardSidebar({
         </div>
       </aside>
   );
-});
+}
 
 export default DashboardSidebar;

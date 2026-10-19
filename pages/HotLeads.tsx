@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo, useRef } from 'react';
+import React, { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import {
   collection,
@@ -22,6 +22,7 @@ import {
   MessageCircle,
   ExternalLink,
   CheckCircle2,
+  CheckCircle,
   Clock,
   Send,
   User,
@@ -50,6 +51,12 @@ import {
   Bell,
   BellOff,
   Wand2,
+  Target,
+  Scale,
+  ArrowUpDown,
+  SlidersHorizontal,
+  AlertCircle,
+  Zap,
 } from 'lucide-react';
 import { MorphResumeModal, MorphedCandidateData } from '../components/MorphResumeModal';
 import {
@@ -64,6 +71,11 @@ import {
   sendAtsCandidateStatusEmail,
   sendAtsCandidateStatusWhatsApp,
 } from '../services/atsNotificationService';
+import {
+  calculateJobMatchScore,
+  JobMatchResult,
+  CandidateMatchProfile,
+} from '../services/jobMatchService';
 
 export const ATS_PIPELINE_STAGES = [
   { key: 'Under Review', label: 'Under Review', color: 'border-blue-500/30 bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400' },
@@ -145,6 +157,11 @@ export default function HotLeads() {
   const [jobSearchQuery, setJobSearchQuery] = useState('');
   const jobDropdownRef = useRef<HTMLDivElement>(null);
   const jobSearchInputRef = useRef<HTMLInputElement>(null);
+
+  // Dynamic Unbiased Match Scoring & Profiles Cache
+  const [candidateProfilesMap, setCandidateProfilesMap] = useState<Map<string, any>>(new Map());
+  const [scoreModalData, setScoreModalData] = useState<{ lead: HotLeadItem; result: JobMatchResult } | null>(null);
+  const [scoreSortOrder, setScoreSortOrder] = useState<'default' | 'score_desc' | 'score_asc'>('default');
 
   // Candidate Details & Resume Modal
   const [selectedCandidateDetail, setSelectedCandidateDetail] = useState<HotLeadItem | null>(null);
@@ -468,10 +485,29 @@ export default function HotLeads() {
       () => updateMergedApplications()
     );
 
+    // C. Query All Candidate Profiles (skills, education, experience, resume texts)
+    const candsQ = query(collection(db, 'resumeDumpCandidates'));
+    const unsubCands = onSnapshot(
+      candsQ,
+      (snap) => {
+        const map = new Map<string, any>();
+        snap.docs.forEach((d) => {
+          const data = d.data();
+          const email = (data.email || data.profile?.email || '').toLowerCase().trim();
+          const phone = (data.phone || data.profile?.phone || '').replace(/[^0-9]/g, '').slice(-10);
+          if (email) map.set(email, { id: d.id, ...data });
+          if (phone) map.set(phone, { id: d.id, ...data });
+        });
+        setCandidateProfilesMap(map);
+      },
+      (err) => console.warn('resumeDumpCandidates subscription warning:', err)
+    );
+
     return () => {
       unsubsJobsList.forEach((u) => u());
       unsubApps();
       unsubJobApps();
+      unsubCands();
     };
   }, [userUid, userTeamId, userParentRecruiterId, isAdmin, (userProfile as any)?.primaryRecruiterUID]);
 
@@ -866,9 +902,71 @@ export default function HotLeads() {
     });
   };
 
+  // ── Objective & Unbiased Candidate Match Evaluation ──
+  const getLeadMatchResult = useCallback((lead: HotLeadItem): JobMatchResult | null => {
+    // Find applied job by id or accessCode
+    const job = jobs.find((j) => j.id === lead.jobId || j.jobId === lead.jobId || (lead.accessCode && j.accessCode === lead.accessCode));
+    if (!job) return null;
+
+    const cleanEmail = (lead.candidateEmail || '').toLowerCase().trim();
+    const cleanPhone = (lead.candidatePhone || '').replace(/[^0-9]/g, '').slice(-10);
+    const dumpCandidate = (cleanEmail ? candidateProfilesMap.get(cleanEmail) : null) || 
+                          (cleanPhone ? candidateProfilesMap.get(cleanPhone) : null) || {};
+
+    const details = lead.candidateDetails || {};
+    
+    // Skills consolidation
+    const rawSkills: string[] = [
+      ...(Array.isArray(details.skills) ? details.skills : []),
+      ...(Array.isArray(dumpCandidate.skills) ? dumpCandidate.skills : []),
+      ...(Array.isArray(dumpCandidate.profile?.skills) ? dumpCandidate.profile.skills : []),
+    ];
+    const skills = Array.from(new Set(rawSkills.map(s => String(s).trim()).filter(Boolean)));
+
+    // Education consolidation
+    const education = details.education || dumpCandidate.education || dumpCandidate.profile?.education || dumpCandidate.highestEducation || '';
+
+    // Experience consolidation
+    const rawExp = details.experience ?? dumpCandidate.experience ?? dumpCandidate.totalExperienceYears ?? dumpCandidate.profile?.experience ?? 0;
+    const experience = typeof rawExp === 'number' ? rawExp : parseFloat(String(rawExp)) || 0;
+
+    // Location consolidation
+    const location = details.location || dumpCandidate.location || dumpCandidate.city || dumpCandidate.profile?.city || '';
+
+    // Text / summary for skill & domain extraction fallback
+    const resumeText = details.extractedText || dumpCandidate.resumeText || dumpCandidate.extractedText || details.summary || dumpCandidate.summary || '';
+
+    const candidateProfile: CandidateMatchProfile = {
+      name: lead.candidateName,
+      email: lead.candidateEmail,
+      phone: lead.candidatePhone,
+      location,
+      city: location,
+      skills,
+      education,
+      experience,
+      totalExperienceYears: experience,
+      resumeText,
+      summary: details.summary || dumpCandidate.summary || '',
+      preferredDomains: dumpCandidate.domains || dumpCandidate.preferredDomains || [],
+    };
+
+    const matchResult = calculateJobMatchScore(job, candidateProfile);
+
+    // Harmonize with previously persisted matchScore if it exists and is higher
+    if (lead.matchScore && lead.matchScore > matchResult.overallScore) {
+      matchResult.overallScore = lead.matchScore;
+      if (lead.matchGrade) {
+        matchResult.matchGrade = lead.matchGrade as any;
+      }
+    }
+
+    return matchResult;
+  }, [jobs, candidateProfilesMap]);
+
   // ── Filtered Leads ──
   const filteredLeads = useMemo(() => {
-    return leads.filter((lead) => {
+    const list = leads.filter((lead) => {
       // Tab filter
       if (activeTab === 'under_review' && (lead.status && lead.status !== 'Under Review' && lead.status !== 'New')) return false;
       if (activeTab === 'shortlisted' && lead.status !== 'Shortlisted') return false;
@@ -904,7 +1002,25 @@ export default function HotLeads() {
 
       return true;
     });
-  }, [leads, activeTab, stageFilter, selectedJobId, searchTerm, jobs]);
+
+    // Score Sorting
+    if (scoreSortOrder === 'score_desc') {
+      return [...list].sort((a, b) => {
+        const scoreA = getLeadMatchResult(a)?.overallScore ?? (a.matchScore || 0);
+        const scoreB = getLeadMatchResult(b)?.overallScore ?? (b.matchScore || 0);
+        return scoreB - scoreA;
+      });
+    }
+    if (scoreSortOrder === 'score_asc') {
+      return [...list].sort((a, b) => {
+        const scoreA = getLeadMatchResult(a)?.overallScore ?? (a.matchScore || 0);
+        const scoreB = getLeadMatchResult(b)?.overallScore ?? (b.matchScore || 0);
+        return scoreA - scoreB;
+      });
+    }
+
+    return list;
+  }, [leads, activeTab, stageFilter, selectedJobId, searchTerm, jobs, scoreSortOrder, getLeadMatchResult]);
 
   // ── KPI Metrics ──
   const stats = useMemo(() => {
@@ -959,7 +1075,7 @@ export default function HotLeads() {
   };
 
   const hasActiveFilters = Boolean(
-    searchTerm.trim() || selectedJobId !== 'all' || stageFilter !== 'all' || activeTab !== 'all'
+    searchTerm.trim() || selectedJobId !== 'all' || stageFilter !== 'all' || activeTab !== 'all' || scoreSortOrder !== 'default'
   );
 
   const handleResetFilters = () => {
@@ -967,6 +1083,7 @@ export default function HotLeads() {
     setSelectedJobId('all');
     setStageFilter('all');
     setActiveTab('all');
+    setScoreSortOrder('default');
   };
 
   // ── Selection Handlers ──
@@ -1450,6 +1567,24 @@ export default function HotLeads() {
               </select>
             </div>
 
+            {/* Sort by Match Score Dropdown */}
+            <div className="relative shrink-0">
+              <select
+                value={scoreSortOrder}
+                onChange={(e) => setScoreSortOrder(e.target.value as any)}
+                className={`geist-caption h-8 rounded-md border px-2.5 text-xs outline-none cursor-pointer max-w-[155px] sm:max-w-[180px] transition-all focus-visible:ring-2 focus-visible:ring-emerald-500 ${
+                  scoreSortOrder !== 'default'
+                    ? 'border-emerald-500/40 bg-emerald-50/90 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 font-bold'
+                    : 'border-gray-200 dark:border-white/[0.1] bg-white dark:bg-[#0c0c0e] text-gray-700 dark:text-[#d4d4d4] hover:border-gray-300 dark:hover:border-white/20'
+                }`}
+                aria-label="Sort Candidates by AI Match Score"
+              >
+                <option value="default">Sort: Default</option>
+                <option value="score_desc">★ Score: Highest First</option>
+                <option value="score_asc">Score: Lowest First</option>
+              </select>
+            </div>
+
             {/* Reset Filter Button if active */}
             {hasActiveFilters && (
               <button
@@ -1532,6 +1667,9 @@ export default function HotLeads() {
                     </th>
                     <th className="geist-label whitespace-nowrap px-4 py-2.5 uppercase text-[10px] tracking-wider font-semibold text-gray-500 dark:text-[#8f8f8f]">
                       Applied Role
+                    </th>
+                    <th className="geist-label whitespace-nowrap px-4 py-2.5 uppercase text-[10px] tracking-wider font-semibold text-gray-500 dark:text-[#8f8f8f]">
+                      AI Match Score
                     </th>
                     <th className="geist-label whitespace-nowrap px-4 py-2.5 uppercase text-[10px] tracking-wider font-semibold text-gray-500 dark:text-[#8f8f8f]">
                       Application Details
@@ -1623,25 +1761,76 @@ export default function HotLeads() {
                           </div>
                         </td>
 
+                        {/* AI Match Score Column (Dynamic Unbiased Engine) */}
+                        <td className="px-4 py-3.5">
+                          {(() => {
+                            const match = getLeadMatchResult(lead);
+                            const score = match ? match.overallScore : (lead.matchScore || 0);
+                            const grade = match?.matchGrade || (score >= 80 ? 'Excellent Fit' : score >= 60 ? 'Good Fit' : score >= 40 ? 'Moderate Fit' : 'Low Fit');
+                            const matchedSkillsCount = match?.skillMatch?.matchedSkills.length ?? 0;
+                            const totalReqSkills = match?.skillMatch?.totalRequired ?? 0;
+
+                            const isHigh = score >= 80;
+                            const isMedium = score >= 60;
+                            const isModerate = score >= 40;
+
+                            return (
+                              <div className="space-y-1.5 min-w-[155px]">
+                                <button
+                                  type="button"
+                                  onClick={() => match && setScoreModalData({ lead, result: match })}
+                                  className={`group/btn flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg border text-left transition-all cursor-pointer w-full max-w-[170px] shadow-xs hover:shadow-sm ${
+                                    isHigh
+                                      ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/20 hover:border-emerald-500/50'
+                                      : isMedium
+                                      ? 'border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-400 hover:bg-blue-500/20 hover:border-blue-500/50'
+                                      : isModerate
+                                      ? 'border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400 hover:bg-amber-500/20 hover:border-amber-500/50'
+                                      : 'border-slate-500/30 bg-slate-500/10 text-slate-700 dark:text-slate-400 hover:bg-slate-500/20'
+                                  }`}
+                                  title="Click to view unbiased AI match evaluation breakdown"
+                                >
+                                  <div className="flex items-center gap-1.5 min-w-0">
+                                    <Sparkles className="size-3.5 shrink-0" />
+                                    <span className="font-mono font-bold text-xs tracking-tight">{score}%</span>
+                                  </div>
+                                  <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-black/5 dark:bg-white/10 shrink-0">
+                                    {grade}
+                                  </span>
+                                </button>
+
+                                <div className="space-y-0.5 px-0.5">
+                                  {totalReqSkills > 0 ? (
+                                    <div className="flex items-center gap-1 text-[10.5px] text-gray-500 dark:text-[#8f8f8f] font-mono">
+                                      <CheckCircle className="size-2.5 text-emerald-500 shrink-0" />
+                                      <span>{matchedSkillsCount}/{totalReqSkills} skills matched</span>
+                                    </div>
+                                  ) : (
+                                    <div className="flex items-center gap-1 text-[10.5px] text-gray-500 dark:text-[#8f8f8f]">
+                                      <Zap className="size-2.5 text-blue-500 shrink-0" />
+                                      <span>{match?.expMatch?.label || 'Skills & Profile Fit'}</span>
+                                    </div>
+                                  )}
+
+                                  <div className="flex items-center gap-1 text-[9.5px] text-emerald-600 dark:text-emerald-400 font-medium">
+                                    <Scale className="size-2.5 shrink-0" />
+                                    <span>100% Unbiased Merit</span>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })()}
+                        </td>
+
                         {/* Application Details */}
                         <td className="px-4 py-3.5">
                           <div className="space-y-1">
                             <div className="geist-small text-[11px] text-gray-500 dark:text-[#8f8f8f]">
                               Applied: <span className="text-gray-900 dark:text-white font-medium">{formatDate(lead.appliedAt)}</span>
                             </div>
-                            {lead.matchScore !== undefined && lead.matchScore > 0 && (
-                              <div className="flex items-center gap-1.5">
-                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold font-mono bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20">
-                                  <Sparkles size={10} />
-                                  <span>{lead.matchScore}% Match</span>
-                                </span>
-                                {lead.matchGrade && (
-                                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-gray-100 dark:bg-white/10 text-slate-700 dark:text-slate-300">
-                                    Grade {lead.matchGrade}
-                                  </span>
-                                )}
-                              </div>
-                            )}
+                            <div className="text-[10px] text-gray-400 dark:text-[#777] font-mono">
+                              Source: {lead.source || 'Direct Application'}
+                            </div>
                           </div>
                         </td>
 
@@ -1753,13 +1942,25 @@ export default function HotLeads() {
                   {selectedCandidateDetail.candidateName.charAt(0).toUpperCase()}
                 </div>
                 <div>
-                  <h3 className="font-bold text-base sm:text-lg text-slate-900 dark:text-white flex items-center gap-2">
+                  <h3 className="font-bold text-base sm:text-lg text-slate-900 dark:text-white flex flex-wrap items-center gap-2">
                     <span>{selectedCandidateDetail.candidateName}</span>
-                    {selectedCandidateDetail.matchScore !== undefined && selectedCandidateDetail.matchScore > 0 && (
-                      <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                        {selectedCandidateDetail.matchScore}% Match
-                      </span>
-                    )}
+                    {(() => {
+                      const match = getLeadMatchResult(selectedCandidateDetail);
+                      const score = match ? match.overallScore : (selectedCandidateDetail.matchScore || 0);
+                      const grade = match?.matchGrade || selectedCandidateDetail.matchGrade || (score >= 80 ? 'Excellent Fit' : score >= 60 ? 'Good Fit' : 'Moderate Fit');
+                      return (
+                        <button
+                          type="button"
+                          onClick={() => match && setScoreModalData({ lead: selectedCandidateDetail, result: match })}
+                          className="inline-flex items-center gap-1.5 text-xs font-mono font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25 hover:bg-emerald-500/20 cursor-pointer transition-all"
+                          title="Click to view full unbiased scoring breakdown"
+                        >
+                          <Sparkles size={11} />
+                          <span>{score}% Match • {grade}</span>
+                          <span className="underline ml-0.5 text-[10px] opacity-80 font-sans">View Scoring</span>
+                        </button>
+                      );
+                    })()}
                   </h3>
                   <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                     <span className="flex items-center gap-1 font-mono">
@@ -2138,6 +2339,41 @@ export default function HotLeads() {
               ) : (
                 /* Profile Tab */
                 <div className="space-y-5">
+                  {/* AI Match Overview Card */}
+                  {(() => {
+                    const match = getLeadMatchResult(selectedCandidateDetail);
+                    if (!match) return null;
+                    return (
+                      <div className="p-4 rounded-xl border border-emerald-500/25 bg-emerald-500/5 dark:bg-emerald-500/10 flex flex-wrap items-center justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          <div className="size-11 rounded-xl bg-emerald-500 text-white font-mono font-bold text-sm flex items-center justify-center shadow-md shrink-0">
+                            {match.overallScore}%
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-xs text-gray-900 dark:text-white">Role Match: {match.matchGrade}</span>
+                              <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
+                                <Scale size={11} /> 100% Unbiased Merit
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
+                              {match.skillMatch.ratioText} • {match.expMatch.label} • {match.eduMatch.label}
+                            </p>
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => setScoreModalData({ lead: selectedCandidateDetail, result: match })}
+                          className="px-3 py-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-800 dark:text-emerald-300 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5"
+                        >
+                          <Sparkles size={12} />
+                          <span>View Full Score Breakdown</span>
+                        </button>
+                      </div>
+                    );
+                  })()}
+
                   {/* Stats Grid */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                     <div className="p-3.5 rounded-xl border border-gray-200 dark:border-white/[0.1] bg-white dark:bg-[#111114]">
@@ -2577,6 +2813,231 @@ export default function HotLeads() {
                   </span>
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Unbiased AI Candidate Match Breakdown Modal ── */}
+      {scoreModalData && (
+        <div
+          className="fixed inset-0 z-[70] flex items-center justify-center p-3 sm:p-4 bg-black/70 backdrop-blur-md animate-fadeIn"
+          onClick={() => setScoreModalData(null)}
+        >
+          <div
+            className="w-full max-w-2xl max-h-[90vh] flex flex-col rounded-2xl border border-gray-200 dark:border-white/[0.14] bg-white dark:bg-[#0c0c0e] text-slate-900 dark:text-white shadow-2xl overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-white/[0.1] bg-gray-50/80 dark:bg-[#111114]">
+              <div className="flex items-center gap-2.5">
+                <div className="size-9 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-500 text-white flex items-center justify-center shadow-md shadow-emerald-500/20">
+                  <Sparkles size={18} />
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm sm:text-base text-gray-900 dark:text-white flex items-center gap-2">
+                    <span>Candidate AI Match Score Analysis</span>
+                  </h3>
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                    Applied Role: <span className="font-semibold text-gray-800 dark:text-gray-200">{scoreModalData.lead.jobTitle}</span>
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setScoreModalData(null)}
+                className="size-8 rounded-lg border border-gray-200 dark:border-white/[0.1] bg-white dark:bg-white/[0.04] text-gray-500 hover:text-gray-900 dark:hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-5 overflow-y-auto space-y-4 text-xs">
+              {/* Score Banner & Unbiased Merit Tag */}
+              <div className="p-4 rounded-xl border border-emerald-500/30 bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-blue-500/10 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="flex items-center gap-3.5">
+                  <div className="size-16 rounded-full border-4 border-emerald-500 bg-white dark:bg-[#111] flex flex-col items-center justify-center shadow-md shrink-0">
+                    <span className="font-mono text-lg font-black text-emerald-600 dark:text-emerald-400 leading-none">
+                      {scoreModalData.result.overallScore}%
+                    </span>
+                    <span className="text-[9px] font-bold text-gray-400 uppercase tracking-tighter">Fit</span>
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-bold text-gray-900 dark:text-white">
+                        {scoreModalData.lead.candidateName}
+                      </span>
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500 text-white">
+                        {scoreModalData.result.matchGrade}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-gray-600 dark:text-gray-300 mt-0.5">
+                      Algorithmic alignment with job requirements & candidate CV
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 text-[11px] font-semibold shrink-0">
+                  <Scale size={14} className="text-emerald-500 shrink-0" />
+                  <span>100% Merit & Zero Bias Evaluated</span>
+                </div>
+              </div>
+
+              {/* Four Assessment Pillars */}
+              <div className="space-y-3">
+                <h4 className="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                  Weighted Match Breakdown
+                </h4>
+
+                {/* Pillar 1: Skills (40%) */}
+                <div className="p-3.5 rounded-xl border border-gray-200 dark:border-white/[0.08] bg-gray-50/50 dark:bg-white/[0.02] space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
+                        <CheckCircle2 size={14} className="text-emerald-500" />
+                        Technical Skills Alignment
+                      </span>
+                      <span className="px-1.5 py-0.2 rounded text-[10px] bg-blue-500/10 text-blue-600 dark:text-blue-400 font-mono font-bold">
+                        40% Weight
+                      </span>
+                    </div>
+                    <span className="font-mono text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
+                      {scoreModalData.result.skillMatch.score}% ({scoreModalData.result.skillMatch.ratioText})
+                    </span>
+                  </div>
+
+                  {scoreModalData.result.skillMatch.matchedSkills.length > 0 && (
+                    <div className="space-y-1">
+                      <span className="text-[10px] text-gray-500 uppercase font-semibold">Matched Skills:</span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {scoreModalData.result.skillMatch.matchedSkills.map((s, idx) => (
+                          <span key={idx} className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/25">
+                            <Check size={10} />
+                            {s}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {scoreModalData.result.skillMatch.missingSkills.length > 0 && (
+                    <div className="space-y-1">
+                      <span className="text-[10px] text-amber-600 dark:text-amber-400 uppercase font-semibold">Missing / Unverified Skills:</span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {scoreModalData.result.skillMatch.missingSkills.map((s, idx) => (
+                          <span key={idx} className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/25">
+                            {s}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Pillar 2: Experience (25%) */}
+                <div className="p-3.5 rounded-xl border border-gray-200 dark:border-white/[0.08] bg-gray-50/50 dark:bg-white/[0.02] flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
+                        <Clock size={14} className="text-indigo-500" />
+                        Experience & Seniority Fit
+                      </span>
+                      <span className="px-1.5 py-0.2 rounded text-[10px] bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 font-mono font-bold">
+                        25% Weight
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                      Required: <span className="text-gray-800 dark:text-gray-200 font-medium">{scoreModalData.result.expMatch.requiredExp}</span> • Candidate: <span className="text-gray-800 dark:text-gray-200 font-medium">{scoreModalData.result.expMatch.candidateExp} Yrs</span>
+                    </p>
+                  </div>
+                  <span className={`px-2 py-0.5 rounded text-[11px] font-bold ${
+                    scoreModalData.result.expMatch.isMatch
+                      ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
+                      : 'bg-amber-500/15 text-amber-700 dark:text-amber-300'
+                  }`}>
+                    {scoreModalData.result.expMatch.label}
+                  </span>
+                </div>
+
+                {/* Pillar 3: Education (15%) */}
+                <div className="p-3.5 rounded-xl border border-gray-200 dark:border-white/[0.08] bg-gray-50/50 dark:bg-white/[0.02] flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
+                        <GraduationCap size={14} className="text-purple-500" />
+                        Academic & Qualification Fit
+                      </span>
+                      <span className="px-1.5 py-0.2 rounded text-[10px] bg-purple-500/10 text-purple-600 dark:text-purple-400 font-mono font-bold">
+                        15% Weight
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                      Required: <span className="text-gray-800 dark:text-gray-200 font-medium">{scoreModalData.result.eduMatch.requiredEdu}</span> • Candidate: <span className="text-gray-800 dark:text-gray-200 font-medium">{scoreModalData.result.eduMatch.candidateEdu}</span>
+                    </p>
+                  </div>
+                  <span className={`px-2 py-0.5 rounded text-[11px] font-bold ${
+                    scoreModalData.result.eduMatch.isMatch
+                      ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
+                      : 'bg-blue-500/15 text-blue-700 dark:text-blue-300'
+                  }`}>
+                    {scoreModalData.result.eduMatch.label}
+                  </span>
+                </div>
+
+                {/* Pillar 4: Location (10%) */}
+                <div className="p-3.5 rounded-xl border border-gray-200 dark:border-white/[0.08] bg-gray-50/50 dark:bg-white/[0.02] flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
+                        <MapPin size={14} className="text-teal-500" />
+                        Work Location & Mode Fit
+                      </span>
+                      <span className="px-1.5 py-0.2 rounded text-[10px] bg-teal-500/10 text-teal-600 dark:text-teal-400 font-mono font-bold">
+                        10% Weight
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                      {scoreModalData.result.locationMatch.details}
+                    </p>
+                  </div>
+                  <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">
+                    {scoreModalData.result.locationMatch.label}
+                  </span>
+                </div>
+              </div>
+
+              {/* Zero-Bias Compliance Notice */}
+              <div className="p-3 rounded-lg border border-blue-500/20 bg-blue-50/50 dark:bg-blue-500/5 text-[11px] text-blue-700 dark:text-blue-300 flex items-start gap-2">
+                <ShieldCheck size={16} className="text-blue-500 shrink-0 mt-0.5" />
+                <p>
+                  <strong className="font-semibold">Unbiased AI Guarantee:</strong> This score is calculated purely on hard requirements — skills extracted from the candidate resume vs the job description, verified years of experience, and educational suitability. Demographics such as age, gender, ethnicity, and pedigree are strictly zero-weighted.
+                </p>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-between px-5 py-3.5 border-t border-gray-200 dark:border-white/[0.1] bg-gray-50/80 dark:bg-[#111114]">
+              <button
+                type="button"
+                onClick={() => setScoreModalData(null)}
+                className="px-4 py-2 rounded-lg border border-gray-300 dark:border-white/[0.12] bg-white dark:bg-white/[0.05] text-xs font-bold text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/[0.08] transition-colors cursor-pointer"
+              >
+                Close
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  const lead = scoreModalData.lead;
+                  setScoreModalData(null);
+                  handleOpenCandidateModal(lead);
+                }}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-md shadow-emerald-600/20 transition-all cursor-pointer"
+              >
+                <FileText size={13} />
+                <span>Open Full Candidate Profile & Resume</span>
+              </button>
             </div>
           </div>
         </div>

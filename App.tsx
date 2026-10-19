@@ -1,5 +1,5 @@
-import React from 'react';
-import { HashRouter, Routes, Route, Navigate, useParams } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { HashRouter, Routes, Route, Navigate, useParams, useLocation, useNavigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { BackgroundSendProvider } from './context/BackgroundSendContext';
@@ -237,6 +237,7 @@ const App: React.FC = () => {
             <Route element={<Layout />}>
               {/* Recruiter Routes */}
               <Route path="recruiter/jobs" element={<ProtectedRoute role="recruiter" loadingFallback={<RecruiterDashboardSkeleton />}><RecruiterDashboard /></ProtectedRoute>} />
+              <Route path="recruiter/dashboard" element={<Navigate to="/recruiter/jobs" replace />} />
               <Route path="recruiter/add-candidate" element={<ProtectedRoute><AddCandidate /></ProtectedRoute>} />
               <Route path="admin/add-candidate" element={<ProtectedRoute role="admin"><AddCandidate /></ProtectedRoute>} />
               <Route path="recruiter/all-jobs" element={<ProtectedRoute role="recruiter" loadingFallback={<RecruiterInterviewsSkeleton />}><RecruiterAllJobs /></ProtectedRoute>} />

@@ -68,7 +68,10 @@ const LayoutContent: React.FC<{ children?: React.ReactNode }> = ({ children }) =
   const isRecruiterDashboard = location.pathname === '/recruiter/jobs';
   const navigateFromSidebar = React.useCallback((href: string) => {
     setIsMobileMenuOpen(false);
-  }, []);
+    if (href) {
+      navigate(href);
+    }
+  }, [navigate]);
 
   return (
     <div className={`${isRecruiterPath ? 'recruiter-shell' : ''} min-h-screen bg-background text-foreground font-sans selection:bg-primary/20 selection:text-foreground flex flex-col transition-colors duration-300`}>
@@ -291,7 +294,7 @@ const LayoutContent: React.FC<{ children?: React.ReactNode }> = ({ children }) =
         <div className="flex min-w-0 flex-1 flex-col">
           <main className={`workspace-card flex-grow w-full mx-auto relative ${isRecruiterPath ? 'recruiter-workspace' : ''} ${showRecruiterSidebar ? 'max-w-none p-0' : 'px-4 sm:px-6 lg:px-8 py-8 max-w-7xl'}`}>
 
-            {children || <Outlet />}
+            {children || <Outlet key={location.pathname} />}
           </main>
 
           <footer className={`z-10 mt-auto border-t backdrop-blur-sm ${isRecruiterPath ? 'recruiter-footer' : ''} ${showRecruiterSidebar ? 'border-white/[0.11] bg-[#000] text-white' : 'border-border bg-background/90'}`}>

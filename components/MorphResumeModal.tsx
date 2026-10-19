@@ -278,12 +278,20 @@ export const MorphResumeModal: React.FC<MorphResumeModalProps> = ({ candidate, i
     });
   }, [candidate, customWords]);
 
+  // Reset state only once when modal opens
+  const prevIsOpenRef = useRef(false);
   useEffect(() => {
-    if (!isOpen || !candidate) {
+    if (isOpen && !prevIsOpenRef.current) {
       setMorphedPages([]);
       setLoadError(null);
       setCustomWords([]);
       setCustomWordInput('');
+    }
+    prevIsOpenRef.current = isOpen;
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen || !candidate) {
       return;
     }
 
