@@ -2,22 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { collection, query, where, onSnapshot, doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { initializeApp, deleteApp } from 'firebase/app';
 import { getAuth, createUserWithEmailAndPassword, signOut as secondarySignOut } from 'firebase/auth';
-import { db } from '../services/firebase';
+import { db, firebaseConfig } from '../services/firebase';
 import { useAuth } from '../context/AuthContext';
 import { useMessageBox } from './MessageBox';
 import { subscribeTeamAuditLogs, logTeamActivity } from '../services/auditService';
 import { AuditLog, UserProfile } from '../types';
 import { Users, UserPlus, Shield, Activity, Clock, CheckCircle2, AlertCircle, X, Sparkles, Briefcase, Mail, Phone, Key } from 'lucide-react';
-
-const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyAsahVN3b4TfA_atPtKy8d5DPaJ0819F3w",
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "ats-1-7d621.firebaseapp.com",
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "ats-1-7d621",
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "ats-1-7d621.firebasestorage.app",
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "331729790419",
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:331729790419:web:dc5d5000bd95054c123b26",
-  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || "G-DRJXJB5154"
-};
 
 export const RecruiterTeamPanel: React.FC = () => {
   const { user, userProfile } = useAuth();

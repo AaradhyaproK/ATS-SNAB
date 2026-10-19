@@ -31,6 +31,8 @@ function localServerlessPlugin(env: Record<string, string>): Plugin {
           handlerModule = await import('./api/assemblyai-token.js');
         } else if (pathname === '/api/jobs' || pathname.startsWith('/api/jobs/') || pathname === '/api/jobs/receive') {
           handlerModule = await import('./api/jobs.js');
+        } else if (pathname === '/api/bedrock' || pathname === '/api/ai') {
+          handlerModule = await import('./api/bedrock.js');
         }
 
         if (!handlerModule || !handlerModule.default) {
@@ -112,10 +114,6 @@ export default defineConfig(({ mode }) => {
       },
       build: {
         target: 'esnext',
-      },
-      define: {
-        'process.env.ANTHROPIC_BASE_URL': JSON.stringify(env.VITE_ANTHROPIC_BASE_URL || env.ANTHROPIC_BASE_URL || ''),
-        'process.env.ANTHROPIC_WORKSPACE_ID': JSON.stringify(env.VITE_ANTHROPIC_WORKSPACE_ID || env.ANTHROPIC_WORKSPACE_ID || 'default'),
       },
       resolve: {
         alias: {

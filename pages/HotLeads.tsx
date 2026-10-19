@@ -49,7 +49,9 @@ import {
   Award,
   Bell,
   BellOff,
+  Wand2,
 } from 'lucide-react';
+import { MorphResumeModal, MorphedCandidateData } from '../components/MorphResumeModal';
 import {
   fetchWhatsAppStatus,
   getStoredSessionId,
@@ -146,8 +148,10 @@ export default function HotLeads() {
 
   // Candidate Details & Resume Modal
   const [selectedCandidateDetail, setSelectedCandidateDetail] = useState<HotLeadItem | null>(null);
+  const [morphResumeCandidate, setMorphResumeCandidate] = useState<MorphedCandidateData | null>(null);
   const [activeModalTab, setActiveModalTab] = useState<'resume' | 'profile'>('resume');
   const [isLoadingCandidateProfile, setIsLoadingCandidateProfile] = useState(false);
+  const [recruiterNotesInput, setRecruiterNotesInput] = useState<string>('');
   const [newStatusSelection, setNewStatusSelection] = useState<string>('Shortlisted');
   const [notifyCandidateEmail, setNotifyCandidateEmail] = useState<boolean>(true);
   const [notifyCandidateWhatsApp, setNotifyCandidateWhatsApp] = useState<boolean>(false);
@@ -553,6 +557,54 @@ export default function HotLeads() {
     }
   };
 
+  // ── Open Masked (Blind Client Copy) Resume Modal ──
+  const handleOpenMaskedResume = async (lead: HotLeadItem) => {
+    let resumeUrl = lead.resumeUrl || '';
+    let resumeFileName = `${lead.candidateName.replace(/\s+/g, '_')}_Resume.pdf`;
+    let resumeText = '';
+    let details: any = lead.candidateDetails || {};
+
+    if (!resumeUrl && lead.candidateEmail) {
+      try {
+        const cleanEmail = lead.candidateEmail.toLowerCase().trim();
+        const qCand = query(collection(db, 'resumeDumpCandidates'), where('email', '==', cleanEmail));
+        const snap = await getDocs(qCand).catch(() => null);
+        if (snap && !snap.empty) {
+          const cData = snap.docs[0].data();
+          resumeUrl = cData.resumeUrl || cData.profile?.resumeUrl || cData.fileUrl || '';
+          resumeFileName = cData.resumeFileName || cData.profile?.resumeFileName || resumeFileName;
+          resumeText = cData.extractedText || cData.profile?.extractedText || cData.resumeText || '';
+          if (!details.location) details.location = cData.location || cData.profile?.location || cData.city;
+          if (!details.summary) details.summary = cData.summary || cData.profile?.summary;
+          if (!details.skills || details.skills.length === 0) details.skills = cData.skills || cData.profile?.skills || [];
+          if (!details.experience) details.experience = cData.experience || cData.profile?.experience || cData.totalExperienceYears;
+          if (!details.education) details.education = cData.education || cData.profile?.education;
+        }
+      } catch (err) {
+        console.warn('Error fetching candidate resume for masked copy:', err);
+      }
+    }
+
+    const morphedData: MorphedCandidateData = {
+      id: lead.id,
+      name: lead.candidateName,
+      email: lead.candidateEmail,
+      phone: lead.candidatePhone,
+      location: details.location,
+      city: details.location,
+      currentTitle: lead.jobTitle,
+      summary: details.summary,
+      totalExperienceYears: details.experience,
+      skills: details.skills || [],
+      resumeUrl: resumeUrl || lead.resumeUrl,
+      resumeFileName,
+      resumeText,
+      education: Array.isArray(details.education) ? details.education : [],
+    };
+
+    setMorphResumeCandidate(morphedData);
+  };
+
   // ── WhatsApp Notification Checkmark Handler ──
   const handleToggleWhatsAppNotify = async (checked: boolean) => {
     setNotifyCandidateWhatsApp(checked);
@@ -894,6 +946,29 @@ export default function HotLeads() {
     return `${prefix}${found.title || 'Untitled Role'}`;
   }, [selectedJobId, jobs]);
 
+  const handleTabChange = (tab: typeof activeTab) => {
+    setActiveTab(tab);
+    setStageFilter('all');
+  };
+
+  const handleStageChange = (stage: string) => {
+    setStageFilter(stage);
+    if (stage !== 'all') {
+      setActiveTab('all');
+    }
+  };
+
+  const hasActiveFilters = Boolean(
+    searchTerm.trim() || selectedJobId !== 'all' || stageFilter !== 'all' || activeTab !== 'all'
+  );
+
+  const handleResetFilters = () => {
+    setSearchTerm('');
+    setSelectedJobId('all');
+    setStageFilter('all');
+    setActiveTab('all');
+  };
+
   // ── Selection Handlers ──
   const handleToggleSelectAll = () => {
     if (filteredLeads.length === 0) return;
@@ -1146,144 +1221,196 @@ export default function HotLeads() {
         </div>
       </section>
 
-      {/* ── 3. Controls & Filter Section ── */}
-      <section className="border-b border-gray-200 dark:border-white/[0.11] bg-white dark:bg-[#000] px-4 py-3 sm:px-6 lg:px-7 transition-colors">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+      {/* ── 3. Controls & Filter Section (Compact, Ultra-Clean & Accessible) ── */}
+      <section className="border-b border-gray-200/90 dark:border-white/[0.08] bg-white dark:bg-[#070709] px-3.5 py-2 sm:px-6 lg:px-7 transition-colors">
+        <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-2.5">
           
           {/* Segmented Filter Pills */}
-          <div className="flex shrink-0 items-center gap-1.5 rounded-[6px] border border-gray-200 dark:border-white/[0.16] bg-gray-100 dark:bg-white/[0.04] p-0.5 overflow-x-auto">
+          <div
+            role="tablist"
+            aria-label="Filter applications by status"
+            className="flex items-center gap-1 rounded-lg border border-gray-200/80 dark:border-white/[0.08] bg-gray-100/70 dark:bg-white/[0.03] p-1 overflow-x-auto no-scrollbar scroll-smooth"
+          >
             <button
               type="button"
-              onClick={() => setActiveTab('all')}
-              className={`geist-caption inline-flex h-8 cursor-pointer items-center justify-center gap-1.5 rounded-[4px] px-3 font-medium transition-colors ${
-                activeTab === 'all'
-                  ? 'bg-white dark:bg-white text-gray-900 dark:text-black font-semibold shadow-sm'
-                  : 'text-gray-600 dark:text-[#d4d4d4] hover:bg-gray-200/60 dark:hover:bg-white/[0.08] hover:text-gray-900 dark:hover:text-white'
+              role="tab"
+              aria-selected={activeTab === 'all' && stageFilter === 'all'}
+              onClick={() => handleTabChange('all')}
+              className={`geist-caption inline-flex h-7.5 cursor-pointer items-center justify-center gap-1.5 rounded-md px-2.5 sm:px-3 text-xs font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+                activeTab === 'all' && stageFilter === 'all'
+                  ? 'bg-white dark:bg-white/[0.12] text-gray-900 dark:text-white font-semibold shadow-xs border border-gray-200/70 dark:border-white/10'
+                  : 'text-gray-600 dark:text-[#a1a1aa] hover:bg-white/60 dark:hover:bg-white/[0.05] hover:text-gray-900 dark:hover:text-white'
               }`}
             >
-              <span>All Applications</span>
-              <span className={`rounded-full px-1.5 py-0.2 text-[10px] ${activeTab === 'all' ? 'bg-gray-200 dark:bg-black/15 text-gray-800 dark:text-black' : 'bg-gray-200/60 dark:bg-white/10 text-gray-600 dark:text-[#8f8f8f]'}`}>
+              <span>All</span>
+              <span className={`inline-flex items-center justify-center min-w-[18px] h-4.5 px-1 rounded-full text-[10px] font-mono font-medium ${
+                activeTab === 'all' && stageFilter === 'all'
+                  ? 'bg-gray-100 dark:bg-white/20 text-gray-900 dark:text-white'
+                  : 'bg-gray-200/70 dark:bg-white/[0.07] text-gray-600 dark:text-[#8f8f8f]'
+              }`}>
                 {stats.total}
               </span>
             </button>
 
             <button
               type="button"
-              onClick={() => setActiveTab('under_review')}
-              className={`geist-caption inline-flex h-8 cursor-pointer items-center justify-center gap-1.5 rounded-[4px] px-3 font-medium transition-colors ${
+              role="tab"
+              aria-selected={activeTab === 'under_review'}
+              onClick={() => handleTabChange('under_review')}
+              className={`geist-caption inline-flex h-7.5 cursor-pointer items-center justify-center gap-1.5 rounded-md px-2.5 sm:px-3 text-xs font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
                 activeTab === 'under_review'
-                  ? 'bg-white dark:bg-white text-gray-900 dark:text-black font-semibold shadow-sm'
-                  : 'text-gray-600 dark:text-[#d4d4d4] hover:bg-gray-200/60 dark:hover:bg-white/[0.08] hover:text-gray-900 dark:hover:text-white'
+                  ? 'bg-white dark:bg-white/[0.12] text-blue-700 dark:text-blue-300 font-semibold shadow-xs border border-blue-200 dark:border-blue-500/30'
+                  : 'text-gray-600 dark:text-[#a1a1aa] hover:bg-white/60 dark:hover:bg-white/[0.05] hover:text-gray-900 dark:hover:text-white'
               }`}
             >
-              <Clock className="w-3.5 h-3.5 text-blue-500" />
-              <span>Under Review</span>
-              <span className={`rounded-full px-1.5 py-0.2 text-[10px] ${activeTab === 'under_review' ? 'bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-300' : 'bg-gray-200/60 dark:bg-white/10 text-gray-600 dark:text-[#8f8f8f]'}`}>
+              <Clock className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+              <span>Review</span>
+              <span className={`inline-flex items-center justify-center min-w-[18px] h-4.5 px-1 rounded-full text-[10px] font-mono font-medium ${
+                activeTab === 'under_review'
+                  ? 'bg-blue-100 dark:bg-blue-500/25 text-blue-800 dark:text-blue-300'
+                  : 'bg-gray-200/70 dark:bg-white/[0.07] text-gray-600 dark:text-[#8f8f8f]'
+              }`}>
                 {stats.underReview}
               </span>
             </button>
 
             <button
               type="button"
-              onClick={() => setActiveTab('shortlisted')}
-              className={`geist-caption inline-flex h-8 cursor-pointer items-center justify-center gap-1.5 rounded-[4px] px-3 font-medium transition-colors ${
+              role="tab"
+              aria-selected={activeTab === 'shortlisted'}
+              onClick={() => handleTabChange('shortlisted')}
+              className={`geist-caption inline-flex h-7.5 cursor-pointer items-center justify-center gap-1.5 rounded-md px-2.5 sm:px-3 text-xs font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${
                 activeTab === 'shortlisted'
-                  ? 'bg-white dark:bg-white text-gray-900 dark:text-black font-semibold shadow-sm'
-                  : 'text-gray-600 dark:text-[#d4d4d4] hover:bg-gray-200/60 dark:hover:bg-white/[0.08] hover:text-gray-900 dark:hover:text-white'
+                  ? 'bg-white dark:bg-white/[0.12] text-emerald-700 dark:text-emerald-300 font-semibold shadow-xs border border-emerald-200 dark:border-emerald-500/30'
+                  : 'text-gray-600 dark:text-[#a1a1aa] hover:bg-white/60 dark:hover:bg-white/[0.05] hover:text-gray-900 dark:hover:text-white'
               }`}
             >
-              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
               <span>Shortlisted</span>
-              <span className={`rounded-full px-1.5 py-0.2 text-[10px] ${activeTab === 'shortlisted' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300' : 'bg-gray-200/60 dark:bg-white/10 text-gray-600 dark:text-[#8f8f8f]'}`}>
+              <span className={`inline-flex items-center justify-center min-w-[18px] h-4.5 px-1 rounded-full text-[10px] font-mono font-medium ${
+                activeTab === 'shortlisted'
+                  ? 'bg-emerald-100 dark:bg-emerald-500/25 text-emerald-800 dark:text-emerald-300'
+                  : 'bg-gray-200/70 dark:bg-white/[0.07] text-gray-600 dark:text-[#8f8f8f]'
+              }`}>
                 {stats.shortlisted}
               </span>
             </button>
 
             <button
               type="button"
-              onClick={() => setActiveTab('scheduled')}
-              className={`geist-caption inline-flex h-8 cursor-pointer items-center justify-center gap-1.5 rounded-[4px] px-3 font-medium transition-colors ${
+              role="tab"
+              aria-selected={activeTab === 'scheduled'}
+              onClick={() => handleTabChange('scheduled')}
+              className={`geist-caption inline-flex h-7.5 cursor-pointer items-center justify-center gap-1.5 rounded-md px-2.5 sm:px-3 text-xs font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
                 activeTab === 'scheduled'
-                  ? 'bg-white dark:bg-white text-gray-900 dark:text-black font-semibold shadow-sm'
-                  : 'text-gray-600 dark:text-[#d4d4d4] hover:bg-gray-200/60 dark:hover:bg-white/[0.08] hover:text-gray-900 dark:hover:text-white'
+                  ? 'bg-white dark:bg-white/[0.12] text-indigo-700 dark:text-indigo-300 font-semibold shadow-xs border border-indigo-200 dark:border-indigo-500/30'
+                  : 'text-gray-600 dark:text-[#a1a1aa] hover:bg-white/60 dark:hover:bg-white/[0.05] hover:text-gray-900 dark:hover:text-white'
               }`}
             >
-              <Calendar className="w-3.5 h-3.5 text-indigo-500" />
-              <span>Interviews Scheduled</span>
-              <span className={`rounded-full px-1.5 py-0.2 text-[10px] ${activeTab === 'scheduled' ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-500/20 dark:text-indigo-300' : 'bg-gray-200/60 dark:bg-white/10 text-gray-600 dark:text-[#8f8f8f]'}`}>
+              <Calendar className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+              <span>Interviews</span>
+              <span className={`inline-flex items-center justify-center min-w-[18px] h-4.5 px-1 rounded-full text-[10px] font-mono font-medium ${
+                activeTab === 'scheduled'
+                  ? 'bg-indigo-100 dark:bg-indigo-500/25 text-indigo-800 dark:text-indigo-300'
+                  : 'bg-gray-200/70 dark:bg-white/[0.07] text-gray-600 dark:text-[#8f8f8f]'
+              }`}>
                 {stats.scheduled}
               </span>
             </button>
 
             <button
               type="button"
-              onClick={() => setActiveTab('hired')}
-              className={`geist-caption inline-flex h-8 cursor-pointer items-center justify-center gap-1.5 rounded-[4px] px-3 font-medium transition-colors ${
+              role="tab"
+              aria-selected={activeTab === 'hired'}
+              onClick={() => handleTabChange('hired')}
+              className={`geist-caption inline-flex h-7.5 cursor-pointer items-center justify-center gap-1.5 rounded-md px-2.5 sm:px-3 text-xs font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500 ${
                 activeTab === 'hired'
-                  ? 'bg-white dark:bg-white text-gray-900 dark:text-black font-semibold shadow-sm'
-                  : 'text-gray-600 dark:text-[#d4d4d4] hover:bg-gray-200/60 dark:hover:bg-white/[0.08] hover:text-gray-900 dark:hover:text-white'
+                  ? 'bg-white dark:bg-white/[0.12] text-green-700 dark:text-green-300 font-semibold shadow-xs border border-green-200 dark:border-green-500/30'
+                  : 'text-gray-600 dark:text-[#a1a1aa] hover:bg-white/60 dark:hover:bg-white/[0.05] hover:text-gray-900 dark:hover:text-white'
               }`}
             >
-              <Award className="w-3.5 h-3.5 text-green-500" />
+              <Award className="w-3.5 h-3.5 text-green-500 shrink-0" />
               <span>Hired</span>
-              <span className={`rounded-full px-1.5 py-0.2 text-[10px] ${activeTab === 'hired' ? 'bg-green-100 text-green-800 dark:bg-green-500/20 dark:text-green-300' : 'bg-gray-200/60 dark:bg-white/10 text-gray-600 dark:text-[#8f8f8f]'}`}>
+              <span className={`inline-flex items-center justify-center min-w-[18px] h-4.5 px-1 rounded-full text-[10px] font-mono font-medium ${
+                activeTab === 'hired'
+                  ? 'bg-green-100 dark:bg-green-500/25 text-green-800 dark:text-green-300'
+                  : 'bg-gray-200/70 dark:bg-white/[0.07] text-gray-600 dark:text-[#8f8f8f]'
+              }`}>
                 {stats.hired}
               </span>
             </button>
           </div>
 
-          {/* Search & Filter Dropdowns */}
-          <div className="flex flex-wrap items-center gap-2">
+          {/* Inline Compact Filter Toolbar */}
+          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
             {/* Search Box */}
-            <div className="relative w-full sm:w-[220px] lg:w-[260px]">
-              <Search className="absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-gray-400 dark:text-[#8f8f8f]" strokeWidth={1.8} />
+            <div className="relative flex-1 sm:flex-initial sm:w-[190px] md:w-[210px] xl:w-[230px]">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-gray-400 dark:text-[#8f8f8f] pointer-events-none" />
               <input
                 type="text"
-                placeholder="Search candidate, job #, email..."
+                placeholder="Search candidates..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="geist-caption h-9 w-full rounded-[6px] border border-gray-200 dark:border-white/[0.11] bg-white dark:bg-[#050505] pl-9 pr-3 text-gray-900 dark:text-white outline-none placeholder:text-gray-400 dark:placeholder:text-[#6b7280] focus:border-blue-500 dark:focus:border-white/[0.24] transition-colors"
+                className="geist-caption h-8 w-full rounded-md border border-gray-200 dark:border-white/[0.1] bg-white dark:bg-[#0c0c0e] pl-8 pr-7 text-xs text-gray-900 dark:text-white outline-none placeholder:text-gray-400 dark:placeholder:text-[#6b7280] focus:border-blue-500 dark:focus:border-white/20 focus:ring-1 focus:ring-blue-500/20 transition-all"
+                aria-label="Search applicants by name, email, phone, or job number"
               />
+              {searchTerm && (
+                <button
+                  type="button"
+                  onClick={() => setSearchTerm('')}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-white transition-colors"
+                  aria-label="Clear search"
+                >
+                  <X className="size-3" />
+                </button>
+              )}
             </div>
 
             {/* Searchable Job Filter Dropdown */}
-            <div className="relative" ref={jobDropdownRef}>
+            <div className="relative shrink-0" ref={jobDropdownRef}>
               <button
                 type="button"
                 onClick={() => setIsJobDropdownOpen(!isJobDropdownOpen)}
-                className={`geist-caption h-9 rounded-[6px] border px-2.5 text-xs outline-none transition-colors flex items-center justify-between gap-2 min-w-[170px] max-w-[240px] sm:max-w-[280px] cursor-pointer ${
+                className={`geist-caption h-8 rounded-md border px-2.5 text-xs outline-none transition-all flex items-center justify-between gap-1.5 max-w-[155px] sm:max-w-[190px] xl:max-w-[210px] cursor-pointer focus-visible:ring-2 focus-visible:ring-blue-500 ${
                   selectedJobId !== 'all'
-                    ? 'border-emerald-500/50 dark:border-emerald-500/40 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 font-medium'
-                    : 'border-gray-200 dark:border-white/[0.11] bg-white dark:bg-[#050505] text-gray-700 dark:text-white hover:border-gray-300 dark:hover:border-white/[0.24]'
+                    ? 'border-emerald-500/40 bg-emerald-50/80 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 font-medium'
+                    : 'border-gray-200 dark:border-white/[0.1] bg-white dark:bg-[#0c0c0e] text-gray-700 dark:text-[#d4d4d4] hover:border-gray-300 dark:hover:border-white/20'
                 }`}
                 title={selectedJobTitle}
+                aria-label="Filter by job role"
               >
                 <div className="flex items-center gap-1.5 min-w-0 flex-1 text-left">
                   <Briefcase className={`size-3 shrink-0 ${selectedJobId !== 'all' ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400 dark:text-[#8f8f8f]'}`} />
                   <span className="truncate">{selectedJobTitle}</span>
                 </div>
-                <ChevronDown className={`size-3 text-gray-400 dark:text-[#8f8f8f] transition-transform duration-200 ${isJobDropdownOpen ? 'rotate-180' : ''}`} />
+                <ChevronDown className={`size-3 shrink-0 text-gray-400 dark:text-[#8f8f8f] transition-transform duration-200 ${isJobDropdownOpen ? 'rotate-180' : ''}`} />
               </button>
 
               {isJobDropdownOpen && (
-                <div className="absolute left-0 top-full mt-1.5 z-50 w-[300px] sm:w-[340px] rounded-[8px] border border-gray-200 dark:border-white/[0.15] bg-white dark:bg-[#0d0d10] shadow-xl dark:shadow-2xl backdrop-blur-xl overflow-hidden">
+                <div className="absolute right-0 top-full mt-1.5 z-50 w-[280px] sm:w-[320px] rounded-lg border border-gray-200 dark:border-white/[0.12] bg-white dark:bg-[#0d0d10] shadow-xl dark:shadow-2xl backdrop-blur-xl overflow-hidden animate-in fade-in zoom-in-95 duration-100">
                   <div className="p-2 border-b border-gray-100 dark:border-white/[0.08]">
-                    <input
-                      ref={jobSearchInputRef}
-                      type="text"
-                      placeholder="Filter jobs..."
-                      value={jobSearchQuery}
-                      onChange={(e) => setJobSearchQuery(e.target.value)}
-                      className="h-8 w-full rounded-[5px] border border-gray-200 dark:border-white/[0.1] bg-white dark:bg-black/60 px-2.5 text-xs text-gray-900 dark:text-white outline-none"
-                    />
+                    <div className="relative">
+                      <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3 text-gray-400" />
+                      <input
+                        ref={jobSearchInputRef}
+                        type="text"
+                        placeholder="Search jobs..."
+                        value={jobSearchQuery}
+                        onChange={(e) => setJobSearchQuery(e.target.value)}
+                        className="h-7 w-full rounded-md border border-gray-200 dark:border-white/[0.1] bg-gray-50/60 dark:bg-black/60 pl-7 pr-2 text-xs text-gray-900 dark:text-white outline-none focus:border-blue-500"
+                      />
+                    </div>
                   </div>
                   <div className="max-h-[220px] overflow-y-auto p-1 divide-y divide-gray-100 dark:divide-white/[0.04]">
                     <button
                       type="button"
                       onClick={() => { setSelectedJobId('all'); setIsJobDropdownOpen(false); }}
-                      className="w-full text-left px-3 py-2 text-xs font-medium text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/[0.06] rounded flex items-center justify-between"
+                      className="w-full text-left px-2.5 py-1.5 text-xs font-medium text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/[0.06] rounded flex items-center justify-between"
                     >
-                      <span>All Jobs</span>
+                      <div className="flex items-center gap-2">
+                        <Briefcase className="size-3 text-gray-400" />
+                        <span>All Jobs</span>
+                      </div>
                       {selectedJobId === 'all' && <Check className="size-3 text-emerald-500" />}
                     </button>
                     {jobs
@@ -1293,7 +1420,7 @@ export default function HotLeads() {
                           key={j.id}
                           type="button"
                           onClick={() => { setSelectedJobId(j.id); setIsJobDropdownOpen(false); }}
-                          className="w-full text-left px-3 py-2 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/[0.06] rounded flex items-center justify-between"
+                          className="w-full text-left px-2.5 py-1.5 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/[0.06] rounded flex items-center justify-between"
                         >
                           <span className="truncate">{j.title || 'Untitled Role'}</span>
                           {selectedJobId === j.id && <Check className="size-3 text-emerald-500" />}
@@ -1305,20 +1432,41 @@ export default function HotLeads() {
             </div>
 
             {/* Stage Filter Dropdown */}
-            <select
-              value={stageFilter}
-              onChange={(e) => setStageFilter(e.target.value)}
-              className="geist-caption h-9 rounded-[6px] border border-gray-200 dark:border-white/[0.11] bg-white dark:bg-[#050505] px-2.5 text-xs text-gray-800 dark:text-white outline-none focus:border-blue-500 dark:focus:border-white/[0.24] cursor-pointer max-w-[170px]"
-            >
-              <option value="all">All ATS Stages</option>
-              {ATS_PIPELINE_STAGES.map((st) => (
-                <option key={st.key} value={st.key}>{st.label}</option>
-              ))}
-            </select>
+            <div className="relative shrink-0">
+              <select
+                value={stageFilter}
+                onChange={(e) => handleStageChange(e.target.value)}
+                className={`geist-caption h-8 rounded-md border px-2 text-xs outline-none cursor-pointer max-w-[125px] sm:max-w-[145px] transition-all focus-visible:ring-2 focus-visible:ring-blue-500 ${
+                  stageFilter !== 'all'
+                    ? 'border-indigo-500/40 bg-indigo-50/80 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 font-medium'
+                    : 'border-gray-200 dark:border-white/[0.1] bg-white dark:bg-[#0c0c0e] text-gray-700 dark:text-[#d4d4d4] hover:border-gray-300 dark:hover:border-white/20'
+                }`}
+                aria-label="Filter by ATS Stage"
+              >
+                <option value="all">Stage: All</option>
+                {ATS_PIPELINE_STAGES.map((st) => (
+                  <option key={st.key} value={st.key}>{st.label}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Reset Filter Button if active */}
+            {hasActiveFilters && (
+              <button
+                type="button"
+                onClick={handleResetFilters}
+                className="geist-caption h-8 inline-flex items-center gap-1 rounded-md px-2 text-[11px] text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/[0.06] transition-colors shrink-0"
+                title="Reset all filters"
+                aria-label="Reset all filters"
+              >
+                <RotateCw className="size-3" />
+                <span className="hidden sm:inline">Reset</span>
+              </button>
+            )}
 
             {/* Bulk Actions */}
             {selectedLeadIds.length > 0 && (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 shrink-0 pl-1 border-l border-gray-200 dark:border-white/10">
                 <button
                   type="button"
                   onClick={() => {
@@ -1326,17 +1474,19 @@ export default function HotLeads() {
                     executeDeleteLeads(selectedLeads);
                   }}
                   disabled={isDeletingLeads}
-                  className="geist-caption inline-flex h-9 items-center justify-center gap-1.5 rounded-[6px] border border-red-500/40 bg-red-500/10 px-3 font-semibold text-red-600 dark:text-red-400 hover:bg-red-500/20 transition-colors disabled:opacity-50"
+                  className="geist-caption inline-flex h-8 items-center justify-center gap-1.5 rounded-md border border-red-500/40 bg-red-500/10 px-2.5 text-xs font-semibold text-red-600 dark:text-red-400 hover:bg-red-500/20 transition-colors disabled:opacity-50"
+                  aria-label={`Delete ${selectedLeadIds.length} selected candidates`}
                 >
                   <Trash2 className="w-3.5 h-3.5" />
-                  <span>Delete Selected ({selectedLeadIds.length})</span>
+                  <span>Delete ({selectedLeadIds.length})</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setSelectedLeadIds([])}
-                  className="geist-caption inline-flex h-9 items-center justify-center px-2 text-xs text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
+                  className="geist-caption inline-flex h-8 items-center justify-center px-1.5 text-[11px] text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
+                  aria-label="Deselect all candidates"
                 >
-                  Deselect
+                  <X className="size-3.5" />
                 </button>
               </div>
             )}
@@ -1539,8 +1689,19 @@ export default function HotLeads() {
                         </td>
 
                         {/* Actions */}
-                        <td className="px-4 py-3.5 text-right whitespace-nowrap min-w-[190px]">
-                          <div className="flex items-center justify-end gap-2">
+                        <td className="px-4 py-3.5 text-right whitespace-nowrap min-w-[220px]">
+                          <div className="flex items-center justify-end gap-1.5">
+                            {/* Mask Resume Button */}
+                            <button
+                              type="button"
+                              onClick={() => handleOpenMaskedResume(lead)}
+                              className="geist-caption inline-flex h-7 items-center justify-center gap-1.5 rounded-[5px] border border-purple-500/35 bg-purple-500/10 hover:bg-purple-500/20 text-purple-700 dark:text-purple-300 px-2.5 text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-95 shrink-0"
+                              title="Masked Resume (Blind Client Copy: Auto-blanks email, phone & web links)"
+                            >
+                              <Wand2 className="size-3 text-purple-500 shrink-0" />
+                              <span>Mask Resume</span>
+                            </button>
+
                             {/* View Details & Resume Modal Button */}
                             <button
                               type="button"
@@ -1549,7 +1710,7 @@ export default function HotLeads() {
                               title="View full candidate details, ATS status & resume"
                             >
                               <FileText className="size-3" />
-                              <span>View Details & Resume</span>
+                              <span>Details</span>
                             </button>
 
                             {/* Delete */}
@@ -1918,17 +2079,29 @@ export default function HotLeads() {
                 </button>
               </div>
 
-              {selectedCandidateDetail.resumeUrl && (
-                <a
-                  href={selectedCandidateDetail.resumeUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-md bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/20 transition-colors"
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleOpenMaskedResume(selectedCandidateDetail)}
+                  className="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-md border border-purple-500/35 bg-purple-500/10 hover:bg-purple-500/20 text-purple-700 dark:text-purple-300 transition-colors shadow-xs cursor-pointer active:scale-95"
+                  title="Masked Resume (Blind Client Copy: Auto-blanks email, phone & web links)"
                 >
-                  <ExternalLink size={12} />
-                  <span>Open in New Tab</span>
-                </a>
-              )}
+                  <Wand2 size={12} className="text-purple-500 shrink-0" />
+                  <span>Masked Resume</span>
+                </button>
+
+                {selectedCandidateDetail.resumeUrl && (
+                  <a
+                    href={selectedCandidateDetail.resumeUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-md bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/20 transition-colors"
+                  >
+                    <ExternalLink size={12} />
+                    <span>Open in New Tab</span>
+                  </a>
+                )}
+              </div>
             </div>
 
             {/* Modal Body */}
@@ -2408,6 +2581,13 @@ export default function HotLeads() {
           </div>
         </div>
       )}
+
+      {/* Morph / Masked Resume (Blind Client Copy) Modal */}
+      <MorphResumeModal
+        candidate={morphResumeCandidate}
+        isOpen={Boolean(morphResumeCandidate)}
+        onClose={() => setMorphResumeCandidate(null)}
+      />
     </div>
   );
 }

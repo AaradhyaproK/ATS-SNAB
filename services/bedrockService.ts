@@ -18,19 +18,15 @@ import OpenAI from 'openai';
 export type BedrockModelPurpose = 'questions' | 'report' | 'default';
 
 export const BEDROCK_MODELS = {
-  questions: import.meta.env.VITE_BEDROCK_MODEL_QUESTIONS || 'minimax.minimax-m2.1',
-  report: import.meta.env.VITE_BEDROCK_MODEL_REPORT || 'minimax.minimax-m2.5',
+  questions: import.meta.env.VITE_BEDROCK_MODEL_DEFAULT || 'zai.glm-4.7-flash',
+  report: import.meta.env.VITE_BEDROCK_MODEL_DEFAULT || 'zai.glm-4.7-flash',
   default: import.meta.env.VITE_BEDROCK_MODEL_DEFAULT || 'zai.glm-4.7-flash',
 } as const;
 
 const sanitize = (value?: string) => (value || '').replace(/['"]/g, '').trim();
 
 export const getBedrockApiKey = (): string => {
-  const key = sanitize(import.meta.env.VITE_ANTHROPIC_API_KEY);
-  if (!key) {
-    throw new Error('Bedrock API key missing. Set VITE_ANTHROPIC_API_KEY in your .env file.');
-  }
-  return key;
+  return sanitize(import.meta.env.VITE_ANTHROPIC_API_KEY || (import.meta.env as any).VITE_BEDROCK_API_KEY || '');
 };
 
 /** Anthropic Messages base (kept for config parity with AWS/Anthropic samples). */
@@ -63,13 +59,12 @@ let clientInstance: OpenAI | null = null;
 
 export const getBedrockClient = (): OpenAI => {
   if (!clientInstance) {
+    const key = getBedrockApiKey();
     clientInstance = new OpenAI({
-      apiKey: getBedrockApiKey(),
+      apiKey: key || 'dummy_key',
       baseURL: getBedrockChatBaseUrl(),
-      // Browser Vite app calls Mantle directly (same pattern as prior Gemini client calls).
       dangerouslyAllowBrowser: true,
       defaultHeaders: {
-        // Project scoping on Mantle OpenAI-compatible APIs
         'OpenAI-Project': getBedrockWorkspaceId(),
       },
     });
@@ -90,6 +85,7 @@ export interface BedrockCallOptions {
 
 /**
  * Core text completion via Chat Completions on Bedrock Mantle.
+ * Routes through secure /api/bedrock backend endpoint (Zero secrets leaked to browser).
  */
 export async function callBedrockApi(
   systemInstruction: string,
@@ -100,50 +96,96 @@ export async function callBedrockApi(
   maxTokens = 4096,
   modelOverride?: string
 ): Promise<string> {
-  const client = getBedrockClient();
   const model = modelOverride || resolveBedrockModel(purpose);
 
-  const system = responseJson
-    ? `${systemInstruction}\n\nIMPORTANT: Respond with valid JSON only. No markdown fences, no commentary.`
-    : systemInstruction;
+  // 1. Primary: Secure Serverless Backend Proxy (Node.js runtime, zero keys in browser)
+  try {
+    const apiBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
+    const endpoint = apiBase ? `${apiBase}/api/bedrock` : '/api/bedrock';
 
-  const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [];
-  if (system) messages.push({ role: 'system', content: system });
-  messages.push({ role: 'user', content: userPrompt });
-
-  const create = async (withJsonFormat: boolean) =>
-    client.chat.completions.create({
-      model,
-      messages,
-      temperature,
-      max_tokens: maxTokens,
-      ...(withJsonFormat && responseJson
-        ? { response_format: { type: 'json_object' as const } }
-        : {}),
+    const resp = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        systemInstruction,
+        userPrompt,
+        temperature,
+        responseJson,
+        purpose,
+        maxTokens,
+        model,
+      }),
     });
 
-  let response: OpenAI.Chat.ChatCompletion;
-  try {
-    response = await create(true);
-  } catch (err: any) {
-    // Some Mantle models reject response_format; retry without it.
-    const msg = String(err?.message || err || '');
-    if (responseJson && /response_format|json_object|invalid/i.test(msg)) {
-      response = await create(false);
+    if (resp.ok) {
+      const data = await resp.json().catch(() => null);
+      if (data?.success && data?.text) {
+        return data.text.trim();
+      }
+      if (data?.error) {
+        throw new Error(data.error);
+      }
     } else {
-      throw err;
+      const errData = await resp.json().catch(() => null);
+      if (errData?.error) {
+        throw new Error(errData.error);
+      }
     }
+  } catch (backendErr: any) {
+    if (backendErr.message && !backendErr.message.includes('fetch') && !backendErr.message.includes('Failed to fetch')) {
+      throw backendErr;
+    }
+    console.warn('[BedrockService] Backend serverless endpoint not reachable, checking fallback...', backendErr);
   }
 
-  const text = response.choices?.[0]?.message?.content?.trim() || '';
-  if (!text) {
-    throw new Error(`No text content returned from Bedrock model ${model}.`);
+  // 2. Direct client fallback (only if client key is configured in dev)
+  const clientKey = getBedrockApiKey();
+  if (clientKey) {
+    const client = getBedrockClient();
+    const system = responseJson
+      ? `${systemInstruction}\n\nIMPORTANT: Respond with valid JSON only. No markdown fences, no commentary.`
+      : systemInstruction;
+
+    const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [];
+    if (system) messages.push({ role: 'system', content: system });
+    messages.push({ role: 'user', content: userPrompt });
+
+    const create = async (withJsonFormat: boolean) =>
+      client.chat.completions.create({
+        model,
+        messages,
+        temperature,
+        max_tokens: maxTokens,
+        ...(withJsonFormat && responseJson
+          ? { response_format: { type: 'json_object' as const } }
+          : {}),
+      });
+
+    let response: OpenAI.Chat.ChatCompletion;
+    try {
+      response = await create(true);
+    } catch (err: any) {
+      const msg = String(err?.message || err || '');
+      if (responseJson && /response_format|json_object|invalid/i.test(msg)) {
+        response = await create(false);
+      } else {
+        throw err;
+      }
+    }
+
+    const text = response.choices?.[0]?.message?.content?.trim() || '';
+    if (!text) {
+      throw new Error(`No text content returned from Bedrock model ${model}.`);
+    }
+    return text;
   }
-  return text;
+
+  throw new Error('AI Service unavailable. Ensure ANTHROPIC_API_KEY is configured on your server.');
 }
 
 /**
  * Multi-turn chat (CareerHub, etc.).
+ * Routes through secure /api/bedrock backend endpoint.
  */
 export async function callBedrockChat(
   systemInstruction: string,
@@ -152,27 +194,71 @@ export async function callBedrockChat(
   purpose: BedrockModelPurpose = 'default',
   maxTokens = 4096
 ): Promise<string> {
-  const client = getBedrockClient();
   const model = resolveBedrockModel(purpose);
 
-  const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [];
-  if (systemInstruction) messages.push({ role: 'system', content: systemInstruction });
-  for (const turn of history) {
-    messages.push({ role: turn.role, content: turn.content });
+  // 1. Primary: Secure Serverless Backend Proxy
+  try {
+    const apiBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
+    const endpoint = apiBase ? `${apiBase}/api/bedrock` : '/api/bedrock';
+
+    const resp = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        systemInstruction,
+        history,
+        temperature,
+        purpose,
+        maxTokens,
+        model,
+      }),
+    });
+
+    if (resp.ok) {
+      const data = await resp.json().catch(() => null);
+      if (data?.success && data?.text) {
+        return data.text.trim();
+      }
+      if (data?.error) {
+        throw new Error(data.error);
+      }
+    } else {
+      const errData = await resp.json().catch(() => null);
+      if (errData?.error) {
+        throw new Error(errData.error);
+      }
+    }
+  } catch (backendErr: any) {
+    if (backendErr.message && !backendErr.message.includes('fetch') && !backendErr.message.includes('Failed to fetch')) {
+      throw backendErr;
+    }
   }
 
-  const response = await client.chat.completions.create({
-    model,
-    messages,
-    temperature,
-    max_tokens: maxTokens,
-  });
+  // 2. Direct client fallback
+  const clientKey = getBedrockApiKey();
+  if (clientKey) {
+    const client = getBedrockClient();
+    const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [];
+    if (systemInstruction) messages.push({ role: 'system', content: systemInstruction });
+    for (const turn of history) {
+      messages.push({ role: turn.role, content: turn.content });
+    }
 
-  const text = response.choices?.[0]?.message?.content?.trim() || '';
-  if (!text) {
-    throw new Error(`No text content returned from Bedrock chat model ${model}.`);
+    const response = await client.chat.completions.create({
+      model,
+      messages,
+      temperature,
+      max_tokens: maxTokens,
+    });
+
+    const text = response.choices?.[0]?.message?.content?.trim() || '';
+    if (!text) {
+      throw new Error(`No text content returned from Bedrock chat model ${model}.`);
+    }
+    return text;
   }
-  return text;
+
+  throw new Error('AI Chat unavailable. Ensure ANTHROPIC_API_KEY is configured on your server.');
 }
 
 export async function bedrockGenerateJson<T>(

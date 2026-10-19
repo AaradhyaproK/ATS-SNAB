@@ -1,19 +1,24 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { doc, getDoc, updateDoc, serverTimestamp, Timestamp, setDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { useAuth } from '../context/AuthContext';
-import { useTheme } from '../context/ThemeContext';
+import { useNavigate, useParams } from 'react-router-dom';
 import { createPortal } from 'react-dom';
-import { SKILL_OPTIONS, JOB_CATEGORIES } from './Profile';
+import { ExternalLink, Sparkles, Building2, Check, X } from 'lucide-react';
+import { LocationCityInput } from '../components/LocationCityInput';
 import { EDUCATION_QUALIFICATIONS, EDUCATION_SPECIALIZATIONS, EducationQualification } from '../data/allEducationDegrees';
-import { parseJobDescriptionText, ParsedJdResult, compileCompanyProfile } from '../services/geminiService';
 import { resolveStrictListedCity } from '../data/maharashtraCities';
-import * as pdfjsLib from 'pdfjs-dist';
+import { parseJobDescriptionText, ParsedJdResult } from '../services/geminiService';
+import { extractSkillSignals } from '../services/resumeService';
 import { resolveJobOrInterviewDocument } from '../services/jobResolutionService';
+import * as pdfjsLib from 'pdfjs-dist';
+
+// Setup PDF.js worker
+pdfjsLib.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
 
 interface EditJobModalProps {
-  jobId: string;
-  onClose: () => void;
+  jobId?: string;
+  onClose?: () => void;
 }
 
 export interface CandidateContact {
@@ -22,6 +27,13 @@ export interface CandidateContact {
   name?: string;
 }
 
+const splitCommaList = (val: any): string[] => {
+  if (!val) return [];
+  if (Array.isArray(val)) return val.map(item => String(item).trim()).filter(Boolean);
+  if (typeof val === 'string') return val.split(',').map((item) => item.trim()).filter(Boolean);
+  return [String(val).trim()].filter(Boolean);
+};
+
 const formatStringValue = (val: any): string => {
   if (!val) return '';
   if (Array.isArray(val)) return val.map(item => String(item).trim()).filter(Boolean).join(', ');
@@ -29,16 +41,107 @@ const formatStringValue = (val: any): string => {
   return String(val);
 };
 
-const parseList = (val: any): string[] => {
-  if (!val) return [];
-  if (Array.isArray(val)) return val.map(item => String(item).trim()).filter(Boolean);
-  if (typeof val === 'string') return val.split(',').map(item => item.trim()).filter(Boolean);
-  return [String(val).trim()].filter(Boolean);
+const SkeletonBlock = ({ className = '' }: { className?: string }) => (
+  <span className={`block animate-pulse rounded-[4px] bg-white/[0.12] ${className}`} aria-hidden="true" />
+);
+
+export const isStandardFieldKey = (key: string): boolean => {
+  const k = key.trim().toLowerCase();
+  return (
+    k === 'company name' ||
+    k === 'company' ||
+    k === 'client' ||
+    k === 'client name' ||
+    k === 'employer' ||
+    k === 'organization' ||
+    k === 'job no' ||
+    k === 'job number' ||
+    k === 'job code' ||
+    k === 'req id' ||
+    k === 'requisition' ||
+    k === 'job title' ||
+    k === 'title' ||
+    k === 'role' ||
+    k === 'designation' ||
+    k === 'vacancy name' ||
+    k === 'salary' ||
+    k === 'salary range' ||
+    k === 'ctc' ||
+    k === 'compensation' ||
+    k === 'experience' ||
+    k === 'min experience' ||
+    k === 'max experience' ||
+    k === 'exp' ||
+    k === 'location' ||
+    k === 'city' ||
+    k === 'job location' ||
+    k === 'gender' ||
+    k === 'gender requirement' ||
+    k === 'qualification' ||
+    k === 'qualifications' ||
+    k === 'education' ||
+    k === 'employment type' ||
+    k === 'job type' ||
+    k === 'description' ||
+    k === 'job description' ||
+    k === 'industry' ||
+    k === 'sector' ||
+    k === 'department'
+  );
 };
 
-const EditJobModal: React.FC<EditJobModalProps> = ({ jobId, onClose }) => {
+const fetchTextFromUrl = async (targetUrl: string): Promise<string> => {
+  let cleanUrl = targetUrl.trim();
+  if (!cleanUrl.startsWith('http://') && !cleanUrl.startsWith('https://')) {
+    cleanUrl = 'https://' + cleanUrl;
+  }
+
+  let htmlText = '';
+  try {
+    const res = await fetch(cleanUrl);
+    if (res.ok) {
+      htmlText = await res.text();
+    }
+  } catch (err) {
+    console.warn('Direct fetch failed, attempting proxy...', err);
+  }
+
+  if (!htmlText) {
+    const proxies = [
+      `https://api.allorigins.win/raw?url=${encodeURIComponent(cleanUrl)}`,
+      `https://corsproxy.io/?${encodeURIComponent(cleanUrl)}`,
+    ];
+    for (const proxyUrl of proxies) {
+      try {
+        const res = await fetch(proxyUrl);
+        if (res.ok) {
+          htmlText = await res.text();
+          if (htmlText.length > 50) break;
+        }
+      } catch (proxyErr) {
+        console.warn(`Proxy ${proxyUrl} failed:`, proxyErr);
+      }
+    }
+  }
+
+  if (!htmlText) {
+    throw new Error('Unable to fetch webpage content directly due to browser CORS or security rules.');
+  }
+
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(htmlText, 'text/html');
+  const elementsToRemove = doc.querySelectorAll('script, style, noscript, iframe, svg, header, footer, nav');
+  elementsToRemove.forEach((el) => el.remove());
+  const rawText = doc.body?.textContent || doc.textContent || '';
+  return rawText.replace(/\s+/g, ' ').trim();
+};
+
+export const EditJob: React.FC<EditJobModalProps> = ({ jobId: propJobId, onClose }) => {
+  const params = useParams<{ jobId: string }>();
+  const activeJobId = propJobId || params.jobId || '';
+  const navigate = useNavigate();
   const { user, userProfile } = useAuth();
-  const { isDark } = useTheme();
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -46,10 +149,8 @@ const EditJobModal: React.FC<EditJobModalProps> = ({ jobId, onClose }) => {
   const [customFields, setCustomFields] = useState<CustomField[]>([]);
   const [accessCode, setAccessCode] = useState('');
   const [tempCustomField, setTempCustomField] = useState({ key: '', value: '' });
-  const [manualQuestions, setManualQuestions] = useState<string[]>([]);
-  const [currentManualQuestion, setCurrentManualQuestion] = useState('');
 
-  // Candidates contacts state (email & phone)
+  // Candidates contacts state
   const [candidateEmails, setCandidateEmails] = useState<string[]>([]);
   const [candidateDataList, setCandidateDataList] = useState<CandidateContact[]>([]);
   const [currentEmail, setCurrentEmail] = useState('');
@@ -57,47 +158,23 @@ const EditJobModal: React.FC<EditJobModalProps> = ({ jobId, onClose }) => {
 
   // AI JD Auto-Fill state
   const [parsingJd, setParsingJd] = useState(false);
-  const [jdImportMode, setJdImportMode] = useState<'upload' | 'paste'>('upload');
+  const [jdImportMode, setJdImportMode] = useState<'upload' | 'paste' | 'url'>('upload');
   const [pastedJdText, setPastedJdText] = useState('');
+  const [jdUrlInput, setJdUrlInput] = useState('');
 
   const [eduInput, setEduInput] = useState('');
   const [selectedQualForEdu, setSelectedQualForEdu] = useState<string>('Graduate');
   const [skillSearch, setSkillSearch] = useState('');
-  const [suggestedRoleSkills, setSuggestedRoleSkills] = useState<string[]>([]);
 
-  const handleGenerateSkillsForRole = () => {
-    const combinedText = `${formData.title} ${formData.category} ${formData.description}`.toLowerCase();
-    let skills: string[] = [];
-
-    if (combinedText.includes('civil') || combinedText.includes('site') || combinedText.includes('construction') || combinedText.includes('rcc') || combinedText.includes('building') || combinedText.includes('architect')) {
-      skills = ["Site Management", "Construction Site Management", "RCC & Finishing Work", "Quantity Surveying", "AutoCAD", "Bill Verification", "Safety Norms", "Material Management", "Civil Engineering", "Project Execution"];
-    } else if (combinedText.includes('front') || combinedText.includes('react') || combinedText.includes('ui') || combinedText.includes('web') || combinedText.includes('frontend')) {
-      skills = ["JavaScript", "TypeScript", "React.js", "HTML5 & CSS3", "Tailwind CSS", "Next.js", "Redux", "REST APIs", "Git & GitHub", "Responsive Design"];
-    } else if (combinedText.includes('back') || combinedText.includes('node') || combinedText.includes('java') || combinedText.includes('python') || combinedText.includes('api') || combinedText.includes('backend')) {
-      skills = ["Node.js", "Express.js", "Python", "Java", "SQL", "PostgreSQL", "MongoDB", "REST APIs", "Docker", "AWS", "Microservices"];
-    } else if (combinedText.includes('data') || combinedText.includes('analytics') || combinedText.includes('machine learning') || combinedText.includes('ai') || combinedText.includes('python')) {
-      skills = ["Python", "SQL", "Data Analysis", "Pandas & NumPy", "Machine Learning", "Tableau", "Power BI", "Statistics", "TensorFlow"];
-    } else if (combinedText.includes('sale') || combinedText.includes('business') || combinedText.includes('marketing') || combinedText.includes('account executive') || combinedText.includes('growth')) {
-      skills = ["Lead Generation", "B2B Sales", "Client Relationship Management", "CRM (Salesforce/HubSpot)", "Digital Marketing", "Negotiation", "Cold Outreach", "Market Research"];
-    } else if (combinedText.includes('hr') || combinedText.includes('recruiter') || combinedText.includes('talent') || combinedText.includes('people') || combinedText.includes('human resource')) {
-      skills = ["Talent Acquisition", "Resume Screening", "HR Operations", "Employee Relations", "Payroll Management", "Onboarding", "Interviewing"];
-    } else if (combinedText.includes('finance') || combinedText.includes('account') || combinedText.includes('tax') || combinedText.includes('ca') || combinedText.includes('audit')) {
-      skills = ["Financial Analysis", "Accounting", "GST & Taxation", "Tally Prime", "Auditing", "MS Excel", "Balance Sheet Preparation", "Budgeting"];
-    } else if (combinedText.includes('design') || combinedText.includes('graphic') || combinedText.includes('figma') || combinedText.includes('ux')) {
-      skills = ["Figma", "UI/UX Design", "Wireframing", "Prototyping", "Adobe Photoshop", "Illustrator", "User Research"];
-    } else if (combinedText.includes('support') || combinedText.includes('customer') || combinedText.includes('helpdesk')) {
-      skills = ["Customer Support", "Query Resolution", "Communication Skills", "Helpdesk Tools", "Ticket Management", "Call Handling"];
-    } else {
-      skills = ["Problem Solving", "Communication Skills", "Team Management", "Project Management", "Time Management", "Leadership", "Analytical Skills", "Domain Knowledge"];
-    }
-
-    setSuggestedRoleSkills(skills);
-  };
+  const [targetDocId, setTargetDocId] = useState<string>(activeJobId);
+  const [targetCollection, setTargetCollection] = useState<'jobs' | 'interviews'>('jobs');
 
   const [formData, setFormData] = useState({
     jobNo: '',
     title: '',
     companyName: '',
+    companyDetails: '',
+    jobLink: '',
     industryName: '',
     roleName: '',
     qualifications: '',
@@ -124,6 +201,14 @@ const EditJobModal: React.FC<EditJobModalProps> = ({ jobId, onClose }) => {
     entryBy: '',
     status: 'Active',
   });
+
+  const handleClose = () => {
+    if (onClose) {
+      onClose();
+    } else {
+      navigate(-1);
+    }
+  };
 
   const handleApplyParsedJdData = (parsed: ParsedJdResult) => {
     const fullJdText = `${parsed.title || ''} ${parsed.description || ''} ${parsed.skills || ''} ${parsed.qualification || ''} ${parsed.location || ''} ${parsed.gender || ''}`.toLowerCase();
@@ -152,9 +237,37 @@ const EditJobModal: React.FC<EditJobModalProps> = ({ jobId, onClose }) => {
     const rawLocCandidate = `${(parsed as any).location || ''} ${(parsed as any).city || ''} ${(parsed as any).state || ''} ${fullJdText}`;
     const resolvedStrictCity = resolveStrictListedCity(rawLocCandidate);
 
-    setFormData(prev => ({
+    let extractedCompanyName = parsed.companyName || (parsed as any).company || '';
+    const cleanNewFields: { id: number; key: string; value: string }[] = [];
+
+    if (parsed.customFields && Array.isArray(parsed.customFields)) {
+      parsed.customFields.forEach((cf, idx) => {
+        const keyLower = cf.key.trim().toLowerCase();
+        if (
+          keyLower === 'company name' ||
+          keyLower === 'company' ||
+          keyLower === 'client name' ||
+          keyLower === 'client' ||
+          keyLower === 'employer' ||
+          keyLower === 'organization'
+        ) {
+          if (!extractedCompanyName) extractedCompanyName = cf.value.trim();
+        } else if (isStandardFieldKey(keyLower)) {
+          // Do not add recognized standard fields into custom fields
+        } else {
+          cleanNewFields.push({
+            id: Date.now() + idx,
+            key: cf.key.trim(),
+            value: cf.value.trim(),
+          });
+        }
+      });
+    }
+
+    setFormData((prev) => ({
       ...prev,
       title: parsed.title || parsed.vacancyName || parsed.designation || prev.title,
+      companyName: extractedCompanyName || prev.companyName || '',
       description: parsed.description || prev.description,
       category: parsed.department || parsed.industry || parsed.roleCategory || prev.category,
       employmentType: parsed.employmentType || prev.employmentType,
@@ -162,26 +275,22 @@ const EditJobModal: React.FC<EditJobModalProps> = ({ jobId, onClose }) => {
       maxExperience: parsed.maxExperience !== undefined ? Number(parsed.maxExperience) : prev.maxExperience,
       experience: parsed.minExperience !== undefined ? Number(parsed.minExperience) : prev.experience,
       skills: formatStringValue(parsed.skills || (parsed.technicalSkills && parsed.softSkills ? `${parsed.technicalSkills}, ${parsed.softSkills}` : prev.skills)),
-      qualifications: formatStringValue(parsed.qualification || parsed.education || prev.qualifications),
+      // Minimum education level is strictly selected manually by selectors only (do not auto-fill from JD)
+      qualifications: prev.qualifications,
       location: resolvedStrictCity || prev.location || '',
+      city: resolvedStrictCity || prev.city || '',
       salaryRange: (parsed as any).salaryRange || (parsed as any).salary || prev.salaryRange,
       genderRequirement: (parsed as any).genderRequirement || (parsed as any).gender || prev.genderRequirement,
-      strictGenderMatch: Boolean(autoStrictGender),
-      strictLocationMatch: Boolean(autoStrictLocation),
-      strictEducationMatch: Boolean(autoStrictEdu),
-      strictExperienceMatch: Boolean(autoStrictExp),
+      strictGenderMatch: false,
+      strictLocationMatch: false,
+      strictEducationMatch: false,
+      strictExperienceMatch: false,
     }));
 
-    if (parsed.customFields && Array.from(parsed.customFields).length > 0) {
-      const newFields = parsed.customFields.map((cf, idx) => ({
-        id: Date.now() + idx,
-        key: cf.key.trim(),
-        value: cf.value.trim()
-      }));
-
-      setCustomFields(prev => {
-        const existingKeys = new Set(prev.map(f => f.key.toLowerCase()));
-        const filteredNew = newFields.filter(f => !existingKeys.has(f.key.toLowerCase()));
+    if (cleanNewFields.length > 0) {
+      setCustomFields((prev) => {
+        const existingKeys = new Set(prev.map((f) => f.key.toLowerCase()));
+        const filteredNew = cleanNewFields.filter((f) => !existingKeys.has(f.key.toLowerCase()));
         return [...prev, ...filteredNew];
       });
     }
@@ -247,28 +356,48 @@ const EditJobModal: React.FC<EditJobModalProps> = ({ jobId, onClose }) => {
     }
   };
 
-  const [targetDocId, setTargetDocId] = useState<string>(jobId);
-  const [targetCollection, setTargetCollection] = useState<'jobs' | 'interviews'>('jobs');
+  const handleFetchAndParseJdFromUrl = async () => {
+    if (!jdUrlInput.trim()) {
+      alert('Please enter a valid URL.');
+      return;
+    }
+
+    setParsingJd(true);
+    try {
+      const extractedHtmlText = await fetchTextFromUrl(jdUrlInput.trim());
+      if (!extractedHtmlText || extractedHtmlText.length < 50) {
+        throw new Error('Unable to extract meaningful text from the provided webpage.');
+      }
+      const parsedData = await parseJobDescriptionText(extractedHtmlText.slice(0, 15000));
+      handleApplyParsedJdData(parsedData);
+      alert('✅ Webpage content fetched & parsed! All details updated.');
+    } catch (error: any) {
+      console.error('Error fetching/parsing JD from URL:', error);
+      alert(`❌ Failed to fetch and parse URL: ${error.message || 'Network error'}`);
+    } finally {
+      setParsingJd(false);
+    }
+  };
 
   useEffect(() => {
     const fetchJob = async () => {
       try {
-        if (!jobId || !user) return;
+        if (!activeJobId || !user) return;
 
-        const resolved = await resolveJobOrInterviewDocument(jobId);
+        const resolved = await resolveJobOrInterviewDocument(activeJobId);
 
         if (resolved && resolved.data) {
           const sourceData = resolved.data;
           setTargetDocId(resolved.id);
           setTargetCollection(resolved.collectionName);
 
-          const userTeamId = userProfile?.teamId || userProfile?.parentRecruiterId || userProfile?.primaryRecruiterUID;
+          const userTeamId = userProfile?.teamId || userProfile?.parentRecruiterId || (userProfile as any)?.primaryRecruiterUID;
           const roleLower = (userProfile?.role || '').toLowerCase();
           const isRecruiterRole = roleLower === 'recruiter' || roleLower === 'primary' || roleLower === 'subrecruiter' || roleLower === 'admin' || roleLower === 'owner';
           const isOwner = isRecruiterRole || sourceData.recruiterUID === user.uid || (userProfile && (userTeamId === sourceData.teamId || sourceData.recruiterUID === userTeamId));
           if (!isOwner) {
-            alert("You do not have permission to edit this item.");
-            onClose();
+            alert('You do not have permission to edit this item.');
+            handleClose();
             return;
           }
 
@@ -284,12 +413,12 @@ const EditJobModal: React.FC<EditJobModalProps> = ({ jobId, onClose }) => {
             }
           }
 
-          const loadedCategory = 
-            sourceData.category || 
-            sourceData.department || 
-            sourceData.roleCategory || 
-            sourceData.jobCategory || 
-            sourceData.industry || 
+          const loadedCategory =
+            sourceData.category ||
+            sourceData.department ||
+            sourceData.roleCategory ||
+            sourceData.jobCategory ||
+            sourceData.industry ||
             '';
 
           const loadedCustomFields = sourceData.customFields || [];
@@ -310,10 +439,30 @@ const EditJobModal: React.FC<EditJobModalProps> = ({ jobId, onClose }) => {
             ''
           );
 
+          let loadedCompanyName = sourceData.companyName || sourceData.company || '';
+          const rawLoadedCustomFields = sourceData.customFields || [];
+          const cleanLoadedCustomFields = rawLoadedCustomFields.filter((cf: any) => {
+            const k = String(cf?.key || '').trim().toLowerCase();
+            if (
+              k === 'company name' ||
+              k === 'company' ||
+              k === 'client name' ||
+              k === 'client' ||
+              k === 'employer' ||
+              k === 'organization'
+            ) {
+              if (!loadedCompanyName && cf.value) loadedCompanyName = String(cf.value).trim();
+              return false;
+            }
+            return !isStandardFieldKey(k);
+          });
+
           setFormData({
             jobNo: sourceData.jobNo ? String(sourceData.jobNo) : (sourceData.accessCode || ''),
             title: sourceData.title?.replace(' Interview', '') || '',
-            companyName: sourceData.companyName || sourceData.company || '',
+            companyName: loadedCompanyName,
+            companyDetails: sourceData.companyDetails || '',
+            jobLink: sourceData.jobLink || sourceData.externalUrl || '',
             industryName: sourceData.industryName || sourceData.sector || '',
             roleName: sourceData.roleName || sourceData.roleCategory || '',
             qualifications: formatStringValue(sourceData.qualifications || sourceData.education || sourceData.qualification || ''),
@@ -329,7 +478,7 @@ const EditJobModal: React.FC<EditJobModalProps> = ({ jobId, onClose }) => {
             experience: sourceData.experience ?? 0,
             difficulty: sourceData.difficulty || 'Easy',
             location: formatStringValue(sourceData.location || ''),
-            city: formatStringValue(sourceData.city || ''),
+            city: formatStringValue(sourceData.city || sourceData.location || ''),
             salaryRange: formatStringValue(sourceData.salaryRange || sourceData.salary || ''),
             genderRequirement: sourceData.genderRequirement || sourceData.gender || 'Any',
             strictGenderMatch: sourceData.strictGenderMatch ?? false,
@@ -341,8 +490,7 @@ const EditJobModal: React.FC<EditJobModalProps> = ({ jobId, onClose }) => {
             status: sourceData.status || 'Active',
           });
 
-          setCustomFields(sourceData.customFields || []);
-          setManualQuestions(sourceData.manualQuestions || []);
+          setCustomFields(cleanLoadedCustomFields);
 
           // Parse candidates
           const emails = sourceData.candidateEmails || [];
@@ -354,24 +502,42 @@ const EditJobModal: React.FC<EditJobModalProps> = ({ jobId, onClose }) => {
           } else if (emails.length > 0) {
             setCandidateDataList(emails.map((e: string) => ({ email: e, phone: '' })));
           }
-
         } else {
-          alert("Job or Interview not found.");
-          onClose();
+          alert('Job or Interview not found.');
+          handleClose();
         }
       } catch (err) {
-        console.error("Error fetching job:", err);
-        alert("Error loading job details");
-        onClose();
+        console.error('Error fetching job:', err);
+        alert('Error loading job details');
+        handleClose();
       } finally {
-        if (jobId && user) setLoading(false);
+        if (activeJobId && user) setLoading(false);
       }
     };
 
     fetchJob();
-  }, [jobId, user, onClose]);
+  }, [activeJobId, user]);
+
+  const aiRecommendedSkills = useMemo(() => {
+    const jobText = `${formData.title} ${formData.category} ${formData.description} ${formData.skills}`.toLowerCase();
+    const detected = extractSkillSignals(jobText);
+    const currentList = splitCommaList(formData.skills);
+    const combined = Array.from(new Set([...currentList, ...detected]));
+
+    if (skillSearch.trim()) {
+      const q = skillSearch.trim().toLowerCase();
+      return combined.filter((s) => s.toLowerCase().includes(q));
+    }
+    return combined;
+  }, [formData.title, formData.category, formData.description, formData.skills, skillSearch]);
 
   const handleAddCustomField = () => {
+    const k = tempCustomField.key.trim().toLowerCase();
+    if (k === 'company name' || k === 'company' || k === 'client' || k === 'client name' || k === 'employer' || k === 'organization') {
+      setFormData(prev => ({ ...prev, companyName: tempCustomField.value.trim() }));
+      setTempCustomField({ key: '', value: '' });
+      return;
+    }
     if (tempCustomField.key.trim() && tempCustomField.value.trim()) {
       setCustomFields([...customFields, { ...tempCustomField, id: Date.now() }]);
       setTempCustomField({ key: '', value: '' });
@@ -379,34 +545,23 @@ const EditJobModal: React.FC<EditJobModalProps> = ({ jobId, onClose }) => {
   };
 
   const handleRemoveCustomField = (id: number) => {
-    setCustomFields(customFields.filter(field => field.id !== id));
+    setCustomFields(customFields.filter((field) => field.id !== id));
   };
 
   const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const target = e.target as HTMLInputElement;
     const { name, value, type } = target;
     const val = type === 'checkbox' ? target.checked : value;
-    setFormData(prev => {
+    setFormData((prev) => {
       const updated = {
         ...prev,
-        [name]: ['experience', 'minExperience', 'maxExperience', 'numQuestions'].includes(name) ? Number(value) : val
+        [name]: ['experience', 'minExperience', 'maxExperience', 'numQuestions'].includes(name) ? Number(value) : val,
       };
       if (name === 'minExperience') {
         updated.experience = Number(value);
       }
       return updated;
     });
-  };
-
-  const handleAddManualQuestion = () => {
-    if (currentManualQuestion.trim()) {
-      setManualQuestions([...manualQuestions, currentManualQuestion.trim()]);
-      setCurrentManualQuestion('');
-    }
-  };
-
-  const handleRemoveManualQuestion = (index: number) => {
-    setManualQuestions(manualQuestions.filter((_, i) => i !== index));
   };
 
   const handleAddCandidate = () => {
@@ -417,15 +572,15 @@ const EditJobModal: React.FC<EditJobModalProps> = ({ jobId, onClose }) => {
 
     const newContact: CandidateContact = {
       email: trimmedEmail,
-      phone: trimmedPhone
+      phone: trimmedPhone,
     };
 
     if (trimmedEmail && !candidateEmails.includes(trimmedEmail)) {
-      setCandidateEmails(prev => [...prev, trimmedEmail]);
+      setCandidateEmails((prev) => [...prev, trimmedEmail]);
     }
 
-    setCandidateDataList(prev => {
-      const exists = prev.some(c => (trimmedEmail && c.email === trimmedEmail) || (trimmedPhone && c.phone === trimmedPhone));
+    setCandidateDataList((prev) => {
+      const exists = prev.some((c) => (trimmedEmail && c.email === trimmedEmail) || (trimmedPhone && c.phone === trimmedPhone));
       if (!exists) {
         return [...prev, newContact];
       }
@@ -440,9 +595,9 @@ const EditJobModal: React.FC<EditJobModalProps> = ({ jobId, onClose }) => {
     const target = candidateDataList[index];
     if (!target) return;
 
-    setCandidateDataList(prev => prev.filter((_, i) => i !== index));
+    setCandidateDataList((prev) => prev.filter((_, i) => i !== index));
     if (target.email) {
-      setCandidateEmails(prev => prev.filter(e => e !== target.email));
+      setCandidateEmails((prev) => prev.filter((e) => e !== target.email));
     }
   };
 
@@ -450,29 +605,21 @@ const EditJobModal: React.FC<EditJobModalProps> = ({ jobId, onClose }) => {
     const trimmed = skillName.trim();
     if (!trimmed) return;
 
-    const currentSkills = parseList(formData.skills);
-    
+    const currentSkills = splitCommaList(formData.skills);
     let newSkills: string[];
     if (currentSkills.includes(trimmed)) {
-      newSkills = currentSkills.filter(s => s !== trimmed);
+      newSkills = currentSkills.filter((s) => s !== trimmed);
     } else {
       newSkills = [...currentSkills, trimmed];
     }
     setFormData({ ...formData, skills: newSkills.join(', ') });
   };
 
-  const removeSkill = (skillName: string) => {
-    const currentSkills = parseList(formData.skills);
-    const newSkills = currentSkills.filter(s => s !== skillName.trim());
-    setFormData({ ...formData, skills: newSkills.join(', ') });
-  };
-
   const toggleEducation = (edu: string) => {
-    const currentEducations = parseList(formData.qualifications);
-
-    let newEducations;
+    const currentEducations = splitCommaList(formData.qualifications);
+    let newEducations: string[];
     if (currentEducations.includes(edu)) {
-      newEducations = currentEducations.filter(e => e !== edu);
+      newEducations = currentEducations.filter((e) => e !== edu);
     } else {
       newEducations = [...currentEducations, edu];
     }
@@ -481,10 +628,10 @@ const EditJobModal: React.FC<EditJobModalProps> = ({ jobId, onClose }) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !jobId) return;
+    if (!user || !activeJobId) return;
 
     if (Number(formData.maxExperience) < Number(formData.minExperience)) {
-      alert("❌ Maximum experience cannot be less than minimum experience.");
+      alert('❌ Maximum experience cannot be less than minimum experience.');
       return;
     }
 
@@ -497,7 +644,7 @@ const EditJobModal: React.FC<EditJobModalProps> = ({ jobId, onClose }) => {
 
       const allEmails = Array.from(new Set([
         ...candidateEmails,
-        ...candidateDataList.map(c => c.email).filter(Boolean)
+        ...candidateDataList.map((c) => c.email).filter(Boolean),
       ]));
 
       const minExp = Number(formData.minExperience) || 0;
@@ -513,11 +660,14 @@ const EditJobModal: React.FC<EditJobModalProps> = ({ jobId, onClose }) => {
         title: formData.title,
         companyName: formData.companyName,
         company: formData.companyName,
+        companyDetails: formData.companyDetails,
+        jobLink: formData.jobLink,
         industryName: formData.industryName,
         sector: formData.industryName,
         roleName: formData.roleName,
         roleCategory: formData.roleName || formData.category,
         qualifications: formData.qualifications,
+        education: formData.qualifications,
         description: formData.description,
         interviewPermission: formData.permission,
         permission: formData.permission,
@@ -532,7 +682,7 @@ const EditJobModal: React.FC<EditJobModalProps> = ({ jobId, onClose }) => {
         maxExperience: maxExp,
         experience: expString,
         location: formData.location,
-        city: formData.city,
+        city: formData.city || formData.location,
         salaryRange: formData.salaryRange,
         salary: formData.salaryRange,
         genderRequirement: formData.genderRequirement,
@@ -546,12 +696,10 @@ const EditJobModal: React.FC<EditJobModalProps> = ({ jobId, onClose }) => {
         status: formData.status,
         applyDeadline: Timestamp.fromDate(deadlineDate),
         difficulty: formData.difficulty,
+        candidateEmails: allEmails,
+        candidateData: candidateDataList,
+        candidateDataList: candidateDataList,
         updatedAt: serverTimestamp(),
-        recruiterUID: user.uid,
-        recruiterName: formData.entryBy || userProfile?.fullname || (userProfile as any)?.name || user.email,
-        recruiterEmail: user.email,
-        interviewLink: `${window.location.origin}/#/candidate?job=${jobId}`,
-        isMock: false,
       };
 
       const interviewPayload = {
@@ -560,6 +708,8 @@ const EditJobModal: React.FC<EditJobModalProps> = ({ jobId, onClose }) => {
         title: `${formData.title} Interview`,
         companyName: formData.companyName,
         company: formData.companyName,
+        companyDetails: formData.companyDetails,
+        jobLink: formData.jobLink,
         industryName: formData.industryName,
         sector: formData.industryName,
         roleName: formData.roleName,
@@ -576,11 +726,15 @@ const EditJobModal: React.FC<EditJobModalProps> = ({ jobId, onClose }) => {
         education: formData.qualifications,
         qualification: formData.qualifications,
         location: formData.location,
-        city: formData.city,
+        city: formData.city || formData.location,
         salaryRange: formData.salaryRange,
         salary: formData.salaryRange,
         genderRequirement: formData.genderRequirement,
         gender: formData.genderRequirement,
+        strictGenderMatch: formData.strictGenderMatch,
+        strictLocationMatch: formData.strictLocationMatch,
+        strictEducationMatch: formData.strictEducationMatch,
+        strictExperienceMatch: formData.strictExperienceMatch,
         strictness: formData.strictness,
         entryBy: formData.entryBy,
         status: formData.status,
@@ -588,7 +742,6 @@ const EditJobModal: React.FC<EditJobModalProps> = ({ jobId, onClose }) => {
         numQuestions: Number(formData.numQuestions),
         customFields,
         difficulty: formData.difficulty,
-        manualQuestions,
         candidateEmails: allEmails,
         candidateData: candidateDataList,
         candidateDataList: candidateDataList,
@@ -600,258 +753,336 @@ const EditJobModal: React.FC<EditJobModalProps> = ({ jobId, onClose }) => {
         await setDoc(interviewDocRef, interviewPayload, { merge: true });
       });
 
-      onClose();
+      handleClose();
     } catch (err) {
       console.error(err);
-      alert("Failed to update job");
+      alert('Failed to update job');
     } finally {
       setSaving(false);
     }
   };
 
-  const selectedSkillsList = parseList(formData.skills);
+  // Design Tokens identical to CreateInterview.tsx
+  const labelClass = 'geist-label mb-1.5 block text-gray-700 dark:text-[#a1a1aa]';
+  const inputClass = 'geist-caption h-9 w-full rounded-[6px] border border-gray-300 dark:border-white/[0.14] bg-white dark:bg-[#050505] px-3 text-gray-900 dark:text-white outline-none transition-colors placeholder:text-gray-400 dark:placeholder:text-[#6b7280] focus:border-indigo-500 dark:focus:border-white/[0.28] disabled:cursor-not-allowed disabled:opacity-50';
+  const textareaClass = 'geist-caption min-h-[132px] w-full resize-y rounded-[6px] border border-gray-300 dark:border-white/[0.14] bg-white dark:bg-[#050505] px-3 py-2.5 text-gray-900 dark:text-white outline-none transition-colors placeholder:text-gray-400 dark:placeholder:text-[#6b7280] focus:border-indigo-500 dark:focus:border-white/[0.28]';
+  const selectClass = 'geist-caption h-9 w-full rounded-[6px] border border-gray-300 dark:border-white/[0.14] bg-white dark:bg-[#050505] px-3 text-gray-900 dark:text-white outline-none transition-colors focus:border-indigo-500 dark:focus:border-white/[0.28]';
+  const primaryButtonClass = 'geist-caption inline-flex h-10 items-center justify-center rounded-[6px] bg-black text-white hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 px-5 font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 shadow-md dark:shadow-none cursor-pointer';
+  const secondaryButtonClass = 'geist-caption inline-flex h-9 shrink-0 items-center justify-center rounded-[6px] border border-gray-300 dark:border-white/[0.14] bg-white dark:bg-white/[0.03] px-3.5 font-semibold text-gray-800 dark:text-[#d4d4d4] transition-colors hover:bg-gray-100 dark:hover:bg-white/[0.06] hover:text-gray-900 dark:hover:text-white disabled:cursor-not-allowed disabled:opacity-40 shadow-sm dark:shadow-none cursor-pointer';
+  const panelHeaderClass = 'geist-label uppercase text-gray-500 dark:text-[#6b7280]';
+  const panelTitleClass = 'geist-section-title mt-1 text-gray-900 dark:text-white';
+  const helperTextClass = 'geist-small mt-1 max-w-2xl text-gray-600 dark:text-[#8f8f8f]';
 
-  const inputClass = isDark
-    ? "w-full px-3.5 py-2.5 bg-[#0d0d0d] text-white border border-white/[0.14] focus:border-indigo-500 rounded-[6px] text-xs font-medium outline-none transition-colors placeholder-slate-500"
-    : "w-full px-3.5 py-2.5 bg-slate-50 text-slate-900 border border-slate-300 focus:border-indigo-600 focus:bg-white rounded-[6px] text-xs font-medium outline-none transition-colors placeholder-slate-400";
-  
-  const labelClass = isDark
-    ? "block text-[11px] font-mono font-bold text-slate-400 mb-1 uppercase tracking-wider"
-    : "block text-[11px] font-mono font-bold text-slate-600 mb-1 uppercase tracking-wider";
+  const isModal = Boolean(onClose);
 
-  const panelClass = isDark
-    ? "p-4 sm:p-5 rounded-[6px] border border-white/[0.1] bg-white/[0.02] space-y-3"
-    : "p-4 sm:p-5 rounded-[6px] border border-slate-200 bg-slate-50/60 space-y-3";
-
-  return createPortal(
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-[100] p-3 sm:p-5 animate-in fade-in duration-200">
-      <div className={`relative w-full max-w-4xl max-h-[92vh] flex flex-col rounded-[8px] border shadow-2xl overflow-hidden transition-colors ${
-        isDark ? 'bg-[#000] border-white/[0.13] text-white' : 'bg-white border-slate-200 text-slate-900'
-      }`}>
-        
-        {/* Modal Header */}
-        <div className={`px-6 py-4 border-b flex justify-between items-center transition-colors ${
-          isDark ? 'bg-[#050505] border-white/[0.11]' : 'bg-slate-50/80 border-slate-200/80'
-        }`}>
-          <div className="flex items-center gap-3">
-            <div className={`w-9 h-9 rounded-[6px] border flex items-center justify-center ${
-              isDark ? 'bg-white/10 border-white/20 text-white' : 'bg-slate-900 text-white border-slate-900 shadow-sm'
-            }`}>
-              <i className="fa-solid fa-pen-to-square text-sm"></i>
+  const innerContent = (
+    <div className="w-full min-h-[calc(100dvh-3.5rem)] bg-white dark:bg-[#000] text-gray-900 dark:text-white flex flex-col">
+      {/* Header */}
+      <header className="border-b border-gray-200 dark:border-white/[0.11] bg-white dark:bg-[#000]">
+        <div className="px-4 py-5 sm:px-6 lg:px-7 flex items-center justify-between">
+          <div>
+            <div className="flex items-center gap-2">
+              <p className="geist-label uppercase text-gray-500 dark:text-[#6b7280]">Job setup</p>
+              {formData.jobNo && (
+                <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-[4px] bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-white/10">
+                  #{formData.jobNo}
+                </span>
+              )}
             </div>
-            <div>
-              <span className={`text-[10px] font-mono font-bold uppercase tracking-wider ${isDark ? 'text-indigo-400' : 'text-indigo-600'}`}>Job Setup</span>
-              <h2 className={`text-base sm:text-lg font-bold leading-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>Edit Job Details</h2>
-            </div>
+            <h1 className="geist-page-title mt-2 text-gray-900 dark:text-white">Edit Job</h1>
+            <p className="geist-small mt-1 max-w-2xl text-gray-600 dark:text-[#8f8f8f]">
+              Update job opening details, role specifications, candidate matching criteria, and invites from one focused workspace.
+            </p>
           </div>
-          <button 
-            onClick={onClose} 
-            className={`flex h-8 w-8 items-center justify-center rounded-[6px] transition-colors cursor-pointer ${
-              isDark ? 'text-slate-400 hover:bg-white/10 hover:text-white' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'
-            }`}
-          >
-            <i className="fas fa-times text-sm"></i>
-          </button>
+          {isModal && (
+            <button
+              type="button"
+              onClick={handleClose}
+              className="flex h-9 w-9 items-center justify-center rounded-[6px] border border-gray-300 dark:border-white/[0.14] bg-white dark:bg-white/[0.04] text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors cursor-pointer"
+              title="Close modal"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
         </div>
+      </header>
 
-        {loading ? (
-          <div className="flex-1 flex items-center justify-center py-20">
-            <div className="animate-spin rounded-full h-8 w-8 border-4 border-emerald-500 border-t-transparent"></div>
+      {loading ? (
+        <div className="p-8 space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-[minmax(280px,0.42fr)_1px_minmax(0,1fr)] gap-8">
+            <div className="space-y-4">
+              <SkeletonBlock className="h-4 w-32" />
+              <SkeletonBlock className="h-8 w-48" />
+              <SkeletonBlock className="h-28 w-full" />
+            </div>
+            <div className="hidden bg-gray-200 dark:bg-white/[0.11] lg:block" />
+            <div className="space-y-4">
+              <SkeletonBlock className="h-6 w-40" />
+              <SkeletonBlock className="h-10 w-full" />
+              <SkeletonBlock className="h-32 w-full" />
+            </div>
           </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0">
-            <div className="p-5 sm:p-6 space-y-5 overflow-y-auto custom-card-scrollbar bg-white dark:bg-[#000]">
-
-              {/* AI JD Import & Auto-Fill Box */}
-              <div className="p-4 rounded-[6px] border border-gray-200 dark:border-white/[0.11] bg-gray-50/80 dark:bg-white/[0.025] space-y-3">
-                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-200 dark:border-white/10 pb-2.5">
-                  <div className="flex items-center gap-2 text-black dark:text-white font-bold text-xs">
-                    <i className="fas fa-wand-magic-sparkles text-black dark:text-white"></i>
-                    <span>AI JD Import & Auto-Fill</span>
-                  </div>
-
-                  <div className="flex rounded-[4px] border border-gray-200 dark:border-white/10 bg-gray-100/80 dark:bg-black/40 p-0.5 text-xs shadow-inner dark:shadow-none">
-                    <button
-                      type="button"
-                      onClick={() => setJdImportMode('upload')}
-                      className={`px-3 py-1 rounded-[4px] text-xs transition-all flex items-center gap-1.5 font-bold cursor-pointer ${jdImportMode === 'upload' ? 'bg-black text-white dark:bg-white dark:text-black shadow-sm' : 'text-gray-600 dark:text-[#8f8f8f] hover:text-gray-900 dark:hover:text-white'}`}
-                    >
-                      <i className="fas fa-file-pdf"></i> Upload File
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setJdImportMode('paste')}
-                      className={`px-3 py-1 rounded-[4px] text-xs transition-all flex items-center gap-1.5 font-bold cursor-pointer ${jdImportMode === 'paste' ? 'bg-black text-white dark:bg-white dark:text-black shadow-sm' : 'text-gray-600 dark:text-[#8f8f8f] hover:text-gray-900 dark:hover:text-white'}`}
-                    >
-                      <i className="fas fa-paste"></i> Paste JD Text
-                    </button>
-                  </div>
-                </div>
-
-                {jdImportMode === 'upload' ? (
-                  <div className="flex items-center gap-3">
-                    <label htmlFor="edit-jd-upload" className="flex-1 cursor-pointer p-3 border border-dashed border-gray-300 dark:border-white/20 rounded-[6px] text-center text-xs text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/5 transition-colors font-medium">
-                      {parsingJd ? (
-                        <span><i className="fas fa-spinner fa-spin mr-1 text-black dark:text-white"></i> Parsing JD file...</span>
-                      ) : (
-                        <span><i className="fas fa-file-upload mr-1 text-black dark:text-white"></i> Upload JD PDF or TXT File to Auto-Fill All Fields</span>
-                      )}
-                    </label>
-                    <input id="edit-jd-upload" type="file" accept=".pdf,.txt" className="hidden" onChange={handleJDUpload} disabled={parsingJd} />
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    <textarea
-                      rows={3}
-                      value={pastedJdText}
-                      onChange={(e) => setPastedJdText(e.target.value)}
-                      placeholder="Paste full Job Description text here..."
-                      className={inputClass}
-                    />
-                    <button
-                      type="button"
-                      onClick={handleParsePastedJDText}
-                      disabled={parsingJd || !pastedJdText.trim()}
-                      className="w-full py-2 bg-black hover:bg-neutral-800 dark:bg-white dark:hover:bg-neutral-200 text-white dark:text-black font-semibold text-xs rounded-[6px] transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer shadow-sm"
-                    >
-                      {parsingJd ? <><i className="fas fa-spinner fa-spin"></i> Parsing...</> : <><i className="fas fa-wand-magic-sparkles"></i> Auto-Fill Details & Custom Fields</>}
-                    </button>
-                  </div>
-                )}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(280px,0.42fr)_1px_minmax(0,1fr)] flex-1">
+          {/* Aside Column */}
+          <aside className="border-b border-gray-200 dark:border-white/[0.11] bg-gray-50 dark:bg-[#020202] px-4 py-5 sm:px-6 lg:border-b-0 lg:px-7">
+            <div className="lg:sticky lg:top-[5.25rem] space-y-4">
+              <div>
+                <p className={panelHeaderClass}>Source</p>
+                <h2 className={panelTitleClass}>Update from a job description</h2>
+                <p className={helperTextClass}>
+                  Upload a PDF/TXT, paste raw JD text, or fetch from URL to auto-fill details & update dynamic fields.
+                </p>
               </div>
 
-              {/* Job Identification & Recruiter Meta */}
-              <div className={panelClass}>
-                <h3 className="text-xs font-bold uppercase tracking-wider text-gray-900 dark:text-white flex items-center gap-2 border-b border-gray-200 dark:border-white/[0.11] pb-2">
-                  <i className="fa-solid fa-id-card text-black dark:text-white"></i> Job Identification & Recruiter Meta
-                </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                  <div>
-                    <label className={labelClass}>Job Number (jobNo) *</label>
-                    <input 
-                      type="text" required 
-                      className={inputClass}
-                      value={formData.jobNo}
-                      onChange={handleFormChange} name="jobNo"
-                      placeholder="e.g. 23467"
-                    />
-                  </div>
-                  <div>
-                    <label className={labelClass}>Access Code</label>
-                    <input 
-                      type="text" 
-                      className={`${inputClass} font-mono`}
-                      value={formData.jobNo || accessCode}
-                      onChange={(e) => setAccessCode(e.target.value)}
-                      placeholder="e.g. 23467"
-                    />
-                  </div>
-                  <div>
-                    <label className={labelClass}>Job Status</label>
-                    <select name="status" value={formData.status} onChange={handleFormChange} className={inputClass}>
+              {/* Mode Switcher Tabs */}
+              <div className="flex rounded-[6px] border border-gray-200 dark:border-white/[0.11] bg-gray-100/80 dark:bg-white/[0.03] p-1 shadow-inner dark:shadow-none">
+                <button
+                  type="button"
+                  onClick={() => setJdImportMode('upload')}
+                  className={`flex-1 py-1.5 text-[11px] font-semibold rounded-[4px] transition-all flex items-center justify-center gap-1 cursor-pointer ${jdImportMode === 'upload' ? 'bg-black text-white dark:bg-white dark:text-black shadow-sm' : 'text-gray-600 dark:text-[#8f8f8f] hover:text-gray-900 dark:hover:text-white'}`}
+                >
+                  <i className="fas fa-file-pdf"></i> Upload File
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setJdImportMode('paste')}
+                  className={`flex-1 py-1.5 text-[11px] font-semibold rounded-[4px] transition-all flex items-center justify-center gap-1 cursor-pointer ${jdImportMode === 'paste' ? 'bg-black text-white dark:bg-white dark:text-black shadow-sm' : 'text-gray-600 dark:text-[#8f8f8f] hover:text-gray-900 dark:hover:text-white'}`}
+                >
+                  <i className="fas fa-paste"></i> Paste Text
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setJdImportMode('url')}
+                  className={`flex-1 py-1.5 text-[11px] font-semibold rounded-[4px] transition-all flex items-center justify-center gap-1 cursor-pointer ${jdImportMode === 'url' ? 'bg-black text-white dark:bg-white dark:text-black shadow-sm' : 'text-gray-600 dark:text-[#8f8f8f] hover:text-gray-900 dark:hover:text-white'}`}
+                >
+                  <i className="fas fa-link"></i> Web Link
+                </button>
+              </div>
+
+              {jdImportMode === 'upload' ? (
+                <>
+                  <label
+                    htmlFor="edit-jd-upload"
+                    className={`geist-caption flex min-h-28 cursor-pointer flex-col justify-center rounded-[6px] border border-dashed bg-white dark:bg-white/[0.025] px-4 py-4 text-gray-800 dark:text-[#d4d4d4] transition-colors hover:border-gray-400 dark:hover:border-white/[0.3] ${parsingJd ? 'cursor-not-allowed border-gray-300 dark:border-white/[0.12]' : 'border-gray-300 dark:border-white/[0.18]'}`}
+                  >
+                    {parsingJd ? (
+                      <span className="flex flex-col gap-2" role="status" aria-label="Parsing job description">
+                        <SkeletonBlock className="h-4 w-44" />
+                        <SkeletonBlock className="h-3 w-64 max-w-full bg-gray-200 dark:bg-white/[0.08]" />
+                        <SkeletonBlock className="h-3 w-36 bg-gray-200 dark:bg-white/[0.08]" />
+                      </span>
+                    ) : (
+                      <>
+                        <span className="font-medium text-gray-900 dark:text-white flex items-center gap-2">
+                          <i className="fas fa-file-upload text-black dark:text-white"></i> Upload job description file
+                        </span>
+                        <span className="geist-small mt-1 text-gray-500 dark:text-[#8f8f8f]">PDF or TXT document with job requirements.</span>
+                      </>
+                    )}
+                  </label>
+                  <input id="edit-jd-upload" type="file" accept=".pdf,.txt" className="hidden" onChange={handleJDUpload} disabled={parsingJd} />
+                </>
+              ) : jdImportMode === 'paste' ? (
+                <div className="space-y-3">
+                  <textarea
+                    rows={8}
+                    value={pastedJdText}
+                    onChange={(e) => setPastedJdText(e.target.value)}
+                    placeholder="Paste complete Job Description text here..."
+                    className="w-full rounded-[6px] border border-gray-300 dark:border-white/[0.18] bg-white dark:bg-white/[0.03] p-3 text-xs text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 outline-none focus:border-indigo-500 dark:focus:border-white leading-relaxed resize-none font-sans"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleParsePastedJDText}
+                    disabled={parsingJd || !pastedJdText.trim()}
+                    className="w-full h-9 rounded-[6px] bg-black hover:bg-neutral-800 dark:bg-white dark:hover:bg-neutral-200 text-white dark:text-black font-semibold text-xs transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer shadow-sm"
+                  >
+                    {parsingJd ? (
+                      <>
+                        <i className="fas fa-spinner fa-spin"></i> Parsing & Auto-Filling JD...
+                      </>
+                    ) : (
+                      <>
+                        <i className="fas fa-wand-magic-sparkles"></i> Auto-Fill JD Details & Custom Fields
+                      </>
+                    )}
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <input
+                    type="url"
+                    value={jdUrlInput}
+                    onChange={(e) => setJdUrlInput(e.target.value)}
+                    placeholder="Paste Job URL (e.g. https://company.com/job/101)..."
+                    className="w-full rounded-[6px] border border-gray-300 dark:border-white/[0.18] bg-white dark:bg-white/[0.03] p-3 text-xs text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 outline-none focus:border-indigo-500 dark:focus:border-white font-sans"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleFetchAndParseJdFromUrl}
+                    disabled={parsingJd || !jdUrlInput.trim()}
+                    className="w-full h-9 rounded-[6px] bg-black hover:bg-neutral-800 dark:bg-white dark:hover:bg-neutral-200 text-white dark:text-black font-semibold text-xs transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer shadow-sm"
+                  >
+                    {parsingJd ? (
+                      <>
+                        <i className="fas fa-spinner fa-spin"></i> Fetching Webpage & Parsing...
+                      </>
+                    ) : (
+                      <>
+                        <i className="fas fa-globe"></i> Fetch & Auto-Fill JD from URL
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
+
+              {/* Status & Meta Info */}
+              <div className="mt-7 border-t border-gray-200 dark:border-white/[0.11] pt-5">
+                <p className={panelHeaderClass}>Status & Meta</p>
+                <div className="mt-3 divide-y divide-gray-200 dark:divide-white/[0.11] border border-gray-200 dark:border-white/[0.11] rounded-[6px] bg-white dark:bg-transparent">
+                  <div className="px-3 py-3">
+                    <p className="geist-caption font-medium text-gray-900 dark:text-white">Job Status</p>
+                    <select
+                      name="status"
+                      value={formData.status}
+                      onChange={handleFormChange}
+                      className={`${selectClass} mt-1`}
+                    >
                       <option value="Active">Active (Visible)</option>
                       <option value="Inactive">Inactive (Hidden / Expired)</option>
                     </select>
                   </div>
-                  <div>
-                    <label className={labelClass}>Entered By (Recruiter)</label>
-                    <input 
-                      type="text" 
-                      className={inputClass}
+                  <div className="px-3 py-3">
+                    <p className="geist-caption font-medium text-gray-900 dark:text-white">Job Number / Access Code</p>
+                    <p className="geist-small mt-0.5 text-gray-500 dark:text-[#8f8f8f] font-mono">
+                      {formData.jobNo || accessCode || targetDocId}
+                    </p>
+                  </div>
+                  <div className="px-3 py-3">
+                    <p className="geist-caption font-medium text-gray-900 dark:text-white">Entered By</p>
+                    <input
+                      name="entryBy"
+                      type="text"
+                      className={`${inputClass} mt-1`}
                       value={formData.entryBy}
-                      onChange={handleFormChange} name="entryBy"
+                      onChange={handleFormChange}
                       placeholder="e.g. Rohini Chaure"
                     />
                   </div>
                 </div>
               </div>
+            </div>
+          </aside>
 
-              {/* Basic Information */}
-              <div className={panelClass}>
-                <h3 className="text-xs font-bold uppercase tracking-wider text-gray-900 dark:text-white flex items-center gap-2 border-b border-gray-200 dark:border-white/[0.11] pb-2">
-                  <i className="fa-solid fa-briefcase text-black dark:text-white"></i> Basic Job Information
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="hidden bg-gray-200 dark:bg-white/[0.11] lg:block" />
+
+          {/* Main Form Column */}
+          <form onSubmit={handleSubmit} className="min-w-0 bg-white dark:bg-[#000] flex flex-col justify-between">
+            <div>
+              {/* Section 1: Brief - Role details */}
+              <section className="border-b border-gray-200 dark:border-white/[0.11] px-4 py-5 sm:px-6 lg:px-7">
+                <p className={panelHeaderClass}>Brief</p>
+                <h2 className={panelTitleClass}>Role details</h2>
+                <p className={helperTextClass}>Keep the requirements specific so candidate matching and applications stay relevant.</p>
+
+                <div className="mt-5 grid grid-cols-1 gap-4 xl:grid-cols-2">
                   <div>
-                    <label className={labelClass}>Job Title *</label>
-                    <input 
-                      type="text" required 
+                    <label className={labelClass}>Job Number / Code (Optional)</label>
+                    <input
+                      name="jobNo"
+                      type="text"
                       className={inputClass}
-                      value={formData.title}
-                      onChange={handleFormChange} name="title"
-                      placeholder="e.g. Senior Frontend Developer"
+                      value={formData.jobNo}
+                      onChange={handleFormChange}
+                      placeholder="e.g. Job No: 1042 or REQ-901"
                     />
                   </div>
+
                   <div>
-                    <label className={labelClass}>Company Name *</label>
-                    <input 
-                      type="text" required 
+                    <label className={labelClass}>Job title / role <span className="text-red-500 dark:text-red-400">*</span></label>
+                    <input
+                      name="title"
+                      type="text"
+                      required
+                      className={inputClass}
+                      value={formData.title}
+                      onChange={handleFormChange}
+                      placeholder="Senior Frontend Engineer"
+                    />
+                  </div>
+
+                  <div className="xl:col-span-2">
+                    <label className={labelClass}>Job description <span className="text-red-500 dark:text-red-400">*</span></label>
+                    <textarea
+                      name="description"
+                      required
+                      rows={5}
+                      className={textareaClass}
+                      value={formData.description}
+                      onChange={handleFormChange}
+                      placeholder="Describe the role, responsibilities, and what you are looking for."
+                    />
+                  </div>
+
+                  <div>
+                    <label className={labelClass}>Company Name</label>
+                    <input
+                      name="companyName"
+                      type="text"
                       className={inputClass}
                       value={formData.companyName}
-                      onChange={handleFormChange} name="companyName"
+                      onChange={handleFormChange}
                       placeholder="e.g. Mukta Group / TechCorp"
                     />
                   </div>
-                </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                   <div>
                     <label className={labelClass}>Industry Sector</label>
-                    <input 
-                      type="text" 
-                      name="industryName" 
-                      value={formData.industryName} 
-                      onChange={handleFormChange}
-                      placeholder="e.g. MEP Consultant / IT Services"
+                    <input
+                      name="industryName"
+                      type="text"
                       className={inputClass}
+                      value={formData.industryName}
+                      onChange={handleFormChange}
+                      placeholder="e.g. IT Services / Manufacturing"
+                    />
+                  </div>
+
+                  <div className="xl:col-span-2">
+                    <label className={labelClass}>Company Details & Overview (Optional)</label>
+                    <textarea
+                      name="companyDetails"
+                      rows={3}
+                      className={textareaClass}
+                      value={formData.companyDetails}
+                      onChange={handleFormChange}
+                      placeholder="Enter company profile, background, product overview, or recruiter company details..."
+                    />
+                  </div>
+
+                  <div className="xl:col-span-2">
+                    <label className={labelClass}>Job Link / External URL</label>
+                    <input
+                      name="jobLink"
+                      type="url"
+                      className={inputClass}
+                      value={formData.jobLink}
+                      onChange={handleFormChange}
+                      placeholder="e.g. https://careers.company.com/job-101"
                     />
                   </div>
 
                   <div>
-                    <label className={labelClass}>Role Category</label>
-                    <input 
-                      type="text" 
-                      name="roleName" 
-                      value={formData.roleName} 
+                    <label className={labelClass}>Employment type</label>
+                    <select
+                      name="employmentType"
+                      required
+                      className={selectClass}
+                      value={formData.employmentType}
                       onChange={handleFormChange}
-                      placeholder="e.g. Design Engineer - Electrical"
-                      className={inputClass}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Experience, Location & Compensation */}
-              <div className={panelClass}>
-                <h3 className="text-xs font-bold uppercase tracking-wider text-gray-900 dark:text-white flex items-center gap-2 border-b border-gray-200 dark:border-white/[0.11] pb-2">
-                  <i className="fa-solid fa-location-dot text-black dark:text-white"></i> Experience, Location & Salary
-                </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                  <div>
-                    <label className={labelClass}>Location (Typed / Address)</label>
-                    <input 
-                      type="text" 
-                      name="location" 
-                      placeholder="e.g. Gadkari Chowk,Nashik"
-                      value={formData.location}
-                      onChange={handleFormChange} 
-                      className={inputClass}
-                    />
-                  </div>
-                  <div>
-                    <label className={labelClass}>City</label>
-                    <input 
-                      type="text" 
-                      name="city" 
-                      placeholder="e.g. Nashik"
-                      value={formData.city}
-                      onChange={handleFormChange} 
-                      className={inputClass}
-                    />
-                  </div>
-                  <div>
-                    <label className={labelClass}>Employment Type</label>
-                    <select name="employmentType" value={formData.employmentType} onChange={handleFormChange} className={inputClass}>
+                    >
                       <option value="Full-time">Full-time</option>
                       <option value="Part-time">Part-time</option>
                       <option value="Contract">Contract</option>
@@ -860,286 +1091,159 @@ const EditJobModal: React.FC<EditJobModalProps> = ({ jobId, onClose }) => {
                       <option value="Remote">Remote</option>
                     </select>
                   </div>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+
                   <div>
-                    <label className={labelClass}>Min Exp (Years)</label>
+                    <label className={labelClass}>Required experience</label>
+                    <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2">
+                      <input
+                        name="minExperience"
+                        type="number"
+                        min="0"
+                        required
+                        placeholder="Min"
+                        className={inputClass}
+                        value={formData.minExperience}
+                        onChange={handleFormChange}
+                      />
+                      <span className="geist-small text-gray-500 dark:text-[#6b7280]">to</span>
+                      <input
+                        name="maxExperience"
+                        type="number"
+                        min="0"
+                        required
+                        placeholder="Max"
+                        className={inputClass}
+                        value={formData.maxExperience}
+                        onChange={handleFormChange}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className={labelClass}>Job City / Location <span className="text-red-500 dark:text-red-400">*</span></label>
+                    <LocationCityInput
+                      value={formData.city || formData.location}
+                      onChange={(val) => setFormData({ ...formData, city: val, location: val })}
+                      placeholder="Search city (e.g. Ambad, Nashik / Pune / Mumbai)..."
+                      className={inputClass}
+                    />
+                  </div>
+
+                  <div>
+                    <label className={labelClass}>Salary / Compensation <span className="text-red-500 dark:text-red-400">*</span></label>
                     <input
-                      type="number"
-                      name="minExperience"
-                      placeholder="0"
-                      value={formData.minExperience}
-                      onChange={handleFormChange}
-                      min="0"
-                      className={inputClass}
-                    />
-                  </div>
-                  <div>
-                    <label className={labelClass}>Max Exp (Years)</label>
-                    <input
-                      type="number"
-                      name="maxExperience"
-                      placeholder="0"
-                      value={formData.maxExperience}
-                      onChange={handleFormChange}
-                      min="0"
-                      className={inputClass}
-                    />
-                  </div>
-                  <div>
-                    <label className={labelClass}>Job Location</label>
-                    <input 
-                      type="text" 
-                      name="location" 
-                      placeholder="e.g. Mumbai / Remote"
-                      value={formData.location}
-                      onChange={handleFormChange} 
-                      className={inputClass}
-                    />
-                  </div>
-                  <div>
-                    <label className={labelClass}>Salary Range / CTC</label>
-                    <input 
-                      type="text" 
-                      name="salaryRange" 
-                      placeholder="e.g. ₹50,000 / month or 8-12 LPA"
-                      value={formData.salaryRange}
-                      onChange={handleFormChange} 
-                      className={inputClass}
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
-                  <div>
-                    <label className={labelClass}>Gender Requirement</label>
-                    <select name="genderRequirement" value={formData.genderRequirement} onChange={handleFormChange} className={inputClass}>
-                      <option value="Any">Any Gender</option>
-                      <option value="Male Only">Male Only</option>
-                      <option value="Female Only">Female Only</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className={labelClass}>AI Strictness Level</label>
-                    <select name="strictness" value={formData.strictness} onChange={handleFormChange} className={inputClass}>
-                      <option value="Low">Low Strictness</option>
-                      <option value="Medium">Medium Strictness</option>
-                      <option value="High">High Strictness</option>
-                    </select>
-                  </div>
-                </div>
-
-                {/* Strict Mandatory AI Criteria Checkmarks */}
-                <div className="mt-3 rounded-[8px] border border-amber-500/30 bg-amber-50/50 dark:bg-amber-950/20 p-3.5 space-y-2.5">
-                  <div className="flex items-center gap-2">
-                    <i className="fa-solid fa-square-check text-amber-600 dark:text-amber-400 text-xs"></i>
-                    <span className="font-bold uppercase text-amber-900 dark:text-amber-300 text-[11px] tracking-wider">
-                      Strict Mandatory AI Criteria Checkmarks
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2.5">
-                    <label className="flex items-center gap-2 cursor-pointer p-2 rounded-[6px] border border-amber-200 dark:border-amber-800/40 bg-white dark:bg-neutral-900/70 hover:border-amber-400 transition-all">
-                      <input
-                        type="checkbox"
-                        name="strictGenderMatch"
-                        checked={formData.strictGenderMatch}
-                        onChange={handleFormChange}
-                        className="w-4 h-4 rounded border-amber-300 text-amber-600 focus:ring-amber-500 accent-amber-600 cursor-pointer"
-                      />
-                      <div>
-                        <span className="text-xs font-semibold text-gray-900 dark:text-amber-100 block">Strict Gender</span>
-                        <span className="text-[10px] text-gray-500 dark:text-amber-300/70 block">
-                          {formData.genderRequirement === 'Any' ? 'Any -> All genders' : `Must be ${formData.genderRequirement}`}
-                        </span>
-                      </div>
-                    </label>
-
-                    <label className="flex items-center gap-2 cursor-pointer p-2 rounded-[6px] border border-amber-200 dark:border-amber-800/40 bg-white dark:bg-neutral-900/70 hover:border-amber-400 transition-all">
-                      <input
-                        type="checkbox"
-                        name="strictLocationMatch"
-                        checked={formData.strictLocationMatch}
-                        onChange={handleFormChange}
-                        className="w-4 h-4 rounded border-amber-300 text-amber-600 focus:ring-amber-500 accent-amber-600 cursor-pointer"
-                      />
-                      <div>
-                        <span className="text-xs font-semibold text-gray-900 dark:text-amber-100 block">Strict Location</span>
-                        <span className="text-[10px] text-gray-500 dark:text-amber-300/70 block truncate max-w-[100px]">
-                          {formData.location ? `Must match ${formData.location}` : 'Must match City'}
-                        </span>
-                      </div>
-                    </label>
-
-                    <label className="flex items-center gap-2 cursor-pointer p-2 rounded-[6px] border border-amber-200 dark:border-amber-800/40 bg-white dark:bg-neutral-900/70 hover:border-amber-400 transition-all">
-                      <input
-                        type="checkbox"
-                        name="strictEducationMatch"
-                        checked={formData.strictEducationMatch}
-                        onChange={handleFormChange}
-                        className="w-4 h-4 rounded border-amber-300 text-amber-600 focus:ring-amber-500 accent-amber-600 cursor-pointer"
-                      />
-                      <div>
-                        <span className="text-xs font-semibold text-gray-900 dark:text-amber-100 block">Strict Education</span>
-                        <span className="text-[10px] text-gray-500 dark:text-amber-300/70 block truncate max-w-[100px]">
-                          {formData.qualifications ? `Must match ${formatStringValue(formData.qualifications)}` : 'Must match Qualification'}
-                        </span>
-                      </div>
-                    </label>
-
-                    <label className="flex items-center gap-2 cursor-pointer p-2 rounded-[6px] border border-amber-200 dark:border-amber-800/40 bg-white dark:bg-neutral-900/70 hover:border-amber-400 transition-all">
-                      <input
-                        type="checkbox"
-                        name="strictExperienceMatch"
-                        checked={formData.strictExperienceMatch}
-                        onChange={handleFormChange}
-                        className="w-4 h-4 rounded border-amber-300 text-amber-600 focus:ring-amber-500 accent-amber-600 cursor-pointer"
-                      />
-                      <div>
-                        <span className="text-xs font-semibold text-gray-900 dark:text-amber-100 block">Strict Experience</span>
-                        <span className="text-[10px] text-gray-500 dark:text-amber-300/70 block">
-                          {formData.minExperience || formData.maxExperience ? `${formData.minExperience}-${formData.maxExperience} Yrs` : 'Must fit Yrs range'}
-                        </span>
-                      </div>
-                    </label>
-                  </div>
-                </div>
-              </div>
-
-              {/* Qualifications */}
-              <div className={panelClass}>
-                <h3 className="text-xs font-bold uppercase tracking-wider text-gray-900 dark:text-white flex items-center gap-2 border-b border-gray-200 dark:border-white/[0.11] pb-2">
-                  <i className="fa-solid fa-graduation-cap text-black dark:text-white"></i> Qualifications & Education
-                </h3>
-                <div className="flex flex-wrap gap-2 min-h-[40px] p-2.5 bg-white dark:bg-[#050505] border border-gray-300 dark:border-white/[0.14] rounded-[6px]">
-                  {parseList(formData.qualifications).length > 0 ? parseList(formData.qualifications).map(edu => (
-                    <span key={edu} className="px-3 py-1 bg-gray-100 dark:bg-white/10 text-gray-900 dark:text-white border border-gray-300 dark:border-white/20 rounded-[4px] text-xs font-bold flex items-center gap-2 animate-in fade-in zoom-in duration-200">
-                      {edu}
-                      <button type="button" onClick={() => toggleEducation(edu)} className="hover:text-red-500 transition-colors font-bold text-sm">&times;</button>
-                    </span>
-                  )) : <span className="text-gray-400 dark:text-[#6b7280] text-xs p-1 italic">No qualifications specified</span>}
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
-                  {/* 1. Qualification Dropdown */}
-                  <select
-                    className={inputClass}
-                    value={selectedQualForEdu}
-                    onChange={(e) => setSelectedQualForEdu(e.target.value)}
-                  >
-                    <option value="">-- Qualification --</option>
-                    {EDUCATION_QUALIFICATIONS.map(qual => (
-                      <option key={qual} value={qual}>{qual}</option>
-                    ))}
-                  </select>
-
-                  {/* 2. Specialization Dropdown */}
-                  <select
-                    className={inputClass}
-                    value=""
-                    onChange={(e) => {
-                      if (e.target.value) {
-                        toggleEducation(e.target.value);
-                        e.target.value = "";
-                      }
-                    }}
-                  >
-                    <option value="">-- Select {selectedQualForEdu || 'Specialization'} --</option>
-                    {(selectedQualForEdu && EDUCATION_SPECIALIZATIONS[selectedQualForEdu as EducationQualification]
-                      ? EDUCATION_SPECIALIZATIONS[selectedQualForEdu as EducationQualification]
-                      : []
-                    ).map(spec => (
-                      <option key={spec} value={spec}>{spec}</option>
-                    ))}
-                  </select>
-
-                  {/* 3. Custom text */}
-                  <div className="flex gap-2">
-                    <input
+                      name="salaryRange"
                       type="text"
+                      required
                       className={inputClass}
-                      placeholder="Or custom degree..."
-                      value={eduInput}
-                      onChange={e => setEduInput(e.target.value)}
-                      onKeyDown={e => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          if (eduInput.trim()) {
-                            toggleEducation(eduInput.trim());
-                            setEduInput('');
-                          }
-                        }
-                      }}
+                      value={formData.salaryRange}
+                      onChange={handleFormChange}
+                      placeholder="e.g. 20,000 - 22,000 / per month or 4 - 6 LPA"
                     />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (eduInput.trim()) {
-                          toggleEducation(eduInput.trim());
-                          setEduInput('');
-                        }
-                      }}
-                      className="px-3 py-2 bg-white dark:bg-[#262626] hover:bg-gray-100 dark:hover:bg-[#333333] text-gray-900 dark:text-white border border-gray-300 dark:border-white/20 rounded-[6px] font-bold text-xs transition-colors shrink-0 cursor-pointer shadow-sm"
-                    >
-                      Add
-                    </button>
                   </div>
-                </div>
-              </div>
 
-              {/* Skills Section - Displays ALL Added Skills */}
-              <div className={panelClass}>
-                <div className="flex items-center justify-between border-b border-gray-200 dark:border-white/[0.11] pb-2">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-gray-900 dark:text-white flex items-center gap-2">
-                    <i className="fa-solid fa-code text-black dark:text-white"></i> Required Skills ({selectedSkillsList.length})
-                  </h3>
-                  {selectedSkillsList.length > 0 && (
-                    <button 
-                      type="button" 
-                      onClick={() => setFormData({ ...formData, skills: '' })}
-                      className="text-[11px] text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 font-semibold transition-colors"
+                  <div>
+                    <label className={labelClass}>Gender requirement</label>
+                    <select
+                      name="genderRequirement"
+                      className={selectClass}
+                      value={formData.genderRequirement}
+                      onChange={handleFormChange}
                     >
-                      Clear All
-                    </button>
-                  )}
-                </div>
+                      <option value="Any">Any</option>
+                      <option value="Male">Male</option>
+                      <option value="Female">Female</option>
+                    </select>
+                  </div>
 
-                {/* All Added/Selected Skills Badges Box */}
-                <div>
-                  <label className="block text-[11px] font-medium text-gray-700 dark:text-[#a1a1aa] mb-1">Added Skills</label>
-                  <div className="flex flex-wrap gap-2 min-h-[44px] p-2.5 bg-white dark:bg-[#050505] border border-gray-300 dark:border-white/[0.14] rounded-[6px]">
-                    {selectedSkillsList.length > 0 ? (
-                      selectedSkillsList.map(skill => (
-                        <span 
-                          key={skill} 
-                          className="px-3 py-1 bg-purple-50 dark:bg-purple-500/20 text-purple-700 dark:text-purple-200 border border-purple-200 dark:border-purple-500/40 rounded-[4px] text-xs font-bold flex items-center gap-2 animate-in fade-in zoom-in duration-200"
+                  {/* Education level */}
+                  <div className="xl:col-span-2">
+                    <label className={labelClass}>Minimum education level</label>
+                    <div className="min-h-10 rounded-[6px] border border-gray-300 dark:border-white/[0.11] bg-gray-50 dark:bg-white/[0.025] p-2">
+                      <div className="flex flex-wrap gap-2">
+                        {splitCommaList(formData.qualifications).length > 0 ? splitCommaList(formData.qualifications).map((edu) => (
+                          <span key={edu} className="geist-small inline-flex h-7 items-center gap-2 rounded-[6px] border border-gray-300 dark:border-white/[0.11] bg-white dark:bg-white/[0.05] px-2.5 text-gray-900 dark:text-[#d4d4d4] font-medium shadow-sm dark:shadow-none">
+                            {edu}
+                            <button type="button" onClick={() => toggleEducation(edu)} className="text-gray-400 dark:text-[#8f8f8f] transition-colors hover:text-red-500 dark:hover:text-white">&times;</button>
+                          </span>
+                        )) : <span className="geist-caption text-gray-400 dark:text-[#6b7280]">No education level selected</span>}
+                      </div>
+                    </div>
+
+                    <div className="mt-2.5 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+                      {/* 1. Select Qualification Category */}
+                      <div>
+                        <label className="geist-caption mb-1 block text-gray-500 dark:text-[#8f8f8f]">1. Qualification Category</label>
+                        <select
+                          className={selectClass}
+                          value={selectedQualForEdu}
+                          onChange={(e) => setSelectedQualForEdu(e.target.value)}
                         >
-                          <span>{skill}</span>
-                          <button 
-                            type="button" 
-                            onClick={() => removeSkill(skill)} 
-                            className="hover:text-red-500 dark:hover:text-red-400 transition-colors font-bold text-sm leading-none"
-                            title="Remove skill"
-                          >
-                            &times;
-                          </button>
-                        </span>
-                      ))
-                    ) : (
-                      <span className="text-gray-400 dark:text-[#6b7280] text-xs p-1 italic">No skills added yet. Select from below or type custom skills to add.</span>
-                    )}
+                          <option value="">-- Select Qualification Category --</option>
+                          {EDUCATION_QUALIFICATIONS.map((qual) => (
+                            <option key={qual} value={qual}>{qual}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* 2. Select Specialization based on Qualification */}
+                      <div>
+                        <label className="geist-caption mb-1 block text-gray-500 dark:text-[#8f8f8f]">2. Degree / Specialization</label>
+                        <select
+                          className={`${selectClass} ${!selectedQualForEdu ? 'opacity-60 cursor-not-allowed' : ''}`}
+                          value=""
+                          disabled={!selectedQualForEdu}
+                          onChange={(e) => {
+                            if (e.target.value) {
+                              toggleEducation(e.target.value);
+                              e.target.value = '';
+                            }
+                          }}
+                        >
+                          <option value="">
+                            {selectedQualForEdu ? `-- Select ${selectedQualForEdu} Degree --` : '-- Choose Category First --'}
+                          </option>
+                          {selectedQualForEdu && (
+                            <option value={`Any ${selectedQualForEdu}`}>Any {selectedQualForEdu} (All)</option>
+                          )}
+                          {(selectedQualForEdu && EDUCATION_SPECIALIZATIONS[selectedQualForEdu as EducationQualification]
+                            ? EDUCATION_SPECIALIZATIONS[selectedQualForEdu as EducationQualification]
+                            : []
+                          ).map((spec) => (
+                            <option key={spec} value={spec}>{spec}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              {/* Section 2: Skills - Required capabilities */}
+              <section className="border-b border-gray-200 dark:border-white/[0.11] px-4 py-5 sm:px-6 lg:px-7">
+                <p className={panelHeaderClass}>Skills</p>
+                <h2 className={panelTitleClass}>Required capabilities</h2>
+                <p className={helperTextClass}>Select existing skills or add a custom requirement.</p>
+
+                <div className="mt-5 min-h-10 rounded-[6px] border border-gray-300 dark:border-white/[0.11] bg-gray-50 dark:bg-white/[0.025] p-2">
+                  <div className="flex flex-wrap gap-2">
+                    {splitCommaList(formData.skills).length > 0 ? splitCommaList(formData.skills).map((skill) => (
+                      <span key={skill} className="geist-small inline-flex h-7 items-center gap-2 rounded-[6px] border border-purple-200 dark:border-white/[0.11] bg-purple-50 dark:bg-white/[0.05] px-2.5 text-purple-700 dark:text-[#d4d4d4] font-medium">
+                        {skill}
+                        <button type="button" onClick={() => toggleSkill(skill)} className="text-purple-400 dark:text-[#8f8f8f] transition-colors hover:text-red-500 dark:hover:text-white">&times;</button>
+                      </span>
+                    )) : <span className="geist-caption text-gray-400 dark:text-[#6b7280]">No skills selected</span>}
                   </div>
                 </div>
 
-                {/* Add Custom Skill Input */}
-                <div className="flex gap-2 pt-1">
-                  <input 
+                <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+                  <input
                     type="text"
                     className={inputClass}
-                    placeholder="Search or add custom skill (e.g. Docker, Python, AWS S3)..."
+                    placeholder="Search or add custom skill"
                     value={skillSearch}
-                    onChange={e => setSkillSearch(e.target.value)}
-                    onKeyDown={e => {
+                    onChange={(e) => setSkillSearch(e.target.value)}
+                    onKeyDown={(e) => {
                       if (e.key === 'Enter') {
                         e.preventDefault();
                         if (skillSearch.trim()) {
@@ -1149,7 +1253,7 @@ const EditJobModal: React.FC<EditJobModalProps> = ({ jobId, onClose }) => {
                       }
                     }}
                   />
-                  <button 
+                  <button
                     type="button"
                     onClick={() => {
                       if (skillSearch.trim()) {
@@ -1157,237 +1261,145 @@ const EditJobModal: React.FC<EditJobModalProps> = ({ jobId, onClose }) => {
                         setSkillSearch('');
                       }
                     }}
-                    className="px-4 py-2 bg-white dark:bg-[#262626] hover:bg-gray-100 dark:hover:bg-[#333333] text-gray-900 dark:text-white border border-gray-300 dark:border-white/20 rounded-[6px] font-bold text-xs transition-colors shrink-0 cursor-pointer shadow-sm"
+                    className={secondaryButtonClass}
                   >
-                    Add Skill
+                    Add
                   </button>
                 </div>
 
-                {/* Role-Based Skill Recommendations Button & Grid */}
-                <div className={`p-4 rounded-[6px] border transition-colors mt-3 ${
-                  isDark ? 'bg-[#050505] border-white/[0.1]' : 'bg-slate-50/70 border-slate-200/80'
-                }`}>
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                    <div>
-                      <span className={`text-[11px] font-mono font-bold uppercase tracking-wider block ${
-                        isDark ? 'text-slate-300' : 'text-slate-700'
-                      }`}>
-                        Role-Based Skill Recommendations
-                      </span>
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                        Generate skills tailored for <strong className="text-slate-700 dark:text-slate-200">{formData.title || formData.category || 'this job role'}</strong>.
-                      </p>
-                    </div>
+                <div className="mt-3 rounded-[6px] border border-purple-200 dark:border-white/[0.11] bg-purple-50/50 dark:bg-[#08080c] p-3">
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <Sparkles className="w-4 h-4 text-purple-600 dark:text-purple-400 animate-pulse" />
+                    <span className="geist-caption text-xs font-bold uppercase tracking-wider text-purple-700 dark:text-purple-300">
+                      AI Recommended Contextual Skills ({aiRecommendedSkills.length})
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400 mb-2">
+                    Contextually recommended skills based on your job title & description. Click to toggle.
+                  </p>
+                  <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto custom-scrollbar">
+                    {aiRecommendedSkills.map((skill) => {
+                      const isSelected = splitCommaList(formData.skills).includes(skill);
+                      return (
+                        <button
+                          key={skill}
+                          type="button"
+                          onClick={() => toggleSkill(skill)}
+                          className={`geist-small inline-flex h-7 items-center rounded-[6px] border px-2.5 transition-colors cursor-pointer ${
+                            isSelected
+                              ? 'border-purple-400 bg-purple-600 dark:bg-white text-white dark:text-black font-bold shadow-sm'
+                              : 'border-gray-300 dark:border-white/10 bg-white dark:bg-white/[0.04] text-gray-800 dark:text-gray-200 hover:bg-purple-100 dark:hover:bg-white/10'
+                          }`}
+                        >
+                          {skill} {isSelected ? '✓' : '+'}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </section>
 
-                    <button
-                      type="button"
-                      onClick={handleGenerateSkillsForRole}
-                      className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-[6px] text-xs font-bold transition-all border cursor-pointer shrink-0 shadow-sm ${
-                        isDark 
-                          ? 'bg-white/10 border-white/20 text-white hover:bg-white/15' 
-                          : 'bg-white border-slate-300 text-slate-800 hover:bg-slate-100'
-                      }`}
-                    >
-                      <i className="fas fa-wand-magic-sparkles text-indigo-500"></i>
-                      <span>Suggest Skills by Role</span>
+              {/* Section 3: Additional Info - Custom fields */}
+              <section className="border-b border-gray-200 dark:border-white/[0.11] px-4 py-5 sm:px-6 lg:px-7">
+                <p className={panelHeaderClass}>Additional Info</p>
+                <h2 className={panelTitleClass}>Custom fields</h2>
+                <p className={helperTextClass}>Attach optional custom fields to this job post (e.g. Perks, Working Hours, Client Code).</p>
+
+                <div className="mt-4 rounded-[6px] border border-gray-200 dark:border-white/[0.11] bg-gray-50 dark:bg-white/[0.025] p-3">
+                  <div className="grid grid-cols-1 gap-2 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
+                    <input
+                      type="text"
+                      className={inputClass}
+                      placeholder="Field name, e.g. Perks"
+                      value={tempCustomField.key}
+                      onChange={(e) => setTempCustomField({ ...tempCustomField, key: e.target.value })}
+                    />
+                    <input
+                      type="text"
+                      className={inputClass}
+                      placeholder="Field value, e.g. Day Shift, Cab facility"
+                      value={tempCustomField.value}
+                      onChange={(e) => setTempCustomField({ ...tempCustomField, value: e.target.value })}
+                    />
+                    <button type="button" onClick={handleAddCustomField} className={secondaryButtonClass}>
+                      Add
                     </button>
                   </div>
 
-                  {suggestedRoleSkills.length > 0 && (
-                    <div className="pt-3 mt-3 border-t border-slate-200 dark:border-white/10">
-                      <span className="block text-[10px] font-mono font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">
-                        Suggested Skills (Click to Add):
-                      </span>
-                      <div className="flex flex-wrap gap-2">
-                        {suggestedRoleSkills.map(skill => {
-                          const isSelected = selectedSkillsList.includes(skill);
-                          return (
-                            <button
-                              key={skill}
-                              type="button"
-                              onClick={() => toggleSkill(skill)}
-                              className={`px-3 py-1.5 rounded-[4px] text-xs font-semibold border transition-all cursor-pointer ${
-                                isSelected 
-                                  ? (isDark ? 'bg-white text-black border-white font-bold' : 'bg-slate-900 text-white border-slate-900 font-bold') 
-                                  : (isDark ? 'bg-white/[0.05] border-white/10 text-slate-300 hover:bg-white/10' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100')
-                              }`}
-                            >
-                              {skill} {isSelected && '✓'}
-                            </button>
-                          );
-                        })}
-                      </div>
+                  {customFields.length > 0 && (
+                    <div className="mt-3 divide-y divide-gray-200 dark:divide-white/[0.11] border border-gray-200 dark:border-white/[0.11] rounded-[6px] bg-white dark:bg-[#050505]">
+                      {customFields.map((field) => (
+                        <div key={field.id} className="flex items-center justify-between p-2.5 text-xs">
+                          <p className="geist-caption min-w-0 truncate text-gray-800 dark:text-[#d4d4d4]">
+                            <span className="font-medium text-gray-900 dark:text-white">{field.key}:</span> {field.value}
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveCustomField(field.id)}
+                            className="geist-small shrink-0 text-red-500 dark:text-[#8f8f8f] transition-colors hover:text-red-700 dark:hover:text-white font-semibold cursor-pointer"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      ))}
                     </div>
                   )}
                 </div>
-              </div>
-
-              {/* Interview Rules & Settings */}
-              <div className={panelClass}>
-                <h3 className="text-xs font-bold uppercase tracking-wider text-gray-900 dark:text-white flex items-center gap-2 border-b border-gray-200 dark:border-white/[0.11] pb-2">
-                  <i className="fa-solid fa-sliders text-black dark:text-white"></i> Interview Rules & Settings
-                </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                  <div>
-                    <label className={labelClass}>Access Permission</label>
-                    <select 
-                      className={inputClass}
-                      value={formData.permission}
-                      onChange={handleFormChange} name="permission"
-                    >
-                      <option value="anyone">Direct Start (Anyone with link/code)</option>
-                      <option value="request">Request Permission Needed</option>
-                      <option value="code_only">Access Code Only</option>
-                      <option value="candidate_list">Invited Candidate Email Only</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className={labelClass}>Number of AI Questions</label>
-                    <input type="number" name="numQuestions" value={formData.numQuestions} onChange={handleFormChange} min="1" max="15" className={inputClass} />
-                  </div>
-                  <div>
-                    <label className={labelClass}>Difficulty Level</label>
-                    <select name="difficulty" value={formData.difficulty} onChange={handleFormChange} className={inputClass}>
-                      <option value="Easy">Easy</option>
-                      <option value="Medium">Medium</option>
-                      <option value="Hard">Hard</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              {/* Description */}
-              <div className={panelClass}>
-                <label className={labelClass}>Job Description *</label>
-                <textarea 
-                  required rows={4}
-                  className={inputClass}
-                  value={formData.description}
-                  onChange={handleFormChange} name="description"
-                  placeholder="Provide complete job details, responsibilities, and requirements..."
-                />
-              </div>
-
-              {/* Custom Fields */}
-              <div className={panelClass}>
-                <div>
-                  <label className="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-wider">Dynamic Custom Fields</label>
-                  <p className="text-[11px] text-gray-500 dark:text-[#8f8f8f] mt-0.5">Add additional key-value specifications for candidates.</p>
-                </div>
-                <div className="flex gap-2">
-                  <input type="text" className={inputClass} placeholder="Field Name (e.g. Shift Timing)" value={tempCustomField.key} onChange={e => setTempCustomField({ ...tempCustomField, key: e.target.value })} />
-                  <input type="text" className={inputClass} placeholder="Field Value (e.g. Day Shift)" value={tempCustomField.value} onChange={e => setTempCustomField({ ...tempCustomField, value: e.target.value })} />
-                  <button type="button" onClick={handleAddCustomField} className="px-4 py-2 bg-gray-100 dark:bg-[#262626] hover:bg-gray-200 dark:hover:bg-[#333333] text-gray-900 dark:text-white border border-gray-300 dark:border-white/20 rounded-[6px] font-bold text-xs transition-colors shrink-0">Add</button>
-                </div>
-                {customFields.length > 0 && (
-                  <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1 custom-card-scrollbar">
-                    {customFields.map((field) => (
-                      <div key={field.id} className="flex items-center justify-between p-2 bg-white dark:bg-[#050505] border border-gray-200 dark:border-white/[0.14] rounded-[6px] text-xs">
-                        <div className="flex gap-2">
-                          <strong className="text-gray-900 dark:text-white">{field.key}:</strong>
-                          <span className="text-gray-700 dark:text-gray-300">{field.value}</span>
-                        </div>
-                        <button type="button" onClick={() => handleRemoveCustomField(field.id)} className="text-gray-400 dark:text-[#8f8f8f] hover:text-red-500 dark:hover:text-red-400 transition-colors p-1">
-                          <i className="fa-solid fa-trash-can"></i>
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Manual Questions */}
-              <div className="p-4 rounded-[6px] border border-blue-500/30 bg-blue-50/50 dark:bg-blue-500/5 space-y-3">
-                <div>
-                  <label className="text-xs font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                    <i className="fa-solid fa-clipboard-question text-blue-600 dark:text-blue-400"></i>
-                    Manual Interview Questions (Optional)
-                  </label>
-                  <p className="text-[11px] text-gray-500 dark:text-[#8f8f8f] mt-0.5">Specify custom questions you want the AI voice avatar to ask.</p>
-                </div>
-                <div className="flex gap-2">
-                  <input type="text" className={inputClass} placeholder="e.g. Explain your recent project architecture..." value={currentManualQuestion} onChange={e => setCurrentManualQuestion(e.target.value)} onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), handleAddManualQuestion())} />
-                  <button type="button" onClick={handleAddManualQuestion} className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-[6px] transition-colors shrink-0">Add</button>
-                </div>
-                {manualQuestions.length > 0 && (
-                  <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1 custom-card-scrollbar">
-                    {manualQuestions.map((q, index) => (
-                      <div key={index} className="flex items-center justify-between p-2.5 bg-white dark:bg-[#050505] border border-gray-200 dark:border-white/[0.14] rounded-[6px] text-xs">
-                        <p className="text-gray-800 dark:text-gray-200 font-medium">{q}</p>
-                        <button type="button" onClick={() => handleRemoveManualQuestion(index)} className="text-gray-400 dark:text-[#8f8f8f] hover:text-red-500 dark:hover:text-red-400 transition-colors p-1"><i className="fa-solid fa-trash-can"></i></button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Candidate Invites */}
-              <div className="p-4 rounded-[6px] border border-emerald-500/30 bg-emerald-50/50 dark:bg-emerald-500/5 space-y-3">
-                <div>
-                  <label className="text-xs font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                    <i className="fa-solid fa-user-plus text-emerald-600 dark:text-emerald-400"></i>
-                    Candidate Contact Invitations (Email & Phone)
-                  </label>
-                  <p className="text-[11px] text-gray-500 dark:text-[#8f8f8f] mt-0.5">Add candidate email addresses and/or WhatsApp numbers for automated invitations.</p>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-5 gap-2">
-                  <input type="email" className={`${inputClass} sm:col-span-2`} placeholder="candidate@example.com" value={currentEmail} onChange={e => setCurrentEmail(e.target.value)} />
-                  <input type="tel" className={`${inputClass} sm:col-span-2`} placeholder="+91 9876543210 (Mobile)" value={currentPhone} onChange={e => setCurrentPhone(e.target.value)} />
-                  <button type="button" onClick={handleAddCandidate} className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-[6px] transition-colors shrink-0 sm:col-span-1">Add</button>
-                </div>
-                {candidateDataList.length > 0 && (
-                  <div className="flex flex-wrap gap-2 pt-1 max-h-40 overflow-y-auto custom-card-scrollbar">
-                    {candidateDataList.map((cand, idx) => (
-                      <div key={idx} className="flex items-center gap-2 bg-white dark:bg-[#050505] border border-gray-200 dark:border-white/[0.14] rounded-[6px] px-3 py-1.5 text-xs shadow-sm">
-                        <i className="fa-solid fa-user text-emerald-600 dark:text-emerald-400"></i>
-                        <span className="font-semibold text-gray-900 dark:text-white">{cand.email || 'No email'}</span>
-                        {cand.phone && <span className="text-gray-500 dark:text-[#8f8f8f]">({cand.phone})</span>}
-                        <button type="button" onClick={() => handleRemoveCandidate(idx)} className="text-gray-400 dark:text-[#8f8f8f] hover:text-red-500 dark:hover:text-red-400 transition-colors font-bold ml-1">&times;</button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
+              </section>
             </div>
 
-            {/* Modal Footer */}
-            <div className={`flex gap-3 p-4 border-t transition-colors ${
-              isDark ? 'bg-[#050505] border-white/[0.1]' : 'bg-slate-50/80 border-slate-200/80'
-            }`}>
-              <button 
-                type="button"
-                onClick={onClose}
-                className={`w-1/3 py-2.5 px-4 rounded-[6px] text-xs font-bold border transition-colors cursor-pointer ${
-                  isDark 
-                    ? 'border-white/[0.12] text-slate-300 hover:bg-white/10 hover:text-white' 
-                    : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-100 shadow-sm'
-                }`}
-              >
-                Cancel
-              </button>
-              <button 
-                type="submit" 
-                disabled={saving}
-                className={`w-2/3 py-2.5 px-4 rounded-[6px] font-bold text-xs transition-all shadow-sm flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer ${
-                  isDark 
-                    ? 'bg-white text-black hover:bg-[#eaeaea]' 
-                    : 'bg-slate-900 text-white hover:bg-slate-800'
-                }`}
-              >
-                {saving ? (
-                  <><i className="fas fa-spinner fa-spin"></i> Saving Changes...</>
-                ) : (
-                  <><i className="fa-solid fa-check"></i> Save & Update Job Details</>
-                )}
-              </button>
+            {/* Sticky Bottom Bar */}
+            <div className="sticky bottom-0 border-t border-gray-200 dark:border-white/[0.11] bg-white/95 dark:bg-[#000]/95 px-4 py-4 backdrop-blur sm:px-6 lg:px-7 shadow-lg dark:shadow-none z-10">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <p className="geist-small text-gray-500 dark:text-[#8f8f8f]">
+                  Job updates sync across active listings, ATS matching, and candidate pipelines.
+                </p>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={handleClose}
+                    className={secondaryButtonClass}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={saving}
+                    className={primaryButtonClass}
+                  >
+                    {saving ? (
+                      <span className="flex items-center gap-2">
+                        <i className="fas fa-spinner fa-spin"></i>
+                        <span>Saving Changes...</span>
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-2">
+                        <Check className="w-4 h-4" />
+                        <span>Save & Update Job Details</span>
+                      </span>
+                    )}
+                  </button>
+                </div>
+              </div>
             </div>
           </form>
-        )}
-      </div>
-    </div>,
-    document.body
+        </div>
+      )}
+    </div>
   );
+
+  if (isModal) {
+    return createPortal(
+      <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-md overflow-y-auto">
+        <div className="min-h-full max-w-7xl mx-auto my-0 sm:my-6 rounded-none sm:rounded-[10px] border-0 sm:border border-gray-200 dark:border-white/[0.13] shadow-2xl overflow-hidden bg-white dark:bg-[#000]">
+          {innerContent}
+        </div>
+      </div>,
+      document.body
+    );
+  }
+
+  return innerContent;
 };
 
-export default EditJobModal;
+export default EditJob;

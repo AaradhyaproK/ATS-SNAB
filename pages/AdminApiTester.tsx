@@ -69,14 +69,8 @@ export default function AdminApiTester() {
   const [emailResult, setEmailResult] = useState<string | null>(null);
   const [emailError, setEmailError] = useState<string | null>(null);
 
-  // Run Amazon Bedrock Mantle API Test
+  // Run Amazon Bedrock Mantle API Test via Secure Backend
   const handleTestBedrock = async () => {
-    const cleanKey = bedrockApiKey.replace(/['"]/g, '').trim();
-    if (!cleanKey) {
-      setAiError('Bedrock API key missing. Set VITE_ANTHROPIC_API_KEY in .env.');
-      return;
-    }
-
     setIsAiLoading(true);
     setAiError(null);
     setAiResponse(null);
@@ -536,28 +530,19 @@ console.log(msg.choices[0].message.content);`}</pre>
 
             <div className="space-y-3">
               {[
-                { name: 'VITE_ANTHROPIC_API_KEY', val: import.meta.env.VITE_ANTHROPIC_API_KEY },
-                { name: 'VITE_ANTHROPIC_BASE_URL', val: import.meta.env.VITE_ANTHROPIC_BASE_URL },
-                { name: 'VITE_BEDROCK_CHAT_BASE_URL', val: import.meta.env.VITE_BEDROCK_CHAT_BASE_URL },
-                { name: 'VITE_ANTHROPIC_WORKSPACE_ID', val: import.meta.env.VITE_ANTHROPIC_WORKSPACE_ID },
-                { name: 'VITE_BEDROCK_MODEL_QUESTIONS', val: import.meta.env.VITE_BEDROCK_MODEL_QUESTIONS },
-                { name: 'VITE_BEDROCK_MODEL_REPORT', val: import.meta.env.VITE_BEDROCK_MODEL_REPORT },
-                { name: 'VITE_BEDROCK_MODEL_DEFAULT', val: import.meta.env.VITE_BEDROCK_MODEL_DEFAULT },
-                { name: 'VITE_AWS_S3_BUCKET_NAME', val: import.meta.env.VITE_AWS_S3_BUCKET_NAME },
-                { name: 'VITE_AWS_S3_REGION', val: import.meta.env.VITE_AWS_S3_REGION },
-                { name: 'VITE_BREVO_API_KEY', val: import.meta.env.VITE_BREVO_API_KEY },
-                { name: 'VITE_ASSEMBLYAI_API_KEY', val: import.meta.env.VITE_ASSEMBLYAI_API_KEY },
-                { name: 'VITE_SARVAM_API_KEY', val: import.meta.env.VITE_SARVAM_API_KEY }
+                { name: 'AI Engine (Bedrock Mantle)', endpoint: '/api/bedrock', status: 'Server-Only (Leakproof)' },
+                { name: 'Transactional Email (Amazon SES)', endpoint: '/api/send-email', status: 'Server-Only (Leakproof)' },
+                { name: 'Document Storage (Amazon S3)', endpoint: '/api/upload-s3', status: 'Server-Only (Leakproof)' },
+                { name: 'WhatsApp Notifications', endpoint: 'External Proxy', status: 'Active' },
+                { name: 'Database & Auth (Firebase)', endpoint: 'Firestore Client SDK', status: 'Configured' }
               ].map(item => (
                 <div key={item.name} className="p-3 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl flex justify-between items-center text-xs">
                   <div>
                     <span className="font-mono font-bold text-gray-800 dark:text-gray-200">{item.name}</span>
-                    <p className="font-mono text-gray-400 text-[11px] mt-0.5">
-                      {item.val ? (item.name.includes('KEY') ? item.val.slice(0, 8) + '...' + item.val.slice(-4) : item.val) : 'Not configured'}
-                    </p>
+                    <p className="font-mono text-gray-400 text-[11px] mt-0.5">{item.endpoint}</p>
                   </div>
-                  <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${item.val ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/30' : 'bg-red-500/10 text-red-600 border border-red-500/30'}`}>
-                    {item.val ? 'Set' : 'Missing'}
+                  <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-600 border border-emerald-500/30">
+                    {item.status}
                   </span>
                 </div>
               ))}

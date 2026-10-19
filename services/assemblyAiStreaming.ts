@@ -7,10 +7,8 @@
  * 2. transcribeAudioBlobWithAssemblyAI: Direct audio blob upload & transcription fallback.
  */
 
-const DEFAULT_API_KEY = '4a07d7f7399f447b9ff969c458df945f';
-
 export const getAssemblyAiApiKey = (): string => {
-  return import.meta.env.VITE_ASSEMBLYAI_API_KEY || DEFAULT_API_KEY;
+  return import.meta.env.VITE_ASSEMBLYAI_API_KEY || '';
 };
 
 export interface AssemblyAiStreamCallbacks {

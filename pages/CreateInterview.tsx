@@ -9,6 +9,7 @@ import { ExternalLink, Sparkles, Building2, Check } from 'lucide-react';
 import { LocationCityInput } from '../components/LocationCityInput';
 import { EDUCATION_QUALIFICATIONS, EDUCATION_SPECIALIZATIONS, EducationQualification } from '../data/allEducationDegrees';
 import { resolveStrictListedCity } from '../data/maharashtraCities';
+import { detectSectorsFromText, detectDepartmentsFromText } from '../data/jobDomains';
 import { useCompanyRateLimits } from '../hooks/useRecruiterRateLimits';
 import { getRateLimitReachedMessage, isRateLimitReached } from '../services/rateLimitService';
 import { getCandidateIdentityKeys, isCandidateIdentityInSet, dedupeCandidatesByIdentity } from '../services/candidateIdentity';
@@ -68,6 +69,51 @@ const textContainsSkill = (text: string, skill: string) => {
   const normalizedText = ` ${normalizeSearchText(text)} `;
   const normalizedSkill = ` ${normalizeSearchText(skill)} `;
   return normalizedSkill.trim().length > 1 && normalizedText.includes(normalizedSkill);
+};
+
+export const isStandardFieldKey = (key: string): boolean => {
+  const k = key.trim().toLowerCase();
+  return (
+    k === 'company name' ||
+    k === 'company' ||
+    k === 'client' ||
+    k === 'client name' ||
+    k === 'employer' ||
+    k === 'organization' ||
+    k === 'job no' ||
+    k === 'job number' ||
+    k === 'job code' ||
+    k === 'req id' ||
+    k === 'requisition' ||
+    k === 'job title' ||
+    k === 'title' ||
+    k === 'role' ||
+    k === 'designation' ||
+    k === 'vacancy name' ||
+    k === 'salary' ||
+    k === 'salary range' ||
+    k === 'ctc' ||
+    k === 'compensation' ||
+    k === 'experience' ||
+    k === 'min experience' ||
+    k === 'max experience' ||
+    k === 'exp' ||
+    k === 'location' ||
+    k === 'city' ||
+    k === 'job location' ||
+    k === 'gender' ||
+    k === 'gender requirement' ||
+    k === 'qualification' ||
+    k === 'qualifications' ||
+    k === 'education' ||
+    k === 'employment type' ||
+    k === 'job type' ||
+    k === 'description' ||
+    k === 'job description' ||
+    k === 'industry' ||
+    k === 'sector' ||
+    k === 'department'
+  );
 };
 
 const fetchTextFromUrl = async (targetUrl: string): Promise<string> => {
@@ -232,6 +278,7 @@ const CreateInterview: React.FC = () => {
   const [formData, setFormData] = useState({
     jobNo: '',
     title: '',
+    companyName: '',
     description: '',
     department: '',
     employmentType: 'Full-time',
@@ -494,6 +541,12 @@ const CreateInterview: React.FC = () => {
   };
 
   const handleAddCustomField = () => {
+    const k = tempCustomField.key.trim().toLowerCase();
+    if (k === 'company name' || k === 'company' || k === 'client' || k === 'client name' || k === 'employer' || k === 'organization') {
+      setFormData(prev => ({ ...prev, companyName: tempCustomField.value.trim() }));
+      setTempCustomField({ key: '', value: '' });
+      return;
+    }
     if (tempCustomField.key.trim() && tempCustomField.value.trim()) {
       setCustomFields([...customFields, { ...tempCustomField, id: Date.now() }]);
       setTempCustomField({ key: '', value: '' });
@@ -559,6 +612,7 @@ const CreateInterview: React.FC = () => {
 
   const handleApplyParsedJdData = (parsed: ParsedJdResult) => {
     let extractedCompanyInfo = parsed.companyProfile || '';
+    let extractedCompanyName = parsed.companyName || (parsed as any).company || '';
     let extractedJobNo = parsed.jobNo || '';
     const remainingCustomFields: { key: string; value: string }[] = [];
 
@@ -576,6 +630,15 @@ const CreateInterview: React.FC = () => {
       parsed.customFields.forEach(cf => {
         const keyLower = cf.key.trim().toLowerCase();
         if (
+          keyLower === 'company name' ||
+          keyLower === 'company' ||
+          keyLower === 'client name' ||
+          keyLower === 'client' ||
+          keyLower === 'employer' ||
+          keyLower === 'organization'
+        ) {
+          if (!extractedCompanyName) extractedCompanyName = cf.value.trim();
+        } else if (
           keyLower.includes('job no') ||
           keyLower.includes('job number') ||
           keyLower.includes('job code') ||
@@ -585,6 +648,8 @@ const CreateInterview: React.FC = () => {
           if (!extractedJobNo) extractedJobNo = cf.value.trim();
         } else if (companyProfileKeys.some(k => keyLower.includes(k))) {
           // Handled by compileCompanyProfile
+        } else if (isStandardFieldKey(keyLower)) {
+          // Do not add recognized standard fields into custom fields
         } else {
           remainingCustomFields.push(cf);
         }
@@ -619,10 +684,15 @@ const CreateInterview: React.FC = () => {
     const rawLocCandidate = `${parsed.location || ''} ${parsed.city || ''} ${parsed.state || ''} ${fullJdText}`;
     const resolvedStrictCity = resolveStrictListedCity(rawLocCandidate);
 
+    const jdTextToScan = `${parsed.title || ''} ${parsed.description || ''} ${parsed.skills || ''} ${fullJdText}`;
+    const autoSecs = detectSectorsFromText(jdTextToScan);
+    const autoDepts = detectDepartmentsFromText(jdTextToScan);
+
     setFormData(prev => ({
       ...prev,
       jobNo: extractedJobNo || prev.jobNo || '',
       title: parsed.title || parsed.vacancyName || parsed.designation || prev.title,
+      companyName: extractedCompanyName || prev.companyName || '',
       description: parsed.description || prev.description,
       sector: autoSecs[0] || (parsed as any).sector || (prev as any).sector || '',
       department: autoDepts[0] || parsed.department || parsed.industry || parsed.roleCategory || prev.department,
@@ -635,16 +705,17 @@ const CreateInterview: React.FC = () => {
       maxExperience: parsed.maxExperience !== undefined ? Number(parsed.maxExperience) : prev.maxExperience,
       experience: parsed.minExperience !== undefined ? Number(parsed.minExperience) : prev.experience,
       skills: parsed.skills || (parsed.technicalSkills && parsed.softSkills ? `${parsed.technicalSkills}, ${parsed.softSkills}` : prev.skills),
-      education: parsed.qualification || parsed.education || prev.education,
+      // Minimum education level is strictly selected manually by selectors only (do not auto-fill from JD)
+      education: prev.education,
       salaryRange: parsed.salaryRange || (parsed.minSalary && parsed.maxSalary ? `${parsed.minSalary} - ${parsed.maxSalary}` : (prev as any).salaryRange || ''),
       location: resolvedStrictCity || prev.location || '',
       city: resolvedStrictCity || prev.city || '',
       companyDetails: compiledProfile || extractedCompanyInfo || prev.companyDetails || '',
       genderRequirement: parsed.gender || (prev as any).genderRequirement || 'Any',
-      strictGenderMatch: Boolean(autoStrictGender),
-      strictLocationMatch: Boolean(autoStrictLocation),
-      strictEducationMatch: Boolean(autoStrictEdu),
-      strictExperienceMatch: Boolean(autoStrictExp),
+      strictGenderMatch: false,
+      strictLocationMatch: false,
+      strictEducationMatch: false,
+      strictExperienceMatch: false,
     }));
 
     if (remainingCustomFields.length > 0) {
@@ -883,6 +954,8 @@ const CreateInterview: React.FC = () => {
 
       await setDoc(doc(db, 'interviews', newRand), {
         ...formData,
+        companyName: formData.companyName || '',
+        company: formData.companyName || '',
         status: (formData as any).status || 'Active',
         isActive: true,
         experience: expFormatted,
@@ -898,6 +971,27 @@ const CreateInterview: React.FC = () => {
         createdAt: serverTimestamp(),
         isMock: false,
       });
+
+      // Also mirror to jobs collection for ATS consistency
+      await setDoc(doc(db, 'jobs', newRand), {
+        ...formData,
+        id: newRand,
+        jobId: newRand,
+        companyName: formData.companyName || '',
+        company: formData.companyName || '',
+        status: (formData as any).status || 'Active',
+        isActive: true,
+        experience: expFormatted,
+        qualifications: formData.education || '',
+        education: formData.education || '',
+        customFields,
+        interviewLink: newInterviewLink,
+        accessCode: newAccessCode,
+        recruiterUID: user.uid,
+        teamId,
+        createdBy: creatorInfo,
+        createdAt: serverTimestamp(),
+      }, { merge: true });
 
       // Log audit trail event
       logTeamActivity(
@@ -1182,8 +1276,8 @@ const CreateInterview: React.FC = () => {
               <div className="mt-3 divide-y divide-gray-200 dark:divide-white/[0.11] border border-gray-200 dark:border-white/[0.11] rounded-[6px] bg-white dark:bg-transparent">
                 {[
                   ['Brief', 'Role details and requirements'],
-                  ['Questions', 'Difficulty and manual prompts'],
-                  ['Invites', 'Candidate emails and resume parsing'],
+                  ['Skills', 'Capabilities and requirements'],
+                  ['Additional', 'Dynamic custom fields and perks'],
                 ].map(([title, copy]) => (
                   <div key={title} className="px-3 py-3">
                     <p className="geist-caption font-medium text-gray-900 dark:text-white">{title}</p>
@@ -1217,8 +1311,20 @@ const CreateInterview: React.FC = () => {
               </div>
 
               <div>
-                <label className={labelClass}>Job title / role</label>
+                <label className={labelClass}>Job title / role <span className="text-red-500 dark:text-red-400">*</span></label>
                 <input name="title" type="text" required className={inputClass} value={formData.title} onChange={handleFormChange} placeholder="Senior Frontend Engineer" />
+              </div>
+
+              <div>
+                <label className={labelClass}>Company Name</label>
+                <input
+                  name="companyName"
+                  type="text"
+                  className={inputClass}
+                  value={formData.companyName}
+                  onChange={handleFormChange}
+                  placeholder="e.g. Mukta Group / TechCorp"
+                />
               </div>
 
               <div className="xl:col-span-2">
@@ -1287,87 +1393,6 @@ const CreateInterview: React.FC = () => {
                 </select>
               </div>
 
-              {/* Strict Mandatory AI Candidate Matching Criteria Checkboxes */}
-              <div className="xl:col-span-2 rounded-[8px] border border-amber-500/30 bg-amber-50/50 dark:bg-amber-950/20 p-4 space-y-3 shadow-sm">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
-                  <div className="flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-                    <span className="geist-label uppercase font-bold text-amber-900 dark:text-amber-300 text-xs tracking-wider">
-                      Strict Mandatory AI Criteria Checkmarks
-                    </span>
-                  </div>
-                  <span className="text-[11px] text-amber-700 dark:text-amber-400/80 font-mono">
-                    AI checks checkmarked fields first. Non-matching candidates won't be recommended.
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
-                  <label className="flex items-center gap-2.5 cursor-pointer p-2.5 rounded-[6px] border border-amber-200 dark:border-amber-800/40 bg-white dark:bg-neutral-900/70 hover:border-amber-400 transition-all">
-                    <input
-                      type="checkbox"
-                      name="strictGenderMatch"
-                      checked={formData.strictGenderMatch}
-                      onChange={handleFormChange}
-                      className="w-4 h-4 rounded border-amber-300 text-amber-600 focus:ring-amber-500 accent-amber-600 cursor-pointer"
-                    />
-                    <div>
-                      <span className="text-xs font-semibold text-gray-900 dark:text-amber-100 block">Strict Gender</span>
-                      <span className="text-[10px] text-gray-500 dark:text-amber-300/70 block">
-                        {formData.genderRequirement === 'Any' ? 'Any -> Shows all genders' : `Must be ${formData.genderRequirement}`}
-                      </span>
-                    </div>
-                  </label>
-
-                  <label className="flex items-center gap-2.5 cursor-pointer p-2.5 rounded-[6px] border border-amber-200 dark:border-amber-800/40 bg-white dark:bg-neutral-900/70 hover:border-amber-400 transition-all">
-                    <input
-                      type="checkbox"
-                      name="strictLocationMatch"
-                      checked={formData.strictLocationMatch}
-                      onChange={handleFormChange}
-                      className="w-4 h-4 rounded border-amber-300 text-amber-600 focus:ring-amber-500 accent-amber-600 cursor-pointer"
-                    />
-                    <div>
-                      <span className="text-xs font-semibold text-gray-900 dark:text-amber-100 block">Strict Location</span>
-                      <span className="text-[10px] text-gray-500 dark:text-amber-300/70 block truncate max-w-[120px]">
-                        {formData.city || formData.location ? `Must match ${formData.city || formData.location}` : 'Must match City'}
-                      </span>
-                    </div>
-                  </label>
-
-                  <label className="flex items-center gap-2.5 cursor-pointer p-2.5 rounded-[6px] border border-amber-200 dark:border-amber-800/40 bg-white dark:bg-neutral-900/70 hover:border-amber-400 transition-all">
-                    <input
-                      type="checkbox"
-                      name="strictEducationMatch"
-                      checked={formData.strictEducationMatch}
-                      onChange={handleFormChange}
-                      className="w-4 h-4 rounded border-amber-300 text-amber-600 focus:ring-amber-500 accent-amber-600 cursor-pointer"
-                    />
-                    <div>
-                      <span className="text-xs font-semibold text-gray-900 dark:text-amber-100 block">Strict Education</span>
-                      <span className="text-[10px] text-gray-500 dark:text-amber-300/70 block truncate max-w-[120px]">
-                        {formData.education ? `Must match ${formData.education}` : 'Must match Qualification'}
-                      </span>
-                    </div>
-                  </label>
-
-                  <label className="flex items-center gap-2.5 cursor-pointer p-2.5 rounded-[6px] border border-amber-200 dark:border-amber-800/40 bg-white dark:bg-neutral-900/70 hover:border-amber-400 transition-all">
-                    <input
-                      type="checkbox"
-                      name="strictExperienceMatch"
-                      checked={formData.strictExperienceMatch}
-                      onChange={handleFormChange}
-                      className="w-4 h-4 rounded border-amber-300 text-amber-600 focus:ring-amber-500 accent-amber-600 cursor-pointer"
-                    />
-                    <div>
-                      <span className="text-xs font-semibold text-gray-900 dark:text-amber-100 block">Strict Experience</span>
-                      <span className="text-[10px] text-gray-500 dark:text-amber-300/70 block">
-                        {formData.minExperience || formData.maxExperience ? `${formData.minExperience}-${formData.maxExperience} Yrs` : 'Must fit Yrs range'}
-                      </span>
-                    </div>
-                  </label>
-                </div>
-              </div>
-
               <div className="xl:col-span-2">
                 <label className={labelClass}>Minimum education level</label>
                 <div className="min-h-10 rounded-[6px] border border-gray-300 dark:border-white/[0.11] bg-gray-50 dark:bg-white/[0.025] p-2">
@@ -1381,67 +1406,50 @@ const CreateInterview: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="mt-2 grid grid-cols-1 gap-2 md:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)_minmax(0,1fr)_auto]">
-                  {/* 1. Select Qualification */}
-                  <select
-                    className={selectClass}
-                    value={selectedQualForEdu}
-                    onChange={(e) => setSelectedQualForEdu(e.target.value)}
-                  >
-                    <option value="">-- Select Qualification --</option>
-                    {EDUCATION_QUALIFICATIONS.map(qual => (
-                      <option key={qual} value={qual}>{qual}</option>
-                    ))}
-                  </select>
+                <div className="mt-2.5 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+                  {/* 1. Select Qualification Category */}
+                  <div>
+                    <label className="geist-caption mb-1 block text-gray-500 dark:text-[#8f8f8f]">1. Qualification Category</label>
+                    <select
+                      className={selectClass}
+                      value={selectedQualForEdu}
+                      onChange={(e) => setSelectedQualForEdu(e.target.value)}
+                    >
+                      <option value="">-- Select Qualification Category --</option>
+                      {EDUCATION_QUALIFICATIONS.map(qual => (
+                        <option key={qual} value={qual}>{qual}</option>
+                      ))}
+                    </select>
+                  </div>
 
                   {/* 2. Select Specialization based on Qualification */}
-                  <select
-                    className={selectClass}
-                    value=""
-                    onChange={(e) => {
-                      if (e.target.value) {
-                        toggleEducation(e.target.value);
-                        e.target.value = "";
-                      }
-                    }}
-                  >
-                    <option value="">-- Select {selectedQualForEdu || 'Specialization'} --</option>
-                    {(selectedQualForEdu && EDUCATION_SPECIALIZATIONS[selectedQualForEdu as EducationQualification]
-                      ? EDUCATION_SPECIALIZATIONS[selectedQualForEdu as EducationQualification]
-                      : []
-                    ).map(spec => (
-                      <option key={spec} value={spec}>{spec}</option>
-                    ))}
-                  </select>
-
-                  <input
-                    type="text"
-                    className={inputClass}
-                    placeholder="Or type custom education"
-                    value={eduInput}
-                    onChange={e => setEduInput(e.target.value)}
-                    onKeyDown={e => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        if (eduInput.trim()) {
-                          toggleEducation(eduInput.trim());
-                          setEduInput('');
+                  <div>
+                    <label className="geist-caption mb-1 block text-gray-500 dark:text-[#8f8f8f]">2. Degree / Specialization</label>
+                    <select
+                      className={`${selectClass} ${!selectedQualForEdu ? 'opacity-60 cursor-not-allowed' : ''}`}
+                      value=""
+                      disabled={!selectedQualForEdu}
+                      onChange={(e) => {
+                        if (e.target.value) {
+                          toggleEducation(e.target.value);
+                          e.target.value = "";
                         }
-                      }
-                    }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (eduInput.trim()) {
-                        toggleEducation(eduInput.trim());
-                        setEduInput('');
-                      }
-                    }}
-                    className={secondaryButtonClass}
-                  >
-                    Add
-                  </button>
+                      }}
+                    >
+                      <option value="">
+                        {selectedQualForEdu ? `-- Select ${selectedQualForEdu} Degree --` : '-- Choose Category First --'}
+                      </option>
+                      {selectedQualForEdu && (
+                        <option value={`Any ${selectedQualForEdu}`}>Any {selectedQualForEdu} (All)</option>
+                      )}
+                      {(selectedQualForEdu && EDUCATION_SPECIALIZATIONS[selectedQualForEdu as EducationQualification]
+                        ? EDUCATION_SPECIALIZATIONS[selectedQualForEdu as EducationQualification]
+                        : []
+                      ).map(spec => (
+                        <option key={spec} value={spec}>{spec}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1556,233 +1564,16 @@ const CreateInterview: React.FC = () => {
             </div>
           </section>
 
-          <section className="px-4 py-5 sm:px-6 lg:px-7">
-            <p className={panelHeaderClass}>Invites</p>
-            <h2 className={panelTitleClass}>Candidate access</h2>
-            <p className={helperTextClass}>Add candidate emails directly or extract them from uploaded resumes.</p>
-
-            <div className="mt-5 grid grid-cols-1 gap-4 xl:grid-cols-2">
-
-              <div className="xl:col-span-2">
-                <label className={labelClass}>Candidate Email & WhatsApp Phone (Provide Email, Phone, or Both)</label>
-                <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_1fr_auto]">
-                  <input
-                    type="email"
-                    value={currentEmail}
-                    onChange={(e) => setCurrentEmail(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        handleAddCandidate();
-                      }
-                    }}
-                    placeholder="candidate@company.com (Optional if phone is provided)"
-                    className={inputClass}
-                  />
-                  <input
-                    type="tel"
-                    value={currentPhone}
-                    onChange={(e) => setCurrentPhone(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        handleAddCandidate();
-                      }
-                    }}
-                    placeholder="WhatsApp Phone e.g. 9876543210 (Optional if email is provided)"
-                    className={inputClass}
-                  />
-                  <button type="button" onClick={handleAddCandidate} className={secondaryButtonClass}>Add Candidate</button>
-                </div>
-              </div>
-            </div>
-
-            {candidateDataList.length > 0 && (
-              <div className="mt-3 flex flex-wrap gap-2">
-                {candidateDataList.map((candidate, index) => (
-                  <span key={index} className="geist-small inline-flex h-auto flex-col items-start gap-0.5 rounded-[6px] border border-gray-300 dark:border-white/[0.11] bg-gray-50 dark:bg-white/[0.05] p-2 text-gray-800 dark:text-[#d4d4d4] font-medium shadow-sm dark:shadow-none min-w-[170px]">
-                    <div className="flex items-center justify-between w-full gap-2">
-                      <span className="font-bold text-gray-900 dark:text-white text-xs flex items-center gap-1">
-                        👤 {candidate.name || (candidate.email ? candidate.email.split('@')[0] : 'Candidate')}
-                      </span>
-                      <button type="button" onClick={() => handleRemoveCandidate(index)} className="text-gray-400 dark:text-[#8f8f8f] transition-colors hover:text-red-500 dark:hover:text-white font-bold text-base">&times;</button>
-                    </div>
-                    {candidate.email ? (
-                      <span className="text-[10px] text-gray-500 dark:text-[#aaa] font-mono">✉️ {candidate.email}</span>
-                    ) : null}
-                    {candidate.phone && candidate.phone !== 'N/A' ? (
-                      <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-mono">📱 {candidate.phone}</span>
-                    ) : null}
-                  </span>
-                ))}
-              </div>
-            )}
-
-            <div className="mt-5 rounded-[6px] border border-gray-200 dark:border-white/[0.11] bg-gray-50 dark:bg-white/[0.025] p-3">
-              <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
-                <div>
-                  <label className={labelClass}>Suggested candidates</label>
-                  <p className="geist-small text-gray-500 dark:text-[#8f8f8f]">Matched from Resume Dump using this role's description and required skills. Permanently shortlisted candidates are excluded.</p>
-                </div>
-                {requiredSkillSignals.length > 0 && (
-                  <span className="geist-small rounded-[6px] border border-gray-200 dark:border-white/[0.11] bg-white dark:bg-[#050505] px-2 py-1 text-gray-600 dark:text-[#8f8f8f]">
-                    {requiredSkillSignals.length} signal{requiredSkillSignals.length === 1 ? '' : 's'}
-                  </span>
-                )}
-              </div>
-
-              {loadingResumeDumpCandidates || loadingShortlistedCandidates ? (
-                <div className="mt-3 grid gap-2 xl:grid-cols-2">
-                  {[0, 1].map((item) => (
-                    <div key={item} className="rounded-[6px] border border-gray-200 dark:border-white/[0.11] bg-white dark:bg-[#050505] p-3">
-                      <SkeletonBlock className="h-4 w-36" />
-                      <SkeletonBlock className="mt-2 h-3 w-48 max-w-full bg-gray-200 dark:bg-white/[0.08]" />
-                      <div className="mt-3 flex gap-2">
-                        <SkeletonBlock className="h-6 w-16 bg-gray-200 dark:bg-white/[0.08]" />
-                        <SkeletonBlock className="h-6 w-20 bg-gray-200 dark:bg-white/[0.08]" />
-                        <SkeletonBlock className="h-6 w-14 bg-gray-200 dark:bg-white/[0.08]" />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : suggestedCandidates.length > 0 ? (
-                <div className="mt-3 grid gap-2 xl:grid-cols-2">
-                  {suggestedCandidates.map((candidate) => {
-                    const candidateEmail = candidate.email.trim().toLowerCase();
-                    const candidatePhone = candidate.phone ? candidate.phone.trim() : '';
-                    const candidateAdded = candidateDataList.some((c) => 
-                      (candidateEmail && c.email.toLowerCase() === candidateEmail) || 
-                      (candidatePhone && c.phone === candidatePhone)
-                    );
-
-                    return (
-                      <div key={candidate.id} className="rounded-[6px] border border-gray-200 dark:border-white/[0.11] bg-white dark:bg-[#050505] p-3 shadow-sm dark:shadow-none">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <p className="geist-caption truncate font-semibold text-gray-900 dark:text-white" title={candidate.name}>
-                              {candidate.name || 'Unknown Candidate'}
-                            </p>
-                            <p className="geist-small mt-0.5 truncate text-blue-600 dark:text-[#8bbde8]" title={candidate.email}>
-                              {candidate.email || (candidate.phone ? `📱 ${candidate.phone}` : 'No contact info')}
-                            </p>
-                            {(candidate.currentTitle || candidate.totalExperienceYears > 0) && (
-                              <p className="geist-small mt-1 truncate text-gray-500 dark:text-[#6b7280]">
-                                {[candidate.currentTitle, candidate.totalExperienceYears > 0 ? `${candidate.totalExperienceYears} yrs` : ''].filter(Boolean).join(' · ')}
-                              </p>
-                            )}
-                          </div>
-                          <span className="geist-small shrink-0 rounded-[6px] border border-gray-200 dark:border-white/[0.14] bg-gray-100 dark:bg-white/[0.05] px-2 py-1 text-gray-700 dark:text-[#d4d4d4] font-medium">
-                            {candidate.matchScore}% match
-                          </span>
-                        </div>
-
-                        <div className="mt-3 flex flex-wrap gap-1.5">
-                          {candidate.matchedSkills.slice(0, 5).map((skill) => (
-                            <span key={skill} className="geist-small rounded-[6px] border border-gray-200 dark:border-white/[0.11] bg-gray-100 dark:bg-white/[0.04] px-2 py-0.5 text-gray-700 dark:text-[#d4d4d4]">
-                              {skill}
-                            </span>
-                          ))}
-                          {candidate.matchedSkills.length > 5 && (
-                            <span className="geist-small rounded-[6px] border border-gray-200 dark:border-white/[0.11] bg-gray-100 dark:bg-white/[0.04] px-2 py-0.5 text-gray-500 dark:text-[#8f8f8f]">
-                              +{candidate.matchedSkills.length - 5}
-                            </span>
-                          )}
-                        </div>
-
-                        <div className="mt-2 space-y-1">
-                          {candidate.matchReasons.slice(0, 2).map((reason) => (
-                            <p key={reason} className="geist-small text-gray-600 dark:text-[#a1a1aa]">✓ {reason}</p>
-                          ))}
-                          {candidate.missingSkills.length > 0 && (
-                            <p className="geist-small text-gray-500 dark:text-[#8f8f8f]">Missing signals: {candidate.missingSkills.slice(0, 3).join(', ')}{candidate.missingSkills.length > 3 ? ` +${candidate.missingSkills.length - 3}` : ''}</p>
-                          )}
-                        </div>
-
-                        <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-                          {candidate.resumeUrl ? (
-                            <a
-                              href={candidate.resumeUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="geist-small inline-flex h-8 items-center gap-1.5 rounded-[6px] border border-gray-300 dark:border-white/[0.11] bg-gray-100 dark:bg-white/[0.03] px-2.5 font-medium text-gray-700 dark:text-[#d4d4d4] transition-colors hover:bg-gray-200 dark:hover:bg-white/[0.06] hover:text-gray-900 dark:hover:text-white"
-                            >
-                              <ExternalLink size={13} strokeWidth={1.8} />
-                              Open resume
-                            </a>
-                          ) : (
-                            <span className="geist-small text-gray-400 dark:text-[#6b7280]">No resume link</span>
-                          )}
-
-                          <button
-                            type="button"
-                            onClick={() => addCandidateEntry(candidate.email, candidate.phone, candidate.name)}
-                            disabled={(!candidateEmail && !candidatePhone) || Boolean(candidateAdded)}
-                            className={secondaryButtonClass}
-                          >
-                            {candidateAdded ? 'Added' : (candidateEmail || candidatePhone) ? 'Add to invite' : 'No contact'}
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="mt-3 rounded-[6px] border border-dashed border-gray-300 dark:border-white/[0.12] bg-white dark:bg-[#050505] px-3 py-4 text-center">
-                  <p className={`geist-caption ${shortlistedCandidatesError ? 'text-red-500 dark:text-[#ff8f8f]' : 'text-gray-800 dark:text-white'}`}>
-                    {shortlistedCandidatesError
-                      ? 'Candidate eligibility could not be verified, so suggestions are temporarily hidden.'
-                      : requiredSkillSignals.length === 0
-                      ? 'Add job skills or a job description to see matching candidates.'
-                      : resumeDumpCandidates.length === 0
-                        ? 'No Resume Dump candidates saved yet.'
-                        : excludedShortlistedCandidateCount === resumeDumpCandidates.length
-                          ? 'All Resume Dump candidates are already permanently shortlisted.'
-                        : 'No saved candidates match this role yet.'}
-                  </p>
-                  <p className="geist-small mt-1 text-gray-500 dark:text-[#8f8f8f]">
-                    {shortlistedCandidatesError
-                      ? 'Refresh the page to retry the shortlist eligibility check.'
-                      : 'Suggestions update automatically as you edit the role.'}
-                  </p>
-                </div>
-              )}
-            </div>
-
-            <div className="mt-5 rounded-[6px] border border-gray-200 dark:border-white/[0.11] bg-gray-50 dark:bg-white/[0.025] p-3">
-              <label
-                htmlFor="resume-upload"
-                className={`geist-caption flex cursor-pointer items-center justify-between gap-3 rounded-[6px] border border-dashed bg-white dark:bg-[#050505] px-3 py-3 text-gray-700 dark:text-[#d4d4d4] transition-colors hover:border-gray-400 dark:hover:border-white/[0.3] ${parsingResumes ? 'cursor-not-allowed border-gray-300 dark:border-white/[0.12]' : 'border-gray-300 dark:border-white/[0.18]'}`}
-              >
-                {parsingResumes ? (
-                  <span className="flex w-full items-center justify-between gap-3" role="status" aria-label="Parsing resumes">
-                    <span className="flex min-w-0 flex-1 flex-col gap-2">
-                      <SkeletonBlock className="h-4 w-48 max-w-full" />
-                      <SkeletonBlock className="h-3 w-28 bg-gray-200 dark:bg-white/[0.08]" />
-                    </span>
-                    <SkeletonBlock className="h-3 w-16 bg-gray-200 dark:bg-white/[0.08]" />
-                  </span>
-                ) : (
-                  <>
-                    <span className="font-medium text-gray-900 dark:text-white">Upload resumes to parse and save candidates</span>
-                    <span className="geist-small text-gray-500 dark:text-[#8f8f8f]">PDF, DOCX, or TXT</span>
-                  </>
-                )}
-              </label>
-              <input id="resume-upload" type="file" multiple accept=".pdf,.docx,.txt,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain" className="hidden" onChange={handleResumeUpload} disabled={parsingResumes} />
-              <p className="geist-small mt-2 text-gray-500 dark:text-[#8f8f8f]">Each resume is added to Resume Dump with structured experience, education, skills, and source details. Extracted emails are also queued for review.</p>
-            </div>
-          </section>
-
           <div className="sticky bottom-0 border-t border-gray-200 dark:border-white/[0.11] bg-white/95 dark:bg-[#000]/95 px-4 py-4 backdrop-blur sm:px-6 lg:px-7 shadow-lg dark:shadow-none">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <p className="geist-small text-gray-500 dark:text-[#8f8f8f]">Access codes are generated when the interview is created.</p>
-              <button type="submit" disabled={loading || sendingEmails || rateLimitLoading || interviewLimitReached} className={primaryButtonClass}>
-                {loading || sendingEmails ? (
-                  <span className="flex w-56 max-w-full flex-col items-center gap-1.5" role="status" aria-label={loading ? 'Saving interview' : 'Sending invitations'}>
-                    <SkeletonBlock className="h-3.5 w-40 bg-gray-300 dark:bg-black/[0.18]" />
-                    <SkeletonBlock className="h-2.5 w-28 bg-gray-200 dark:bg-black/[0.12]" />
+              <p className="geist-small text-gray-500 dark:text-[#8f8f8f]">Access codes and listings are generated upon submission.</p>
+              <button type="submit" disabled={loading || rateLimitLoading || interviewLimitReached} className={primaryButtonClass}>
+                {loading ? (
+                  <span className="flex w-44 max-w-full flex-col items-center gap-1.5" role="status" aria-label="Saving job">
+                    <SkeletonBlock className="h-3.5 w-32 bg-gray-300 dark:bg-black/[0.18]" />
+                    <SkeletonBlock className="h-2.5 w-20 bg-gray-200 dark:bg-black/[0.12]" />
                   </span>
-                ) : interviewLimitReached ? 'Job limit reached' : 'Create job and send invitations'}
+                ) : interviewLimitReached ? 'Job limit reached' : 'Create Job Opening'}
               </button>
             </div>
           </div>

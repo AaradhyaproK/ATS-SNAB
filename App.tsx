@@ -53,6 +53,7 @@ import PublicJobSeekerUpload from './pages/PublicJobSeekerUpload';
 import RecruiterTemplatesPage from './pages/RecruiterTemplates';
 import HotLeads from './pages/HotLeads';
 import CandidatePortal from './pages/CandidatePortal';
+import LandingPage from './pages/LandingPage';
 
 const DefaultRouteLoader = () => (
   <div className="flex items-center justify-center min-h-screen bg-background text-foreground">
@@ -86,24 +87,6 @@ const JobToCandidatePortalRedirect: React.FC = () => {
   return <Navigate to={interviewId ? `/candidate?job=${interviewId}` : '/candidate'} replace />;
 };
 
-const HomeRoute: React.FC = () => {
-  const { user, userProfile, loading } = useAuth();
-
-  if (loading) return (
-    <div className="flex items-center justify-center min-h-screen bg-background text-foreground">
-      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-    </div>
-  );
-
-  if (user) {
-    const userRole: string = userProfile?.role || (user.email === 'admin@snab.co.in' || user.email?.includes('admin') ? 'admin' : 'recruiter');
-    if (userRole === 'admin') return <Navigate to="/admin" replace />;
-    return <Navigate to="/recruiter/jobs" replace />;
-  }
-
-  return <AuthPage />;
-};
-
 const App: React.FC = () => {
   return (
     <MessageBoxProvider>
@@ -114,7 +97,8 @@ const App: React.FC = () => {
               <ErrorBoundary>
                 <Routes>
             {/* Public Routes (No Layout) */}
-            <Route path="/" element={<HomeRoute />} />
+            <Route path="/" element={<LandingPage />} />
+            <Route path="landing" element={<LandingPage />} />
             <Route path="auth" element={<AuthPage />} />
             <Route path="blogs" element={<Blogs />} />
             <Route path="contact" element={<ContactUs />} />
