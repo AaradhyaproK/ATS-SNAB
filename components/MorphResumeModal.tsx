@@ -418,23 +418,35 @@ export const MorphResumeModal: React.FC<MorphResumeModalProps> = ({ candidate, i
             }
           }
 
-          // Check for web links and profiles
+          // Check for web links and profile labels (GitHub, LinkedIn, Portfolio, etc.)
+          const strippedStr = str.replace(/^[|•·\-\/\s:,]+|[|•·\-\/\s:,]+$/g, '').toLowerCase();
           if (
             urlRegex.test(str) ||
             lowerStr.includes('linkedin.com') ||
             lowerStr.includes('github.com') ||
+            lowerStr.includes('gitlab.com') ||
             lowerStr.includes('http://') ||
             lowerStr.includes('https://') ||
             lowerStr.includes('www.') ||
             lowerStr.includes('.com/') ||
             lowerStr.includes('.io/') ||
-            lowerStr.includes('.me/')
+            lowerStr.includes('.me/') ||
+            strippedStr === 'github' ||
+            strippedStr.startsWith('github:') ||
+            strippedStr === 'linkedin' ||
+            strippedStr.startsWith('linkedin:') ||
+            strippedStr === 'portfolio' ||
+            strippedStr.startsWith('portfolio:')
           ) {
             shouldBlank = true;
           }
 
-          // Check for orphaned contact labels (e.g. "Email:", "Phone:", "LinkedIn:")
-          if (labelRegex.test(str) || str === '✉' || str === '📞' || str === '📱' || str === '🔗') {
+          // Check for orphaned contact labels (e.g. "Email:", "Phone:", "| GitHub:", "| LinkedIn:")
+          if (
+            labelRegex.test(str) ||
+            labelRegex.test(strippedStr) ||
+            str === '✉' || str === '📞' || str === '📱' || str === '🔗'
+          ) {
             shouldBlank = true;
           }
 
@@ -447,31 +459,20 @@ export const MorphResumeModal: React.FC<MorphResumeModalProps> = ({ candidate, i
             const fontHeight = fontPt * scale;
             const itemWidth = Math.max(8 * scale, (item.width || str.length * 6.5) * scale);
 
-            const pad = 3 * scale;
-            const boxX = Math.max(0, vx - pad);
-            const boxY = Math.max(0, vy - fontHeight - pad);
-            const boxW = Math.min(canvas.width - boxX, itemWidth + pad * 2);
-            const boxH = Math.min(canvas.height - boxY, fontHeight * 1.35 + pad * 2);
+            const padX = 2 * scale;
+            const padY = 2 * scale;
+            const boxX = Math.max(0, vx - padX);
+            const boxY = Math.max(0, vy - fontHeight - padY);
+            const boxW = Math.min(canvas.width - boxX, itemWidth + padX * 2);
+            const boxH = Math.min(canvas.height - boxY, fontHeight * 1.35 + padY * 2);
 
-            // Sample canvas background color just above/beside box to match colored bars or white backgrounds
-            let fillColor = '#ffffff';
-            try {
-              const sampleX = Math.max(0, Math.min(canvas.width - 1, Math.round(boxX + 2)));
-              const sampleY = Math.max(0, Math.min(canvas.height - 1, Math.round(boxY - 3)));
-              const px = ctx.getImageData(sampleX, sampleY, 1, 1).data;
-              if (px[3] > 120) {
-                fillColor = `rgb(${px[0]}, ${px[1]}, ${px[2]})`;
-              }
-            } catch (_) {
-              fillColor = '#ffffff';
-            }
-
-            ctx.fillStyle = fillColor;
+            // Clean, pure white mask to seamlessly blend into document background
+            ctx.fillStyle = '#ffffff';
             ctx.fillRect(boxX, boxY, boxW, boxH);
           }
         });
 
-        // 3. Blank out PDF clickable link annotations
+        // 3. Blank out PDF clickable link annotations in clean white
         try {
           const annotations = await page.getAnnotations();
           annotations.forEach((ann: any) => {
@@ -482,19 +483,7 @@ export const MorphResumeModal: React.FC<MorphResumeModalProps> = ({ candidate, i
               const w = Math.abs(rect[2] - rect[0]);
               const h = Math.abs(rect[3] - rect[1]);
 
-              let fillColor = '#ffffff';
-              try {
-                const sampleX = Math.max(0, Math.min(canvas.width - 1, Math.round(x + 2)));
-                const sampleY = Math.max(0, Math.min(canvas.height - 1, Math.round(y - 2)));
-                const px = ctx.getImageData(sampleX, sampleY, 1, 1).data;
-                if (px[3] > 120) {
-                  fillColor = `rgb(${px[0]}, ${px[1]}, ${px[2]})`;
-                }
-              } catch (_) {
-                fillColor = '#ffffff';
-              }
-
-              ctx.fillStyle = fillColor;
+              ctx.fillStyle = '#ffffff';
               ctx.fillRect(Math.max(0, x - 2), Math.max(0, y - 2), w + 4, h + 4);
             }
           });
