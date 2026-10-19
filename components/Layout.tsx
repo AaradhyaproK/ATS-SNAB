@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Link, useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import NotificationCenter from './NotificationCenter';
 import { signOut } from 'firebase/auth';
@@ -13,7 +13,7 @@ import RecruiterRateLimitBanner from './RecruiterRateLimitBanner';
 import WhatsAppConnectModal from './WhatsAppConnectModal';
 import { fetchWhatsAppStatus, getStoredSessionId, getStoredPasscode } from '../services/waSenderService';
 
-const LayoutContent: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+const LayoutContent: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
   const { user, userProfile, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -67,11 +67,8 @@ const LayoutContent: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   const isRecruiterPath = showRecruiterSidebar;
   const isRecruiterDashboard = location.pathname === '/recruiter/jobs';
   const navigateFromSidebar = React.useCallback((href: string) => {
-    React.startTransition(() => {
-      navigate(href);
-    });
     setIsMobileMenuOpen(false);
-  }, [navigate]);
+  }, []);
 
   return (
     <div className={`${isRecruiterPath ? 'recruiter-shell' : ''} min-h-screen bg-background text-foreground font-sans selection:bg-primary/20 selection:text-foreground flex flex-col transition-colors duration-300`}>
@@ -294,7 +291,7 @@ const LayoutContent: React.FC<{ children: React.ReactNode }> = ({ children }) =>
         <div className="flex min-w-0 flex-1 flex-col">
           <main className={`workspace-card flex-grow w-full mx-auto relative ${isRecruiterPath ? 'recruiter-workspace' : ''} ${showRecruiterSidebar ? 'max-w-none p-0' : 'px-4 sm:px-6 lg:px-8 py-8 max-w-7xl'}`}>
 
-            {children}
+            {children || <Outlet />}
           </main>
 
           <footer className={`z-10 mt-auto border-t backdrop-blur-sm ${isRecruiterPath ? 'recruiter-footer' : ''} ${showRecruiterSidebar ? 'border-white/[0.11] bg-[#000] text-white' : 'border-border bg-background/90'}`}>
@@ -454,8 +451,8 @@ const LayoutContent: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   );
 };
 
-const Layout: React.FC<{ children: React.ReactNode }> = React.memo(({ children }) => (
+const Layout: React.FC<{ children?: React.ReactNode }> = ({ children }) => (
   <LayoutContent>{children}</LayoutContent>
-));
+);
 
 export default Layout;

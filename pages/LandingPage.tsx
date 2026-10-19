@@ -54,6 +54,7 @@ import {
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import Logo from '../components/Logo';
+import LandingBackgroundAnimation from '../components/landing/LandingBackgroundAnimation';
 
 // ── Head-to-Head Comparison: Traditional Legacy ATS vs hireX by SNAB ──
 const COMPARISON_ROWS = [
@@ -311,15 +312,8 @@ export const LandingPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-[#fafafa] dark:bg-[#000000] text-gray-900 dark:text-[#ededed] font-sans selection:bg-emerald-500/20 selection:text-emerald-700 dark:selection:text-emerald-300 transition-colors duration-200">
       
-      {/* ── Background Ambient Mesh & Gradients ── */}
-      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-        {/* Top subtle emerald and blue radial glows */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1100px] h-[550px] bg-[radial-gradient(ellipse_at_top,rgba(16,185,129,0.08),transparent_65%)] dark:bg-[radial-gradient(ellipse_at_top,rgba(16,185,129,0.12),transparent_65%)]" />
-        <div className="absolute top-[20%] right-[-10%] w-[600px] h-[600px] bg-[radial-gradient(circle,rgba(59,130,246,0.05),transparent_60%)] dark:bg-[radial-gradient(circle,rgba(59,130,246,0.08),transparent_60%)]" />
-        <div className="absolute top-[60%] left-[-10%] w-[600px] h-[600px] bg-[radial-gradient(circle,rgba(139,92,246,0.05),transparent_60%)] dark:bg-[radial-gradient(circle,rgba(139,92,246,0.07),transparent_60%)]" />
-        {/* Crisp subtle micro-dot grid pattern */}
-        <div className="absolute inset-0 bg-[radial-gradient(#80808012_1px,transparent_1px)] dark:bg-[radial-gradient(#ffffff0a_1px,transparent_1px)] bg-[size:24px_24px] [mask-image:radial-gradient(ellipse_75%_50%_at_50%_0%,#000_70%,transparent_100%)]" />
-      </div>
+      {/* ── World-Class Dynamic Background Animation ── */}
+      <LandingBackgroundAnimation isDark={isDark} />
 
       {/* ── 1. Top Navbar (Clean, High-End SaaS Header) ── */}
       <header className="sticky top-0 z-50 bg-white/95 dark:bg-[#000000]/95 backdrop-blur-md border-b border-gray-200/90 dark:border-white/[0.09] px-4 sm:px-6 lg:px-8 transition-colors">
