@@ -38,6 +38,7 @@ import {
 } from 'lucide-react';
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { db } from '../services/firebase';
+import { useForm, ValidationError } from '@formspree/react';
 import { useAuth } from '../context/AuthContext';
 import Logo from '../components/Logo';
 
@@ -202,6 +203,7 @@ export default function LandingPage() {
   });
   const [submittingLead, setSubmittingLead] = useState(false);
   const [leadSubmitted, setLeadSubmitted] = useState(false);
+  const [formspreeState, handleFormspreeSubmit] = useForm('movdbzab');
 
   // Cost Estimator State
   const [pricingTab, setPricingTab] = useState<'estimator' | 'benchmark'>('estimator');
@@ -342,37 +344,16 @@ I want to lock in this price and schedule a live demo.`
     setMobileMenuOpen(false);
   };
 
-  const handleLeadSubmit = async (e: React.FormEvent) => {
+  const handleLeadSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!leadForm.name || !leadForm.email || !leadForm.phone) return;
 
     setSubmittingLead(true);
     try {
-      // 1. Send inquiry to Formspree
-      try {
-        await fetch('https://formspree.io/f/movdbzab', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-          },
-          body: JSON.stringify({
-            name: leadForm.name,
-            email: leadForm.email,
-            phone: leadForm.phone,
-            company: leadForm.company || 'Not Specified',
-            hiringVolume: leadForm.hiringVolume,
-            inquiryType: '1 Month Free Demo & Walkthrough',
-            offer: '1-Month Free Demo',
-            page: window.location.href,
-            submittedAt: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }),
-          }),
-        });
-      } catch (formspreeErr) {
-        console.warn('Formspree dispatch error (proceeding to Firestore fallback):', formspreeErr);
-      }
+      // 1. Submit through official @formspree/react handler
+      await handleFormspreeSubmit(e);
 
-      // 2. Persist to Firestore
+      // 2. Persist to Firestore as reliable backup
       await addDoc(collection(db, 'clientPresentations'), {
         ...leadForm,
         offer: '1 Month Free Demo',
@@ -2108,7 +2089,7 @@ I want to lock in this price and schedule a live demo.`
               <X className="size-4" />
             </button>
 
-            {leadSubmitted ? (
+            {formspreeState.succeeded || leadSubmitted ? (
               <div className="text-center py-6">
                 <div className="size-12 rounded-full bg-[#EAFBF4] text-[#10B981] flex items-center justify-center mx-auto mb-3">
                   <CheckCircle2 className="size-7" />
@@ -2151,16 +2132,24 @@ I want to lock in this price and schedule a live demo.`
                 </p>
 
                 <form onSubmit={handleLeadSubmit} className="space-y-4">
+                  {/* Hidden context fields for Formspree */}
+                  <input type="hidden" name="_subject" value="New 1-Month Free Demo Inquiry - HireX Snab" />
+                  <input type="hidden" name="offer" value="1-Month Free Demo" />
+                  <input type="hidden" name="inquiryType" value="1 Month Free Demo & Walkthrough" />
+
                   <div>
                     <label className="block text-[11px] font-bold text-[#17213F] mb-1">Contact Name *</label>
                     <input
                       type="text"
+                      name="name"
+                      id="name"
                       required
                       value={leadForm.name}
                       onChange={(e) => setLeadForm({ ...leadForm, name: e.target.value })}
                       placeholder="e.g. Rahul Sharma"
                       className="w-full h-10 px-3.5 rounded-xl border border-[#D5DCED] bg-[#F8F9FF] text-xs text-[#17213F] focus:outline-none focus:border-[#5145FF] focus:bg-white"
                     />
+                    <ValidationError prefix="Name" field="name" errors={formspreeState.errors} className="text-red-500 text-[10px] mt-1" />
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -2168,23 +2157,29 @@ I want to lock in this price and schedule a live demo.`
                       <label className="block text-[11px] font-bold text-[#17213F] mb-1">Work Email *</label>
                       <input
                         type="email"
+                        name="email"
+                        id="email"
                         required
                         value={leadForm.email}
                         onChange={(e) => setLeadForm({ ...leadForm, email: e.target.value })}
                         placeholder="rahul@company.com"
                         className="w-full h-10 px-3.5 rounded-xl border border-[#D5DCED] bg-[#F8F9FF] text-xs text-[#17213F] focus:outline-none focus:border-[#5145FF] focus:bg-white"
                       />
+                      <ValidationError prefix="Email" field="email" errors={formspreeState.errors} className="text-red-500 text-[10px] mt-1" />
                     </div>
                     <div>
                       <label className="block text-[11px] font-bold text-[#17213F] mb-1">Phone / WhatsApp *</label>
                       <input
                         type="tel"
+                        name="phone"
+                        id="phone"
                         required
                         value={leadForm.phone}
                         onChange={(e) => setLeadForm({ ...leadForm, phone: e.target.value })}
                         placeholder="+91 9876543210"
                         className="w-full h-10 px-3.5 rounded-xl border border-[#D5DCED] bg-[#F8F9FF] text-xs text-[#17213F] focus:outline-none focus:border-[#5145FF] focus:bg-white"
                       />
+                      <ValidationError prefix="Phone" field="phone" errors={formspreeState.errors} className="text-red-500 text-[10px] mt-1" />
                     </div>
                   </div>
 
@@ -2192,16 +2187,21 @@ I want to lock in this price and schedule a live demo.`
                     <label className="block text-[11px] font-bold text-[#17213F] mb-1">Company / Agency Name</label>
                     <input
                       type="text"
+                      name="company"
+                      id="company"
                       value={leadForm.company}
                       onChange={(e) => setLeadForm({ ...leadForm, company: e.target.value })}
                       placeholder="e.g. Acme Talent Partners"
                       className="w-full h-10 px-3.5 rounded-xl border border-[#D5DCED] bg-[#F8F9FF] text-xs text-[#17213F] focus:outline-none focus:border-[#5145FF] focus:bg-white"
                     />
+                    <ValidationError prefix="Company" field="company" errors={formspreeState.errors} className="text-red-500 text-[10px] mt-1" />
                   </div>
 
                   <div>
                     <label className="block text-[11px] font-bold text-[#17213F] mb-1">Monthly Hiring Volume</label>
                     <select
+                      name="hiringVolume"
+                      id="hiringVolume"
                       value={leadForm.hiringVolume}
                       onChange={(e) => setLeadForm({ ...leadForm, hiringVolume: e.target.value })}
                       className="w-full h-10 px-3 rounded-xl border border-[#D5DCED] bg-[#F8F9FF] text-xs text-[#17213F] focus:outline-none focus:border-[#5145FF] focus:bg-white"
@@ -2216,10 +2216,10 @@ I want to lock in this price and schedule a live demo.`
                   <div className="pt-2">
                     <button
                       type="submit"
-                      disabled={submittingLead}
+                      disabled={submittingLead || formspreeState.submitting}
                       className="w-full h-11 rounded-xl bg-gradient-to-r from-[#5145FF] to-[#3B82F6] hover:from-[#4135E8] hover:to-[#2563EB] text-white text-xs font-bold transition-all shadow-md shadow-[#5145FF]/20 cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
                     >
-                      <span>{submittingLead ? 'Submitting to Formspree...' : 'Claim 1-Month Free Demo & Walkthrough'}</span>
+                      <span>{submittingLead || formspreeState.submitting ? 'Submitting to Formspree...' : 'Claim 1-Month Free Demo & Walkthrough'}</span>
                       <ArrowRight className="size-4" />
                     </button>
                     <div className="mt-2 text-center text-[10px] text-[#7D89A5]">
