@@ -563,6 +563,7 @@ export interface WhatsAppInviteOptions {
   whatsappSessionPasscode?: string;
   recruiterUid?: string;
   customTemplate?: WhatsAppTemplateConfig;
+  customMessageText?: string | ((candidate: { name: string; phone: string; email?: string }) => string);
 }
 
 /**
@@ -592,22 +593,22 @@ export function buildWhatsAppInviteText(params: {
     salary: options?.salary || options?.salaryRange || 'Competitive / As per Job Description',
     employment_type: options?.employmentType || 'Full Time',
     recruiter_name: options?.recruiterName || 'HR Recruiting Team',
-    recruiter_phone: options?.recruiterPhone || '9762588623 / 8484888632',
-    recruiter_email: 'noreply@snab.co.in',
-    support_phone: '9762588623 / 8484888632'
+    recruiter_phone: options?.recruiterPhone || '9511779317',
+    recruiter_email: 'hello@snab.co.in',
+    support_phone: '9511779317'
   };
 
   const custom = options?.customTemplate;
 
   const headline = custom?.headline
     ? renderTemplateText(custom.headline, context)
-    : (isReminder ? `*INTERVIEW REMINDER*` : `*CONGRATULATIONS! YOU ARE SHORTLISTED*`);
+    : (isReminder ? `*PORTAL JOB MATCH REMINDER*` : `🎯 *JOB WITH SKILL MATCH AVAILABLE ON PORTAL*`);
 
   const body = custom?.body
     ? renderTemplateText(custom.body, context)
     : (isReminder
-        ? `Dear *${candidateName}*,\n\nFriendly reminder: You have been *shortlisted for ${jobTitle}* at *${options?.companyName || 'SNAB hireX'}*, but your AI Video Interview is still pending!\n\nPlease complete your interview at your convenience to keep your application active.`
-        : `Dear *${candidateName}*,\n\nGreat news! Your profile has been *shortlisted for this interview round* for the *${jobTitle}* role at *${options?.companyName || 'SNAB hireX'}*.\n\nPlease complete your 15-minute AI Video Interview from your phone or laptop at your convenience.\n\n- No HR scheduling needed\n- Complete anytime, anywhere`);
+        ? `Dear *${candidateName}*,\n\nFriendly reminder: A verified job opening matching your skills is available on our candidate portal for the *${jobTitle}* position.\n\nPlease login and apply for the job at your convenience to keep your application active.`
+        : `Dear *${candidateName}*,\n\nGreat news! A verified job opening matching your skills is available on our candidate portal for the *${jobTitle}* position.\n\nPlease login and apply for the job directly below:`);
 
   const showJobDetails = custom ? custom.showJobDetails !== false : true;
   const showCredentials = custom ? custom.showCredentials !== false : true;
@@ -634,24 +635,23 @@ export function buildWhatsAppInviteText(params: {
 
   const jobDetailsSection = showJobDetails && jobDetailsLines.length > 0 ? `\n\n*JOB REQUIREMENT DETAILS:*\n${jobDetailsLines.join('\n')}` : '';
 
-  const credentialsSection = showCredentials ? `\n\n*YOUR ACCESS CREDENTIALS:*
-• *Access Code:* *${accessCode}*
-• *Interview Link:* ${interviewLink}` : '';
+  const credentialsSection = showCredentials ? `\n\n👉 *Login and Apply for this Job on the Portal:*
+🔗 ${interviewLink}` : '';
 
-  const recruiterName = options?.recruiterName || 'Recruiting Team';
-  const recruiterPhone = options?.recruiterPhone || '9762588623 / 8484888632';
+  const recruiterName = options?.recruiterName || 'Recruiting Desk';
+  const recruiterPhone = options?.recruiterPhone || '9511779317';
 
-  const recruiterSection = showRecruiterContact ? `\n\n*RECRUITER / CONTACT PERSON:*
-• *Contact Person:* *${recruiterName}*
-• *Mobile / Contact:* *${recruiterPhone}*` : '';
+  const recruiterSection = showRecruiterContact ? `\n\n*FOR ANY QUERIES:*
+• *Contact:* *${recruiterPhone}*
+• *Email:* hello@snab.co.in` : '';
 
   const instructionsText = custom?.instructions
     ? renderTemplateText(custom.instructions, context)
-    : `1. Ensure a working camera & microphone on your phone or laptop.\n2. Use a stable internet connection in a quiet environment.`;
+    : `1. Click the portal link above to inspect the job specifications.\n2. Login with your registered mobile/email and submit your application in 1 click.`;
 
   const signoffText = custom?.signoff
     ? renderTemplateText(custom.signoff, context)
-    : `Best regards,\n*${options?.companyName || 'SNAB hireX'} Recruitment Team*`;
+    : `Best regards,\n*Candidate Recruitment Desk*\n✉️ hello@snab.co.in`;
 
   return `${headline}
 
@@ -659,8 +659,6 @@ ${body}${jobDetailsSection}${credentialsSection}${recruiterSection}
 
 *Instructions:*
 ${instructionsText}
-
-Need Technical Help? Call Support: 9762588623 / 8484888632
 
 ${signoffText}`;
 }
@@ -697,7 +695,22 @@ export async function sendInterviewWhatsAppInvite(params: {
     }
   };
 
-  const messageText = buildWhatsAppInviteText(updatedParams);
+  let messageText = '';
+  if (typeof params.options?.customMessageText === 'function') {
+    messageText = params.options.customMessageText({
+      name: params.candidateName || 'Candidate',
+      phone: params.phone
+    });
+  } else if (typeof params.options?.customMessageText === 'string' && params.options.customMessageText.trim()) {
+    messageText = params.options.customMessageText
+      .replace(/{candidate_name}/g, params.candidateName || 'Candidate')
+      .replace(/{job_title}/g, params.jobTitle)
+      .replace(/{job_link}/g, params.interviewLink)
+      .replace(/{access_code}/g, params.accessCode || '');
+  } else {
+    messageText = buildWhatsAppInviteText(updatedParams);
+  }
+
   return await sendWhatsAppMessage(params.phone, messageText, {
     sessionId: params.options?.whatsappSessionId,
     passcode: params.options?.whatsappSessionPasscode

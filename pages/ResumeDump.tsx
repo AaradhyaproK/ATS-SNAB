@@ -41,6 +41,80 @@ const DOMAIN_SKILL_SYNONYMS: Record<string, string[]> = {
   node: ['express', 'backend', 'javascript', 'typescript', 'api'],
 };
 
+/**
+ * High click-intent job match notification for WhatsApp & Email
+ */
+export const getHighIntentJobInviteMessage = (params: {
+  candidateName: string;
+  jobTitle: string;
+  jobLink: string;
+  location?: string;
+  experience?: string | number;
+  salary?: string;
+  qualification?: string;
+  employmentType?: string;
+  skills?: string[] | string;
+  description?: string;
+  recruiterName?: string;
+  recruiterPhone?: string;
+}): string => {
+  const {
+    candidateName,
+    jobTitle,
+    jobLink,
+    location,
+    experience,
+    salary,
+    qualification,
+    employmentType,
+    skills,
+    description,
+    recruiterName = 'Recruiting Desk',
+    recruiterPhone = '9511779317'
+  } = params;
+
+  // Format skills list
+  let skillsFormatted = '';
+  if (Array.isArray(skills) && skills.length > 0) {
+    skillsFormatted = skills.slice(0, 8).join(', ');
+  } else if (typeof skills === 'string' && skills.trim()) {
+    skillsFormatted = skills;
+  }
+
+  // Format brief description excerpt if present (clean HTML tags if any)
+  let descSnippet = '';
+  if (description && description.trim()) {
+    const cleanDesc = description.replace(/<[^>]*>?/gm, '').replace(/\s+/g, ' ').trim();
+    if (cleanDesc) {
+      descSnippet = cleanDesc.length > 200 ? cleanDesc.slice(0, 197) + '...' : cleanDesc;
+    }
+  }
+
+  return `🎯 *JOB WITH SKILL MATCH AVAILABLE: ${candidateName.toUpperCase()}*\n\n` +
+    `Hello *${candidateName}*,\n\n` +
+    `A verified job opening matching your skills is available on our candidate portal.\n\n` +
+    `📋 *JOB DESCRIPTION & DETAILS:*\n` +
+    `• *Position:* *${jobTitle}*\n` +
+    (location ? `• *Location:* ${location}\n` : '') +
+    (experience ? `• *Experience Required:* ${experience}\n` : '') +
+    (salary ? `• *Salary / CTC:* ${salary}\n` : '') +
+    (employmentType ? `• *Work Mode:* ${employmentType}\n` : '') +
+    (qualification ? `• *Qualification:* ${qualification}\n` : '') +
+    (skillsFormatted ? `• *Matching Skills:* ${skillsFormatted}\n` : '') +
+    (descSnippet ? `\n📝 *Job Overview:*\n${descSnippet}\n` : '') +
+    `\n👉 *Login and Apply for this Job on the Portal:*\n` +
+    `🔗 ${jobLink}\n\n` +
+    `⚡ *How to Apply:*\n` +
+    `1. Click the portal link above\n` +
+    `2. Login with your registered mobile/email\n` +
+    `3. Submit your application in 1 click\n\n` +
+    `Applications are being reviewed on a rolling basis. Please login and apply early for priority profile evaluation.\n\n` +
+    (recruiterPhone ? `For any queries, contact: ${recruiterPhone}\n` : '') +
+    `✉️ Email: hello@snab.co.in\n\n` +
+    `Best regards,\n` +
+    `*Candidate Recruitment Desk*`;
+};
+
 type TimestampLike =
   | {
       toDate?: () => Date;
@@ -2483,16 +2557,67 @@ const ResumeDump: React.FC = () => {
             </button>
           </div>
 
-          <div className="flex items-center gap-3 shrink-0">
+          <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
             {selectedCandidateIds.length > 0 && (
-              <button
-                type="button"
-                onClick={() => setIsInviteModalOpen(true)}
-                className="geist-caption inline-flex h-8 items-center gap-1.5 rounded-[6px] bg-black dark:bg-white text-white dark:text-black hover:bg-neutral-800 dark:hover:bg-neutral-200 px-3 font-semibold text-xs transition-colors shrink-0 shadow-sm"
-              >
-                <Send size={13} strokeWidth={2} />
-                <span>Send Invite ({selectedCandidateIds.length})</span>
-              </button>
+              <div className="flex items-center gap-2 p-1 rounded-lg bg-gray-100 dark:bg-white/[0.06] border border-gray-300 dark:border-white/[0.12] shadow-xs animate-in fade-in duration-150">
+                <span className="text-[11px] font-bold text-slate-800 dark:text-slate-200 px-1.5 flex items-center gap-1">
+                  <CheckSquare size={13} className="text-emerald-600 dark:text-emerald-400" />
+                  <span>{selectedCandidateIds.length} Selected</span>
+                </span>
+
+                {/* Mode Selector: WhatsApp, Email, or Both */}
+                <div className="inline-flex items-center p-0.5 rounded-md bg-white dark:bg-[#141414] border border-gray-200 dark:border-white/[0.08]">
+                  <button
+                    type="button"
+                    onClick={() => setInviteDeliveryMode('whatsapp_api')}
+                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded text-[11px] font-bold transition-all cursor-pointer ${
+                      inviteDeliveryMode === 'whatsapp_api' || inviteDeliveryMode === 'whatsapp_web'
+                        ? 'bg-emerald-600 text-white shadow-xs'
+                        : 'text-gray-600 dark:text-gray-300 hover:text-black dark:hover:text-white'
+                    }`}
+                    title="Choose WhatsApp Delivery"
+                  >
+                    <MessageSquare size={12} />
+                    <span>WhatsApp</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setInviteDeliveryMode('email')}
+                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded text-[11px] font-bold transition-all cursor-pointer ${
+                      inviteDeliveryMode === 'email'
+                        ? 'bg-blue-600 text-white shadow-xs'
+                        : 'text-gray-600 dark:text-gray-300 hover:text-black dark:hover:text-white'
+                    }`}
+                    title="Choose Email Delivery"
+                  >
+                    <Mail size={12} />
+                    <span>Email</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setInviteDeliveryMode('both')}
+                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded text-[11px] font-bold transition-all cursor-pointer ${
+                      inviteDeliveryMode === 'both'
+                        ? 'bg-purple-600 text-white shadow-xs'
+                        : 'text-gray-600 dark:text-gray-300 hover:text-black dark:hover:text-white'
+                    }`}
+                    title="Choose Both WhatsApp and Email"
+                  >
+                    <Sparkles size={12} />
+                    <span>Both</span>
+                  </button>
+                </div>
+
+                {/* Send Button */}
+                <button
+                  type="button"
+                  onClick={() => setIsInviteModalOpen(true)}
+                  className="geist-caption inline-flex h-7 items-center gap-1.5 rounded-md bg-black dark:bg-white text-white dark:text-black hover:bg-neutral-800 dark:hover:bg-neutral-200 px-3.5 font-extrabold text-xs transition-all shrink-0 shadow-sm cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
+                >
+                  <Send size={12} strokeWidth={2.5} />
+                  <span>Send ({inviteDeliveryMode === 'both' ? 'Both' : inviteDeliveryMode === 'email' ? 'Email' : 'WhatsApp'}) &rarr;</span>
+                </button>
+              </div>
             )}
 
             <span className="text-xs text-slate-500 dark:text-[#8f8f8f] font-medium">
@@ -3634,21 +3759,21 @@ const ResumeDump: React.FC = () => {
       {/* Send Interview Invitations Modal Popup */}
       {isInviteModalOpen &&
         createPortal(
-          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 p-4 backdrop-blur-md" onClick={() => !isSendingInvites && setIsInviteModalOpen(false)}>
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 p-4 sm:p-6 md:p-8 backdrop-blur-md overflow-y-auto" onClick={() => !isSendingInvites && setIsInviteModalOpen(false)}>
             <div
-              className="w-full max-w-lg overflow-hidden rounded-[14px] border border-gray-200 dark:border-white/[0.15] bg-white dark:bg-[#090909] text-slate-900 dark:text-white shadow-2xl animate-in fade-in zoom-in duration-150"
+              className="w-full max-w-2xl max-h-[88vh] flex flex-col overflow-hidden rounded-2xl border border-gray-200 dark:border-white/[0.15] bg-white dark:bg-[#0c0c0e] text-slate-900 dark:text-white shadow-2xl my-auto animate-in fade-in zoom-in-95 duration-150"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Modal Header */}
-              <div className="flex items-center justify-between px-5 py-4 bg-gray-50 dark:bg-[#0d0d0d] border-b border-gray-200 dark:border-white/[0.11]">
-                <div className="flex items-center gap-2.5">
-                  <div className="p-2 rounded-[6px] bg-gray-100 dark:bg-white/[0.05] border border-gray-200 dark:border-white/[0.11] text-slate-900 dark:text-white">
-                    <Send size={16} strokeWidth={2} />
+              <div className="flex items-center justify-between px-6 py-4 bg-gray-50/90 dark:bg-white/[0.03] border-b border-gray-200 dark:border-white/[0.08] shrink-0">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 rounded-xl bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 text-blue-600 dark:text-blue-400">
+                    <Send size={16} strokeWidth={2.2} />
                   </div>
                   <div>
-                    <h3 className="font-bold text-sm text-slate-900 dark:text-white">Send Interview Invitations</h3>
+                    <h3 className="font-bold text-sm text-slate-900 dark:text-white">Send Job Invitations</h3>
                     <p className="geist-small text-gray-500 dark:text-[#8f8f8f]">
-                      Inviting {selectedCandidateIds.length || filteredCandidates.length} Candidate(s)
+                      Inviting {selectedCandidateIds.length || filteredCandidates.length} Selected Candidate(s) • Skill Match Notification
                     </p>
                   </div>
                 </div>
@@ -3656,14 +3781,14 @@ const ResumeDump: React.FC = () => {
                   type="button"
                   disabled={isSendingInvites}
                   onClick={() => setIsInviteModalOpen(false)}
-                  className="flex h-8 w-8 items-center justify-center rounded-[6px] border border-gray-200 dark:border-white/[0.11] bg-gray-100 dark:bg-white/[0.03] text-gray-500 dark:text-[#8f8f8f] transition-colors hover:bg-gray-200 dark:hover:bg-white/[0.06] hover:text-black dark:hover:text-white disabled:opacity-40"
+                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 dark:border-white/[0.11] bg-gray-100 dark:bg-white/[0.03] text-gray-500 dark:text-[#8f8f8f] transition-colors hover:bg-gray-200 dark:hover:bg-white/[0.08] hover:text-black dark:hover:text-white disabled:opacity-40 cursor-pointer"
                 >
                   <span className="text-xl leading-none">&times;</span>
                 </button>
               </div>
 
               {/* Modal Content Body */}
-              <div className="p-5 space-y-4 max-h-[75vh] overflow-y-auto">
+              <div className="p-6 space-y-4.5 flex-1 min-h-0 overflow-y-auto overscroll-contain">
                 {/* Highest Education Qualification Input */}
                 <div>
                   <label className="block geist-label uppercase text-gray-600 dark:text-[#6b7280] mb-1.5 font-medium">
@@ -3679,7 +3804,7 @@ const ResumeDump: React.FC = () => {
                 {/* 1. Job Role Selection */}
                 <div>
                   <label className="block geist-label uppercase text-gray-600 dark:text-[#6b7280] mb-1.5 font-medium">
-                    Select Target Job Role / Interview
+                    Select Target Job Role
                   </label>
                   <select
                     value={selectedJobId}
@@ -3801,12 +3926,6 @@ const ResumeDump: React.FC = () => {
                       <span className="text-gray-500 dark:text-[#8f8f8f]">Job Title:</span>
                       <span className="font-bold text-slate-900 dark:text-white">{activeSelectedJob.title || activeSelectedJob.jobRole}</span>
                     </div>
-                    {activeSelectedJob.accessCode && (
-                      <div className="flex items-center justify-between geist-caption">
-                        <span className="text-gray-500 dark:text-[#8f8f8f]">Access Code:</span>
-                        <span className="font-mono bg-gray-100 dark:bg-white/[0.06] border border-gray-200 dark:border-white/[0.11] px-2 py-0.5 rounded text-slate-900 dark:text-white font-bold">{activeSelectedJob.accessCode}</span>
-                      </div>
-                    )}
                     <div className="geist-caption">
                       <span className="text-gray-500 dark:text-[#8f8f8f] block mb-1">Job Application Link:</span>
                       <div className="flex items-center gap-2 bg-gray-100 dark:bg-[#050505] border border-gray-200 dark:border-white/[0.11] p-2 rounded-[6px] text-slate-900 dark:text-[#d4d4d4] font-mono text-[11px] break-all">
@@ -3829,18 +3948,55 @@ const ResumeDump: React.FC = () => {
                   </div>
                 ) : (
                   <div className="p-3 rounded-[6px] border border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300 text-xs text-center font-medium">
-                    ⚠️ Please select a Job Role above to generate the specific interview link & access code.
+                    ⚠️ Please select a Job Role above to generate the specific job application link.
+                  </div>
+                )}
+
+                {/* 5. Live High Click-Intent Notification Preview Box */}
+                {activeSelectedJob && (
+                  <div className="p-3.5 rounded-xl border border-indigo-200 dark:border-indigo-900/60 bg-gradient-to-br from-indigo-50/70 via-white to-purple-50/50 dark:from-indigo-950/20 dark:via-[#111] dark:to-purple-950/20 space-y-2.5">
+                    <div className="flex items-center justify-between text-xs font-bold text-indigo-950 dark:text-indigo-200">
+                      <span className="flex items-center gap-1.5">
+                        <Sparkles size={14} className="text-indigo-600 dark:text-indigo-400" />
+                        High Click-Intent Portal Match Message Preview
+                      </span>
+                      <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300">
+                        Personalized for {(selectedCandidateIds.length || filteredCandidates.length)} Candidate(s)
+                      </span>
+                    </div>
+
+                    <div className="p-3 rounded-lg bg-white dark:bg-[#080808] border border-indigo-100 dark:border-white/[0.08] text-[11px] font-mono text-slate-800 dark:text-slate-200 leading-relaxed whitespace-pre-wrap max-h-48 overflow-y-auto shadow-2xs">
+                      {getHighIntentJobInviteMessage({
+                        candidateName: (selectedCandidateIds.length > 0 ? candidates.find(c => selectedCandidateIds.includes(c.id))?.name : filteredCandidates[0]?.name) || 'Candidate Name',
+                        jobTitle: activeSelectedJob.title || activeSelectedJob.jobRole || 'Open Position',
+                        jobLink: `${window.location.origin}/candidate?job=${activeSelectedJob.id}`,
+                        location: activeSelectedJob.location || activeSelectedJob.city,
+                        experience: activeSelectedJob.experience,
+                        salary: activeSelectedJob.salary,
+                        qualification: activeSelectedJob.qualification || activeSelectedJob.education,
+                        employmentType: activeSelectedJob.employmentType,
+                        skills: activeSelectedJob.skills,
+                        description: activeSelectedJob.description,
+                        recruiterName: userProfile?.name || 'Recruiting Team',
+                        recruiterPhone: (userProfile as any)?.phone || '9511779317'
+                      })}
+                    </div>
+
+                    <div className="flex items-center gap-1.5 text-[10px] text-indigo-800 dark:text-indigo-300 font-medium">
+                      <CheckCircle2 size={12} className="text-emerald-500 shrink-0" />
+                      <span>Message contains complete job specifications (no company name, no access code) with 1-click login & apply link.</span>
+                    </div>
                   </div>
                 )}
               </div>
 
               {/* Modal Footer Actions */}
-              <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4 bg-gray-50 dark:bg-[#0d0d0d] border-t border-gray-200 dark:border-white/[0.11]">
+              <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-4 bg-gray-50/90 dark:bg-white/[0.02] border-t border-gray-200 dark:border-white/[0.08] shrink-0">
                 <button
                   type="button"
                   disabled={isSendingInvites}
                   onClick={() => setIsInviteModalOpen(false)}
-                  className="geist-caption h-9 px-4 rounded-[6px] border border-gray-300 dark:border-white/[0.11] bg-white dark:bg-white/[0.03] hover:bg-gray-100 dark:hover:bg-white/[0.06] font-semibold text-xs text-slate-700 dark:text-[#d4d4d4] transition-colors disabled:opacity-40"
+                  className="geist-caption h-9 px-4 rounded-lg border border-gray-300 dark:border-white/[0.11] bg-white dark:bg-white/[0.03] hover:bg-gray-100 dark:hover:bg-white/[0.06] font-semibold text-xs text-slate-700 dark:text-[#d4d4d4] transition-colors disabled:opacity-40 cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -3851,14 +4007,29 @@ const ResumeDump: React.FC = () => {
                       type="button"
                       disabled={isSendingInvites}
                       onClick={() => {
+                        const targetCandidates = selectedCandidateIds.length > 0
+                          ? candidates.filter(c => selectedCandidateIds.includes(c.id))
+                          : filteredCandidates;
+                        const targetCand = targetCandidates[0];
+                        const candName = targetCand?.name || 'Candidate';
                         const jobTitle = activeSelectedJob.title || activeSelectedJob.jobRole || 'Open Position';
-                        const accessCode = activeSelectedJob.accessCode || '';
                         const jobLink = `${window.location.origin}/candidate?job=${activeSelectedJob.id}`;
-                        const messageText = `Hello! You have been invited to apply for the position of *${jobTitle}*.\n\n` +
-                          (accessCode ? `📌 Job Code: *${accessCode}*\n` : '') +
-                          `🔗 Application Link: ${jobLink}\n\n` +
-                          `Please open the link to view the job requirements and submit your application!`;
-                        window.open(`https://wa.me/?text=${encodeURIComponent(messageText)}`, '_blank');
+                        const messageText = getHighIntentJobInviteMessage({
+                          candidateName: candName,
+                          jobTitle,
+                          jobLink,
+                          location: activeSelectedJob.location || activeSelectedJob.city,
+                          experience: activeSelectedJob.experience,
+                          salary: activeSelectedJob.salary,
+                          qualification: activeSelectedJob.qualification || activeSelectedJob.education,
+                          employmentType: activeSelectedJob.employmentType,
+                          skills: activeSelectedJob.skills,
+                          description: activeSelectedJob.description,
+                          recruiterName: userProfile?.name || 'Recruiting Team',
+                          recruiterPhone: (userProfile as any)?.phone || '9511779317'
+                        });
+                        const phone = (targetCand?.phone || (targetCand as any)?.mobile || '').replace(/[^0-9]/g, '');
+                        window.open(phone ? `https://web.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(messageText)}` : `https://wa.me/?text=${encodeURIComponent(messageText)}`, '_blank');
                       }}
                       className="geist-caption inline-flex h-9 items-center justify-center gap-1.5 rounded-[6px] border border-amber-600/40 dark:border-amber-500/40 bg-amber-50 dark:bg-amber-500/10 text-amber-800 dark:text-amber-300 font-semibold text-xs px-3 hover:bg-amber-100 dark:hover:bg-amber-500/20 transition-colors disabled:opacity-50 cursor-pointer"
                       title="Open pre-filled invitation in WhatsApp Web app"
@@ -3890,15 +4061,29 @@ const ResumeDump: React.FC = () => {
                         }
 
                         const jobTitle = activeSelectedJob.title || activeSelectedJob.jobRole || 'Open Position';
-                        const accessCode = activeSelectedJob.accessCode || '';
+                        const accessCode = '';
                         const jobLink = `${window.location.origin}/candidate?job=${activeSelectedJob.id}`;
 
                         const waOptions = {
-                          recruiterName: userProfile?.name || (user as any)?.displayName || (user as any)?.email || 'Recruiting Team',
-                          recruiterPhone: (userProfile as any)?.phone || (userProfile as any)?.phoneNumber || '',
+                          recruiterName: userProfile?.name || (user as any)?.displayName || (user as any)?.email || 'Recruiting Desk',
+                          recruiterPhone: (userProfile as any)?.phone || (userProfile as any)?.phoneNumber || '9511779317',
                           deadline: activeSelectedJob.deadline || activeSelectedJob.interviewDeadline || '',
                           whatsappSessionId: (userProfile as any)?.whatsappSessionId || localStorage.getItem('wa_session_id') || '',
-                          whatsappSessionPasscode: (userProfile as any)?.whatsappSessionPasscode || localStorage.getItem('wa_session_passcode') || ''
+                          whatsappSessionPasscode: (userProfile as any)?.whatsappSessionPasscode || localStorage.getItem('wa_session_passcode') || '',
+                          customMessageText: (cand: { name: string; phone: string; email?: string }) => getHighIntentJobInviteMessage({
+                            candidateName: cand.name || 'Candidate',
+                            jobTitle,
+                            jobLink,
+                            location: activeSelectedJob.location || activeSelectedJob.city,
+                            experience: activeSelectedJob.experience,
+                            salary: activeSelectedJob.salary,
+                            qualification: activeSelectedJob.qualification || activeSelectedJob.education,
+                            employmentType: activeSelectedJob.employmentType,
+                            skills: activeSelectedJob.skills,
+                            description: activeSelectedJob.description,
+                            recruiterName: userProfile?.name || 'Recruiting Desk',
+                            recruiterPhone: (userProfile as any)?.phone || '9511779317'
+                          })
                         };
 
                         setIsSendingInvites(true);
@@ -3930,10 +4115,21 @@ const ResumeDump: React.FC = () => {
                             
                             // Fallback to WhatsApp Web
                             const firstPhone = candidatesWithPhones[0]?.phone || '';
-                            const msgText = `Hello! You have been invited to apply for the position of *${jobTitle}*.\n\n` +
-                              (accessCode ? `📌 Job Code: *${accessCode}*\n` : '') +
-                              `🔗 Application Link: ${jobLink}\n\n` +
-                              `Please open the link to view the job requirements and submit your application!`;
+                            const candName = candidatesWithPhones[0]?.name || 'Candidate';
+                            const msgText = getHighIntentJobInviteMessage({
+                              candidateName: candName,
+                              jobTitle,
+                              jobLink,
+                              location: activeSelectedJob.location || activeSelectedJob.city,
+                              experience: activeSelectedJob.experience,
+                              salary: activeSelectedJob.salary,
+                              qualification: activeSelectedJob.qualification || activeSelectedJob.education,
+                              employmentType: activeSelectedJob.employmentType,
+                              skills: activeSelectedJob.skills,
+                              description: activeSelectedJob.description,
+                              recruiterName: userProfile?.name || 'Recruiting Desk',
+                              recruiterPhone: (userProfile as any)?.phone || '9511779317'
+                            });
                             window.open(`https://web.whatsapp.com/send?phone=${firstPhone.replace(/[^0-9]/g, '')}&text=${encodeURIComponent(msgText)}`, '_blank');
                           }
                         } catch (err: any) {
@@ -3965,7 +4161,7 @@ const ResumeDump: React.FC = () => {
                       }
 
                       setIsSendingInvites(true);
-                      setSendingProgressMsg("Sending invitations via Both Email & WhatsApp API...");
+                      setSendingProgressMsg("Sending invitations via " + (inviteDeliveryMode === 'both' ? 'Both Email & WhatsApp API...' : inviteDeliveryMode === 'email' ? 'Email...' : 'WhatsApp...'));
 
                       try {
                         if (inviteModalEducation.trim()) {
@@ -3988,7 +4184,7 @@ const ResumeDump: React.FC = () => {
                         }
 
                         const jobTitle = activeSelectedJob.title || activeSelectedJob.jobRole || 'Open Position';
-                        const accessCode = activeSelectedJob.accessCode || '';
+                        const accessCode = '';
                         const interviewLink = `${window.location.origin}/candidate?job=${activeSelectedJob.id}`;
 
                         let waSentCount = 0;
@@ -3996,12 +4192,25 @@ const ResumeDump: React.FC = () => {
                         let waErrorMsg = '';
 
                         if (inviteDeliveryMode === 'whatsapp_web') {
-                          const messageText = `Hello! You have been invited to apply for the position of *${jobTitle}*.\n\n` +
-                            (accessCode ? `📌 Job Code: *${accessCode}*\n` : '') +
-                            `🔗 Application Link: ${interviewLink}\n\n` +
-                            `Please open the link to view the job requirements and submit your application!`;
-                          window.open(`https://wa.me/?text=${encodeURIComponent(messageText)}`, '_blank');
-                          messageBox.showSuccess('WhatsApp Web app opened with pre-filled message!');
+                          const targetCand = targetCandidates[0];
+                          const candName = targetCand?.name || 'Candidate';
+                          const messageText = getHighIntentJobInviteMessage({
+                            candidateName: candName,
+                            jobTitle,
+                            jobLink: interviewLink,
+                            location: activeSelectedJob.location || activeSelectedJob.city,
+                            experience: activeSelectedJob.experience,
+                            salary: activeSelectedJob.salary,
+                            qualification: activeSelectedJob.qualification || activeSelectedJob.education,
+                            employmentType: activeSelectedJob.employmentType,
+                            skills: activeSelectedJob.skills,
+                            description: activeSelectedJob.description,
+                            recruiterName: userProfile?.name || 'Recruiting Desk',
+                            recruiterPhone: (userProfile as any)?.phone || '9511779317'
+                          });
+                          const phone = (targetCand?.phone || (targetCand as any)?.mobile || '').replace(/[^0-9]/g, '');
+                          window.open(phone ? `https://web.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(messageText)}` : `https://wa.me/?text=${encodeURIComponent(messageText)}`, '_blank');
+                          messageBox.showSuccess('WhatsApp Web app opened with personalized high-intent message!');
                           setIsInviteModalOpen(false);
                           setSelectedCandidateIds([]);
                           return;
@@ -4032,10 +4241,24 @@ const ResumeDump: React.FC = () => {
                                 }
                               },
                               {
-                                recruiterName: userProfile?.name || (user as any)?.displayName || (user as any)?.email || 'Recruiting Team',
-                                recruiterPhone: (userProfile as any)?.phone || (userProfile as any)?.phoneNumber || '',
+                                recruiterName: userProfile?.name || (user as any)?.displayName || (user as any)?.email || 'Recruiting Desk',
+                                recruiterPhone: (userProfile as any)?.phone || (userProfile as any)?.phoneNumber || '9511779317',
                                 whatsappSessionId: (userProfile as any)?.whatsappSessionId || localStorage.getItem('wa_session_id') || '',
-                                whatsappSessionPasscode: (userProfile as any)?.whatsappSessionPasscode || localStorage.getItem('wa_session_passcode') || ''
+                                whatsappSessionPasscode: (userProfile as any)?.whatsappSessionPasscode || localStorage.getItem('wa_session_passcode') || '',
+                                customMessageText: (cand: { name: string; phone: string; email?: string }) => getHighIntentJobInviteMessage({
+                                  candidateName: cand.name || 'Candidate',
+                                  jobTitle,
+                                  jobLink: interviewLink,
+                                  location: activeSelectedJob.location || activeSelectedJob.city,
+                                  experience: activeSelectedJob.experience,
+                                  salary: activeSelectedJob.salary,
+                                  qualification: activeSelectedJob.qualification || activeSelectedJob.education,
+                                  employmentType: activeSelectedJob.employmentType,
+                                  skills: activeSelectedJob.skills,
+                                  description: activeSelectedJob.description,
+                                  recruiterName: userProfile?.name || 'Recruiting Desk',
+                                  recruiterPhone: (userProfile as any)?.phone || '9511779317'
+                                })
                               }
                             );
                             waSentCount = waRes.totalSent;
@@ -4059,7 +4282,29 @@ const ResumeDump: React.FC = () => {
                               false,
                               {
                                 deadline: activeSelectedJob.deadline || activeSelectedJob.interviewDeadline || '',
-                                recruiterName: userProfile?.name || (user as any)?.displayName || 'Recruiter'
+                                recruiterName: userProfile?.name || (user as any)?.displayName || 'Recruiting Desk',
+                                recruiterPhone: (userProfile as any)?.phone || '9511779317',
+                                recruiterEmail: 'hello@snab.co.in',
+                                companyName: '',
+                                location: activeSelectedJob.location || activeSelectedJob.city,
+                                experience: activeSelectedJob.experience,
+                                salary: activeSelectedJob.salary,
+                                qualification: activeSelectedJob.qualification || activeSelectedJob.education,
+                                employmentType: activeSelectedJob.employmentType,
+                                customTemplate: {
+                                  subject: `🎯 Job With Skill Match Available on Portal: ${jobTitle} — {candidate_name}`,
+                                  headline: `JOB WITH SKILL MATCH AVAILABLE ON PORTAL`,
+                                  body: `Dear *{candidate_name}*,\n\nGreat news! A verified job opening matching your skills is available on our candidate portal for the *${jobTitle}* position.\n\nYour profile has been pre-matched with this role. Please login to the candidate portal below to review all job specifications and apply directly!`,
+                                  ctaText: `Login & Apply for Job Now →`,
+                                  showCredentials: false,
+                                  showJobDetails: true,
+                                  showRecruiterContact: true,
+                                  instructions: [
+                                    'Click the portal link above to view full job specifications.',
+                                    'Login with your registered mobile number or email.',
+                                    'Submit your application in 1 click for priority review.'
+                                  ]
+                                }
                               }
                             );
                             if (emailRes.success) {
