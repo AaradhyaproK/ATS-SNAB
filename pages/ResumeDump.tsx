@@ -2388,8 +2388,39 @@ const ResumeDump: React.FC = () => {
                 </span>
               </button>
             </div>
+          </div>
 
-            {/* Skill Rec Box Filter (Multi-Select Checkmarks) */}
+          {/* Right side of Row 1: Candidate Counter & Reset Filters */}
+          <div className="flex items-center gap-3 shrink-0">
+            <span className="text-xs text-slate-500 dark:text-[#8f8f8f] font-medium">
+              {isSearchOrFilterActive ? (
+                <>Showing all <strong className="text-slate-900 dark:text-white">{filteredCandidates.length}</strong> matching candidates</>
+              ) : (
+                <>Showing <strong className="text-slate-900 dark:text-white">{paginatedCandidates.length}</strong> of {filteredCandidates.length} candidates {totalPages > 1 ? `(Page ${currentPage} of ${totalPages})` : ''}</>
+              )}
+            </span>
+
+            {activeFiltersCount > 0 && (
+              <button
+                type="button"
+                onClick={handleClearAllFilters}
+                className="geist-caption inline-flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 dark:hover:text-emerald-300 font-semibold underline cursor-pointer"
+              >
+                <RotateCcw size={12} />
+                <span>Reset All</span>
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* ROW 2: Facet Filters (Skills, Industry, Experience, Location, More Filters) */}
+        <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-gray-200/70 dark:border-white/[0.06]">
+          <div className="flex items-center gap-1 text-xs text-gray-400 dark:text-[#737373] font-semibold mr-1 shrink-0">
+            <Filter size={12} />
+            <span className="uppercase text-[10px] tracking-wider">Filters:</span>
+          </div>
+
+          {/* Skill Rec Box Filter (Multi-Select Checkmarks) */}
             <div className="flex items-center gap-1 shrink-0 relative">
               <Filter size={13} className="text-gray-500 dark:text-[#8f8f8f] shrink-0" />
               <button
@@ -2555,27 +2586,39 @@ const ResumeDump: React.FC = () => {
                 </span>
               )}
             </button>
-          </div>
+        </div>
 
-          <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
-            {selectedCandidateIds.length > 0 && (
-              <div className="flex items-center gap-2 p-1 rounded-lg bg-gray-100 dark:bg-white/[0.06] border border-gray-300 dark:border-white/[0.12] shadow-xs animate-in fade-in duration-150">
-                <span className="text-[11px] font-bold text-slate-800 dark:text-slate-200 px-1.5 flex items-center gap-1">
-                  <CheckSquare size={13} className="text-emerald-600 dark:text-emerald-400" />
-                  <span>{selectedCandidateIds.length} Selected</span>
-                </span>
+        {/* ROW 3: Dedicated Action Bar for Selected Candidates */}
+        {selectedCandidateIds.length > 0 && (
+          <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2.5 rounded-xl bg-slate-900 text-white dark:bg-[#141416] dark:text-white border border-slate-800 dark:border-white/10 shadow-md animate-in slide-in-from-top-1 fade-in duration-150">
+            <div className="flex items-center gap-2.5">
+              <span className="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-md bg-emerald-500/20 text-emerald-400">
+                <CheckSquare size={13} className="text-emerald-400" />
+                <span>{selectedCandidateIds.length} Candidate{selectedCandidateIds.length > 1 ? 's' : ''} Selected</span>
+              </span>
+              <button
+                type="button"
+                onClick={() => setSelectedCandidateIds([])}
+                className="text-xs text-gray-400 hover:text-white underline cursor-pointer"
+              >
+                Clear Selection
+              </button>
+            </div>
 
-                {/* Mode Selector: WhatsApp, Email, or Both */}
-                <div className="inline-flex items-center p-0.5 rounded-md bg-white dark:bg-[#141414] border border-gray-200 dark:border-white/[0.08]">
+            <div className="flex items-center gap-3 flex-wrap">
+              {/* Delivery Channel Chooser */}
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs text-gray-400 font-medium hidden sm:inline">Send via:</span>
+                <div className="inline-flex items-center p-0.5 rounded-lg bg-white/10 dark:bg-white/[0.06] border border-white/10">
                   <button
                     type="button"
                     onClick={() => setInviteDeliveryMode('whatsapp_api')}
-                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded text-[11px] font-bold transition-all cursor-pointer ${
+                    className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-bold transition-all cursor-pointer ${
                       inviteDeliveryMode === 'whatsapp_api' || inviteDeliveryMode === 'whatsapp_web'
                         ? 'bg-emerald-600 text-white shadow-xs'
-                        : 'text-gray-600 dark:text-gray-300 hover:text-black dark:hover:text-white'
+                        : 'text-gray-300 hover:text-white'
                     }`}
-                    title="Choose WhatsApp Delivery"
+                    title="Send via WhatsApp API"
                   >
                     <MessageSquare size={12} />
                     <span>WhatsApp</span>
@@ -2583,12 +2626,12 @@ const ResumeDump: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setInviteDeliveryMode('email')}
-                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded text-[11px] font-bold transition-all cursor-pointer ${
+                    className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-bold transition-all cursor-pointer ${
                       inviteDeliveryMode === 'email'
                         ? 'bg-blue-600 text-white shadow-xs'
-                        : 'text-gray-600 dark:text-gray-300 hover:text-black dark:hover:text-white'
+                        : 'text-gray-300 hover:text-white'
                     }`}
-                    title="Choose Email Delivery"
+                    title="Send via Email"
                   >
                     <Mail size={12} />
                     <span>Email</span>
@@ -2596,50 +2639,31 @@ const ResumeDump: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setInviteDeliveryMode('both')}
-                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded text-[11px] font-bold transition-all cursor-pointer ${
+                    className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-bold transition-all cursor-pointer ${
                       inviteDeliveryMode === 'both'
                         ? 'bg-purple-600 text-white shadow-xs'
-                        : 'text-gray-600 dark:text-gray-300 hover:text-black dark:hover:text-white'
+                        : 'text-gray-300 hover:text-white'
                     }`}
-                    title="Choose Both WhatsApp and Email"
+                    title="Send via Both Channels"
                   >
                     <Sparkles size={12} />
                     <span>Both</span>
                   </button>
                 </div>
-
-                {/* Send Button */}
-                <button
-                  type="button"
-                  onClick={() => setIsInviteModalOpen(true)}
-                  className="geist-caption inline-flex h-7 items-center gap-1.5 rounded-md bg-black dark:bg-white text-white dark:text-black hover:bg-neutral-800 dark:hover:bg-neutral-200 px-3.5 font-extrabold text-xs transition-all shrink-0 shadow-sm cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
-                >
-                  <Send size={12} strokeWidth={2.5} />
-                  <span>Send ({inviteDeliveryMode === 'both' ? 'Both' : inviteDeliveryMode === 'email' ? 'Email' : 'WhatsApp'}) &rarr;</span>
-                </button>
               </div>
-            )}
 
-            <span className="text-xs text-slate-500 dark:text-[#8f8f8f] font-medium">
-              {isSearchOrFilterActive ? (
-                <>Showing all <strong className="text-slate-900 dark:text-white">{filteredCandidates.length}</strong> matching candidates</>
-              ) : (
-                <>Showing <strong className="text-slate-900 dark:text-white">{paginatedCandidates.length}</strong> of {filteredCandidates.length} candidates {totalPages > 1 ? `(Page ${currentPage} of ${totalPages})` : ''}</>
-              )}
-            </span>
-
-            {activeFiltersCount > 0 && (
+              {/* Action Button */}
               <button
                 type="button"
-                onClick={handleClearAllFilters}
-                className="geist-caption inline-flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 dark:hover:text-emerald-300 font-semibold underline"
+                onClick={() => setIsInviteModalOpen(true)}
+                className="geist-caption inline-flex h-8 items-center gap-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-white font-extrabold text-xs px-4 shadow-sm transition-all cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
               >
-                <RotateCcw size={12} />
-                <span>Reset All</span>
+                <Send size={12} strokeWidth={2.5} />
+                <span>Send ({inviteDeliveryMode === 'both' ? 'Both' : inviteDeliveryMode === 'email' ? 'Email' : 'WhatsApp'}) &rarr;</span>
               </button>
-            )}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Row 2: Secondary / Advanced Naukri Recruiter Filters */}
         {showMoreFilters && (

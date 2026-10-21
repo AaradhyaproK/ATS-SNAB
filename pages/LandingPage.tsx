@@ -348,10 +348,36 @@ I want to lock in this price and schedule a live demo.`
 
     setSubmittingLead(true);
     try {
+      // 1. Send inquiry to Formspree
+      try {
+        await fetch('https://formspree.io/f/movdbzab', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+          body: JSON.stringify({
+            name: leadForm.name,
+            email: leadForm.email,
+            phone: leadForm.phone,
+            company: leadForm.company || 'Not Specified',
+            hiringVolume: leadForm.hiringVolume,
+            inquiryType: '1 Month Free Demo & Walkthrough',
+            offer: '1-Month Free Demo',
+            page: window.location.href,
+            submittedAt: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }),
+          }),
+        });
+      } catch (formspreeErr) {
+        console.warn('Formspree dispatch error (proceeding to Firestore fallback):', formspreeErr);
+      }
+
+      // 2. Persist to Firestore
       await addDoc(collection(db, 'clientPresentations'), {
         ...leadForm,
+        offer: '1 Month Free Demo',
         createdAt: serverTimestamp(),
-        source: 'Landing Page Client Presentation',
+        source: 'Landing Page 1 Month Free Demo Inquiry',
         status: 'new',
       });
       setLeadSubmitted(true);
@@ -456,9 +482,10 @@ I want to lock in this price and schedule a live demo.`
                 <button
                   type="button"
                   onClick={() => setBookingModalOpen(true)}
-                  className="hidden sm:inline-flex h-9 items-center px-4 rounded-full border border-[#D5DCED] text-[#17213F] bg-white hover:bg-[#F8F9FF] hover:border-[#5145FF]/40 text-xs font-semibold transition-all cursor-pointer shadow-2xs"
+                  className="hidden sm:inline-flex h-9 items-center gap-1.5 px-4 rounded-full bg-gradient-to-r from-[#5145FF] to-[#6366F1] text-white hover:opacity-95 text-xs font-bold transition-all cursor-pointer shadow-xs"
                 >
-                  Book Presentation
+                  <Sparkles className="size-3 text-amber-300" />
+                  <span>1-Month Free Demo</span>
                 </button>
                 <Link
                   to="/auth"
@@ -533,10 +560,10 @@ I want to lock in this price and schedule a live demo.`
                   setMobileMenuOpen(false);
                   setBookingModalOpen(true);
                 }}
-                className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-full text-xs font-bold text-[#5145FF] bg-[#F1EFFF] border border-[#E9E7FF]"
+                className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-full text-xs font-bold text-white bg-gradient-to-r from-[#5145FF] to-[#6366F1] shadow-xs"
               >
-                <Calendar className="size-3.5" />
-                <span>Book Presentation</span>
+                <Sparkles className="size-3.5 text-amber-300" />
+                <span>Claim 1-Month Free Demo</span>
               </button>
             </div>
           </div>
@@ -554,9 +581,10 @@ I want to lock in this price and schedule a live demo.`
           {/* Left Column (approx 44%) */}
           <div className="lg:col-span-5 text-left">
             
-            {/* Lavender Pill Tag */}
-            <div className="inline-flex items-center px-3 py-1 rounded-full bg-[#F1EFFF] text-[#5145FF] text-[11px] font-bold mb-4 border border-[#E5EAF5] shadow-2xs">
-              HireX Snab ATS
+            {/* Lavender Pill Tag with 1-Month Free Demo announcement */}
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#F1EFFF] text-[#5145FF] text-[11px] font-bold mb-4 border border-[#E5EAF5] shadow-2xs">
+              <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              <span>🎉 Limited Offer: 1-Month Free Demo • Full Platform Access</span>
             </div>
 
             {/* Main Hero Heading (Wraps into three lines at 1024px) */}
@@ -585,7 +613,7 @@ I want to lock in this price and schedule a live demo.`
                 onClick={() => setBookingModalOpen(true)}
                 className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#5145FF] hover:bg-[#4135E8] text-white px-5 text-xs font-bold transition-all shadow-md shadow-[#5145FF]/20 hover:scale-[1.01] cursor-pointer"
               >
-                <span>Book Client Presentation</span>
+                <span>Start 1-Month Free Demo</span>
                 <ArrowRight className="size-4" />
               </button>
               <Link
@@ -595,6 +623,17 @@ I want to lock in this price and schedule a live demo.`
                 <Play className="size-3.5 fill-[#5145FF] text-[#5145FF]" />
                 <span>Explore Live Platform</span>
               </Link>
+            </div>
+
+            {/* 1 Month Free Demo Trust Guarantee */}
+            <div className="mt-3.5 flex flex-wrap items-center gap-3 text-[11px] text-[#566481]">
+              <span className="flex items-center gap-1 text-emerald-600 font-bold">
+                <CheckCircle2 className="size-3.5 text-emerald-600" /> 1 Month Free Demo
+              </span>
+              <span className="text-[#D5DCED]">•</span>
+              <span>Zero Credit Card Required</span>
+              <span className="text-[#D5DCED]">•</span>
+              <span>Full AI & WhatsApp Access</span>
             </div>
 
             {/* Product of SNAB & Contact Badge */}
@@ -1746,7 +1785,7 @@ I want to lock in this price and schedule a live demo.`
                     onClick={handleBookFromQuote}
                     className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-[#5145FF] text-white font-bold text-xs shadow-md shadow-[#5145FF]/20 hover:bg-[#4336eb] active:scale-[0.99] transition-all"
                   >
-                    <span>Lock in This Quote & Book Walkthrough</span>
+                    <span>Lock in This Quote & Start 1-Month Free Demo</span>
                     <ArrowRight className="w-4 h-4" />
                   </button>
 
@@ -1782,7 +1821,7 @@ I want to lock in this price and schedule a live demo.`
                 </div>
 
                 <p className="text-[10px] text-center text-[#7D89A5] mt-3">
-                  No hidden onboarding charges. Instant activation upon presentation confirmation.
+                  Includes 1-Month Free Demo with full AI features. No credit card required.
                 </p>
 
               </div>
@@ -1851,10 +1890,10 @@ I want to lock in this price and schedule a live demo.`
                 <Rocket className="size-6" />
               </div>
               <h2 className="text-2xl sm:text-3xl font-extrabold text-[#101B3B]">
-                Ready to Transform Your Hiring?
+                Ready to Transform Your Hiring? Start with 1 Month 100% Free.
               </h2>
               <p className="mt-3 text-xs sm:text-sm text-[#566481] leading-relaxed max-w-xl">
-                Book a live demo and see HireX Snab in action — real resume parsing, AI candidate ads, WhatsApp automation, and confidential resume masking.
+                Claim your 1-month free demo and see HireX Snab in action — real resume parsing, candidate portal, WhatsApp job matching, and live AI screening with zero initial cost.
               </p>
 
               {/* Action Buttons */}
@@ -1864,7 +1903,7 @@ I want to lock in this price and schedule a live demo.`
                   onClick={() => setBookingModalOpen(true)}
                   className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#5145FF] hover:bg-[#4135E8] text-white px-6 text-xs font-bold transition-all shadow-md shadow-[#5145FF]/20 hover:scale-[1.01] cursor-pointer"
                 >
-                  <span>Schedule a Client Presentation</span>
+                  <span>Claim 1-Month Free Demo & Walkthrough</span>
                   <ArrowRight className="size-4" />
                 </button>
                 <Link
@@ -1879,26 +1918,29 @@ I want to lock in this price and schedule a live demo.`
               <div className="mt-6 flex flex-wrap items-center gap-5 text-[11px] text-[#7D89A5]">
                 <div className="flex items-center gap-1.5">
                   <ShieldCheck className="size-3.5 text-[#5145FF]" />
-                  <span>Zero commitment</span>
+                  <span>1-Month Free Demo</span>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <CheckCircle2 className="size-3.5 text-[#10B981]" />
-                  <span>Free sandbox access</span>
+                  <span>Zero Credit Card Required</span>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <Calendar className="size-3.5 text-[#4285FF]" />
-                  <span>Google Meet or WhatsApp</span>
+                  <span>Full AI & WhatsApp Access</span>
                 </div>
               </div>
             </div>
 
             {/* Right Quick Form / Direct Booking Trigger */}
             <div className="lg:col-span-4 bg-white p-5 rounded-2xl border border-[#E5EAF5] shadow-xs">
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-extrabold mb-2 border border-emerald-200">
+                🎁 1-Month Free Access
+              </div>
               <div className="text-xs font-bold text-[#101B3B] mb-1">
-                Fast Walkthrough Request
+                Activate 1-Month Free Demo
               </div>
               <p className="text-[11px] text-[#7D89A5] mb-4">
-                Fill details for a 15-minute tailored walkthrough.
+                Fill details for instant 1-month demo setup and tailored walkthrough.
               </p>
               <button
                 type="button"
@@ -1906,7 +1948,7 @@ I want to lock in this price and schedule a live demo.`
                 className="w-full h-10 rounded-xl bg-[#101B3B] hover:bg-[#1e2a4f] text-white text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-2"
               >
                 <Calendar className="size-3.5" />
-                <span>Open Presentation Form</span>
+                <span>Claim Free Demo Now</span>
               </button>
               <div className="mt-3 text-center">
                 <span className="text-[10px] text-[#7D89A5]">⚡ 15-Min Response Guarantee</span>
@@ -2071,13 +2113,16 @@ I want to lock in this price and schedule a live demo.`
                 <div className="size-12 rounded-full bg-[#EAFBF4] text-[#10B981] flex items-center justify-center mx-auto mb-3">
                   <CheckCircle2 className="size-7" />
                 </div>
-                <h3 className="text-lg font-bold text-[#101B3B]">Presentation Request Received!</h3>
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-[11px] font-bold mb-2 border border-emerald-200">
+                  🎁 1-Month Free Demo Reserved
+                </div>
+                <h3 className="text-lg font-bold text-[#101B3B]">Demo Request & Inquiry Received!</h3>
                 <p className="mt-2 text-xs text-[#566481]">
-                  Our talent solutions lead will reach out within 15 minutes to schedule your live walkthrough on Google Meet or WhatsApp.
+                  Our talent solutions lead will reach out within 15 minutes to activate your 1-month free demo and schedule your live walkthrough.
                 </p>
                 <div className="mt-6">
                   <a
-                    href="https://wa.me/919511779317?text=Hi%2C%20I%20would%20like%20to%20schedule%20a%20HireX%20Snab%20Client%20Presentation"
+                    href="https://wa.me/919511779317?text=Hi%2C%20I%20have%20submitted%20inquiry%20for%201-Month%20Free%20Demo%20on%20HireX%20Snab"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#10B981] hover:bg-[#059669] text-white text-xs font-bold transition-all shadow-md"
@@ -2089,15 +2134,20 @@ I want to lock in this price and schedule a live demo.`
               </div>
             ) : (
               <div>
-                <div className="flex items-center gap-2 text-[#5145FF] text-xs font-bold mb-1">
-                  <Calendar className="size-4" />
-                  <span>Client Presentation & Walkthrough</span>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2 text-[#5145FF] text-xs font-bold">
+                    <Calendar className="size-4" />
+                    <span>Client Presentation & Walkthrough</span>
+                  </div>
+                  <span className="px-2.5 py-0.5 rounded-full bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 text-emerald-700 font-extrabold text-[10px]">
+                    🎁 1-Month Free Demo
+                  </span>
                 </div>
                 <h3 className="text-xl font-black text-[#101B3B]">
-                  Schedule a Dedicated Demo
+                  Claim Your 1-Month Free Demo
                 </h3>
                 <p className="mt-1 text-xs text-[#7D89A5] mb-6">
-                  Experience real AI resume parsing, candidate ads, and confidential resume masking.
+                  Get full 30-day platform access — AI resume parsing, candidate portal, WhatsApp job matching, and live walkthrough. Zero credit card required.
                 </p>
 
                 <form onSubmit={handleLeadSubmit} className="space-y-4">
@@ -2167,13 +2217,13 @@ I want to lock in this price and schedule a live demo.`
                     <button
                       type="submit"
                       disabled={submittingLead}
-                      className="w-full h-11 rounded-xl bg-[#5145FF] hover:bg-[#4135E8] text-white text-xs font-bold transition-all shadow-md shadow-[#5145FF]/20 cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
+                      className="w-full h-11 rounded-xl bg-gradient-to-r from-[#5145FF] to-[#3B82F6] hover:from-[#4135E8] hover:to-[#2563EB] text-white text-xs font-bold transition-all shadow-md shadow-[#5145FF]/20 cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
                     >
-                      <span>{submittingLead ? 'Submitting...' : 'Request Client Presentation & Walkthrough'}</span>
+                      <span>{submittingLead ? 'Submitting to Formspree...' : 'Claim 1-Month Free Demo & Walkthrough'}</span>
                       <ArrowRight className="size-4" />
                     </button>
                     <div className="mt-2 text-center text-[10px] text-[#7D89A5]">
-                      ⚡ 15-Min Response • Direct Google Meet or WhatsApp Demo
+                      ⚡ Instant 15-Min Response • No Credit Card • 1 Month Free Demo
                     </div>
                   </div>
                 </form>
