@@ -92,6 +92,24 @@ service cloud.firestore {
       allow create, update, delete: if true;
     }
 
+    // --- Candidate Applications Collection Rules ---
+    match /candidateApplications/{applicationId} {
+      allow read: if true;
+      allow create, update, delete: if true;
+    }
+
+    // --- Job Applications Collection Rules ---
+    match /jobApplications/{applicationId} {
+      allow read: if true;
+      allow create, update, delete: if true;
+    }
+
+    // --- Deleted Applications (Tombstones) Collection Rules ---
+    match /deletedApplications/{deletedId} {
+      allow read: if true;
+      allow create, update, delete: if true;
+    }
+
     // --- Voice Interviews Collection Rules (Caller / Screening Interviews) ---
     match /voiceInterviews/{voiceInterviewId} {
       allow read, create, update, delete: if true;

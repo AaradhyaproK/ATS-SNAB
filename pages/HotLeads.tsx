@@ -8,6 +8,7 @@ import {
   doc,
   deleteDoc,
   updateDoc,
+  setDoc,
   getDocs,
   getDoc,
   serverTimestamp,
@@ -347,7 +348,21 @@ export default function HotLeads() {
       });
 
       const list = Array.from(leadsMap.values());
-      const validLeads = list.filter((lead) => !deletedLeadKeysRef.current.has(lead.id));
+      const validLeads = list.filter((lead) => {
+        const cleanEmail = (lead.candidateEmail || '').toLowerCase().trim();
+        const id1 = lead.id;
+        const id2 = `${cleanEmail}_${lead.jobId}`;
+        const id3 = lead.accessCode ? `${cleanEmail}_${lead.accessCode}` : '';
+        const id4 = lead.applicationDocId || '';
+
+        const isDeleted =
+          deletedLeadKeysRef.current.has(id1) ||
+          deletedLeadKeysRef.current.has(id2) ||
+          (id3 && deletedLeadKeysRef.current.has(id3)) ||
+          (id4 && deletedLeadKeysRef.current.has(id4));
+
+        return !isDeleted;
+      });
       validLeads.sort((a, b) => {
         const timeA = a.appliedAt?.toMillis
           ? a.appliedAt.toMillis()
@@ -503,11 +518,32 @@ export default function HotLeads() {
       (err) => console.warn('resumeDumpCandidates subscription warning:', err)
     );
 
+    // D. Query Deleted Applications (Tombstones across all devices / production)
+    const deletedAppsQ = query(collection(db, 'deletedApplications'));
+    const unsubDeleted = onSnapshot(
+      deletedAppsQ,
+      (snap) => {
+        const firestoreDeletedKeys = new Set<string>(deletedLeadKeysRef.current);
+        snap.docs.forEach((d) => {
+          firestoreDeletedKeys.add(d.id);
+          const data = d.data();
+          if (data.candidateEmail && data.jobId) {
+            firestoreDeletedKeys.add(`${data.candidateEmail.toLowerCase().trim()}_${data.jobId}`);
+          }
+        });
+        setDeletedLeadKeys(firestoreDeletedKeys);
+        deletedLeadKeysRef.current = firestoreDeletedKeys;
+        mergeAllData();
+      },
+      (err) => console.warn('deletedApplications subscription error:', err)
+    );
+
     return () => {
       unsubsJobsList.forEach((u) => u());
       unsubApps();
       unsubJobApps();
       unsubCands();
+      unsubDeleted();
     };
   }, [userUid, userTeamId, userParentRecruiterId, isAdmin, (userProfile as any)?.primaryRecruiterUID]);
 
@@ -1196,23 +1232,175 @@ export default function HotLeads() {
     }
   };
 
-  // ── Delete Leads ──
+  // ── Delete Leads (Comprehensive, permanent Firestore deletion) ──
   const executeDeleteLeads = async (leadsToDelete: HotLeadItem[]) => {
+    if (!leadsToDelete.length) return;
     setIsDeletingLeads(true);
+
+    // 1. Optimistic immediate update to local state & ref
+    const newKeys = new Set(deletedLeadKeysRef.current);
+    leadsToDelete.forEach((l) => {
+      const cleanEmail = (l.candidateEmail || '').toLowerCase().trim();
+      newKeys.add(l.id);
+      if (cleanEmail && l.jobId) {
+        newKeys.add(`${cleanEmail}_${l.jobId}`);
+      }
+      if (cleanEmail && l.accessCode) {
+        newKeys.add(`${cleanEmail}_${l.accessCode}`);
+      }
+      if (l.applicationDocId) {
+        newKeys.add(l.applicationDocId);
+      }
+    });
+    saveDeletedKeys(newKeys);
+
+    setLeads((prev) => prev.filter((l) => !leadsToDelete.some((del) => del.id === l.id)));
+    setSelectedLeadIds((prev) => prev.filter((id) => !leadsToDelete.some((del) => del.id === id)));
+
+    if (selectedCandidateDetail && leadsToDelete.some((del) => del.id === selectedCandidateDetail.id)) {
+      setSelectedCandidateDetail(null);
+    }
+
     try {
-      const newKeys = new Set(deletedLeadKeysRef.current);
-      leadsToDelete.forEach((l) => newKeys.add(l.id));
-      saveDeletedKeys(newKeys);
-
-      setLeads((prev) => prev.filter((l) => !leadsToDelete.some((del) => del.id === l.id)));
-      setSelectedLeadIds((prev) => prev.filter((id) => !leadsToDelete.some((del) => del.id === id)));
-
       const deletePromises: Promise<any>[] = [];
 
       for (const lead of leadsToDelete) {
+        const cleanEmail = (lead.candidateEmail || '').toLowerCase().trim();
+        const targetJobId = lead.jobId;
+        const targetAccessCode = lead.accessCode;
+
+        // A. Delete direct application doc if known
         if (lead.applicationDocId) {
           deletePromises.push(
             deleteDoc(doc(db, 'candidateApplications', lead.applicationDocId)).catch(() => {})
+          );
+          deletePromises.push(
+            deleteDoc(doc(db, 'jobApplications', lead.applicationDocId)).catch(() => {})
+          );
+        }
+
+        // B. Query & delete any matching candidateApplications by email + jobId/interviewId
+        if (cleanEmail) {
+          const qCandApps1 = query(
+            collection(db, 'candidateApplications'),
+            where('candidateEmail', '==', cleanEmail)
+          );
+          deletePromises.push(
+            getDocs(qCandApps1).then((snap) => {
+              const subDeletes = snap.docs
+                .filter((d) => {
+                  const data = d.data();
+                  return (
+                    !targetJobId ||
+                    data.jobId === targetJobId ||
+                    data.interviewId === targetJobId ||
+                    (targetAccessCode && data.jobAccessCode === targetAccessCode)
+                  );
+                })
+                .map((d) => deleteDoc(d.ref).catch(() => {}));
+              return Promise.all(subDeletes);
+            }).catch(() => {})
+          );
+
+          const qCandApps2 = query(
+            collection(db, 'candidateApplications'),
+            where('email', '==', cleanEmail)
+          );
+          deletePromises.push(
+            getDocs(qCandApps2).then((snap) => {
+              const subDeletes = snap.docs
+                .filter((d) => {
+                  const data = d.data();
+                  return (
+                    !targetJobId ||
+                    data.jobId === targetJobId ||
+                    data.interviewId === targetJobId ||
+                    (targetAccessCode && data.jobAccessCode === targetAccessCode)
+                  );
+                })
+                .map((d) => deleteDoc(d.ref).catch(() => {}));
+              return Promise.all(subDeletes);
+            }).catch(() => {})
+          );
+
+          // C. Query & delete any matching jobApplications by email + jobId/interviewId
+          const qJobApps = query(
+            collection(db, 'jobApplications'),
+            where('candidateEmail', '==', cleanEmail)
+          );
+          deletePromises.push(
+            getDocs(qJobApps).then((snap) => {
+              const subDeletes = snap.docs
+                .filter((d) => {
+                  const data = d.data();
+                  return (
+                    !targetJobId ||
+                    data.jobId === targetJobId ||
+                    data.interviewId === targetJobId
+                  );
+                })
+                .map((d) => deleteDoc(d.ref).catch(() => {}));
+              return Promise.all(subDeletes);
+            }).catch(() => {})
+          );
+        }
+
+        // D. Clean candidateData and candidateEmails from the Job / Interview documents in Firestore
+        const cleanJobDoc = async (col: 'interviews' | 'jobs', id: string) => {
+          try {
+            const jobRef = doc(db, col, id);
+            const jobSnap = await getDoc(jobRef);
+            if (jobSnap.exists()) {
+              const data = jobSnap.data();
+              const emails = Array.isArray(data.candidateEmails) ? data.candidateEmails : [];
+              const candData = Array.isArray(data.candidateData) ? data.candidateData : [];
+
+              const newEmails = emails.filter(
+                (e: string) => String(e || '').toLowerCase().trim() !== cleanEmail
+              );
+              const newCandData = candData.filter(
+                (c: any) => String(c?.email || '').toLowerCase().trim() !== cleanEmail
+              );
+
+              if (newEmails.length !== emails.length || newCandData.length !== candData.length) {
+                await updateDoc(jobRef, {
+                  candidateEmails: newEmails,
+                  candidateData: newCandData,
+                });
+              }
+            }
+          } catch (e) {
+            console.warn(`[cleanJobDoc] Error updating ${col}/${id}:`, e);
+          }
+        };
+
+        if (targetJobId) {
+          deletePromises.push(cleanJobDoc('interviews', targetJobId));
+          deletePromises.push(cleanJobDoc('jobs', targetJobId));
+        }
+
+        // E. Record tombstones in deletedApplications (so ALL production devices / tabs stay synced)
+        const tombstoneId = `${cleanEmail}_${targetJobId}`;
+        deletePromises.push(
+          setDoc(doc(db, 'deletedApplications', tombstoneId), {
+            id: tombstoneId,
+            candidateEmail: cleanEmail,
+            jobId: targetJobId || '',
+            deletedAt: serverTimestamp(),
+            deletedBy: userUid || 'recruiter',
+          }).catch((err) => console.warn('Tombstone save warning:', err))
+        );
+
+        if (targetAccessCode && targetAccessCode !== targetJobId) {
+          const tombstoneId2 = `${cleanEmail}_${targetAccessCode}`;
+          deletePromises.push(
+            setDoc(doc(db, 'deletedApplications', tombstoneId2), {
+              id: tombstoneId2,
+              candidateEmail: cleanEmail,
+              jobId: targetAccessCode,
+              deletedAt: serverTimestamp(),
+              deletedBy: userUid || 'recruiter',
+            }).catch((err) => console.warn('Tombstone save warning:', err))
           );
         }
       }
@@ -1220,8 +1408,8 @@ export default function HotLeads() {
       await Promise.all(deletePromises);
       messageBox.showSuccess(
         leadsToDelete.length === 1
-          ? `Lead for "${leadsToDelete[0].candidateName || leadsToDelete[0].candidateEmail}" deleted successfully!`
-          : `Successfully deleted ${leadsToDelete.length} leads!`
+          ? `Application for "${leadsToDelete[0].candidateName || leadsToDelete[0].candidateEmail}" permanently deleted!`
+          : `Successfully deleted ${leadsToDelete.length} applications!`
       );
     } catch (err: any) {
       console.error('[executeDeleteLeads] Error:', err);
@@ -2473,13 +2661,25 @@ export default function HotLeads() {
               <div className="text-xs text-gray-500 dark:text-gray-400">
                 Application received on {formatDate(selectedCandidateDetail.appliedAt)}
               </div>
-              <button
-                type="button"
-                onClick={() => setSelectedCandidateDetail(null)}
-                className="px-4 py-1.5 rounded-lg border border-gray-300 dark:border-white/[0.12] bg-white dark:bg-white/[0.05] text-xs font-bold hover:bg-gray-100 dark:hover:bg-white/[0.08] transition-colors"
-              >
-                Close
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleDeleteSingleLead(selectedCandidateDetail)}
+                  disabled={isDeletingLeads}
+                  className="px-3 py-1.5 rounded-lg border border-red-500/30 bg-red-50 dark:bg-red-500/10 text-xs font-bold text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-500/20 transition-colors inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  title="Permanently delete this application"
+                >
+                  <Trash2 size={13} />
+                  <span>Delete Application</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedCandidateDetail(null)}
+                  className="px-4 py-1.5 rounded-lg border border-gray-300 dark:border-white/[0.12] bg-white dark:bg-white/[0.05] text-xs font-bold hover:bg-gray-100 dark:hover:bg-white/[0.08] transition-colors cursor-pointer"
+                >
+                  Close
+                </button>
+              </div>
             </div>
           </div>
         </div>
