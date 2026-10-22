@@ -537,9 +537,10 @@ export async function sendWhatsAppMessage(
  * Opens WhatsApp Web in a new browser tab with prefilled phone and message.
  */
 export function openWhatsAppWebInvite(phone: string, text: string) {
-  const digits = formatPhoneForWhatsApp(phone);
-  if (!digits) return;
-  const url = `https://web.whatsapp.com/send?phone=${digits}&text=${encodeURIComponent(text)}`;
+  const digits = phone ? formatPhoneForWhatsApp(phone) : '';
+  const url = digits
+    ? `https://web.whatsapp.com/send?phone=${digits}&text=${encodeURIComponent(text)}`
+    : `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
   window.open(url, '_blank');
 }
 
