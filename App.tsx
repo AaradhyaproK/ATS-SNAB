@@ -52,6 +52,7 @@ import RecruiterAllJobs from './pages/RecruiterAllJobs';
 import PublicJobSeekerUpload from './pages/PublicJobSeekerUpload';
 import RecruiterTemplatesPage from './pages/RecruiterTemplates';
 import HotLeads from './pages/HotLeads';
+import KanbanPipeline from './pages/KanbanPipeline';
 import CandidatePortal from './pages/CandidatePortal';
 import LandingPage from './pages/LandingPage';
 import ClientReviewPortal from './pages/ClientReviewPortal';
@@ -238,10 +239,22 @@ const App: React.FC = () => {
             <Route path="voice-report/*" element={<Navigate to="/candidate" replace />} />
             <Route path="report/*" element={<Navigate to="/candidate" replace />} />
             
-            {/* Public Client Shortlist Review Portal (1-Click Approve / Reject for Corporate Clients) */}
-            <Route path="review/:shareId" element={<ClientReviewPortal />} />
-            <Route path="client-review/:shareId" element={<ClientReviewPortal />} />
-            <Route path="client-view/:shareId" element={<ClientReviewPortal />} />
+            {/* Public Client Shortlist Review Portal */}
+            <Route path="review/:shareId" element={
+              <ThemeProvider>
+                <ClientReviewPortal />
+              </ThemeProvider>
+            } />
+            <Route path="client-review/:shareId" element={
+              <ThemeProvider>
+                <ClientReviewPortal />
+              </ThemeProvider>
+            } />
+            <Route path="client-view/:shareId" element={
+              <ThemeProvider>
+                <ClientReviewPortal />
+              </ThemeProvider>
+            } />
 
             {/* Public Test Taking Routes (No Layout) */}
             <Route path="test/:testId" element={
@@ -264,6 +277,8 @@ const App: React.FC = () => {
               <Route path="admin/add-candidate" element={<ProtectedRoute role="admin"><AddCandidate /></ProtectedRoute>} />
               <Route path="recruiter/all-jobs" element={<ProtectedRoute role="recruiter" loadingFallback={<RecruiterInterviewsSkeleton />}><RecruiterAllJobs /></ProtectedRoute>} />
               <Route path="recruiter/hot-leads" element={<ProtectedRoute role="recruiter" loadingFallback={<RecruiterInterviewsSkeleton />}><HotLeads /></ProtectedRoute>} />
+              <Route path="recruiter/pipeline" element={<ProtectedRoute role="recruiter" loadingFallback={<RecruiterInterviewsSkeleton />}><KanbanPipeline /></ProtectedRoute>} />
+              <Route path="recruiter/kanban" element={<Navigate to="/recruiter/pipeline" replace />} />
               <Route path="recruiter/interviews" element={<ProtectedRoute role="recruiter" loadingFallback={<RecruiterInterviewsSkeleton />}><RecruiterAllJobs /></ProtectedRoute>} />
               <Route path="recruiter/job/:jobId/edit" element={<ProtectedRoute role="recruiter"><EditJob /></ProtectedRoute>} />
               <Route path="recruiter/invites" element={<ProtectedRoute role="recruiter" loadingFallback={<RecruiterInterviewsSkeleton />}><InvitedCandidates /></ProtectedRoute>} />

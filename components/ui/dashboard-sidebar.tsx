@@ -10,6 +10,7 @@ import {
   MessageSquare,
   Flame,
   UserPlus,
+  Kanban,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
@@ -69,6 +70,13 @@ const recruiterNavGroups: NavGroupData[] = [
         icon: Flame,
         href: '/recruiter/hot-leads',
         match: (path) => path === '/recruiter/hot-leads',
+      },
+      {
+        id: 'pipeline-kanban',
+        title: 'Pipeline Kanban',
+        icon: Kanban,
+        href: '/recruiter/pipeline',
+        match: (path) => path === '/recruiter/pipeline' || path === '/recruiter/kanban',
       },
       {
         id: 'resume-dump',

@@ -3043,6 +3043,14 @@ html.dark {
   color: #0f172a !important;
 }
 
+/* Modal & Drawer Backdrops - ensure they stay transparent dimmed overlays in light mode (not solid white) */
+:root:not(.dark) .recruiter-shell .recruiter-workspace [class*="fixed"][class*="inset-0"],
+:root:not(.dark) .recruiter-shell .recruiter-workspace [data-backdrop="true"],
+:root:not(.dark) .recruiter-shell .recruiter-workspace .ats-backdrop {
+  background-color: rgba(15, 23, 42, 0.45) !important;
+  color: inherit !important;
+}
+
 /* Inner Section Cards & Header Bars (Soft Slate Surface) */
 :root:not(.dark) .recruiter-shell .recruiter-workspace [class*="bg-[#080808]"],
 :root:not(.dark) .recruiter-shell .recruiter-workspace [class*="bg-[#0d0d0d]"],

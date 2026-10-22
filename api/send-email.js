@@ -7,8 +7,11 @@ import { SESv2Client, SendEmailCommand } from '@aws-sdk/client-sesv2';
  */
 export default async function handler(req, res) {
   // Set CORS headers so frontend can call this function
-  res.setHeader('Access-Control-Allow-Credentials', true);
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  const origin = req.headers?.origin || req.headers?.Origin || '*';
+  res.setHeader('Access-Control-Allow-Origin', origin);
+  if (origin !== '*') {
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+  }
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
   res.setHeader(
     'Access-Control-Allow-Headers',

@@ -8,8 +8,11 @@ import OpenAI from 'openai';
  */
 export default async function handler(req, res) {
   // CORS Headers
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  const origin = req.headers?.origin || req.headers?.Origin || '*';
+  res.setHeader('Access-Control-Allow-Origin', origin);
+  if (origin !== '*') {
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+  }
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,POST');
   res.setHeader(
     'Access-Control-Allow-Headers',

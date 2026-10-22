@@ -12,6 +12,7 @@ import {
   getDocs,
   getDoc,
   serverTimestamp,
+  addDoc,
 } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { useAuth } from '../context/AuthContext';
@@ -61,7 +62,6 @@ import {
   Share2,
 } from 'lucide-react';
 import { MorphResumeModal, MorphedCandidateData } from '../components/MorphResumeModal';
-import GenerateClientShortlistModal from '../components/GenerateClientShortlistModal';
 import {
   fetchWhatsAppStatus,
   getStoredSessionId,
@@ -185,15 +185,202 @@ export default function HotLeads() {
   const [scheduleNotes, setScheduleNotes] = useState<string>('');
   const [isUpdatingStatus, setIsUpdatingStatus] = useState<boolean>(false);
 
-  // Client Shortlist Share Portal Modal
-  const [isClientShortlistModalOpen, setIsClientShortlistModalOpen] = useState<boolean>(false);
-  const [clientShortlistLeads, setClientShortlistLeads] = useState<HotLeadItem[]>([]);
+  // Client Shortlist Unique Link for Selected Job
+  const [activeJobShortlist, setActiveJobShortlist] = useState<{
+    id: string;
+    shareId: string;
+    jobId: string;
+    jobTitle: string;
+    clientName: string;
+    shortlistUrl: string;
+  } | null>(null);
+  const [linkCopied, setLinkCopied] = useState<boolean>(false);
 
-  const handleOpenClientShortlist = (leadsToShare: HotLeadItem[]) => {
-    if (!leadsToShare.length) return;
-    setClientShortlistLeads(leadsToShare);
-    setIsClientShortlistModalOpen(true);
+  const handleCopyJobClientLink = async (targetJobId?: string) => {
+    const jId = targetJobId || selectedJobId;
+    if (!jId || jId === 'all') {
+      messageBox.showInfo('Please select a specific job to view its client review link.');
+      return;
+    }
+
+    try {
+      const q = query(collection(db, 'clientShortlists'), where('jobId', '==', jId));
+      const snap = await getDocs(q);
+      let shareId = '';
+      if (!snap.empty) {
+        shareId = snap.docs[0].data().shareId;
+      } else {
+        shareId = activeJobShortlist?.shareId || jId;
+      }
+      const url = `${window.location.origin}/review/${shareId}`;
+      await navigator.clipboard.writeText(url);
+      messageBox.showSuccess('🔗 Client Review Link copied to clipboard!');
+    } catch {
+      messageBox.showError('Failed to copy link.');
+    }
   };
+
+  // Realtime Sync: Keeps this job's unique Client Review Link in 100% sync with all Shortlisted candidates
+  const syncJobShortlist = async (targetJobId: string, currentLeads?: HotLeadItem[]) => {
+    if (!targetJobId || targetJobId === 'all') return;
+
+    try {
+      const listToFilter = currentLeads || leads;
+      const shortlistedLeads = listToFilter.filter(
+        (l) => l.jobId === targetJobId && l.status === 'Shortlisted'
+      );
+
+      // Prepare candidate payloads with Cloudinary resumes and match scores
+      const candidatePayloads = await Promise.all(
+        shortlistedLeads.map(async (lead) => {
+          const rawName = lead.candidateName || 'Candidate';
+          const parts = rawName.split(' ');
+          const maskedName = parts.length > 1 ? `${parts[0]} ${parts[1][0]}.` : `${parts[0]}`;
+
+          let skills = lead.candidateDetails?.skills || [];
+          const exp = lead.candidateDetails?.experience || '3+';
+          const notice = lead.candidateDetails?.noticePeriod || 'Immediate / 15 Days';
+          const location = lead.candidateDetails?.location || 'Bangalore / Remote';
+          const summary =
+            lead.candidateDetails?.summary ||
+            `Pre-screened talent with ${exp} years verified experience in ${lead.jobTitle}. Evaluated with AI match score of ${lead.matchScore || 85}%.`;
+
+          let resumeUrl = lead.resumeUrl || lead.candidateDetails?.resumeUrl || '';
+
+          if ((!resumeUrl || skills.length === 0) && lead.candidateEmail) {
+            try {
+              const cleanEmail = lead.candidateEmail.toLowerCase().trim();
+              const qDump = query(collection(db, 'resumeDumpCandidates'), where('email', '==', cleanEmail));
+              const snap = await getDocs(qDump).catch(() => null);
+              if (snap && !snap.empty) {
+                const dData = snap.docs[0].data();
+                if (!resumeUrl) {
+                  resumeUrl = dData.resumeUrl || dData.profile?.resumeUrl || dData.fileUrl || '';
+                }
+                if (skills.length === 0) {
+                  skills = dData.skills || dData.profile?.skills || [];
+                }
+              }
+            } catch (err) {
+              console.warn('Fallback resume resolution error:', err);
+            }
+          }
+
+          return {
+            id: lead.id,
+            applicationDocId: lead.applicationDocId || '',
+            candidateId: lead.candidateId || '',
+            candidateEmail: lead.candidateEmail || '',
+            candidatePhone: lead.candidatePhone || '',
+            candidateName: lead.candidateName,
+            maskedName,
+            matchScore: lead.matchScore || 85,
+            matchGrade: lead.matchGrade || 'Great Fit',
+            skills,
+            experience: typeof exp === 'number' ? `${exp} Years` : String(exp),
+            noticePeriod: String(notice),
+            location: String(location),
+            currentSalary: lead.candidateDetails?.currentSalary || 'Confidential',
+            expectedSalary: lead.candidateDetails?.expectedSalary || 'As per norms',
+            summary,
+            resumeUrl,
+            clientDecision: 'pending',
+            clientFeedback: '',
+            decidedAt: null,
+            interviewDetails: null,
+          };
+        })
+      );
+
+      // Query persistent clientShortlists document for this jobId
+      const qShortlist = query(collection(db, 'clientShortlists'), where('jobId', '==', targetJobId));
+      const snap = await getDocs(qShortlist);
+
+      if (!snap.empty) {
+        const docId = snap.docs[0].id;
+        await updateDoc(doc(db, 'clientShortlists', docId), {
+          candidates: candidatePayloads,
+          updatedAt: serverTimestamp(),
+        });
+      }
+    } catch (err) {
+      console.warn('Failed to sync job shortlist:', err);
+    }
+  };
+
+  // Sync unique Client Review Link whenever a job is selected
+  useEffect(() => {
+    if (selectedJobId === 'all') {
+      setActiveJobShortlist(null);
+      return;
+    }
+
+    const matchingJob = jobs.find((j) => j.id === selectedJobId);
+    const resolvedJobTitle = matchingJob?.title || matchingJob?.role || 'Role';
+    let rawCompany = matchingJob?.companyName || matchingJob?.company || userProfile?.company || 'Client';
+    rawCompany = rawCompany.replace(/\s*\(Dummy.*?\)\s*/gi, '').trim() || 'Client';
+
+    const agencyName = userProfile?.company || (userProfile as any)?.agencyName || 'SNAB Talent Partners';
+    const recruiterPhone = userProfile?.phone || (userProfile as any)?.whatsappNumber || '+91 9511779317';
+    const recruiterEmail = user?.email || '';
+
+    // Listen to persistent shortlist document for this jobId
+    const qShortlist = query(collection(db, 'clientShortlists'), where('jobId', '==', selectedJobId));
+    const unsubscribe = onSnapshot(qShortlist, async (snap) => {
+      if (!snap.empty) {
+        const d = snap.docs[0];
+        const data = d.data();
+        setActiveJobShortlist({
+          id: d.id,
+          shareId: data.shareId,
+          jobId: selectedJobId,
+          jobTitle: data.jobTitle || resolvedJobTitle,
+          clientName: data.clientName || rawCompany,
+          shortlistUrl: `${window.location.origin}/review/${data.shareId}`,
+        });
+      } else {
+        // Create unique persistent shortlist document for this job
+        const newShareId = `csl_${Math.random().toString(36).substring(2, 10)}${Date.now().toString(36).slice(-4)}`;
+        const expirationDate = new Date();
+        expirationDate.setDate(expirationDate.getDate() + 30);
+
+        const docRef = await addDoc(collection(db, 'clientShortlists'), {
+          shareId: newShareId,
+          clientName: rawCompany,
+          jobTitle: resolvedJobTitle,
+          jobId: selectedJobId,
+          agencyName,
+          recruiterUID: user?.uid || '',
+          recruiterName: userProfile?.name || user?.displayName || 'Recruiter Lead',
+          recruiterPhone,
+          recruiterEmail,
+          clientContactPerson: '',
+          clientPhone: '',
+          executiveNote: 'Hi team, please find attached the curated, pre-screened candidates for this role. All candidates have verified skills, match requirements, and are available for interview rounds.',
+          maskingLevel: 'standard',
+          expiresAt: expirationDate.toISOString(),
+          createdAt: serverTimestamp(),
+          viewCount: 0,
+          candidates: [],
+          status: 'active',
+        });
+
+        setActiveJobShortlist({
+          id: docRef.id,
+          shareId: newShareId,
+          jobId: selectedJobId,
+          jobTitle: resolvedJobTitle,
+          clientName: rawCompany,
+          shortlistUrl: `${window.location.origin}/review/${newShareId}`,
+        });
+      }
+    });
+
+    // Initial sync of shortlisted candidates for this job
+    syncJobShortlist(selectedJobId, leads);
+
+    return () => unsubscribe();
+  }, [selectedJobId, jobs, leads]);
 
   // Status Change Confirmation Popup
   const [statusChangePrompt, setStatusChangePrompt] = useState<{
@@ -907,6 +1094,17 @@ export default function HotLeads() {
       if (waDispatched) notificationParts.push('WhatsApp sent');
       const notificationSummary = notificationParts.length > 0 ? ` (${notificationParts.join(', ')})` : '';
 
+      // Realtime Client Review Link Sync:
+      // If candidate is shortlisted, they appear on the link; if moved to any other status, they are auto-removed!
+      const updatedLeads = leads.map((l) =>
+        l.id === lead.id ? { ...l, status: targetStatus } : l
+      );
+      if (lead.jobId) {
+        syncJobShortlist(lead.jobId, updatedLeads).catch((e) =>
+          console.warn('Realtime shortlist sync notice:', e)
+        );
+      }
+
       messageBox.showSuccess(
         `✅ Application status for ${lead.candidateName} moved to "${targetStatus}"!${notificationSummary}`
       );
@@ -1012,7 +1210,7 @@ export default function HotLeads() {
     return matchResult;
   }, [jobs, candidateProfilesMap]);
 
-  // ── Filtered Leads ──
+  // ── Filtered Leads ──-
   const filteredLeads = useMemo(() => {
     const list = leads.filter((lead) => {
       // Tab filter
@@ -1080,6 +1278,11 @@ export default function HotLeads() {
 
     return { total, underReview, shortlisted, scheduled, hired };
   }, [leads]);
+
+  const shortlistedCountForJob = useMemo(() => {
+    if (selectedJobId === 'all') return 0;
+    return leads.filter((l) => l.jobId === selectedJobId && l.status === 'Shortlisted').length;
+  }, [selectedJobId, leads]);
 
   // Click outside & Escape key handler for job dropdown
   useEffect(() => {
@@ -1418,6 +1621,13 @@ export default function HotLeads() {
       }
 
       await Promise.all(deletePromises);
+
+      // Realtime Client Review Link Sync: Auto-remove deleted candidates from the job's client link
+      const remainingLeads = leads.filter((l) => !leadsToDelete.some((del) => del.id === l.id));
+      const affectedJobIds = new Set(leadsToDelete.map((l) => l.jobId).filter(Boolean));
+      affectedJobIds.forEach((jId) => {
+        syncJobShortlist(jId, remainingLeads).catch((e) => console.warn('Shortlist deletion sync notice:', e));
+      });
       messageBox.showSuccess(
         leadsToDelete.length === 1
           ? `Application for "${leadsToDelete[0].candidateName || leadsToDelete[0].candidateEmail}" permanently deleted!`
@@ -1806,18 +2016,6 @@ export default function HotLeads() {
                   type="button"
                   onClick={() => {
                     const selectedLeads = leads.filter((l) => selectedLeadIds.includes(l.id));
-                    handleOpenClientShortlist(selectedLeads);
-                  }}
-                  className="geist-caption inline-flex h-8 items-center justify-center gap-1.5 rounded-md border border-emerald-500/40 bg-emerald-500/10 dark:bg-emerald-500/20 px-3 text-xs font-bold text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/25 transition-all shadow-xs cursor-pointer"
-                  title="Generate white-labeled client review link with 1-click approve/reject"
-                >
-                  <Share2 className="w-3.5 h-3.5" />
-                  <span>Generate Client Shortlist Link ({selectedLeadIds.length})</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const selectedLeads = leads.filter((l) => selectedLeadIds.includes(l.id));
                     executeDeleteLeads(selectedLeads);
                   }}
                   disabled={isDeletingLeads}
@@ -1840,6 +2038,69 @@ export default function HotLeads() {
           </div>
         </div>
       </section>
+
+      {/* ── Unique Client Review Link for Selected Job ── */}
+      {selectedJobId !== 'all' && activeJobShortlist && (
+        <div className="px-4 pt-3 sm:px-6 lg:px-7">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 px-4 py-3 rounded-xl border border-blue-500/30 bg-blue-500/5 dark:bg-blue-500/10 backdrop-blur-xs">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="size-8 rounded-lg bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+                <Share2 size={15} />
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-xs font-bold text-slate-900 dark:text-white">
+                    Client Review Link
+                  </span>
+                  <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                    ● {shortlistedCountForJob} Shortlisted (Live Realtime Sync)
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500 dark:text-neutral-400 font-mono truncate mt-0.5">
+                  {activeJobShortlist.shortlistUrl}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard.writeText(activeJobShortlist.shortlistUrl);
+                  setLinkCopied(true);
+                  setTimeout(() => setLinkCopied(false), 2500);
+                }}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-95"
+              >
+                {linkCopied ? <Check size={13} /> : <Copy size={13} />}
+                <span>{linkCopied ? 'Copied!' : 'Copy Link'}</span>
+              </button>
+
+              <a
+                href={activeJobShortlist.shortlistUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-300 dark:border-white/10 bg-white dark:bg-[#1a1a1a] hover:bg-slate-50 dark:hover:bg-[#252525] text-slate-700 dark:text-neutral-200 text-xs font-bold transition-all cursor-pointer"
+              >
+                <ExternalLink size={13} />
+                <span>Open Portal ↗</span>
+              </a>
+
+              <a
+                href={`https://wa.me/?text=${encodeURIComponent(
+                  `Hi! Here is the live candidate review link for ${activeJobShortlist.jobTitle}: ${activeJobShortlist.shortlistUrl}`
+                )}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#25D366] hover:bg-[#20bd5a] text-white text-xs font-bold shadow-xs transition-all"
+              >
+                <MessageCircle size={13} />
+                <span>WhatsApp</span>
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── 4. Main Applications Table ── */}
       <div className="px-4 py-5 sm:px-6 lg:px-7">
@@ -2103,15 +2364,15 @@ export default function HotLeads() {
                               <span>Mask Resume</span>
                             </button>
 
-                            {/* Share with Client Portal */}
+                            {/* Copy Job Client Portal Link */}
                             <button
                               type="button"
-                              onClick={() => handleOpenClientShortlist([lead])}
+                              onClick={() => handleCopyJobClientLink(lead.jobId)}
                               className="geist-caption inline-flex h-7 items-center justify-center gap-1 rounded-[5px] border border-blue-500/35 bg-blue-500/10 hover:bg-blue-500/20 text-blue-700 dark:text-blue-300 px-2 text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-95 shrink-0"
-                              title="Generate client review link for this candidate"
+                              title="Copy Client Review Link for this job"
                             >
                               <Share2 className="size-3 text-blue-500 shrink-0" />
-                              <span className="hidden xl:inline">Share</span>
+                              <span className="hidden xl:inline">Link</span>
                             </button>
 
                             {/* View Details & Resume Modal Button */}
@@ -2518,14 +2779,14 @@ export default function HotLeads() {
                   type="button"
                   onClick={() => {
                     if (selectedCandidateDetail) {
-                      handleOpenClientShortlist([selectedCandidateDetail]);
+                      handleCopyJobClientLink(selectedCandidateDetail.jobId);
                     }
                   }}
                   className="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-md border border-blue-500/35 bg-blue-500/10 hover:bg-blue-500/20 text-blue-700 dark:text-blue-300 transition-colors shadow-xs cursor-pointer active:scale-95"
-                  title="Generate client shortlist review link for this candidate"
+                  title="Copy Client Review Link for this job"
                 >
                   <Share2 size={12} className="text-blue-500 shrink-0" />
-                  <span>Share with Client</span>
+                  <span>Copy Client Link</span>
                 </button>
 
                 {selectedCandidateDetail.resumeUrl && (
@@ -3297,15 +3558,6 @@ export default function HotLeads() {
         candidate={morphResumeCandidate}
         isOpen={Boolean(morphResumeCandidate)}
         onClose={() => setMorphResumeCandidate(null)}
-      />
-
-      {/* Client Shortlist Generation Modal */}
-      <GenerateClientShortlistModal
-        isOpen={isClientShortlistModalOpen}
-        onClose={() => setIsClientShortlistModalOpen(false)}
-        selectedLeads={clientShortlistLeads}
-        defaultJobTitle={clientShortlistLeads[0]?.jobTitle}
-        defaultCompanyName={clientShortlistLeads[0]?.companyName}
       />
     </div>
   );
