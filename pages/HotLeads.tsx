@@ -58,8 +58,10 @@ import {
   SlidersHorizontal,
   AlertCircle,
   Zap,
+  Share2,
 } from 'lucide-react';
 import { MorphResumeModal, MorphedCandidateData } from '../components/MorphResumeModal';
+import GenerateClientShortlistModal from '../components/GenerateClientShortlistModal';
 import {
   fetchWhatsAppStatus,
   getStoredSessionId,
@@ -182,6 +184,16 @@ export default function HotLeads() {
   const [scheduleLink, setScheduleLink] = useState<string>('');
   const [scheduleNotes, setScheduleNotes] = useState<string>('');
   const [isUpdatingStatus, setIsUpdatingStatus] = useState<boolean>(false);
+
+  // Client Shortlist Share Portal Modal
+  const [isClientShortlistModalOpen, setIsClientShortlistModalOpen] = useState<boolean>(false);
+  const [clientShortlistLeads, setClientShortlistLeads] = useState<HotLeadItem[]>([]);
+
+  const handleOpenClientShortlist = (leadsToShare: HotLeadItem[]) => {
+    if (!leadsToShare.length) return;
+    setClientShortlistLeads(leadsToShare);
+    setIsClientShortlistModalOpen(true);
+  };
 
   // Status Change Confirmation Popup
   const [statusChangePrompt, setStatusChangePrompt] = useState<{
@@ -1794,6 +1806,18 @@ export default function HotLeads() {
                   type="button"
                   onClick={() => {
                     const selectedLeads = leads.filter((l) => selectedLeadIds.includes(l.id));
+                    handleOpenClientShortlist(selectedLeads);
+                  }}
+                  className="geist-caption inline-flex h-8 items-center justify-center gap-1.5 rounded-md border border-emerald-500/40 bg-emerald-500/10 dark:bg-emerald-500/20 px-3 text-xs font-bold text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/25 transition-all shadow-xs cursor-pointer"
+                  title="Generate white-labeled client review link with 1-click approve/reject"
+                >
+                  <Share2 className="w-3.5 h-3.5" />
+                  <span>Generate Client Shortlist Link ({selectedLeadIds.length})</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const selectedLeads = leads.filter((l) => selectedLeadIds.includes(l.id));
                     executeDeleteLeads(selectedLeads);
                   }}
                   disabled={isDeletingLeads}
@@ -2077,6 +2101,17 @@ export default function HotLeads() {
                             >
                               <Wand2 className="size-3 text-purple-500 shrink-0" />
                               <span>Mask Resume</span>
+                            </button>
+
+                            {/* Share with Client Portal */}
+                            <button
+                              type="button"
+                              onClick={() => handleOpenClientShortlist([lead])}
+                              className="geist-caption inline-flex h-7 items-center justify-center gap-1 rounded-[5px] border border-blue-500/35 bg-blue-500/10 hover:bg-blue-500/20 text-blue-700 dark:text-blue-300 px-2 text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-95 shrink-0"
+                              title="Generate client review link for this candidate"
+                            >
+                              <Share2 className="size-3 text-blue-500 shrink-0" />
+                              <span className="hidden xl:inline">Share</span>
                             </button>
 
                             {/* View Details & Resume Modal Button */}
@@ -2477,6 +2512,20 @@ export default function HotLeads() {
                 >
                   <Wand2 size={12} className="text-purple-500 shrink-0" />
                   <span>Masked Resume</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (selectedCandidateDetail) {
+                      handleOpenClientShortlist([selectedCandidateDetail]);
+                    }
+                  }}
+                  className="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-md border border-blue-500/35 bg-blue-500/10 hover:bg-blue-500/20 text-blue-700 dark:text-blue-300 transition-colors shadow-xs cursor-pointer active:scale-95"
+                  title="Generate client shortlist review link for this candidate"
+                >
+                  <Share2 size={12} className="text-blue-500 shrink-0" />
+                  <span>Share with Client</span>
                 </button>
 
                 {selectedCandidateDetail.resumeUrl && (
@@ -3248,6 +3297,15 @@ export default function HotLeads() {
         candidate={morphResumeCandidate}
         isOpen={Boolean(morphResumeCandidate)}
         onClose={() => setMorphResumeCandidate(null)}
+      />
+
+      {/* Client Shortlist Generation Modal */}
+      <GenerateClientShortlistModal
+        isOpen={isClientShortlistModalOpen}
+        onClose={() => setIsClientShortlistModalOpen(false)}
+        selectedLeads={clientShortlistLeads}
+        defaultJobTitle={clientShortlistLeads[0]?.jobTitle}
+        defaultCompanyName={clientShortlistLeads[0]?.companyName}
       />
     </div>
   );

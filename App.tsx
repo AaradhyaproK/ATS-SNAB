@@ -54,6 +54,7 @@ import RecruiterTemplatesPage from './pages/RecruiterTemplates';
 import HotLeads from './pages/HotLeads';
 import CandidatePortal from './pages/CandidatePortal';
 import LandingPage from './pages/LandingPage';
+import ClientReviewPortal from './pages/ClientReviewPortal';
 
 const DefaultRouteLoader = () => (
   <div className="flex items-center justify-center min-h-screen bg-background text-foreground">
@@ -236,7 +237,11 @@ const App: React.FC = () => {
             <Route path="voice-interview/*" element={<Navigate to="/candidate" replace />} />
             <Route path="voice-report/*" element={<Navigate to="/candidate" replace />} />
             <Route path="report/*" element={<Navigate to="/candidate" replace />} />
-            <Route path="client-view/*" element={<Navigate to="/candidate" replace />} />
+            
+            {/* Public Client Shortlist Review Portal (1-Click Approve / Reject for Corporate Clients) */}
+            <Route path="review/:shareId" element={<ClientReviewPortal />} />
+            <Route path="client-review/:shareId" element={<ClientReviewPortal />} />
+            <Route path="client-view/:shareId" element={<ClientReviewPortal />} />
 
             {/* Public Test Taking Routes (No Layout) */}
             <Route path="test/:testId" element={

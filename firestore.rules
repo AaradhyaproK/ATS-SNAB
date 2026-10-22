@@ -110,6 +110,12 @@ service cloud.firestore {
       allow create, update, delete: if true;
     }
 
+    // --- Client Shortlists (Agency Review Portal) Collection Rules ---
+    match /clientShortlists/{shortlistId} {
+      allow read, create, update: if true;
+      allow delete: if request.auth != null;
+    }
+
     // --- Voice Interviews Collection Rules (Caller / Screening Interviews) ---
     match /voiceInterviews/{voiceInterviewId} {
       allow read, create, update, delete: if true;

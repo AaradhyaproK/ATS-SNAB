@@ -72,9 +72,18 @@ const AuthPage: React.FC = () => {
     setError(null);
     setMessage(null);
 
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanPassword = password.trim();
+
+    if (!cleanEmail || !cleanPassword) {
+      setError('Please enter both your email and password.');
+      setLoading(false);
+      return;
+    }
+
     try {
       await setPersistence(auth, rememberMe ? browserLocalPersistence : browserSessionPersistence);
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(auth, cleanEmail, cleanPassword);
 
       let userData: any = {};
       try {
@@ -84,7 +93,7 @@ const AuthPage: React.FC = () => {
         console.warn('Could not fetch user document from Firestore:', docErr);
       }
 
-      const isAdminEmail = email.trim().toLowerCase() === 'admin@snab.co.in' || email.trim().toLowerCase().includes('admin');
+      const isAdminEmail = cleanEmail === 'admin@snab.co.in' || cleanEmail.includes('admin');
       const userRole = userData.role || (isAdminEmail ? 'admin' : 'recruiter');
 
       if (userRole !== 'admin') {
@@ -107,7 +116,34 @@ const AuthPage: React.FC = () => {
         navigate('/recruiter/jobs');
       }
     } catch (err: any) {
-      setError(`Login failed: ${err.message}`);
+      console.error('Firebase Auth Login Error:', err);
+      const code = err.code || '';
+      const rawMsg = err.message || '';
+
+      if (
+        code === 'auth/invalid-credential' ||
+        code === 'auth/wrong-password' ||
+        code === 'auth/user-not-found' ||
+        rawMsg.includes('INVALID_LOGIN_CREDENTIALS') ||
+        rawMsg.includes('EMAIL_NOT_FOUND') ||
+        rawMsg.includes('INVALID_PASSWORD')
+      ) {
+        setError('Invalid email or password. Please verify your credentials or ensure this account was registered in Firebase Auth.');
+      } else if (code === 'auth/invalid-email' || rawMsg.includes('INVALID_EMAIL')) {
+        setError('Invalid email address format. Please check for accidental trailing spaces or typos.');
+      } else if (code === 'auth/user-disabled' || rawMsg.includes('USER_DISABLED')) {
+        setError('This account has been disabled. Please contact your system administrator.');
+      } else if (code === 'auth/too-many-requests' || rawMsg.includes('TOO_MANY_ATTEMPTS')) {
+        setError('Too many failed login attempts. Access has been temporarily restricted for security. Please wait a few minutes or reset your password.');
+      } else if (code === 'auth/unauthorized-domain' || rawMsg.includes('unauthorized-domain')) {
+        setError('This production domain is not authorized in Firebase. Please add this domain under Firebase Console > Authentication > Settings > Authorized Domains.');
+      } else if (code === 'auth/operation-not-allowed' || rawMsg.includes('OPERATION_NOT_ALLOWED')) {
+        setError('Email/Password provider is disabled in Firebase Console. Please enable it under Authentication > Sign-in method.');
+      } else if (code === 'auth/network-request-failed') {
+        setError('Network connection failed. Please check your internet connection.');
+      } else {
+        setError(`Login failed: ${rawMsg.replace(/^Firebase:\s*/, '')}`);
+      }
     } finally {
       setLoading(false);
     }
@@ -119,10 +155,19 @@ const AuthPage: React.FC = () => {
     setError(null);
     setMessage(null);
 
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanName = fullname.trim();
+
+    if (!cleanEmail || !cleanName) {
+      setError('Please provide your name and email address.');
+      setLoading(false);
+      return;
+    }
+
     try {
       await addDoc(collection(db, 'recruiterRequests'), {
-        email,
-        fullname,
+        email: cleanEmail,
+        fullname: cleanName,
         experience: Number(experience),
         role: 'recruiter',
         status: 'pending',
@@ -131,7 +176,7 @@ const AuthPage: React.FC = () => {
       setMessage('Request sent! An admin will review your recruiter access request and create your account once approved.');
       setMode('login');
     } catch (err: any) {
-      setError(`Request failed: ${err.message}`);
+      setError(`Request failed: ${err.message?.replace(/^Firebase:\s*/, '')}`);
     } finally {
       setLoading(false);
     }
@@ -143,12 +188,26 @@ const AuthPage: React.FC = () => {
     setError(null);
     setMessage(null);
 
+    const cleanEmail = email.trim().toLowerCase();
+    if (!cleanEmail) {
+      setError('Please enter your email address to reset password.');
+      setLoading(false);
+      return;
+    }
+
     try {
-      await sendPasswordResetEmail(auth, email);
+      await sendPasswordResetEmail(auth, cleanEmail);
       setMessage('Password reset email sent! Check your inbox and your spam/junk folder.');
       setMode('login');
     } catch (err: any) {
-      setError(`Reset failed: ${err.message}`);
+      const code = err.code || '';
+      if (code === 'auth/user-not-found' || code === 'auth/invalid-credential') {
+        setError('No account found with this email address.');
+      } else if (code === 'auth/invalid-email') {
+        setError('Invalid email address format.');
+      } else {
+        setError(`Reset failed: ${err.message?.replace(/^Firebase:\s*/, '')}`);
+      }
     } finally {
       setLoading(false);
     }
