@@ -89,6 +89,16 @@ const JobToCandidatePortalRedirect: React.FC = () => {
   return <Navigate to={interviewId ? `/candidate?job=${interviewId}` : '/candidate'} replace />;
 };
 
+const DashboardRedirect: React.FC = () => {
+  const { user, userProfile, loading } = useAuth();
+  if (loading) return <DefaultRouteLoader />;
+  if (!user) return <Navigate to="/auth" replace />;
+  const role = userProfile?.role || (user.email === 'admin@snab.co.in' || user.email?.includes('admin') ? 'admin' : 'recruiter');
+  if (role === 'admin' || role === 'superadmin') return <Navigate to="/admin" replace />;
+  if (role === 'recruiter') return <Navigate to="/recruiter/jobs" replace />;
+  return <Navigate to="/candidate" replace />;
+};
+
 const LegacyHashRedirect: React.FC = () => {
   const navigate = useNavigate();
   useEffect(() => {
@@ -119,6 +129,9 @@ const App: React.FC = () => {
             <Route path="/" element={<LandingPage />} />
             <Route path="landing" element={<LandingPage />} />
             <Route path="auth" element={<AuthPage />} />
+            <Route path="dashboard" element={<DashboardRedirect />} />
+            <Route path="admin-dashboard" element={<Navigate to="/admin" replace />} />
+            <Route path="recruiter-jobs" element={<Navigate to="/recruiter/jobs" replace />} />
             <Route path="blogs" element={<Blogs />} />
             <Route path="contact" element={<ContactUs />} />
             <Route path="report-bug" element={<ReportBug />} />

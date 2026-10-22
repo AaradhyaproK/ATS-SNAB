@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import {
   Sparkles,
   ArrowRight,
+  ArrowUpRight,
   CheckCircle2,
   XCircle,
   Clock,
@@ -28,162 +29,117 @@ import {
   Layers,
   Lock,
   ChevronRight,
+  ChevronDown,
   Calculator,
   Sliders,
   Copy,
   Share2,
   Percent,
   IndianRupee,
-  FileCheck
+  FileCheck,
+  Kanban,
+  ExternalLink,
+  Award,
+  Send,
+  Plus,
+  Minus,
+  Edit3
 } from 'lucide-react';
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { useForm, ValidationError } from '@formspree/react';
 import { useAuth } from '../context/AuthContext';
-import Logo from '../components/Logo';
+import HireXLogo, { HireXMark } from '../components/HireXLogo';
 
-// ── Time Saved Table Data ──
-const TIME_SAVED_ROWS = [
-  {
-    task: 'Create a job post',
-    traditional: '30 min',
-    hirex: 'Seconds (AI-generated)',
-    saved: '~30 min',
-  },
-  {
-    task: 'Screen 100 resumes',
-    traditional: '5 hrs',
-    hirex: '10 min (AI scoring)',
-    saved: '~4.5 hrs',
-  },
-  {
-    task: 'Write candidate ads',
-    traditional: '45 min',
-    hirex: '1 min (AI-generated)',
-    saved: '~44 min',
-  },
-  {
-    task: 'Candidate follow-ups',
-    traditional: '3 hrs',
-    hirex: 'Automatic WhatsApp alerts',
-    saved: '~3 hrs',
-  },
-];
-
-// ── Head-to-Head Capability Matrix Data ──
-const CAPABILITY_ROWS = [
-  {
-    capability: 'Resume screening',
-    traditional: 'Manual reading line-by-line',
-    hirex: 'Instant AI scoring against JD',
-  },
-  {
-    capability: 'Candidate alerts',
-    traditional: 'Email only, often delayed',
-    hirex: 'Built-in WhatsApp and email alerts',
-  },
-  {
-    capability: 'Job recommendations',
-    traditional: 'Manual keyword search & browse',
-    hirex: 'AI-personalised candidate match picks',
-  },
-  {
-    capability: 'Finding top talent',
-    traditional: 'Rigid filters & keyword search',
-    hirex: 'Best-candidate suggestions first',
-  },
-];
-
-// ── Market Pricing Benchmark Data (Indicative INR) ──
-const PRICING_BENCHMARK_ROWS = [
-  {
-    tool: 'Zoho Recruit',
-    price: '₹1,250 to ₹3,000',
-    model: 'Per recruiter / month',
-    note: 'WhatsApp & AI require additional tiers or add-ons.',
-    isHirex: false,
-  },
-  {
-    tool: 'Typical Standalone ATS',
-    price: '₹2,000 to ₹3,000',
-    model: 'Per recruiter / month',
-    note: 'Basic applicant tracking without semantic scoring.',
-    isHirex: false,
-  },
-  {
-    tool: 'Greenhouse',
-    price: '₹4,000 and above ($15k+ yr)',
-    model: 'Per recruiter / month',
-    note: 'USD billing; strict annual minimum commitments.',
-    isHirex: false,
-  },
-  {
-    tool: 'Bullhorn',
-    price: '₹5,000 to ₹8,000',
-    model: 'Per recruiter / month',
-    note: 'Complex legacy contracts; setup fees apply.',
-    isHirex: false,
-  },
-  {
-    tool: 'JazzHR',
-    price: 'About ₹9,600',
-    model: 'Flat / month',
-    note: 'Lacks native WhatsApp outreach & autonomous voice screen.',
-    isHirex: false,
-  },
-  {
-    tool: 'AI-Focused Niche Tools',
-    price: '₹25,000 to ₹50,000',
-    model: 'Flat / month',
-    note: 'Narrow point-solutions with expensive volume caps.',
-    isHirex: false,
-  },
-  {
-    tool: 'HireX Snab ATS',
-    price: 'All-Inclusive Value',
-    model: 'Transparent Monthly / Annual',
-    note: 'AI resume scoring, WhatsApp alerts, job ads, white masking, and screening included.',
-    isHirex: true,
-  },
-];
-
-// ── Mockup Candidates Data ──
+// ── Mockup Candidates for Kanban & Demos ──
 const MOCKUP_CANDIDATES = [
   {
     name: 'Aarav Sharma',
-    role: 'Full Stack Developer',
+    role: 'Lead Full Stack Engineer',
     score: 96,
-    skills: 'React, Node.js, MongoDB',
+    skills: 'React, Node.js, TypeScript, AWS',
+    experience: '6 Years Exp • Ex-Zomato',
     status: 'Shortlisted',
-    statusColor: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80',
+    stage: 'Shortlisted',
+    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80',
+    notice: '15 Days',
+    ctc: '₹28 LPA',
   },
   {
     name: 'Priya Nair',
-    role: 'Frontend Developer',
+    role: 'Senior Product Designer',
     score: 94,
-    skills: 'React, TypeScript, Tailwind',
+    skills: 'Figma, Design Systems, Prototyping',
+    experience: '5 Years Exp • Ex-Swiggy',
     status: 'Interview',
-    statusColor: 'bg-blue-50 text-blue-700 border-blue-200',
-    avatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=100&auto=format&fit=crop&q=80',
+    stage: 'Interview Scheduled',
+    avatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=120&auto=format&fit=crop&q=80',
+    notice: 'Immediate',
+    ctc: '₹24 LPA',
   },
   {
     name: 'Rohan Mehta',
-    role: 'Backend Developer',
+    role: 'Backend Systems Architect',
     score: 91,
-    skills: 'Node.js, Python, AWS',
+    skills: 'Go, PostgreSQL, Kubernetes, Redis',
+    experience: '7 Years Exp • Ex-Razorpay',
     status: 'Review',
-    statusColor: 'bg-amber-50 text-amber-700 border-amber-200',
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80',
+    stage: 'Under Review',
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80',
+    notice: '30 Days',
+    ctc: '₹32 LPA',
   },
   {
     name: 'Sneha Reddy',
-    role: 'DevOps Engineer',
+    role: 'DevOps & Cloud Engineer',
     score: 87,
-    skills: 'AWS, Docker, Kubernetes',
-    status: 'Contacted',
-    statusColor: 'bg-purple-50 text-purple-700 border-purple-200',
-    avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=100&auto=format&fit=crop&q=80',
+    skills: 'AWS, Terraform, Docker, CI/CD',
+    experience: '4 Years Exp • Ex-Freshworks',
+    status: 'Shortlisted',
+    stage: 'Shortlisted',
+    avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=120&auto=format&fit=crop&q=80',
+    notice: '15 Days',
+    ctc: '₹22 LPA',
+  },
+  {
+    name: 'Vikram Sen',
+    role: 'Principal Architect',
+    score: 98,
+    skills: 'Microservices, Event-Driven, Java',
+    experience: '9 Years Exp • Ex-Flipkart',
+    status: 'Hired',
+    stage: 'Offer / Hired',
+    avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=120&auto=format&fit=crop&q=80',
+    notice: 'Completed',
+    ctc: '₹42 LPA',
+  },
+];
+
+// ── FAQ Items ──
+const FAQ_ITEMS = [
+  {
+    q: 'What is hireX?',
+    a: 'hireX is an intelligent, high-velocity recruitment operating system designed for modern hiring teams and staffing agencies. It combines deep AI resume parsing, candidate scoring, visual Kanban pipelines, automated voice screening, 1-click WhatsApp outreach, and secure live client review links into a single, cohesive workspace.',
+  },
+  {
+    q: 'Can clients review candidates without an account?',
+    a: 'Yes, absolutely! With our zero-friction client review links, external clients and hiring managers review curated shortlists, view masked resumes, listen to AI voice screenings, and approve or reject candidates with one tap — zero login or software installation required.',
+  },
+  {
+    q: 'How does AI match scoring work?',
+    a: 'Our AI evaluates candidate resumes against the job description across technical skills, years of verified experience, domain competencies, and role-specific requirements to produce an objective 0–100% Fit score with full, transparent match reasoning.',
+  },
+  {
+    q: 'How does direct WhatsApp outreach function?',
+    a: 'hireX connects directly with WhatsApp so you can trigger instant candidate outreach, interview invitations, and screening links with 98% open rates compared to 15% for traditional email. Candidates can reply instantly and book time slots on your calendar.',
+  },
+  {
+    q: 'What is included in the 1-month free trial?',
+    a: 'You receive full platform access for 30 days — including unlimited resume screening, ATS Kanban boards, WhatsApp outreach, voice screening demo, and live client sharing portals. No credit card is required to get started.',
+  },
+  {
+    q: 'How is candidate data secured and privacy preserved?',
+    a: 'hireX provides built-in anti-poaching blind masking to hide candidate contact numbers and personal emails when sharing shortlists with external clients. All data is encrypted in transit and at rest with enterprise-grade security protocols.',
   },
 ];
 
@@ -192,6 +148,7 @@ export default function LandingPage() {
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [bookingModalOpen, setBookingModalOpen] = useState(false);
+  const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
 
   // Client Presentation Form State
   const [leadForm, setLeadForm] = useState({
@@ -205,8 +162,15 @@ export default function LandingPage() {
   const [leadSubmitted, setLeadSubmitted] = useState(false);
   const [formspreeState, handleFormspreeSubmit] = useForm('movdbzab');
 
+  // Interactive Pipeline & Client Demo States
+  const [demoClientLinkCopied, setDemoClientLinkCopied] = useState<boolean>(false);
+  const [demoApprovedCandidates, setDemoApprovedCandidates] = useState<string[]>(['Aarav Sharma']);
+  const [demoActiveCandidate, setDemoActiveCandidate] = useState<(typeof MOCKUP_CANDIDATES)[0]>(MOCKUP_CANDIDATES[0]);
+  const [demoDrawerOpen, setDemoDrawerOpen] = useState<boolean>(false);
+  const [demoDrawerTab, setDemoDrawerTab] = useState<'overview' | 'resume' | 'whatsapp'>('overview');
+  const [demoWhatsappSent, setDemoWhatsappSent] = useState<boolean>(false);
+
   // Cost Estimator State
-  const [pricingTab, setPricingTab] = useState<'estimator' | 'benchmark'>('estimator');
   const [calcRecruiters, setCalcRecruiters] = useState<number>(3);
   const [calcResumes, setCalcResumes] = useState<number>(500);
   const [calcJobs, setCalcJobs] = useState<number>(10);
@@ -233,162 +197,104 @@ export default function LandingPage() {
       basePriceMonthly = 4999;
       includedResumes = 7500;
     } else {
-      tierName = 'Enterprise Pro';
+      tierName = 'Enterprise Tier';
       basePriceMonthly = 7999;
-      includedResumes = 20000;
+      includedResumes = 15000;
     }
 
-    // Extra resumes block (₹499 per 500 resumes beyond tier included)
     const extraResumes = Math.max(0, calcResumes - includedResumes);
-    const extraResumeBlocks = Math.ceil(extraResumes / 500);
-    const extraResumeCostMonthly = extraResumeBlocks * 499;
+    const extraResumePacks = Math.ceil(extraResumes / 500);
+    const resumeOverageCost = extraResumePacks * 350;
 
-    // Optional Voice screening add-on
-    const voiceCostMonthly = calcVoiceScreening ? 999 : 0;
+    const extraJobs = Math.max(0, calcJobs - 5);
+    const extraJobCost = extraJobs * 50;
 
-    const monthlyGross = basePriceMonthly + extraResumeCostMonthly + voiceCostMonthly;
-    const isAnnual = calcBilling === 'annual';
-    const effectiveMonthly = isAnnual ? Math.round(monthlyGross * 0.8) : monthlyGross;
-    const billedAmount = isAnnual ? effectiveMonthly * 12 : monthlyGross;
-    const gstAmount = Math.round(billedAmount * 0.18);
-    const grandTotal = billedAmount + gstAmount;
+    const voiceCost = calcVoiceScreening ? 1499 : 0;
 
-    // Legacy ATS equivalent cost (~₹3,500/seat/mo + ₹1,500 WhatsApp SMS fees)
-    const competitorMonthly = calcRecruiters * 3500 + 1500;
-    const competitorTotal = isAnnual ? competitorMonthly * 12 : competitorMonthly;
-    const savingsAmount = Math.max(0, competitorTotal - billedAmount);
-    const savingsPercent = Math.round((savingsAmount / competitorTotal) * 100);
+    let subtotalMonthly = basePriceMonthly + resumeOverageCost + extraJobCost + voiceCost;
+    if (calcBilling === 'annual') {
+      subtotalMonthly = Math.round(subtotalMonthly * 0.8);
+    }
+
+    const calculatedAnnualTotal = subtotalMonthly * 12;
+    const gstMonthly = Math.round(subtotalMonthly * 0.18);
+    const finalMonthlyWithGst = subtotalMonthly + gstMonthly;
 
     return {
       tierName,
       basePriceMonthly,
       includedResumes,
-      extraResumes,
-      extraResumeCostMonthly,
-      voiceCostMonthly,
-      monthlyGross,
-      effectiveMonthly,
-      billedAmount,
-      gstAmount,
-      grandTotal,
-      competitorTotal,
-      savingsAmount,
-      savingsPercent,
-      isAnnual,
+      extraResumeCost: resumeOverageCost,
+      extraJobCost,
+      voiceCost,
+      subtotalMonthly,
+      calculatedAnnualTotal,
+      gstMonthly,
+      finalMonthlyWithGst,
+      effectiveAnnualSavings: calcBilling === 'annual' ? Math.round(basePriceMonthly * 12 * 0.2) : 0,
     };
-  }, [calcRecruiters, calcResumes, calcBilling, calcVoiceScreening]);
+  }, [calcRecruiters, calcResumes, calcJobs, calcBilling, calcVoiceScreening]);
 
-  const handleCopyQuote = () => {
-    const quoteText = `=========================================
-HIREX SNAB ATS - OFFICIAL COMMERCIAL QUOTE
-Date: ${new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
-Valid For: 30 Days | Quote ID: SNAB-QT-2026-${Math.floor(1000 + Math.random() * 9000)}
-Website: https://snab.co.in | Contact: hello@snab.co.in
-=========================================
+  // Auth routing helper
+  const dashboardPath = useMemo(() => {
+    if (!user) return '/auth';
+    const role = userProfile?.role || (user.email === 'admin@snab.co.in' || user.email?.includes('admin') ? 'admin' : 'recruiter');
+    if (role === 'superadmin' || role === 'admin') return '/admin';
+    if (role === 'recruiter') return '/recruiter/jobs';
+    return '/candidate';
+  }, [user, userProfile]);
 
-CLIENT CONFIGURATION:
-• Recruiting Team: ${calcRecruiters} seat(s)
-• Active Monthly Resumes: ${calcResumes.toLocaleString('en-IN')} resumes
-• Active Jobs / Mo: ${calcJobs} active openings
-• AI Automated Voice Screening: ${calcVoiceScreening ? 'Included (+₹999/mo)' : 'Not selected'}
-• WhatsApp Alerts: UNLIMITED / ₹0 Extra (Native Baileys Engine)
-
-COMMERCIAL BREAKDOWN (${quoteCalculation.isAnnual ? 'Annual Billing (20% OFF)' : 'Monthly Billing'}):
-• Recommended Tier: [${quoteCalculation.tierName}]
-• Base Subscription: ₹${quoteCalculation.basePriceMonthly.toLocaleString('en-IN')}/mo
-${quoteCalculation.extraResumes > 0 ? `• Extra Resume Pack: ₹${quoteCalculation.extraResumeCostMonthly.toLocaleString('en-IN')}/mo\n` : ''}${quoteCalculation.voiceCostMonthly > 0 ? `• AI Voice Screening: ₹${quoteCalculation.voiceCostMonthly.toLocaleString('en-IN')}/mo\n` : ''}• Effective Monthly Rate: ₹${quoteCalculation.effectiveMonthly.toLocaleString('en-IN')}/mo
-• Net Subscription (${quoteCalculation.isAnnual ? '12 Months' : '1 Month'}): ₹${quoteCalculation.billedAmount.toLocaleString('en-IN')}
-• GST (18%): ₹${quoteCalculation.gstAmount.toLocaleString('en-IN')}
------------------------------------------
-TOTAL INVESTMENT: ₹${quoteCalculation.grandTotal.toLocaleString('en-IN')} (incl. 18% GST)
------------------------------------------
-ESTIMATED SAVINGS VS LEGACY ATS:
-• Legacy ATS Equivalent: ₹${quoteCalculation.competitorTotal.toLocaleString('en-IN')}
-• Net Savings: ₹${quoteCalculation.savingsAmount.toLocaleString('en-IN')} (${quoteCalculation.savingsPercent}% lower)
-
-To lock in this quotation, schedule a live walkthrough or reach our team at +91 9511779317.`;
-
-    navigator.clipboard.writeText(quoteText);
-    setCopiedQuote(true);
-    setTimeout(() => setCopiedQuote(false), 3000);
-  };
-
-  const whatsappQuoteUrl = useMemo(() => {
-    const text = encodeURIComponent(
-      `Hi HireX Team, I generated an instant quotation on your platform:
-• Seats: ${calcRecruiters}
-• Resumes: ${calcResumes}/mo
-• Plan: ${quoteCalculation.tierName} (${calcBilling === 'annual' ? 'Annual (20% OFF)' : 'Monthly'})
-• Total: ₹${quoteCalculation.grandTotal.toLocaleString('en-IN')} (incl GST)
-I want to lock in this price and schedule a live demo.`
-    );
-    return `https://wa.me/919511779317?text=${text}`;
-  }, [calcRecruiters, calcResumes, calcBilling, quoteCalculation]);
-
-  const handleBookFromQuote = () => {
-    setLeadForm(prev => ({
-      ...prev,
-      hiringVolume: `${calcRecruiters} recruiters • ${calcResumes} resumes/mo (${quoteCalculation.tierName} ${calcBilling})`,
-    }));
-    setBookingModalOpen(true);
-  };
-
-  const dashboardPath = userProfile?.role === 'admin' ? '/admin' : '/recruiter/jobs';
-
-  const scrollToSection = (e: React.MouseEvent, id: string) => {
+  // Lead form submit handler
+  const handleLeadSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const el = document.getElementById(id);
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-    setMobileMenuOpen(false);
-  };
-
-  const handleLeadSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!leadForm.name || !leadForm.email || !leadForm.phone) return;
-
     setSubmittingLead(true);
     try {
-      // 1. Submit through official @formspree/react handler
       await handleFormspreeSubmit(e);
-
-      // 2. Persist to Firestore as reliable backup
-      await addDoc(collection(db, 'clientPresentations'), {
-        ...leadForm,
-        offer: '1 Month Free Demo',
-        createdAt: serverTimestamp(),
-        source: 'Landing Page 1 Month Free Demo Inquiry',
-        status: 'new',
-      });
+      try {
+        await addDoc(collection(db, 'leads'), {
+          ...leadForm,
+          createdAt: serverTimestamp(),
+          source: '1-Month Free Demo Modal',
+        });
+      } catch (err) {
+        console.warn('Firestore lead logging note:', err);
+      }
       setLeadSubmitted(true);
     } catch (err) {
-      console.error('Error booking presentation:', err);
-      setLeadSubmitted(true);
+      console.error('Error submitting lead form:', err);
     } finally {
       setSubmittingLead(false);
     }
   };
 
+  const scrollToSection = (e: React.MouseEvent, id: string) => {
+    e.preventDefault();
+    setMobileMenuOpen(false);
+    const element = document.getElementById(id);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-[#FFFFFF] text-[#17213F] font-sans selection:bg-[#E9E7FF] selection:text-[#5145FF] antialiased">
-      
-      {/* ── 1. Compact White Top Navigation Bar ── */}
-      <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-[#E5EAF5] px-4 sm:px-8 lg:px-12 transition-all">
-        <div className="max-w-7xl mx-auto h-16 flex items-center justify-between gap-4">
+    <div className="min-h-screen bg-[#F8F9F5] text-[#111215] font-sans selection:bg-[#D4F82C] selection:text-[#111215]">
+
+      {/* ── Top Navigation Bar ── */}
+      <header className="sticky top-0 z-40 bg-[#F8F9F5]/90 backdrop-blur-md border-b border-[#E4E7DC] transition-all">
+        <div className="max-w-7xl mx-auto px-4 sm:px-8 h-18 flex items-center justify-between">
           
-          {/* Brand Logo Lockup & Product of SNAB */}
+          {/* Logo & Product Badge */}
           <div className="flex items-center gap-3">
-            <Link to="/" className="flex items-center gap-2.5 shrink-0 group">
-              <Logo className="h-8 w-auto object-contain" isDark={false} />
+            <Link to="/" className="group inline-flex items-center">
+              <HireXLogo size="md" variant="full" />
             </Link>
-            <div className="hidden sm:flex items-center gap-1.5 pl-3 border-l border-[#E5EAF5] text-[11px] text-[#7D89A5]">
-              <span>A Product of</span>
+            <div className="hidden sm:flex items-center gap-1.5 pl-3 border-l border-[#E4E7DC] text-[11px] font-medium text-[#73766C]">
+              <span>by</span>
               <a
                 href="https://snab.co.in"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="font-bold text-[#101B3B] hover:text-[#5145FF] hover:underline"
+                className="font-bold text-[#111215] hover:underline"
               >
                 SNAB
               </a>
@@ -396,93 +302,93 @@ I want to lock in this price and schedule a live demo.`
           </div>
 
           {/* Centered Navigation Links */}
-          <nav className="hidden lg:flex items-center gap-7 text-[13px] font-semibold text-[#566481]">
-            <a
-              href="#why-hirex"
-              onClick={(e) => scrollToSection(e, 'why-hirex')}
-              className="hover:text-[#5145FF] transition-colors cursor-pointer"
-            >
-              Why HireX
-            </a>
+          <nav className="hidden lg:flex items-center gap-8 text-[13px] font-semibold text-[#575A51]">
             <a
               href="#pipeline"
               onClick={(e) => scrollToSection(e, 'pipeline')}
-              className="hover:text-[#5145FF] transition-colors cursor-pointer"
+              className="hover:text-[#111215] transition-colors cursor-pointer"
+            >
+              Pipeline
+            </a>
+            <a
+              href="#resume-matching"
+              onClick={(e) => scrollToSection(e, 'resume-matching')}
+              className="hover:text-[#111215] transition-colors cursor-pointer"
+            >
+              AI Matching
+            </a>
+            <a
+              href="#client-portal"
+              onClick={(e) => scrollToSection(e, 'client-portal')}
+              className="hover:text-[#111215] transition-colors cursor-pointer flex items-center gap-1.5"
+            >
+              <span>Client Portal</span>
+              <span className="size-1.5 rounded-full bg-[#8FB305] animate-pulse"></span>
+            </a>
+            <a
+              href="#workflow"
+              onClick={(e) => scrollToSection(e, 'workflow')}
+              className="hover:text-[#111215] transition-colors cursor-pointer"
             >
               How It Works
             </a>
             <a
-              href="#time-saved"
-              onClick={(e) => scrollToSection(e, 'time-saved')}
-              className="hover:text-[#5145FF] transition-colors cursor-pointer"
-            >
-              Time Saved
-            </a>
-            <a
               href="#pricing"
               onClick={(e) => scrollToSection(e, 'pricing')}
-              className="hover:text-[#5145FF] transition-colors cursor-pointer"
+              className="hover:text-[#111215] transition-colors cursor-pointer"
             >
               Pricing
             </a>
             <a
-              href="#comparison"
-              onClick={(e) => scrollToSection(e, 'comparison')}
-              className="hover:text-[#5145FF] transition-colors cursor-pointer"
+              href="#faq"
+              onClick={(e) => scrollToSection(e, 'faq')}
+              className="hover:text-[#111215] transition-colors cursor-pointer"
             >
-              Comparison
+              FAQ
             </a>
             <Link
               to="/active-jobs"
-              className="hover:text-[#5145FF] transition-colors"
+              className="hover:text-[#111215] transition-colors font-medium text-[#73766C]"
             >
               Job Board
             </Link>
           </nav>
 
-          {/* Right Action Buttons & Contact */}
-          <div className="flex items-center gap-3 shrink-0">
-            <a
-              href="mailto:hello@snab.co.in"
-              className="hidden xl:flex items-center gap-1.5 text-xs font-semibold text-[#566481] hover:text-[#5145FF] transition-colors"
-            >
-              <Mail className="size-3.5 text-[#5145FF]" />
-              <span>hello@snab.co.in</span>
-            </a>
-
+          {/* Right Action Buttons */}
+          <div className="flex items-center gap-3">
             {user ? (
               <Link
                 to={dashboardPath}
-                className="inline-flex h-9 items-center gap-2 rounded-full bg-[#101B3B] px-4 text-xs font-semibold text-white hover:bg-[#1e2a4f] transition-all shadow-xs"
+                className="inline-flex h-9 items-center gap-2 rounded-full bg-[#111215] px-4 text-xs font-semibold text-white hover:bg-black transition-all shadow-xs"
               >
-                <LayoutDashboard className="size-3.5" />
+                <LayoutDashboard className="size-3.5 text-[#D4F82C]" />
                 <span>Dashboard</span>
               </Link>
             ) : (
-              <div className="flex items-center gap-2.5">
-                <button
-                  type="button"
-                  onClick={() => setBookingModalOpen(true)}
-                  className="hidden sm:inline-flex h-9 items-center gap-1.5 px-4 rounded-full bg-gradient-to-r from-[#5145FF] to-[#6366F1] text-white hover:opacity-95 text-xs font-bold transition-all cursor-pointer shadow-xs"
-                >
-                  <Sparkles className="size-3 text-amber-300" />
-                  <span>1-Month Free Demo</span>
-                </button>
+              <div className="flex items-center gap-3">
                 <Link
                   to="/auth"
-                  className="inline-flex h-9 items-center px-4 rounded-full bg-[#101B3B] text-xs font-semibold text-white hover:bg-[#1a2b5e] transition-all shadow-xs"
+                  className="hidden sm:inline-flex text-xs font-bold text-[#111215] hover:text-[#575A51] transition-colors px-2"
                 >
                   Sign In
                 </Link>
+                <button
+                  type="button"
+                  onClick={() => setBookingModalOpen(true)}
+                  className="inline-flex h-9.5 items-center gap-2 px-4.5 rounded-full bg-[#111215] hover:bg-black text-white text-xs font-bold transition-all shadow-xs cursor-pointer group"
+                >
+                  <span>Book a Demo</span>
+                  <span className="text-[#D4F82C] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform">↗</span>
+                </button>
               </div>
             )}
 
-            {/* Mobile Hamburger Toggle */}
+            {/* Mobile Menu Hamburger */}
             <button
               type="button"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="lg:hidden size-9 rounded-lg border border-[#E5EAF5] bg-[#F8F9FF] flex items-center justify-center text-[#17213F]"
-              aria-label="Toggle mobile menu"
+              className="lg:hidden size-9 rounded-lg border border-[#E4E7DC] bg-white flex items-center justify-center text-[#111215]"
+              aria-label="Toggle menu"
             >
               {mobileMenuOpen ? <X className="size-5" /> : <Menu className="size-5" />}
             </button>
@@ -491,1720 +397,1540 @@ I want to lock in this price and schedule a live demo.`
 
         {/* Mobile Dropdown Drawer */}
         {mobileMenuOpen && (
-          <div className="lg:hidden border-t border-[#E5EAF5] py-4 px-3 space-y-1.5 bg-white">
-            <a
-              href="#why-hirex"
-              onClick={(e) => scrollToSection(e, 'why-hirex')}
-              className="block px-3 py-2 rounded-lg text-xs font-semibold text-[#17213F] hover:bg-[#F8F9FF]"
-            >
-              Why HireX
-            </a>
+          <div className="lg:hidden border-t border-[#E4E7DC] bg-[#F8F9F5] px-4 py-4 space-y-2">
             <a
               href="#pipeline"
               onClick={(e) => scrollToSection(e, 'pipeline')}
-              className="block px-3 py-2 rounded-lg text-xs font-semibold text-[#17213F] hover:bg-[#F8F9FF]"
+              className="block px-3 py-2 rounded-lg text-xs font-bold text-[#111215] hover:bg-white"
+            >
+              Pipeline Kanban
+            </a>
+            <a
+              href="#resume-matching"
+              onClick={(e) => scrollToSection(e, 'resume-matching')}
+              className="block px-3 py-2 rounded-lg text-xs font-bold text-[#111215] hover:bg-white"
+            >
+              AI Matching
+            </a>
+            <a
+              href="#client-portal"
+              onClick={(e) => scrollToSection(e, 'client-portal')}
+              className="block px-3 py-2 rounded-lg text-xs font-bold text-[#111215] hover:bg-white"
+            >
+              Client Review Portal
+            </a>
+            <a
+              href="#workflow"
+              onClick={(e) => scrollToSection(e, 'workflow')}
+              className="block px-3 py-2 rounded-lg text-xs font-bold text-[#111215] hover:bg-white"
             >
               How It Works
             </a>
             <a
-              href="#time-saved"
-              onClick={(e) => scrollToSection(e, 'time-saved')}
-              className="block px-3 py-2 rounded-lg text-xs font-semibold text-[#17213F] hover:bg-[#F8F9FF]"
-            >
-              Time Saved
-            </a>
-            <a
               href="#pricing"
               onClick={(e) => scrollToSection(e, 'pricing')}
-              className="block px-3 py-2 rounded-lg text-xs font-semibold text-[#17213F] hover:bg-[#F8F9FF]"
+              className="block px-3 py-2 rounded-lg text-xs font-bold text-[#111215] hover:bg-white"
             >
-              Pricing
+              Pricing Estimator
             </a>
             <a
-              href="#comparison"
-              onClick={(e) => scrollToSection(e, 'comparison')}
-              className="block px-3 py-2 rounded-lg text-xs font-semibold text-[#17213F] hover:bg-[#F8F9FF]"
+              href="#faq"
+              onClick={(e) => scrollToSection(e, 'faq')}
+              className="block px-3 py-2 rounded-lg text-xs font-bold text-[#111215] hover:bg-white"
             >
-              Comparison
+              FAQ
             </a>
             <Link
               to="/active-jobs"
               onClick={() => setMobileMenuOpen(false)}
-              className="block px-3 py-2 rounded-lg text-xs font-semibold text-[#17213F] hover:bg-[#F8F9FF]"
+              className="block px-3 py-2 rounded-lg text-xs font-bold text-[#111215] hover:bg-white"
             >
-              Job Board
+              Active Job Board
             </Link>
-            <div className="pt-2 border-t border-[#E5EAF5]">
-              <button
-                type="button"
-                onClick={() => {
-                  setMobileMenuOpen(false);
-                  setBookingModalOpen(true);
-                }}
-                className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-full text-xs font-bold text-white bg-gradient-to-r from-[#5145FF] to-[#6366F1] shadow-xs"
-              >
-                <Sparkles className="size-3.5 text-amber-300" />
-                <span>Claim 1-Month Free Demo</span>
-              </button>
+            <div className="pt-2">
+              {user ? (
+                <Link
+                  to={dashboardPath}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="w-full flex items-center justify-center gap-2 py-3 rounded-full bg-[#111215] text-white text-xs font-bold shadow-xs hover:bg-black transition-all"
+                >
+                  <LayoutDashboard className="size-3.5 text-[#D4F82C]" />
+                  <span>Go to Dashboard</span>
+                </Link>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    setBookingModalOpen(true);
+                  }}
+                  className="w-full flex items-center justify-center gap-2 py-3 rounded-full bg-[#111215] text-white text-xs font-bold"
+                >
+                  <span>Book a Demo</span>
+                  <span className="text-[#D4F82C]">↗</span>
+                </button>
+              )}
             </div>
           </div>
         )}
       </header>
 
-      {/* ── 2. Hero Section: Left Text + Right Floating ATS Mockup ── */}
-      <section className="relative pt-12 pb-16 lg:pt-16 lg:pb-20 px-4 sm:px-8 lg:px-12 max-w-7xl mx-auto overflow-hidden">
-        
-        {/* Ambient atmospheric lavender-blue glow behind dashboard */}
-        <div className="absolute top-1/4 right-8 -z-10 w-[580px] h-[580px] bg-gradient-to-br from-[#F1EFFF] via-[#E9E7FF]/60 to-[#EAF2FF]/40 rounded-full blur-3xl pointer-events-none" />
-
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-8 items-center">
-          
-          {/* Left Column (approx 44%) */}
-          <div className="lg:col-span-5 text-left">
+      {/* ── SECTION 1: DEDICATED FULL FRAME HERO ── */}
+      <section className="min-h-[calc(100vh-4.5rem)] flex flex-col justify-between relative border-b border-[#111215]">
+        <div className="flex-1 flex items-center max-w-7xl mx-auto px-4 sm:px-8 lg:px-12 w-full py-8 sm:py-12">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 sm:gap-12 items-center w-full">
             
-            {/* Lavender Pill Tag with 1-Month Free Demo announcement */}
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#F1EFFF] text-[#5145FF] text-[11px] font-bold mb-4 border border-[#E5EAF5] shadow-2xs">
-              <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
-              <span>🎉 Limited Offer: 1-Month Free Demo • Full Platform Access</span>
-            </div>
-
-            {/* Main Hero Heading (Wraps into three lines at 1024px) */}
-            <h1 className="text-3xl sm:text-4xl lg:text-[42px] font-extrabold tracking-tight text-[#101B3B] leading-[1.12]">
-              The{' '}
-              <span className="bg-gradient-to-r from-[#6655FF] to-[#4659FF] bg-clip-text text-transparent">
-                AI-Powered ATS
-              </span>{' '}
-              That Does the Busywork for Your Recruiters
-            </h1>
-
-            {/* Supporting Headline */}
-            <h2 className="mt-4 text-base sm:text-lg font-bold text-[#17213F]">
-              Hire smarter. Hire faster.
-            </h2>
-
-            {/* Description */}
-            <p className="mt-3 text-xs sm:text-[13.5px] text-[#566481] leading-relaxed max-w-lg">
-              The AI-powered ATS that does the heavy lifting for your recruiters. Score resumes instantly, create jobs and ads in seconds, and reach candidates where they reply fastest with built-in WhatsApp.
-            </p>
-
-            {/* Primary & Secondary CTAs */}
-            <div className="mt-7 flex flex-wrap items-center gap-3">
-              <button
-                type="button"
-                onClick={() => setBookingModalOpen(true)}
-                className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#5145FF] hover:bg-[#4135E8] text-white px-5 text-xs font-bold transition-all shadow-md shadow-[#5145FF]/20 hover:scale-[1.01] cursor-pointer"
-              >
-                <span>Start 1-Month Free Demo</span>
-                <ArrowRight className="size-4" />
-              </button>
-              <Link
-                to="/auth"
-                className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-[#D5DCED] bg-white text-[#17213F] hover:bg-[#F8F9FF] px-5 text-xs font-bold transition-all shadow-2xs"
-              >
-                <Play className="size-3.5 fill-[#5145FF] text-[#5145FF]" />
-                <span>Explore Live Platform</span>
-              </Link>
-            </div>
-
-            {/* 1 Month Free Demo Trust Guarantee */}
-            <div className="mt-3.5 flex flex-wrap items-center gap-3 text-[11px] text-[#566481]">
-              <span className="flex items-center gap-1 text-emerald-600 font-bold">
-                <CheckCircle2 className="size-3.5 text-emerald-600" /> 1 Month Free Demo
-              </span>
-              <span className="text-[#D5DCED]">•</span>
-              <span>Zero Credit Card Required</span>
-              <span className="text-[#D5DCED]">•</span>
-              <span>Full AI & WhatsApp Access</span>
-            </div>
-
-            {/* Product of SNAB & Contact Badge */}
-            <div className="mt-5 flex flex-wrap items-center gap-3 text-xs text-[#7D89A5]">
-              <div className="flex items-center gap-1.5 font-medium">
-                <Building2 className="size-3.5 text-[#5145FF]" />
-                <span>A Product of <a href="https://snab.co.in" target="_blank" rel="noopener noreferrer" className="font-bold text-[#101B3B] hover:text-[#5145FF] hover:underline">SNAB</a> (<a href="https://snab.co.in" target="_blank" rel="noopener noreferrer" className="font-semibold text-[#5145FF] hover:underline">snab.co.in</a>)</span>
+            {/* Left Hero Content */}
+            <div className="lg:col-span-7 space-y-6 sm:space-y-8">
+              <div className="inline-flex items-center gap-2 text-[11px] font-bold tracking-wider uppercase text-[#73766C]">
+                <span className="size-2 rounded-full bg-[#8FB305]"></span>
+                <span>AI-POWERED RECRUITMENT ATS FOR MODERN TEAMS</span>
               </div>
-              <span className="text-[#D5DCED]">•</span>
-              <a href="mailto:hello@snab.co.in" className="flex items-center gap-1.5 font-medium text-[#566481] hover:text-[#5145FF] transition-colors">
-                <Mail className="size-3.5 text-[#5145FF]" />
-                <span>hello@snab.co.in</span>
-              </a>
+
+              <h1 className="text-4xl sm:text-6xl lg:text-[72px] font-black tracking-tight text-[#111215] leading-[1.05]">
+                Less busywork.<br />
+                More possibility.
+              </h1>
+
+              <p className="text-base sm:text-lg text-[#575A51] max-w-xl leading-relaxed font-normal">
+                Hire smarter, faster. The intelligent ATS for lean teams, applicants and hiring managers — a streamlined, transparent process.
+              </p>
+
+              <div className="flex flex-wrap items-center gap-4 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setBookingModalOpen(true)}
+                  className="inline-flex h-12 items-center gap-2.5 px-6 rounded-full bg-[#111215] hover:bg-black text-white text-sm font-bold transition-all shadow-sm cursor-pointer group"
+                >
+                  <span>Start free trial</span>
+                  <span className="text-[#D4F82C] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform text-base">↗</span>
+                </button>
+
+                <a
+                  href="#pipeline"
+                  onClick={(e) => scrollToSection(e, 'pipeline')}
+                  className="inline-flex h-12 items-center gap-2 px-5 text-sm font-bold text-[#111215] hover:text-[#575A51] transition-colors cursor-pointer"
+                >
+                  <span>Watch interactive demo</span>
+                  <span>↗</span>
+                </a>
+              </div>
+
+              <div className="text-xs text-[#73766C] flex items-center gap-2 pt-2">
+                <span>⚡ 30-day full access</span>
+                <span>•</span>
+                <span>Zero credit card required</span>
+                <span>•</span>
+                <span>Onboard in 5 mins</span>
+              </div>
+            </div>
+
+            {/* Right Hero Graphic: Radiating 87% Asterisk & Pipeline Metric Card */}
+            <div className="lg:col-span-5 flex flex-col items-center lg:items-end justify-center pt-4 lg:pt-0">
+              <div className="relative mb-6">
+                {/* Radiating 12-petal Asterisk Badge */}
+                <div className="relative size-32 sm:size-40 flex items-center justify-center">
+                  <svg viewBox="0 0 200 200" className="size-full animate-[spin_35s_linear_infinite] drop-shadow-xs">
+                    {[...Array(12)].map((_, i) => (
+                      <rect
+                        key={i}
+                        x="90"
+                        y="14"
+                        width="20"
+                        height="80"
+                        rx="10"
+                        fill="#D4F82C"
+                        transform={`rotate(${i * 30} 100 100)`}
+                      />
+                    ))}
+                    <circle cx="100" cy="100" r="48" fill="#D4F82C" />
+                  </svg>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center text-center select-none">
+                    <span className="text-2xl sm:text-3xl font-black text-[#111215] leading-none tracking-tight">87%</span>
+                    <span className="text-[9px] font-bold text-[#111215]/80 uppercase tracking-widest mt-0.5">Match</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Floating Minimal Pipeline Progression Card */}
+              <div className="w-full max-w-sm rounded-2xl border border-[#E4E7DC] bg-white p-5 shadow-sm space-y-3">
+                <div className="flex items-center justify-between text-xs font-bold text-[#111215]">
+                  <div className="flex items-center gap-2">
+                    <span className="size-2 rounded-full bg-[#111215]"></span>
+                    <span>Pipeline progression</span>
+                  </div>
+                  <Edit3 className="size-3.5 text-[#73766C]" />
+                </div>
+
+                {/* 3 Status Blocks */}
+                <div className="grid grid-cols-3 gap-2 text-center">
+                  <div className="p-3 rounded-xl bg-[#F8F9F5] border border-[#E4E7DC]">
+                    <div className="text-[10px] text-[#73766C] font-semibold">Applied</div>
+                    <div className="text-lg font-black text-[#111215]">12</div>
+                  </div>
+                  <div className="p-3 rounded-xl bg-[#D4F82C] border border-[#BCE41E]">
+                    <div className="text-[10px] text-[#111215] font-bold">Shortlisted</div>
+                    <div className="text-lg font-black text-[#111215]">5</div>
+                  </div>
+                  <div className="p-3 rounded-xl bg-[#F8F9F5] border border-[#E4E7DC]">
+                    <div className="text-[10px] text-[#73766C] font-semibold">Offer</div>
+                    <div className="text-lg font-black text-[#111215]">2</div>
+                  </div>
+                </div>
+
+                <div className="pt-2 border-t border-[#E4E7DC] text-[11px] text-[#73766C] leading-snug">
+                  Average time-to-hire reduced from <span className="font-bold text-[#111215]">34 days</span> to <span className="font-bold text-[#111215]">9 days</span>.
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        {/* ── Marquee / Feature Ticker Strip (Pinned at End of Frame) ── */}
+        <div className="w-full bg-[#111215] text-white py-4 border-t border-[#111215] overflow-hidden whitespace-nowrap shrink-0">
+          <div className="flex items-center gap-8 text-xs font-bold tracking-wider uppercase animate-marquee">
+            <span className="flex items-center gap-2"><span className="text-[#D4F82C]">•</span> zero resume clutter</span>
+            <span className="flex items-center gap-2"><span className="text-[#D4F82C]">•</span> instant AI scoring</span>
+            <span className="flex items-center gap-2"><span className="text-[#D4F82C]">•</span> live client sharing link</span>
+            <span className="flex items-center gap-2"><span className="text-[#D4F82C]">•</span> 5-stage kanban tracking</span>
+            <span className="flex items-center gap-2"><span className="text-[#D4F82C]">•</span> 1-click WhatsApp outreach</span>
+            <span className="flex items-center gap-2"><span className="text-[#D4F82C]">•</span> anti-poaching blind mode</span>
+            <span className="flex items-center gap-2"><span className="text-[#D4F82C]">•</span> AI voice screening audio</span>
+            <span className="flex items-center gap-2"><span className="text-[#D4F82C]">•</span> zero resume clutter</span>
+            <span className="flex items-center gap-2"><span className="text-[#D4F82C]">•</span> instant AI scoring</span>
+            <span className="flex items-center gap-2"><span className="text-[#D4F82C]">•</span> live client sharing link</span>
+          </div>
+        </div>
+      </section>
+
+      {/* ── SECTION 2: DEDICATED FULL FRAME KANBAN PIPELINE ── */}
+      <section id="pipeline" className="min-h-screen flex flex-col justify-between py-12 sm:py-16 px-4 sm:px-8 lg:px-12 max-w-7xl mx-auto scroll-mt-18 border-b border-[#E4E7DC]">
+        <div>
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-end mb-8">
+          <div className="lg:col-span-7">
+            <div className="text-[11px] font-bold uppercase tracking-wider text-[#73766C] mb-2">
+              Intuitive Kanban Pipeline
+            </div>
+            <h2 className="text-3xl sm:text-5xl font-black text-[#111215] tracking-tight">
+              Every applicant.<br />
+              One clear picture.
+            </h2>
+          </div>
+          <div className="lg:col-span-5 text-sm sm:text-base text-[#575A51] leading-relaxed">
+            Stop juggling spreadsheets and email threads. A single unified board that brings clarity to your entire candidate flow from application to hired.
+          </div>
+        </div>
+
+        {/* Realistic ATS Kanban UI Mockup */}
+        <div className="rounded-2xl border border-[#E4E7DC] bg-white shadow-xl overflow-hidden">
+          
+          {/* Top Window Bar */}
+          <div className="bg-[#111215] text-white px-4 sm:px-6 py-3 flex items-center justify-between border-b border-white/10">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1.5">
+                <span className="size-3 rounded-full bg-rose-500"></span>
+                <span className="size-3 rounded-full bg-amber-500"></span>
+                <span className="size-3 rounded-full bg-emerald-500"></span>
+              </div>
+              <div className="text-xs font-semibold text-slate-300 pl-3 border-l border-white/10">
+                hireX Recruitment Operating System
+              </div>
+            </div>
+            <div className="flex items-center gap-2 text-xs">
+              <span className="size-2 rounded-full bg-[#D4F82C] animate-pulse"></span>
+              <span className="text-slate-300">Live Recruiter View</span>
             </div>
           </div>
 
-          {/* Right Column — Product Showcase Dashboard (approx 56%) */}
-          <div className="lg:col-span-7 relative">
-            
-            {/* Main Rounded Desktop Dashboard Window */}
-            <div className="relative rounded-2xl bg-white border border-[#E5EAF5] shadow-xl shadow-[#101B3B]/05 overflow-hidden">
+          <div className="grid grid-cols-1 lg:grid-cols-12 min-h-[500px]">
+            {/* Dark Mini-Sidebar */}
+            <div className="lg:col-span-2 bg-[#16171B] text-slate-300 p-4 border-r border-[#26282E] hidden lg:flex flex-col justify-between text-xs">
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 text-white font-bold pb-3 border-b border-white/10">
+                  <HireXMark size={24} />
+                  <span>hireX ATS</span>
+                </div>
+                <div className="space-y-1">
+                  <div className="px-2.5 py-1.5 rounded-lg bg-white/10 text-white font-semibold flex items-center gap-2">
+                    <Briefcase className="size-3.5 text-[#D4F82C]" />
+                    <span>Jobs</span>
+                  </div>
+                  <div className="px-2.5 py-1.5 rounded-lg text-slate-400 hover:text-white flex items-center gap-2 cursor-pointer">
+                    <Users className="size-3.5" />
+                    <span>Candidates</span>
+                  </div>
+                  <div className="px-2.5 py-1.5 rounded-lg text-slate-400 hover:text-white flex items-center gap-2 cursor-pointer">
+                    <Share2 className="size-3.5" />
+                    <span>Client Links</span>
+                  </div>
+                  <div className="px-2.5 py-1.5 rounded-lg text-slate-400 hover:text-white flex items-center gap-2 cursor-pointer">
+                    <Brain className="size-3.5" />
+                    <span>Voice Screening</span>
+                  </div>
+                  <div className="px-2.5 py-1.5 rounded-lg text-slate-400 hover:text-white flex items-center gap-2 cursor-pointer">
+                    <Zap className="size-3.5" />
+                    <span>Analytics</span>
+                  </div>
+                </div>
+              </div>
+              <div className="p-2.5 rounded-lg bg-white/5 text-[11px] text-slate-400">
+                SNAB Tech Team
+              </div>
+            </div>
+
+            {/* Kanban Board Container */}
+            <div className="lg:col-span-10 p-5 bg-[#F8F9F5] flex flex-col">
               
-              {/* Top Window Bar with Search & Profile */}
-              <div className="h-11 px-4 border-b border-[#E5EAF5] bg-[#F8F9FF] flex items-center justify-between gap-4">
-                <div className="flex items-center gap-1.5">
-                  <div className="size-2.5 rounded-full bg-[#F05B68]" />
-                  <div className="size-2.5 rounded-full bg-[#F6A623]" />
-                  <div className="size-2.5 rounded-full bg-[#10B981]" />
+              {/* Job Title Bar */}
+              <div className="flex flex-wrap items-center justify-between gap-3 pb-4 mb-4 border-b border-[#E4E7DC]">
+                <div className="flex items-center gap-3">
+                  <h3 className="text-base font-extrabold text-[#111215]">Product Designer</h3>
+                  <span className="px-2 py-0.5 rounded-md bg-[#D4F82C] text-[#111215] text-[10px] font-extrabold uppercase tracking-wider">
+                    ACTIVE
+                  </span>
+                  <span className="text-xs text-[#73766C]">18 Applicants • 3 Shortlisted</span>
                 </div>
-                <div className="w-64 h-6.5 rounded-md bg-white border border-[#E5EAF5] px-2.5 flex items-center gap-2 text-[11px] text-[#7D89A5]">
-                  <span>🔍 Search candidates, jobs...</span>
-                </div>
-                <div className="size-6 rounded-full bg-[#E5EAF5] flex items-center justify-center text-[10px] font-bold text-[#566481]">
-                  HR
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDemoActiveCandidate(MOCKUP_CANDIDATES[0]);
+                      setDemoDrawerTab('resume');
+                      setDemoDrawerOpen(true);
+                    }}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-[#E4E7DC] text-xs font-semibold text-[#111215] hover:bg-slate-50 cursor-pointer shadow-2xs"
+                  >
+                    <Eye className="size-3.5 text-[#111215]" />
+                    <span>Preview Drawer</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setBookingModalOpen(true)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#111215] text-white text-xs font-bold hover:bg-black cursor-pointer shadow-2xs"
+                  >
+                    <span>+ Add Candidate</span>
+                  </button>
                 </div>
               </div>
 
-              {/* Workspace Body: Deep Navy Sidebar + White Workspace */}
-              <div className="flex min-h-[350px]">
+              {/* 4 Columns */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3.5 flex-1">
                 
-                {/* Deep Navy Vertical Sidebar */}
-                <div className="w-36 border-r border-[#1e2a4f] bg-[#101B3B] text-slate-300 p-3 flex flex-col justify-between hidden sm:flex">
-                  <div className="space-y-4">
-                    <div className="font-extrabold text-[12px] text-white flex items-center gap-1.5">
-                      <span className="size-2 rounded-full bg-[#5145FF]" />
-                      SNAB hireX
-                    </div>
-                    <div className="space-y-1 text-[11px]">
-                      <div className="px-2 py-1.5 rounded-md bg-white/10 text-white font-semibold flex items-center gap-2">
-                        <LayoutDashboard className="size-3" /> Dashboard
-                      </div>
-                      <div className="px-2 py-1.5 rounded-md hover:bg-white/5 text-slate-400 flex items-center gap-2">
-                        <Briefcase className="size-3" /> Jobs
-                      </div>
-                      <div className="px-2 py-1.5 rounded-md hover:bg-white/5 text-slate-400 flex items-center gap-2">
-                        <Users className="size-3" /> Candidates
-                      </div>
-                      <div className="px-2 py-1.5 rounded-md hover:bg-white/5 text-slate-400 flex items-center gap-2">
-                        <MessageCircle className="size-3" /> Messages
-                      </div>
-                      <div className="px-2 py-1.5 rounded-md hover:bg-white/5 text-slate-400 flex items-center gap-2">
-                        <Sparkles className="size-3" /> Analytics
-                      </div>
-                    </div>
-                  </div>
-                  <div className="text-[10px] text-slate-500 font-mono">v2.4 Production</div>
-                </div>
-
-                {/* Main White Candidate Ranking Workspace */}
-                <div className="flex-1 p-4 bg-white overflow-x-auto">
-                  <div className="flex items-center justify-between mb-3">
-                    <div>
-                      <h3 className="text-xs font-bold text-[#101B3B]">Top Candidates</h3>
-                      <p className="text-[10px] text-[#7D89A5]">Ranked by Claude 3.5 Sonnet fit score</p>
-                    </div>
-                    <span className="text-[10px] font-semibold text-[#5145FF] bg-[#F1EFFF] px-2 py-0.5 rounded-full border border-[#E9E7FF]">
-                      4 Filtered
+                {/* Column 1: Under Review */}
+                <div className="rounded-xl border border-[#E4E7DC] bg-[#F1F2EC]/60 p-3 flex flex-col">
+                  <div className="flex items-center justify-between pb-2 mb-2 border-b border-[#E4E7DC]">
+                    <span className="text-xs font-bold text-[#111215]">Under Review</span>
+                    <span className="size-5 rounded-full bg-white text-[#111215] text-[10px] font-bold flex items-center justify-center border border-[#E4E7DC]">
+                      1
                     </span>
                   </div>
-
-                  {/* Candidate Table */}
-                  <table className="w-full text-left text-[11px]">
-                    <thead>
-                      <tr className="border-b border-[#E5EAF5] text-[10px] text-[#7D89A5] uppercase tracking-wider">
-                        <th className="pb-2 font-medium">Candidate</th>
-                        <th className="pb-2 font-medium">Match</th>
-                        <th className="pb-2 font-medium hidden md:table-cell">Skills</th>
-                        <th className="pb-2 font-medium text-right">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-[#E5EAF5]/60">
-                      {MOCKUP_CANDIDATES.map((cand, idx) => (
-                        <tr key={idx} className="hover:bg-[#F8F9FF] transition-colors">
-                          <td className="py-2.5">
-                            <div className="flex items-center gap-2">
-                              <img
-                                src={cand.avatar}
-                                alt={cand.name}
-                                className="size-6 rounded-full object-cover border border-[#E5EAF5]"
-                              />
-                              <div>
-                                <div className="font-semibold text-[#17213F]">{cand.name}</div>
-                                <div className="text-[9px] text-[#7D89A5]">{cand.role}</div>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="py-2.5">
-                            <span className="font-bold text-[#10B981]">
-                              {cand.score}%
-                            </span>
-                          </td>
-                          <td className="py-2.5 text-[#566481] text-[10px] hidden md:table-cell">
-                            {cand.skills}
-                          </td>
-                          <td className="py-2.5 text-right">
-                            <span className={`inline-block px-2 py-0.5 rounded-full text-[9px] font-bold border ${cand.statusColor}`}>
-                              {cand.status}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                  <div className="space-y-2.5 flex-1">
+                    <div
+                      onClick={() => {
+                        setDemoActiveCandidate(MOCKUP_CANDIDATES[2]);
+                        setDemoDrawerTab('overview');
+                        setDemoDrawerOpen(true);
+                      }}
+                      className="p-3 bg-white rounded-xl border border-[#E4E7DC] hover:border-[#111215] transition-all cursor-pointer shadow-2xs group"
+                    >
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-xs font-bold text-[#111215] group-hover:text-black">{MOCKUP_CANDIDATES[2].name}</span>
+                        <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-[#F8F9F5] text-[#111215] border border-[#E4E7DC]">
+                          {MOCKUP_CANDIDATES[2].score}%
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-[#73766C] mb-2">{MOCKUP_CANDIDATES[2].role}</div>
+                      <div className="flex items-center justify-between text-[10px] text-[#73766C] pt-2 border-t border-[#F1F2EC]">
+                        <span>{MOCKUP_CANDIDATES[2].experience}</span>
+                        <span className="font-bold text-[#111215] flex items-center gap-0.5">
+                          View <ChevronRight className="size-3" />
+                        </span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
+
+                {/* Column 2: Shortlisted (With Lime Highlight) */}
+                <div className="rounded-xl border border-[#D4F82C] bg-[#D4F82C]/10 p-3 flex flex-col">
+                  <div className="flex items-center justify-between pb-2 mb-2 border-b border-[#D4F82C]/30">
+                    <span className="text-xs font-bold text-[#111215]">Shortlisted</span>
+                    <span className="size-5 rounded-full bg-[#D4F82C] text-[#111215] text-[10px] font-black flex items-center justify-center">
+                      2
+                    </span>
+                  </div>
+                  <div className="space-y-2.5 flex-1">
+                    <div
+                      onClick={() => {
+                        setDemoActiveCandidate(MOCKUP_CANDIDATES[0]);
+                        setDemoDrawerTab('overview');
+                        setDemoDrawerOpen(true);
+                      }}
+                      className="p-3 bg-white rounded-xl border border-[#D4F82C] hover:shadow-sm transition-all cursor-pointer shadow-2xs group ring-1 ring-[#D4F82C]"
+                    >
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-xs font-bold text-[#111215]">{MOCKUP_CANDIDATES[0].name}</span>
+                        <span className="px-1.5 py-0.5 rounded text-[10px] font-black bg-[#D4F82C] text-[#111215]">
+                          {MOCKUP_CANDIDATES[0].score}% Fit
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-[#73766C] mb-2">{MOCKUP_CANDIDATES[0].role}</div>
+                      <div className="flex items-center justify-between text-[10px] text-[#73766C] pt-2 border-t border-[#F1F2EC]">
+                        <span>React, TypeScript</span>
+                        <span className="font-bold text-[#111215] flex items-center gap-0.5">
+                          Inspect <ChevronRight className="size-3" />
+                        </span>
+                      </div>
+                    </div>
+
+                    <div
+                      onClick={() => {
+                        setDemoActiveCandidate(MOCKUP_CANDIDATES[3]);
+                        setDemoDrawerTab('overview');
+                        setDemoDrawerOpen(true);
+                      }}
+                      className="p-3 bg-white rounded-xl border border-[#E4E7DC] hover:border-[#111215] transition-all cursor-pointer shadow-2xs group"
+                    >
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-xs font-bold text-[#111215]">{MOCKUP_CANDIDATES[3].name}</span>
+                        <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-[#F8F9F5] text-[#111215] border border-[#E4E7DC]">
+                          {MOCKUP_CANDIDATES[3].score}%
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-[#73766C] mb-2">{MOCKUP_CANDIDATES[3].role}</div>
+                      <div className="flex items-center justify-between text-[10px] text-[#73766C] pt-2 border-t border-[#F1F2EC]">
+                        <span>AWS, DevOps</span>
+                        <span className="font-bold text-[#111215] flex items-center gap-0.5">
+                          Inspect <ChevronRight className="size-3" />
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Column 3: Interview */}
+                <div className="rounded-xl border border-[#E4E7DC] bg-[#F1F2EC]/60 p-3 flex flex-col">
+                  <div className="flex items-center justify-between pb-2 mb-2 border-b border-[#E4E7DC]">
+                    <span className="text-xs font-bold text-[#111215]">Interview Scheduled</span>
+                    <span className="size-5 rounded-full bg-white text-[#111215] text-[10px] font-bold flex items-center justify-center border border-[#E4E7DC]">
+                      1
+                    </span>
+                  </div>
+                  <div className="space-y-2.5 flex-1">
+                    <div
+                      onClick={() => {
+                        setDemoActiveCandidate(MOCKUP_CANDIDATES[1]);
+                        setDemoDrawerTab('overview');
+                        setDemoDrawerOpen(true);
+                      }}
+                      className="p-3 bg-white rounded-xl border border-[#E4E7DC] hover:border-[#111215] transition-all cursor-pointer shadow-2xs group"
+                    >
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-xs font-bold text-[#111215]">{MOCKUP_CANDIDATES[1].name}</span>
+                        <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-[#F8F9F5] text-[#111215] border border-[#E4E7DC]">
+                          {MOCKUP_CANDIDATES[1].score}%
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-[#73766C] mb-2">{MOCKUP_CANDIDATES[1].role}</div>
+                      <div className="flex items-center justify-between text-[10px] text-[#73766C] pt-2 border-t border-[#F1F2EC]">
+                        <span className="text-[#111215] font-semibold">Tomorrow, 3:00 PM</span>
+                        <span className="font-bold text-[#111215] flex items-center gap-0.5">
+                          View <ChevronRight className="size-3" />
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Column 4: Hired */}
+                <div className="rounded-xl border border-[#E4E7DC] bg-[#F1F2EC]/60 p-3 flex flex-col">
+                  <div className="flex items-center justify-between pb-2 mb-2 border-b border-[#E4E7DC]">
+                    <span className="text-xs font-bold text-[#111215]">Hired</span>
+                    <span className="size-5 rounded-full bg-white text-[#111215] text-[10px] font-bold flex items-center justify-center border border-[#E4E7DC]">
+                      1
+                    </span>
+                  </div>
+                  <div className="space-y-2.5 flex-1">
+                    <div className="p-3 bg-white rounded-xl border border-[#E4E7DC] shadow-2xs">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-xs font-bold text-[#111215]">{MOCKUP_CANDIDATES[4].name}</span>
+                        <span className="px-1.5 py-0.5 rounded text-[10px] font-black bg-[#D4F82C] text-[#111215]">
+                          98%
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-[#73766C] mb-2">{MOCKUP_CANDIDATES[4].role}</div>
+                      <div className="flex items-center justify-between text-[10px] text-emerald-700 font-bold pt-2 border-t border-[#F1F2EC]">
+                        <span className="flex items-center gap-1"><Check className="size-3" /> Offer Accepted</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+
+              {/* Subcaption */}
+              <div className="mt-4 pt-3 border-t border-[#E4E7DC] flex flex-wrap items-center justify-between text-xs text-[#73766C] gap-2">
+                <span>Drag-and-drop candidates, review resumes, and manage interview schedules with zero friction.</span>
+                <span className="font-bold text-[#111215]">Click any card to open live drawer ↗</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── SECTION 3: AI RESUME EXTRACTION ("Read the person. Not the paperwork.") ── */}
+      <section id="resume-matching" className="py-20 px-4 sm:px-8 lg:px-12 max-w-7xl mx-auto border-t border-[#E4E7DC]">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+          
+          {/* Left Text */}
+          <div className="lg:col-span-6 space-y-6">
+            <div className="text-[11px] font-bold uppercase tracking-wider text-[#73766C]">
+              AI Resume Extraction & Match
+            </div>
+            <h2 className="text-3xl sm:text-5xl font-black text-[#111215] tracking-tight leading-[1.1]">
+              Read the person.<br />
+              Not the paperwork.
+            </h2>
+            <p className="text-base text-[#575A51] leading-relaxed">
+              Our AI extracts actual competencies, verified work experience, and cultural indicators — giving you an actionable profile within 3 seconds of resume upload.
+            </p>
+
+            <div className="space-y-3 pt-2">
+              <div className="flex items-center gap-3 text-sm font-semibold text-[#111215]">
+                <div className="size-5 rounded-full bg-[#D4F82C] text-[#111215] flex items-center justify-center shrink-0">
+                  <Check className="size-3 stroke-[3]" />
+                </div>
+                <span>Deep keyword & contextual skill extraction</span>
+              </div>
+              <div className="flex items-center gap-3 text-sm font-semibold text-[#111215]">
+                <div className="size-5 rounded-full bg-[#D4F82C] text-[#111215] flex items-center justify-center shrink-0">
+                  <Check className="size-3 stroke-[3]" />
+                </div>
+                <span>Objective AI match scoring (0–100%) against Job Description</span>
+              </div>
+              <div className="flex items-center gap-3 text-sm font-semibold text-[#111215]">
+                <div className="size-5 rounded-full bg-[#D4F82C] text-[#111215] flex items-center justify-center shrink-0">
+                  <Check className="size-3 stroke-[3]" />
+                </div>
+                <span>Clean candidate profile with zero formatting errors or bad PDFs</span>
+              </div>
+              <div className="flex items-center gap-3 text-sm font-semibold text-[#111215]">
+                <div className="size-5 rounded-full bg-[#D4F82C] text-[#111215] flex items-center justify-center shrink-0">
+                  <Check className="size-3 stroke-[3]" />
+                </div>
+                <span>Native WhatsApp outreach with 98% open rates</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Floating Profile Cards Visual */}
+          <div className="lg:col-span-6 relative flex items-center justify-center">
+            
+            {/* Background Card */}
+            <div className="w-full max-w-md rounded-2xl border border-[#E4E7DC] bg-[#F1F2EC] p-6 shadow-sm rotate-1 translate-y-3 translate-x-3 opacity-90">
+              <div className="flex items-center justify-between pb-3 border-b border-[#E4E7DC]">
+                <div className="text-xs font-bold text-[#73766C]">Extracted Qualifications</div>
+                <span className="size-6 rounded-full bg-[#D4F82C] text-[#111215] flex items-center justify-center font-bold text-xs">★</span>
+              </div>
+              <div className="mt-3 space-y-2 text-xs text-[#575A51]">
+                <p>• Verified 5+ years building enterprise SaaS platforms</p>
+                <p>• Core technologies: React, TypeScript, Node.js, PostgreSQL</p>
+                <p>• Fast notice period (15 days), strong communication index</p>
               </div>
             </div>
 
-            {/* ── Floating Card 1: Circular AI Resume Score (Bottom Left) ── */}
-            <div className="absolute -bottom-6 -left-3 sm:left-4 bg-white border border-[#E5EAF5] rounded-2xl p-3 shadow-xl shadow-[#101B3B]/08 flex items-center gap-3 z-20">
-              <div className="relative size-12 flex items-center justify-center">
-                <svg className="size-12 -rotate-90">
-                  <circle cx="24" cy="24" r="20" className="stroke-[#E5EAF5]" strokeWidth="4" fill="transparent" />
-                  <circle
-                    cx="24"
-                    cy="24"
-                    r="20"
-                    className="stroke-[#5145FF]"
-                    strokeWidth="4"
-                    strokeDasharray={125.6}
-                    strokeDashoffset={125.6 * (1 - 0.98)}
-                    strokeLinecap="round"
-                    fill="transparent"
+            {/* Front Card */}
+            <div className="absolute w-full max-w-md rounded-2xl border border-[#111215] bg-white p-6 shadow-xl -rotate-1 -translate-y-2 -translate-x-2">
+              <div className="flex items-start justify-between gap-4 pb-4 border-b border-[#E4E7DC]">
+                <div className="flex items-center gap-3">
+                  <img
+                    src={MOCKUP_CANDIDATES[0].avatar}
+                    alt={MOCKUP_CANDIDATES[0].name}
+                    className="size-12 rounded-full object-cover border border-[#E4E7DC]"
                   />
-                </svg>
-                <span className="absolute text-[11px] font-black text-[#101B3B]">98%</span>
+                  <div>
+                    <h4 className="text-sm font-bold text-[#111215]">{MOCKUP_CANDIDATES[0].name}</h4>
+                    <p className="text-xs text-[#73766C]">{MOCKUP_CANDIDATES[0].role}</p>
+                  </div>
+                </div>
+                <div className="px-2.5 py-1 rounded-full bg-[#D4F82C] text-[#111215] text-xs font-black">
+                  96% Fit
+                </div>
               </div>
-              <div>
-                <div className="text-[10px] text-[#7D89A5] font-medium">AI Resume Score</div>
-                <div className="text-xs font-bold text-[#101B3B]">Deep Match Analysis</div>
+
+              <div className="mt-4 space-y-3">
+                <div className="flex flex-wrap gap-1.5">
+                  <span className="px-2.5 py-1 rounded-md bg-[#F8F9F5] text-[#111215] text-[11px] font-semibold border border-[#E4E7DC]">React</span>
+                  <span className="px-2.5 py-1 rounded-md bg-[#F8F9F5] text-[#111215] text-[11px] font-semibold border border-[#E4E7DC]">TypeScript</span>
+                  <span className="px-2.5 py-1 rounded-md bg-[#F8F9F5] text-[#111215] text-[11px] font-semibold border border-[#E4E7DC]">Node.js</span>
+                  <span className="px-2.5 py-1 rounded-md bg-[#F8F9F5] text-[#111215] text-[11px] font-semibold border border-[#E4E7DC]">Cloud Architect</span>
+                </div>
+
+                <div className="p-3 rounded-xl bg-[#F8F9F5] border border-[#E4E7DC] text-xs text-[#575A51] leading-relaxed">
+                  "Exceeded all technical benchmarks for full stack architecture. Demonstrated leadership scaling distributed systems."
+                </div>
+
+                <div className="flex items-center justify-between text-xs pt-2">
+                  <span className="text-[#73766C]">Notice: <strong className="text-[#111215]">15 Days</strong></span>
+                  <span className="text-[#73766C]">Exp: <strong className="text-[#111215]">6 Years</strong></span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDemoActiveCandidate(MOCKUP_CANDIDATES[0]);
+                      setDemoDrawerTab('whatsapp');
+                      setDemoDrawerOpen(true);
+                    }}
+                    className="text-xs font-bold text-[#111215] underline cursor-pointer"
+                  >
+                    Send WhatsApp Invite &rarr;
+                  </button>
+                </div>
               </div>
             </div>
 
-            {/* ── Floating Card 2: WhatsApp Notification (Top Right) ── */}
-            <div className="absolute -top-6 -right-2 sm:-right-4 bg-white border border-[#E5EAF5] rounded-2xl p-3 shadow-xl shadow-[#101B3B]/08 max-w-[215px] z-20">
-              <div className="flex items-center gap-1.5 mb-1 text-[10px] font-bold text-[#10B981]">
-                <span className="size-2 rounded-full bg-[#10B981] animate-pulse" />
-                <span>WhatsApp Outreach</span>
-              </div>
-              <p className="text-[10.5px] text-[#17213F] leading-snug">
-                "Hi! You're a great fit for the Frontend Developer role at SNAB. Can we schedule a quick chat?"
-              </p>
-              <div className="mt-1 flex items-center justify-between text-[9px] text-[#7D89A5]">
-                <span>10:24 AM</span>
-                <CheckCheck className="size-3 text-[#4285FF]" />
-              </div>
-            </div>
+          </div>
 
-            {/* ── Floating Card 3: Job Post in 3 Seconds (Bottom Right) ── */}
-            <div className="absolute -bottom-7 right-4 hidden sm:flex items-center gap-2 bg-gradient-to-r from-[#F6A623] to-[#FF8C00] text-white rounded-xl px-3.5 py-2 shadow-lg shadow-[#F6A623]/25 text-xs font-bold z-20">
-              <Zap className="size-4 fill-white" />
-              <div>
-                <div className="text-[9px] uppercase tracking-wider text-amber-100 font-medium">Generated</div>
-                <div>Job Post Created in 3s</div>
+        </div>
+      </section>
+
+      {/* ── SECTION 4: DARK SECTION ("A shortlist needs context. Not a black box.") ── */}
+      <section id="client-portal" className="py-24 px-4 sm:px-8 lg:px-12 bg-[#111215] text-white scroll-mt-20">
+        <div className="max-w-7xl mx-auto">
+          
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-end mb-14">
+            <div className="lg:col-span-7">
+              <div className="text-[11px] font-bold uppercase tracking-wider text-[#D4F82C] mb-2">
+                Live Client Collaboration
               </div>
+              <h2 className="text-3xl sm:text-5xl font-black text-white tracking-tight leading-[1.1]">
+                A shortlist needs context.<br />
+                Not a black box.
+              </h2>
+            </div>
+            <div className="lg:col-span-5 text-sm sm:text-base text-slate-300 leading-relaxed">
+              They don't need spreadsheets or 10-page CV PDFs. Give your clients a live, interactive review link they'll actually enjoy using.
             </div>
           </div>
-        </div>
 
-        {/* ── 3. Four Metrics Horizontal Strip ── */}
-        <div className="mt-16 pt-8 border-t border-[#E5EAF5]">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-5xl mx-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
             
-            {/* Metric 1 */}
-            <div className="flex items-center gap-3 p-3.5 rounded-xl bg-white border border-[#E5EAF5] shadow-2xs">
-              <div className="size-10 rounded-lg bg-[#F1EFFF] flex items-center justify-center text-[#5145FF] shrink-0">
-                <FileText className="size-5" />
-              </div>
-              <div>
-                <div className="text-base sm:text-lg font-black text-[#101B3B]">20,000+</div>
-                <div className="text-[11px] text-[#566481]">Resumes Stored</div>
-              </div>
-            </div>
-
-            {/* Metric 2 */}
-            <div className="flex items-center gap-3 p-3.5 rounded-xl bg-white border border-[#E5EAF5] shadow-2xs">
-              <div className="size-10 rounded-lg bg-[#EAF2FF] flex items-center justify-center text-[#4285FF] shrink-0">
-                <Zap className="size-5" />
-              </div>
-              <div>
-                <div className="text-base sm:text-lg font-black text-[#101B3B]">25 GB</div>
-                <div className="text-[11px] text-[#566481]">Storage, Extendable</div>
-              </div>
-            </div>
-
-            {/* Metric 3 */}
-            <div className="flex items-center gap-3 p-3.5 rounded-xl bg-white border border-[#E5EAF5] shadow-2xs">
-              <div className="size-10 rounded-lg bg-[#EAFBF4] flex items-center justify-center text-[#10B981] shrink-0">
-                <MessageCircle className="size-5" />
-              </div>
-              <div>
-                <div className="text-base sm:text-lg font-black text-[#101B3B]">92%+</div>
-                <div className="text-[11px] text-[#566481]">WhatsApp Open Rate</div>
-              </div>
-            </div>
-
-            {/* Metric 4 */}
-            <div className="flex items-center gap-3 p-3.5 rounded-xl bg-white border border-[#E5EAF5] shadow-2xs">
-              <div className="size-10 rounded-lg bg-[#F1EFFF] flex items-center justify-center text-[#5145FF] shrink-0">
-                <ShieldCheck className="size-5" />
-              </div>
-              <div>
-                <div className="text-base sm:text-lg font-black text-[#101B3B]">1-Click</div>
-                <div className="text-[11px] text-[#566481]">White Resume Mask</div>
-              </div>
-            </div>
-
-          </div>
-        </div>
-      </section>
-
-      {/* ── 4. Section: WHY RECRUITERS SWITCH ── */}
-      <section id="why-hirex" className="py-16 px-4 sm:px-8 lg:px-12 max-w-7xl mx-auto border-t border-[#E5EAF5]">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          
-          {/* Section Left Title */}
-          <div className="lg:col-span-5">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-[#5145FF]">
-              Why Recruiters Switch
-            </span>
-            <h2 className="mt-2 text-2xl sm:text-3xl font-extrabold text-[#101B3B] leading-tight">
-              Traditional ATS Creates Work.{' '}
-              <span className="text-[#5145FF]">HireX Snab</span> Does It.
-            </h2>
-            <p className="mt-3 text-xs sm:text-sm text-[#566481] leading-relaxed max-w-md">
-              See why legacy recruiting software slows hiring teams down, and how HireX Snab automates the repetitive busywork.
-            </p>
-          </div>
-
-          {/* Section Right 2 Comparison Cards */}
-          <div className="lg:col-span-7 grid grid-cols-1 sm:grid-cols-2 gap-4">
-            
-            {/* Card 1: Traditional ATS tools create work (Pale Rose) */}
-            <div className="rounded-2xl p-5 bg-[#FFF2F3] border border-[#FED7DA] shadow-2xs flex flex-col justify-between">
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2">
-                    <span className="size-7 rounded-lg bg-rose-100 flex items-center justify-center text-[#F05B68]">
-                      <FileText className="size-4" />
-                    </span>
-                    <div>
-                      <h3 className="text-xs font-bold text-[#101B3B]">Traditional ATS tools</h3>
-                      <div className="text-[10px] text-[#566481]">create work</div>
-                    </div>
-                  </div>
-                  <span className="text-[9px] font-bold text-[#F05B68] bg-rose-100/70 px-2 py-0.5 rounded-full">
-                    Legacy Flow
-                  </span>
-                </div>
-                <p className="text-[10px] text-[#7D89A5] mb-4">Manual, slow, and fragmented</p>
-
-                <div className="space-y-3.5 text-xs">
-                  <div className="flex items-start gap-2.5">
-                    <XCircle className="size-4 text-[#F05B68] shrink-0 mt-0.5" />
-                    <div>
-                      <div className="font-bold text-[#17213F]">Manual screening</div>
-                      <div className="text-[11px] text-[#566481]">5+ hours lost per opening</div>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-2.5">
-                    <XCircle className="size-4 text-[#F05B68] shrink-0 mt-0.5" />
-                    <div>
-                      <div className="font-bold text-[#17213F]">Slow follow-ups</div>
-                      <div className="text-[11px] text-[#566481]">Days or weeks of waiting</div>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-2.5">
-                    <XCircle className="size-4 text-[#F05B68] shrink-0 mt-0.5" />
-                    <div>
-                      <div className="font-bold text-[#17213F]">Missed talent</div>
-                      <div className="text-[11px] text-[#566481]">Good fits get buried in the pile</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Card 2: HireX Snab ATS (Pale Mint) */}
-            <div className="rounded-2xl p-5 bg-[#EAFBF4] border border-[#C6F6D5] shadow-2xs flex flex-col justify-between">
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2">
-                    <span className="size-7 rounded-lg bg-emerald-100 flex items-center justify-center text-[#10B981]">
-                      <Rocket className="size-4" />
-                    </span>
-                    <div>
-                      <h3 className="text-xs font-bold text-[#101B3B]">HireX Snab ATS</h3>
-                      <div className="text-[10px] text-[#10B981]">AI does the heavy lifting</div>
-                    </div>
-                  </div>
-                  <span className="text-[9px] font-bold text-emerald-700 bg-emerald-100/70 px-2 py-0.5 rounded-full">
-                    Automated
-                  </span>
-                </div>
-                <p className="text-[10px] text-[#7D89A5] mb-4">Autonomous intelligence</p>
-
-                <div className="space-y-3.5 text-xs">
-                  <div className="flex items-start gap-2.5">
-                    <CheckCircle2 className="size-4 text-[#10B981] shrink-0 mt-0.5" />
-                    <div>
-                      <div className="font-bold text-[#17213F]">Automated AI resume scoring</div>
-                      <div className="text-[11px] text-[#566481]">Deep Claude 3.5 Sonnet analysis</div>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-2.5">
-                    <CheckCircle2 className="size-4 text-[#10B981] shrink-0 mt-0.5" />
-                    <div>
-                      <div className="font-bold text-[#17213F]">Best-candidate suggestions</div>
-                      <div className="text-[11px] text-[#566481]">Top matches surface first</div>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-2.5">
-                    <CheckCircle2 className="size-4 text-[#10B981] shrink-0 mt-0.5" />
-                    <div>
-                      <div className="font-bold text-[#17213F]">Personalised job picks</div>
-                      <div className="text-[11px] text-[#566481]">80% less irrelevant applications</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-          </div>
-        </div>
-      </section>
-
-      {/* ── 5. Section: END-TO-END HIRING PIPELINE ── */}
-      <section id="pipeline" className="py-16 px-4 sm:px-8 lg:px-12 max-w-7xl mx-auto border-t border-[#E5EAF5]">
-        
-        {/* Header */}
-        <div className="text-left mb-10 max-w-xl">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-[#5145FF]">
-            End-To-End Pipeline
-          </span>
-          <h2 className="mt-1 text-2xl sm:text-3xl font-extrabold text-[#101B3B]">
-            From Application to Offer, Automated
-          </h2>
-          <p className="mt-2 text-xs sm:text-sm text-[#566481]">
-            Four seamless stages that cut average time-to-hire from 38 days to under 7 days.
-          </p>
-        </div>
-
-        {/* 4 Connected Cards Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          
-          {/* Card 1 — Blue */}
-          <div className="rounded-2xl p-5 bg-[#F4F8FE] border border-[#D5E6FB] relative flex flex-col justify-between shadow-2xs">
-            <div>
-              <div className="flex items-center gap-2 mb-3">
-                <span className="size-6 rounded-full bg-[#4285FF] text-white font-bold text-xs flex items-center justify-center">1</span>
-                <span className="size-7 rounded-lg bg-blue-100 flex items-center justify-center text-[#4285FF]">
-                  <FileText className="size-4" />
-                </span>
-              </div>
-              <h3 className="text-xs font-bold text-[#101B3B]">Multi-Channel Ingestion</h3>
-              <div className="text-[10px] font-semibold text-[#4285FF] mb-2">Apply</div>
-              <p className="text-[11px] text-[#566481] leading-relaxed">
-                Candidates apply via mobile portal, public job board, or recruiters batch-import 100+ resumes via AWS S3.
-              </p>
-            </div>
-            <div className="mt-6 pt-3 border-t border-blue-100 text-[9px] font-bold text-[#4285FF]">
-              Step 1 of 4
-            </div>
-          </div>
-
-          {/* Card 2 — Lavender */}
-          <div className="rounded-2xl p-5 bg-[#F9F5FF] border border-[#E9DDFE] relative flex flex-col justify-between shadow-2xs">
-            <div>
-              <div className="flex items-center gap-2 mb-3">
-                <span className="size-6 rounded-full bg-[#5145FF] text-white font-bold text-xs flex items-center justify-center">2</span>
-                <span className="size-7 rounded-lg bg-purple-100 flex items-center justify-center text-[#5145FF]">
-                  <Brain className="size-4" />
-                </span>
-              </div>
-              <h3 className="text-xs font-bold text-[#101B3B]">Instant 0–100% Fit</h3>
-              <div className="text-[10px] font-semibold text-[#5145FF] mb-2">Score</div>
-              <p className="text-[11px] text-[#566481] leading-relaxed">
-                AWS Bedrock Claude 3.5 Sonnet ranks every resume against the job description in seconds.
-              </p>
-            </div>
-            <div className="mt-6 pt-3 border-t border-purple-100 text-[9px] font-bold text-[#5145FF]">
-              Step 2 of 4
-            </div>
-          </div>
-
-          {/* Card 3 — Mint */}
-          <div className="rounded-2xl p-5 bg-[#EAFBF4] border border-[#C6F6D5] relative flex flex-col justify-between shadow-2xs">
-            <div>
-              <div className="flex items-center gap-2 mb-3">
-                <span className="size-6 rounded-full bg-[#10B981] text-white font-bold text-xs flex items-center justify-center">3</span>
-                <span className="size-7 rounded-lg bg-emerald-100 flex items-center justify-center text-[#10B981]">
-                  <MessageCircle className="size-4" />
-                </span>
-              </div>
-              <h3 className="text-xs font-bold text-[#101B3B]">92% Open Rate</h3>
-              <div className="text-[10px] font-semibold text-[#10B981] mb-2">Notify & Screen</div>
-              <p className="text-[11px] text-[#566481] leading-relaxed">
-                WhatsApp and email alerts, with conversational AI screening for applicants.
-              </p>
-            </div>
-            <div className="mt-6 pt-3 border-t border-emerald-100 text-[9px] font-bold text-[#10B981]">
-              Step 3 of 4
-            </div>
-          </div>
-
-          {/* Card 4 — Amber */}
-          <div className="rounded-2xl p-5 bg-[#FFFAF4] border border-[#FED7AA] relative flex flex-col justify-between shadow-2xs">
-            <div>
-              <div className="flex items-center gap-2 mb-3">
-                <span className="size-6 rounded-full bg-[#F6A623] text-white font-bold text-xs flex items-center justify-center">4</span>
-                <span className="size-7 rounded-lg bg-amber-100 flex items-center justify-center text-[#F6A623]">
-                  <Users className="size-4" />
-                </span>
-              </div>
-              <h3 className="text-xs font-bold text-[#101B3B]">5.2x Faster Velocity</h3>
-              <div className="text-[10px] font-semibold text-[#F6A623] mb-2">Hire</div>
-              <p className="text-[11px] text-[#566481] leading-relaxed">
-                Masked resumes, confident decisions, and efficient offer workflows.
-              </p>
-            </div>
-            <div className="mt-6 pt-3 border-t border-amber-100 text-[9px] font-bold text-[#F6A623]">
-              Step 4 of 4
-            </div>
-          </div>
-
-        </div>
-      </section>
-
-      {/* ── 6. Section: CORE PLATFORM PILLARS ── */}
-      <section className="py-16 px-4 sm:px-8 lg:px-12 max-w-7xl mx-auto border-t border-[#E5EAF5]">
-        
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          
-          {/* Left Title */}
-          <div className="lg:col-span-5">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-[#5145FF]">
-              Core Platform Pillars
-            </span>
-            <h2 className="mt-2 text-2xl sm:text-3xl font-extrabold text-[#101B3B] leading-tight">
-              Built-In AI, Built-In WhatsApp, Built-In Privacy
-            </h2>
-            <p className="mt-3 text-xs sm:text-sm text-[#566481] leading-relaxed max-w-md">
-              Everything your talent acquisition team needs included natively — no external subscriptions, no Zapier integrations.
-            </p>
-          </div>
-
-          {/* Right 3 Pillars Grid with Micro-UI Previews */}
-          <div className="lg:col-span-7 grid grid-cols-1 sm:grid-cols-3 gap-4">
-            
-            {/* Pillar 1 — Creation Engine */}
-            <div className="p-4 rounded-2xl bg-white border border-[#E5EAF5] shadow-2xs flex flex-col justify-between">
-              <div>
-                <div className="size-8 rounded-lg bg-[#F1EFFF] flex items-center justify-center text-[#5145FF] mb-3">
-                  <Sparkles className="size-4" />
-                </div>
-                <div className="text-[10px] font-bold uppercase tracking-wider text-[#5145FF]">
-                  Creation Engine
-                </div>
-                <h3 className="text-xs font-bold text-[#101B3B] mt-1 mb-2">
-                  AI creates jobs and ads in seconds
-                </h3>
-                <p className="text-[11px] text-[#566481] mb-3">
-                  AI creates structured job posts and candidate advertisements.
-                </p>
-
-                {/* Compact UI Preview Card */}
-                <div className="p-2.5 rounded-xl bg-[#F8F9FF] border border-[#E5EAF5] mb-3 text-[10px] space-y-1.5">
-                  <div className="text-[9px] font-medium text-[#7D89A5]">Job Title</div>
-                  <div className="h-5 px-2 rounded bg-white border border-[#E5EAF5] flex items-center text-slate-800">
-                    Senior React Lead
-                  </div>
-                  <div className="h-5 px-2 rounded bg-[#5145FF] text-white font-bold flex items-center justify-center text-[9px]">
-                    ✨ Generate Spec
-                  </div>
-                </div>
-
-                <div className="space-y-1.5 text-[11px] text-[#566481]">
-                  <div className="flex items-center gap-1.5">
-                    <CheckCircle2 className="size-3.5 text-[#5145FF]" />
-                    <span>AI job creation</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <CheckCircle2 className="size-3.5 text-[#5145FF]" />
-                    <span>AI candidate ads</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Pillar 2 — Candidate Outreach */}
-            <div className="p-4 rounded-2xl bg-white border border-[#E5EAF5] shadow-2xs flex flex-col justify-between">
-              <div>
-                <div className="size-8 rounded-lg bg-[#EAFBF4] flex items-center justify-center text-[#10B981] mb-3">
-                  <MessageCircle className="size-4" />
-                </div>
-                <div className="text-[10px] font-bold uppercase tracking-wider text-[#10B981]">
-                  Candidate Outreach
-                </div>
-                <h3 className="text-xs font-bold text-[#101B3B] mt-1 mb-2">
-                  Built-in WhatsApp and email alerts
-                </h3>
-                <p className="text-[11px] text-[#566481] mb-3">
-                  Reach candidates through built-in outreach workflows.
-                </p>
-
-                {/* WhatsApp Chat Preview Card */}
-                <div className="p-2.5 rounded-xl bg-[#EAFBF4] border border-[#C6F6D5] mb-3 text-[10px] space-y-1">
-                  <div className="flex items-center justify-between text-[9px] text-[#10B981] font-bold">
-                    <span>SNAB HR</span>
-                    <span>10:30 AM</span>
-                  </div>
-                  <p className="text-[9.5px] text-[#17213F] leading-tight">
-                    Interview round 1 scheduled for tomorrow at 3 PM.
-                  </p>
-                </div>
-
-                <div className="space-y-1.5 text-[11px] text-[#566481]">
-                  <div className="flex items-center gap-1.5">
-                    <CheckCircle2 className="size-3.5 text-[#10B981]" />
-                    <span>WhatsApp integration</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <CheckCircle2 className="size-3.5 text-[#10B981]" />
-                    <span>Automatic stage updates</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <CheckCircle2 className="size-3.5 text-[#10B981]" />
-                    <span>No third-party tools</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Pillar 3 — Security & Bias Control */}
-            <div className="p-4 rounded-2xl bg-white border border-[#E5EAF5] shadow-2xs flex flex-col justify-between">
-              <div>
-                <div className="size-8 rounded-lg bg-[#EAF2FF] flex items-center justify-center text-[#4285FF] mb-3">
-                  <ShieldCheck className="size-4" />
-                </div>
-                <div className="text-[10px] font-bold uppercase tracking-wider text-[#4285FF]">
-                  Security & Bias Control
-                </div>
-                <h3 className="text-xs font-bold text-[#101B3B] mt-1 mb-2">
-                  Privacy and control built in
-                </h3>
-                <p className="text-[11px] text-[#566481] mb-3">
-                  Protect candidate information with clear access controls.
-                </p>
-
-                {/* Masking Pill Preview */}
-                <div className="p-2.5 rounded-xl bg-[#F8F9FF] border border-[#E5EAF5] mb-3 text-[10px] flex items-center justify-between">
-                  <span className="text-[#566481]">Phone / Email</span>
-                  <span className="font-mono text-[9px] px-1.5 py-0.5 rounded bg-white border border-slate-200 text-slate-400">
-                    ████████
-                  </span>
-                </div>
-
-                <div className="space-y-1.5 text-[11px] text-[#566481]">
-                  <div className="flex items-center gap-1.5">
-                    <CheckCircle2 className="size-3.5 text-[#4285FF]" />
-                    <span>Resume masking (Clean White)</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <CheckCircle2 className="size-3.5 text-[#4285FF]" />
-                    <span>Individual role-based logins</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <CheckCircle2 className="size-3.5 text-[#4285FF]" />
-                    <span>Admin-monitored logs</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-          </div>
-        </div>
-      </section>
-
-      {/* ── 7. Section: TIME SAVED WITH HIREX SNAB + ROI CARD + PHOTO ── */}
-      <section id="time-saved" className="py-16 px-4 sm:px-8 lg:px-12 max-w-7xl mx-auto border-t border-[#E5EAF5]">
-        
-        {/* Header */}
-        <div className="text-left mb-8 max-w-xl">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-[#5145FF]">
-            Hours Returned to Your Recruiters
-          </span>
-          <h2 className="mt-1 text-2xl sm:text-3xl font-extrabold text-[#101B3B]">
-            Time Saved with HireX Snab
-          </h2>
-          <p className="mt-2 text-xs sm:text-sm text-[#566481]">
-            Estimates per hiring round, based on typical manual recruiter effort.
-          </p>
-        </div>
-
-        {/* Content: Left Table + Right ROI & Photo Card */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-          
-          {/* Left: Time Saved Table */}
-          <div className="lg:col-span-7 overflow-x-auto">
-            <div className="rounded-2xl border border-[#E5EAF5] bg-white shadow-2xs overflow-hidden">
-              <table className="w-full text-left text-xs">
-                <thead>
-                  <tr className="border-b border-[#E5EAF5] bg-[#F8F9FF] text-[10px] text-[#7D89A5] uppercase tracking-wider">
-                    <th className="py-3 px-4 font-semibold">Task</th>
-                    <th className="py-3 px-4 font-semibold">Traditional ATS</th>
-                    <th className="py-3 px-4 font-semibold text-[#5145FF]">HireX Snab</th>
-                    <th className="py-3 px-4 font-semibold text-[#10B981] text-right">Time Saved</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#E5EAF5]/60">
-                  {TIME_SAVED_ROWS.map((row, idx) => (
-                    <tr key={idx} className="hover:bg-[#F8F9FF] transition-colors">
-                      <td className="py-3.5 px-4 font-bold text-[#101B3B]">{row.task}</td>
-                      <td className="py-3.5 px-4 text-[#566481]">{row.traditional}</td>
-                      <td className="py-3.5 px-4 font-semibold text-[#5145FF]">{row.hirex}</td>
-                      <td className="py-3.5 px-4 font-bold text-[#10B981] text-right">{row.saved}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* Right: ROI Metrics + Recruiter Photo */}
-          <div className="lg:col-span-5">
-            <div className="rounded-2xl p-5 bg-[#F8F9FF] border border-[#E5EAF5] shadow-md relative overflow-hidden flex flex-col sm:flex-row items-center gap-5">
+            {/* Interactive Client Review Portal Mockup */}
+            <div className="lg:col-span-7 rounded-2xl border border-white/10 bg-[#16171B] p-6 shadow-2xl space-y-5">
               
-              {/* ROI Numbers */}
-              <div className="space-y-3.5 flex-1 w-full">
-                <div className="flex items-center gap-3">
-                  <div className="size-8 rounded-lg bg-[#F1EFFF] flex items-center justify-center text-[#5145FF]">
-                    <Briefcase className="size-4" />
-                  </div>
-                  <div>
-                    <div className="text-base font-black text-[#101B3B]">6</div>
-                    <div className="text-[10px] text-[#7D89A5]">Monthly Open Roles</div>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <div className="size-8 rounded-lg bg-[#EAF2FF] flex items-center justify-center text-[#4285FF]">
-                    <Users className="size-4" />
-                  </div>
-                  <div>
-                    <div className="text-base font-black text-[#101B3B]">200</div>
-                    <div className="text-[10px] text-[#7D89A5]">Applicants Per Opening</div>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <div className="size-8 rounded-lg bg-[#F1EFFF] flex items-center justify-center text-[#5145FF]">
-                    <Clock className="size-4" />
-                  </div>
-                  <div>
-                    <div className="text-base font-black text-[#101B3B]">420 hrs</div>
-                    <div className="text-[10px] text-[#7D89A5]">Hours Saved / Mo</div>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <div className="size-8 rounded-lg bg-[#EAFBF4] flex items-center justify-center text-[#10B981]">
-                    <Zap className="size-4" />
-                  </div>
-                  <div>
-                    <div className="text-base font-black text-[#10B981]">₹2.73 Lakhs</div>
-                    <div className="text-[10px] text-[#7D89A5]">Cost Saved Monthly</div>
-                  </div>
-                </div>
-
-                <div className="text-[9px] text-[#7D89A5] italic pt-1">
-                  Illustrative estimate
-                </div>
-              </div>
-
-              {/* Photo with Handwritten-Style Annotation */}
-              <div className="relative w-full sm:w-48 shrink-0">
-                <div className="absolute -top-3 left-2 z-10 font-serif italic text-xs font-bold text-[#5145FF] bg-white px-2.5 py-0.5 rounded-full shadow-xs border border-[#E5EAF5]">
-                  More time for what matters
-                </div>
-                <img
-                  src="/recruiter_hero.jpg"
-                  alt="Professional recruiter working on laptop"
-                  className="w-full h-44 object-cover rounded-xl border border-[#E5EAF5] shadow-xs"
-                />
-              </div>
-
-            </div>
-          </div>
-
-        </div>
-      </section>
-
-      {/* ── 8. Section: HEAD-TO-HEAD CAPABILITIES ── */}
-      <section id="comparison" className="py-16 px-4 sm:px-8 lg:px-12 max-w-7xl mx-auto border-t border-[#E5EAF5]">
-        
-        {/* Header */}
-        <div className="text-left mb-8 max-w-xl">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-[#5145FF]">
-            Head-To-Head Capabilities
-          </span>
-          <h2 className="mt-1 text-2xl sm:text-3xl font-extrabold text-[#101B3B]">
-            HireX Snab vs Traditional ATS
-          </h2>
-          <p className="mt-2 text-xs sm:text-sm text-[#566481]">
-            Direct side-by-side capability evaluation for talent teams and enterprise leadership.
-          </p>
-        </div>
-
-        {/* 3-Column Comparison Table */}
-        <div className="rounded-2xl border border-[#E5EAF5] bg-white shadow-2xs overflow-hidden">
-          <table className="w-full text-left text-xs">
-            <thead>
-              <tr className="border-b border-[#E5EAF5] bg-[#F8F9FF] text-[10px] text-[#7D89A5] uppercase tracking-wider">
-                <th className="py-3.5 px-5 font-semibold w-1/4">Capability</th>
-                <th className="py-3.5 px-5 font-semibold w-3/8">Traditional ATS</th>
-                <th className="py-3.5 px-5 font-semibold text-[#5145FF] w-3/8 bg-[#F1EFFF]/50">HireX Snab ATS</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#E5EAF5]/60">
-              {CAPABILITY_ROWS.map((row, idx) => (
-                <tr key={idx} className="hover:bg-[#F8F9FF] transition-colors">
-                  <td className="py-3.5 px-5 font-bold text-[#101B3B]">{row.capability}</td>
-                  <td className="py-3.5 px-5 text-[#566481]">{row.traditional}</td>
-                  <td className="py-3.5 px-5 font-semibold text-[#5145FF] bg-[#F1EFFF]/30">{row.hirex}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      {/* ── 9. Section: INTERACTIVE COST ESTIMATOR & MARKET BENCHMARK (Pricing) ── */}
-      <section id="pricing" className="py-16 px-4 sm:px-8 lg:px-12 max-w-7xl mx-auto border-t border-[#E5EAF5]">
-        
-        {/* Header & View Switcher */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
-          <div className="max-w-xl">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-[#5145FF] flex items-center gap-1.5">
-              <Calculator className="w-3.5 h-3.5" />
-              Transparent Pricing & Quotation Engine
-            </span>
-            <h2 className="mt-1 text-2xl sm:text-3xl font-extrabold text-[#101B3B]">
-              Calculate Your Cost & Get an Instant Quote
-            </h2>
-            <p className="mt-2 text-xs sm:text-sm text-[#7D89A5]">
-              Configure your team size and monthly hiring volume. Receive an itemized, executive-ready commercial quotation with direct legacy ATS cost comparisons.
-            </p>
-          </div>
-
-          {/* Dual Tabs */}
-          <div className="inline-flex p-1 bg-[#F1EFFF] rounded-xl border border-[#E5EAF5] self-start md:self-auto shadow-2xs">
-            <button
-              onClick={() => setPricingTab('estimator')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all ${
-                pricingTab === 'estimator'
-                  ? 'bg-white text-[#5145FF] shadow-2xs'
-                  : 'text-[#566481] hover:text-[#101B3B]'
-              }`}
-            >
-              <Zap className="w-3.5 h-3.5" />
-              Interactive Cost Estimator
-            </button>
-            <button
-              onClick={() => setPricingTab('benchmark')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all ${
-                pricingTab === 'benchmark'
-                  ? 'bg-white text-[#5145FF] shadow-2xs'
-                  : 'text-[#566481] hover:text-[#101B3B]'
-              }`}
-            >
-              <FileCheck className="w-3.5 h-3.5" />
-              Market Benchmark Table
-            </button>
-          </div>
-        </div>
-
-        {pricingTab === 'estimator' ? (
-          /* ── Interactive Cost Estimator & Quote View ── */
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-            
-            {/* Left: Input Controls Card (7 Cols) */}
-            <div className="lg:col-span-7 bg-white rounded-2xl border border-[#E5EAF5] p-6 sm:p-8 shadow-xs">
-              <div className="flex items-center justify-between pb-4 border-b border-[#E5EAF5]/80 mb-6">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-lg bg-[#F1EFFF] text-[#5145FF] flex items-center justify-center">
-                    <Sliders className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-bold text-[#101B3B]">Hiring Volume & Team Usage</h3>
-                    <p className="text-[11px] text-[#7D89A5]">Adjust sliders to simulate your agency or company recruitment scale</p>
+              {/* Header Bar with Share Link & Copy */}
+              <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-white/10">
+                <div>
+                  <div className="text-xs text-slate-400 font-mono">Job: Lead Full Stack Engineer</div>
+                  <div className="text-sm font-bold text-white flex items-center gap-2 mt-0.5">
+                    <span>Acme Corp • Client Shortlist Portal</span>
+                    <span className="size-2 rounded-full bg-[#D4F82C] animate-pulse"></span>
                   </div>
                 </div>
                 <button
                   type="button"
                   onClick={() => {
-                    setCalcRecruiters(3);
-                    setCalcResumes(500);
-                    setCalcJobs(10);
-                    setCalcBilling('annual');
-                    setCalcVoiceScreening(false);
+                    navigator.clipboard?.writeText('https://hirex.snab.co.in/review/share_lead_arch_9f4k2');
+                    setDemoClientLinkCopied(true);
+                    setTimeout(() => setDemoClientLinkCopied(false), 2000);
                   }}
-                  className="text-[11px] font-semibold text-[#5145FF] hover:underline"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-semibold transition-all cursor-pointer"
                 >
-                  Reset Defaults
+                  {demoClientLinkCopied ? (
+                    <>
+                      <Check className="size-3 text-[#D4F82C]" />
+                      <span>Link Copied!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="size-3" />
+                      <span>Copy Client Link</span>
+                    </>
+                  )}
                 </button>
               </div>
 
-              <div className="space-y-6">
-                {/* 1. Recruiter Seats */}
-                <div>
-                  <div className="flex items-center justify-between text-xs font-semibold mb-2">
-                    <span className="text-[#101B3B] flex items-center gap-1.5">
-                      <Users className="w-3.5 h-3.5 text-[#5145FF]" />
-                      Recruiter & Hiring Manager Seats
-                    </span>
-                    <span className="text-sm font-bold text-[#5145FF] bg-[#F1EFFF] px-2.5 py-0.5 rounded-md border border-[#E9E7FF]">
-                      {calcRecruiters} {calcRecruiters === 1 ? 'Recruiter' : 'Recruiters'}
-                    </span>
-                  </div>
-                  <input
-                    type="range"
-                    min={1}
-                    max={20}
-                    step={1}
-                    value={calcRecruiters}
-                    onChange={(e) => setCalcRecruiters(parseInt(e.target.value))}
-                    className="w-full accent-[#5145FF] cursor-pointer"
-                  />
-                  <div className="flex items-center justify-between mt-2 text-[10px] text-[#7D89A5]">
-                    <span>1 Solo Recruiter</span>
-                    <span>5 Agency Seats</span>
-                    <span>10 Team</span>
-                    <span>20+ Enterprise</span>
-                  </div>
-                  <div className="flex flex-wrap gap-1.5 mt-2.5">
-                    {[1, 3, 5, 8, 12].map((num) => (
-                      <button
-                        key={num}
-                        type="button"
-                        onClick={() => setCalcRecruiters(num)}
-                        className={`text-[10px] font-bold px-2.5 py-1 rounded-md transition-all ${
-                          calcRecruiters === num
-                            ? 'bg-[#5145FF] text-white'
-                            : 'bg-[#F8F9FF] text-[#566481] hover:bg-[#F1EFFF]'
-                        }`}
-                      >
-                        {num} {num === 1 ? 'Seat' : 'Seats'}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* 2. Monthly Resumes */}
-                <div>
-                  <div className="flex items-center justify-between text-xs font-semibold mb-2">
-                    <span className="text-[#101B3B] flex items-center gap-1.5">
-                      <FileText className="w-3.5 h-3.5 text-[#5145FF]" />
-                      Candidate Resumes Screened / Month
-                    </span>
-                    <span className="text-sm font-bold text-[#5145FF] bg-[#F1EFFF] px-2.5 py-0.5 rounded-md border border-[#E9E7FF]">
-                      {calcResumes.toLocaleString('en-IN')} Resumes
-                    </span>
-                  </div>
-                  <input
-                    type="range"
-                    min={100}
-                    max={10000}
-                    step={100}
-                    value={calcResumes}
-                    onChange={(e) => setCalcResumes(parseInt(e.target.value))}
-                    className="w-full accent-[#5145FF] cursor-pointer"
-                  />
-                  <div className="flex items-center justify-between mt-2 text-[10px] text-[#7D89A5]">
-                    <span>100 / mo</span>
-                    <span>2,500 / mo</span>
-                    <span>5,000 / mo</span>
-                    <span>10,000+ / mo</span>
-                  </div>
-                  <div className="flex flex-wrap gap-1.5 mt-2.5">
-                    {[250, 500, 1500, 3000, 5000].map((num) => (
-                      <button
-                        key={num}
-                        type="button"
-                        onClick={() => setCalcResumes(num)}
-                        className={`text-[10px] font-bold px-2.5 py-1 rounded-md transition-all ${
-                          calcResumes === num
-                            ? 'bg-[#5145FF] text-white'
-                            : 'bg-[#F8F9FF] text-[#566481] hover:bg-[#F1EFFF]'
-                        }`}
-                      >
-                        {num.toLocaleString('en-IN')} / mo
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* 3. Active Job Openings */}
-                <div>
-                  <div className="flex items-center justify-between text-xs font-semibold mb-2">
-                    <span className="text-[#101B3B] flex items-center gap-1.5">
-                      <Briefcase className="w-3.5 h-3.5 text-[#5145FF]" />
-                      Active Job Openings Handled Concurrently
-                    </span>
-                    <span className="text-sm font-bold text-[#5145FF] bg-[#F1EFFF] px-2.5 py-0.5 rounded-md border border-[#E9E7FF]">
-                      {calcJobs} Active Roles
-                    </span>
-                  </div>
-                  <input
-                    type="range"
-                    min={1}
-                    max={50}
-                    step={1}
-                    value={calcJobs}
-                    onChange={(e) => setCalcJobs(parseInt(e.target.value))}
-                    className="w-full accent-[#5145FF] cursor-pointer"
-                  />
-                  <div className="flex items-center justify-between mt-1 text-[10px] text-[#7D89A5]">
-                    <span>1 Role</span>
-                    <span>15 Roles</span>
-                    <span>30 Roles</span>
-                    <span>50+ Roles (Unlimited)</span>
-                  </div>
-                </div>
-
-                {/* 4. Billing Cycle Selection */}
-                <div className="pt-2">
-                  <div className="text-xs font-semibold text-[#101B3B] mb-2">Billing Frequency & Contract</div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setCalcBilling('annual')}
-                      className={`p-3 rounded-xl border text-left transition-all ${
-                        calcBilling === 'annual'
-                          ? 'border-[#5145FF] bg-[#F1EFFF]/50 ring-1 ring-[#5145FF]'
-                          : 'border-[#E5EAF5] bg-white hover:bg-[#F8F9FF]'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-[#101B3B]">Annual Billing</span>
-                        <span className="text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800">
-                          Save 20%
+              {/* Candidate Review Card Inside Portal */}
+              <div className="p-5 rounded-xl border border-white/10 bg-white/5 space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <img
+                      src={MOCKUP_CANDIDATES[0].avatar}
+                      alt={MOCKUP_CANDIDATES[0].name}
+                      className="size-11 rounded-full object-cover border border-white/20"
+                    />
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-bold text-white">{MOCKUP_CANDIDATES[0].name}</span>
+                        <span className="px-2 py-0.5 rounded bg-[#D4F82C] text-[#111215] text-[10px] font-black">
+                          {MOCKUP_CANDIDATES[0].score}% Match
                         </span>
                       </div>
-                      <p className="text-[10px] text-[#566481] mt-1">Priority dedicated onboarding & locked commercial rate</p>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setCalcBilling('monthly')}
-                      className={`p-3 rounded-xl border text-left transition-all ${
-                        calcBilling === 'monthly'
-                          ? 'border-[#5145FF] bg-[#F1EFFF]/50 ring-1 ring-[#5145FF]'
-                          : 'border-[#E5EAF5] bg-white hover:bg-[#F8F9FF]'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-[#101B3B]">Monthly Billing</span>
-                        <span className="text-[9px] font-bold text-[#7D89A5]">Flexible</span>
-                      </div>
-                      <p className="text-[10px] text-[#566481] mt-1">Pay-as-you-go, cancel or upgrade anytime</p>
-                    </button>
-                  </div>
-                </div>
-
-                {/* 5. Included & Add-on Services */}
-                <div className="pt-2 border-t border-[#E5EAF5]/80 space-y-2.5">
-                  <div className="text-xs font-semibold text-[#101B3B]">Included & Optional Capabilities</div>
-                  
-                  {/* WhatsApp Built-in (Always Free) */}
-                  <div className="flex items-center justify-between p-3 rounded-xl bg-emerald-50/60 border border-emerald-200/60">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center shrink-0">
-                        <Check className="w-3.5 h-3.5 stroke-[2.5]" />
-                      </div>
-                      <div>
-                        <div className="text-xs font-bold text-emerald-950 flex items-center gap-1.5">
-                          <MessageCircle className="w-3.5 h-3.5 text-emerald-600" />
-                          Native WhatsApp Alerts (Baileys Engine)
-                        </div>
-                        <p className="text-[10px] text-emerald-800">Unlimited candidate WhatsApp alerts without 3rd party SMS or Meta markup fees.</p>
-                      </div>
-                    </div>
-                    <span className="text-xs font-extrabold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full shrink-0">
-                      ₹0 / Included
-                    </span>
-                  </div>
-
-                  {/* Voice Screening Add-on */}
-                  <label className="flex items-center justify-between p-3 rounded-xl border border-[#E5EAF5] hover:bg-[#F8F9FF] cursor-pointer transition-all">
-                    <div className="flex items-center gap-2.5">
-                      <input
-                        type="checkbox"
-                        checked={calcVoiceScreening}
-                        onChange={(e) => setCalcVoiceScreening(e.target.checked)}
-                        className="w-4 h-4 rounded text-[#5145FF] focus:ring-[#5145FF] accent-[#5145FF]"
-                      />
-                      <div>
-                        <div className="text-xs font-bold text-[#101B3B] flex items-center gap-1.5">
-                          <Sparkles className="w-3.5 h-3.5 text-[#5145FF]" />
-                          Automated AI Voice Screening Assistant
-                        </div>
-                        <p className="text-[10px] text-[#566481]">Conducts automatic audio candidate pre-interviews with instant transcripts.</p>
-                      </div>
-                    </div>
-                    <span className="text-xs font-bold text-[#5145FF] shrink-0">
-                      +₹999 / mo
-                    </span>
-                  </label>
-                </div>
-
-              </div>
-            </div>
-
-            {/* Right: Instant Commercial Quotation Document (5 Cols) */}
-            <div className="lg:col-span-5 space-y-4">
-              
-              <div className="bg-white rounded-2xl border-2 border-[#5145FF]/30 p-6 sm:p-7 shadow-xl shadow-[#5145FF]/05 relative overflow-hidden">
-                {/* Official Stamp Watermark Accent */}
-                <div className="absolute top-0 right-0 transform translate-x-4 -translate-y-4 w-28 h-28 bg-[#5145FF]/05 rounded-full pointer-events-none" />
-
-                {/* Quotation Top Badge */}
-                <div className="flex items-center justify-between pb-3.5 border-b border-[#E5EAF5]">
-                  <div>
-                    <span className="text-[9px] font-extrabold uppercase tracking-wider text-[#5145FF] bg-[#F1EFFF] px-2 py-0.5 rounded">
-                      Commercial Quotation
-                    </span>
-                    <h3 className="mt-1 text-sm font-extrabold text-[#101B3B]">HireX Snab ATS Proposal</h3>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-[10px] font-mono text-[#7D89A5]">Valid for 30 Days</span>
-                    <div className="text-[10px] font-bold text-emerald-600 flex items-center justify-end gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                      Live Verified Price
+                      <p className="text-xs text-slate-400">{MOCKUP_CANDIDATES[0].role} • Masked ID: SNAB-9421</p>
                     </div>
                   </div>
-                </div>
 
-                {/* Recommended Tier & Price Hero */}
-                <div className="my-4 p-4 rounded-xl bg-gradient-to-br from-[#F1EFFF] to-[#F8F9FF] border border-[#E9E7FF]">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <span className="text-[10px] font-bold uppercase text-[#5145FF]">Recommended Plan</span>
-                      <h4 className="text-base font-extrabold text-[#101B3B]">{quoteCalculation.tierName}</h4>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-2xl font-black text-[#5145FF] tracking-tight">
-                        ₹{quoteCalculation.effectiveMonthly.toLocaleString('en-IN')}
-                        <span className="text-xs font-semibold text-[#566481]">/mo</span>
-                      </div>
-                      <span className="text-[10px] text-[#7D89A5]">
-                        {quoteCalculation.isAnnual ? 'Billed annually with 20% discount' : 'Billed monthly'}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Line Item Breakdown */}
-                <div className="space-y-2 py-2 text-xs border-b border-[#E5EAF5]">
-                  <div className="flex justify-between text-[#566481]">
-                    <span>Recruiting Seats ({calcRecruiters} seat{calcRecruiters > 1 ? 's' : ''})</span>
-                    <span className="font-semibold text-[#101B3B]">₹{quoteCalculation.basePriceMonthly.toLocaleString('en-IN')}/mo</span>
-                  </div>
-                  <div className="flex justify-between text-[#566481]">
-                    <span>Monthly Resumes ({calcResumes.toLocaleString('en-IN')}/mo)</span>
-                    <span className="font-semibold text-[#101B3B]">
-                      {quoteCalculation.extraResumes > 0 ? `+₹${quoteCalculation.extraResumeCostMonthly.toLocaleString('en-IN')}/mo` : 'Included'}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-[#566481]">
-                    <span>Concurrent Active Jobs ({calcJobs} roles)</span>
-                    <span className="font-semibold text-emerald-600">Unlimited / Free</span>
-                  </div>
-                  <div className="flex justify-between text-[#566481]">
-                    <span>WhatsApp Candidate Automation</span>
-                    <span className="font-semibold text-emerald-600">₹0 (Included)</span>
-                  </div>
-                  {calcVoiceScreening && (
-                    <div className="flex justify-between text-[#566481]">
-                      <span>AI Voice Screening Assistant</span>
-                      <span className="font-semibold text-[#101B3B]">+₹999/mo</span>
-                    </div>
-                  )}
-                  {quoteCalculation.isAnnual && (
-                    <div className="flex justify-between text-emerald-600 font-medium">
-                      <span>Annual Commitment Discount (20% OFF)</span>
-                      <span>-₹{(Math.round(quoteCalculation.monthlyGross * 0.2)).toLocaleString('en-IN')}/mo</span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Financial Summary */}
-                <div className="pt-3 pb-4 space-y-1.5 text-xs">
-                  <div className="flex justify-between text-[#566481]">
-                    <span>Net Subscription ({quoteCalculation.isAnnual ? '12 Months' : '1 Month'})</span>
-                    <span className="font-bold text-[#101B3B]">₹{quoteCalculation.billedAmount.toLocaleString('en-IN')}</span>
-                  </div>
-                  <div className="flex justify-between text-[#7D89A5] text-[11px]">
-                    <span>GST (18% for tax credit)</span>
-                    <span>₹{quoteCalculation.gstAmount.toLocaleString('en-IN')}</span>
-                  </div>
-                  <div className="flex justify-between text-sm font-extrabold text-[#101B3B] pt-2 border-t border-[#E5EAF5]">
-                    <span>Total Investment:</span>
-                    <span className="text-[#5145FF] text-base font-black">
-                      ₹{quoteCalculation.grandTotal.toLocaleString('en-IN')}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Legacy ATS Comparison Box */}
-                <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200/80 mb-5">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-bold text-emerald-950">Legacy ATS (Zoho/Greenhouse):</span>
-                    <span className="text-[#7D89A5] line-through font-semibold">
-                      ₹{quoteCalculation.competitorTotal.toLocaleString('en-IN')}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between text-xs mt-1">
-                    <span className="font-extrabold text-emerald-800 flex items-center gap-1">
-                      <Percent className="w-3.5 h-3.5" /> Direct Estimated Savings:
-                    </span>
-                    <span className="font-extrabold text-emerald-700 bg-white px-2 py-0.5 rounded border border-emerald-200 shadow-2xs">
-                      Save ₹{quoteCalculation.savingsAmount.toLocaleString('en-IN')} ({quoteCalculation.savingsPercent}%)
-                    </span>
-                  </div>
-                </div>
-
-                {/* Quotation Action Buttons */}
-                <div className="space-y-2.5">
                   <button
                     type="button"
-                    onClick={handleBookFromQuote}
-                    className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-[#5145FF] text-white font-bold text-xs shadow-md shadow-[#5145FF]/20 hover:bg-[#4336eb] active:scale-[0.99] transition-all"
+                    onClick={() => {
+                      if (demoApprovedCandidates.includes(MOCKUP_CANDIDATES[0].name)) {
+                        setDemoApprovedCandidates(demoApprovedCandidates.filter(n => n !== MOCKUP_CANDIDATES[0].name));
+                      } else {
+                        setDemoApprovedCandidates([...demoApprovedCandidates, MOCKUP_CANDIDATES[0].name]);
+                      }
+                    }}
+                    className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      demoApprovedCandidates.includes(MOCKUP_CANDIDATES[0].name)
+                        ? 'bg-[#D4F82C] text-[#111215]'
+                        : 'bg-white text-[#111215] hover:bg-slate-100'
+                    }`}
                   >
-                    <span>Lock in This Quote & Start 1-Month Free Demo</span>
-                    <ArrowRight className="w-4 h-4" />
+                    <CheckCircle2 className="size-3.5" />
+                    <span>{demoApprovedCandidates.includes(MOCKUP_CANDIDATES[0].name) ? 'Interview Approved' : 'Approve Candidate'}</span>
                   </button>
-
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={handleCopyQuote}
-                      className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl border border-[#E5EAF5] bg-[#F8F9FF] text-[#101B3B] text-[11px] font-bold hover:bg-[#F1EFFF] transition-all"
-                    >
-                      {copiedQuote ? (
-                        <>
-                          <Check className="w-3.5 h-3.5 text-emerald-600" />
-                          <span className="text-emerald-700">Copied Quote!</span>
-                        </>
-                      ) : (
-                        <>
-                          <Copy className="w-3.5 h-3.5 text-[#5145FF]" />
-                          <span>Copy Quotation</span>
-                        </>
-                      )}
-                    </button>
-
-                    <a
-                      href={whatsappQuoteUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl border border-emerald-300 bg-emerald-50 text-emerald-900 text-[11px] font-bold hover:bg-emerald-100 transition-all"
-                    >
-                      <MessageCircle className="w-3.5 h-3.5 text-emerald-600" />
-                      <span>Send to WhatsApp</span>
-                    </a>
-                  </div>
                 </div>
 
-                <p className="text-[10px] text-center text-[#7D89A5] mt-3">
-                  Includes 1-Month Free Demo with full AI features. No credit card required.
-                </p>
-
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-2 border-t border-white/10 text-xs">
+                  <div>
+                    <span className="text-slate-400 text-[10px]">Expected Comp:</span>
+                    <div className="font-bold text-white">{MOCKUP_CANDIDATES[0].ctc}</div>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 text-[10px]">Notice Period:</span>
+                    <div className="font-bold text-white">{MOCKUP_CANDIDATES[0].notice}</div>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 text-[10px]">Voice Screening:</span>
+                    <div className="font-bold text-[#D4F82C] flex items-center gap-1">
+                      <Play className="size-3 fill-current" /> Verified (4m 12s)
+                    </div>
+                  </div>
+                </div>
               </div>
 
+              <div className="text-[11px] text-slate-400 flex items-center justify-between">
+                <span>⚡ Real-time Sync: ATS status updates reflect on this client link immediately.</span>
+                <span className="text-[#D4F82C]">Zero client login required</span>
+              </div>
             </div>
 
-          </div>
-        ) : (
-          /* ── Pricing Comparison Table View ── */
-          <div className="rounded-2xl border border-[#E5EAF5] bg-white shadow-2xs overflow-hidden">
-            <table className="w-full text-left text-xs">
-              <thead>
-                <tr className="border-b border-[#E5EAF5] bg-[#F8F9FF] text-[10px] text-[#7D89A5] uppercase tracking-wider">
-                  <th className="py-3.5 px-5 font-semibold">ATS Tool</th>
-                  <th className="py-3.5 px-5 font-semibold">Indicative Price (INR)</th>
-                  <th className="py-3.5 px-5 font-semibold">Pricing Model</th>
-                  <th className="py-3.5 px-5 font-semibold">Market Notes</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#E5EAF5]/60">
-                {PRICING_BENCHMARK_ROWS.map((row, idx) => (
-                  <tr
-                    key={idx}
-                    className={
-                      row.isHirex
-                        ? 'bg-[#F1EFFF]/60 font-medium'
-                        : 'hover:bg-[#F8F9FF] transition-colors'
-                    }
-                  >
-                    <td className="py-3.5 px-5 font-bold text-[#101B3B]">
-                      <div className="flex items-center gap-2">
-                        <span>{row.tool}</span>
-                        {row.isHirex && (
-                          <span className="text-[9px] font-bold text-[#5145FF] bg-white px-2 py-0.5 rounded-full border border-[#E9E7FF] shadow-2xs">
-                            Recommended
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td className={`py-3.5 px-5 ${row.isHirex ? 'font-bold text-[#5145FF]' : 'text-[#17213F]'}`}>
-                      {row.price}
-                    </td>
-                    <td className="py-3.5 px-5 text-[#566481]">
-                      {row.model}
-                    </td>
-                    <td className="py-3.5 px-5 text-[11px] text-[#7D89A5]">
-                      {row.note}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
-
-      {/* ── 10. Section: FINAL CONVERSION CTA ── */}
-      <section className="py-16 px-4 sm:px-8 lg:px-12 max-w-7xl mx-auto border-t border-[#E5EAF5]">
-        <div className="rounded-3xl p-8 sm:p-12 bg-gradient-to-br from-[#F1EFFF] via-[#F8F9FF] to-white border border-[#E5EAF5] shadow-lg shadow-[#5145FF]/05 relative overflow-hidden">
-          
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-            
-            {/* Left Content */}
-            <div className="lg:col-span-8">
-              <div className="size-11 rounded-2xl bg-white border border-[#E5EAF5] flex items-center justify-center text-[#5145FF] mb-4 shadow-2xs">
-                <Rocket className="size-6" />
+            {/* Right 3 Feature Pillars */}
+            <div className="lg:col-span-5 space-y-6">
+              
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2 text-sm font-bold text-white">
+                  <div className="size-2 rounded-full bg-[#D4F82C]"></div>
+                  <span>Shared with one click</span>
+                </div>
+                <p className="text-xs text-slate-400 leading-relaxed pl-4">
+                  Generate a beautiful, branded client shortlist URL per job. No logins, no passwords, no attachments.
+                </p>
               </div>
-              <h2 className="text-2xl sm:text-3xl font-extrabold text-[#101B3B]">
-                Ready to Transform Your Hiring? Start with 1 Month 100% Free.
-              </h2>
-              <p className="mt-3 text-xs sm:text-sm text-[#566481] leading-relaxed max-w-xl">
-                Claim your 1-month free demo and see HireX Snab in action — real resume parsing, candidate portal, WhatsApp job matching, and live AI screening with zero initial cost.
-              </p>
 
-              {/* Action Buttons */}
-              <div className="mt-7 flex flex-wrap items-center gap-3">
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2 text-sm font-bold text-white">
+                  <div className="size-2 rounded-full bg-[#D4F82C]"></div>
+                  <span>Live bidirectional sync</span>
+                </div>
+                <p className="text-xs text-slate-400 leading-relaxed pl-4">
+                  Moving or updating a candidate in your recruiter ATS updates the client portal instantly. No stale data.
+                </p>
+              </div>
+
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2 text-sm font-bold text-white">
+                  <div className="size-2 rounded-full bg-[#D4F82C]"></div>
+                  <span>Keep people in charge</span>
+                </div>
+                <p className="text-xs text-slate-400 leading-relaxed pl-4">
+                  Clients approve candidates, request interviews, or decline with feedback in 1 tap, cutting hiring cycle by 60%.
+                </p>
+              </div>
+
+              <div className="pt-4 border-t border-white/10">
                 <button
                   type="button"
                   onClick={() => setBookingModalOpen(true)}
-                  className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#5145FF] hover:bg-[#4135E8] text-white px-6 text-xs font-bold transition-all shadow-md shadow-[#5145FF]/20 hover:scale-[1.01] cursor-pointer"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#D4F82C] hover:bg-[#bde023] text-[#111215] text-xs font-black transition-all cursor-pointer"
                 >
-                  <span>Claim 1-Month Free Demo & Walkthrough</span>
-                  <ArrowRight className="size-4" />
+                  <span>Request Client Portal Demo</span>
+                  <span>↗</span>
                 </button>
-                <Link
-                  to="/auth"
-                  className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-[#D5DCED] bg-white text-[#17213F] hover:bg-[#F8F9FF] px-6 text-xs font-bold transition-all shadow-2xs"
-                >
-                  <span>Explore Live Platform</span>
-                </Link>
               </div>
 
-              {/* Supporting Details */}
-              <div className="mt-6 flex flex-wrap items-center gap-5 text-[11px] text-[#7D89A5]">
-                <div className="flex items-center gap-1.5">
-                  <ShieldCheck className="size-3.5 text-[#5145FF]" />
-                  <span>1-Month Free Demo</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <CheckCircle2 className="size-3.5 text-[#10B981]" />
-                  <span>Zero Credit Card Required</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <Calendar className="size-3.5 text-[#4285FF]" />
-                  <span>Full AI & WhatsApp Access</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Right Quick Form / Direct Booking Trigger */}
-            <div className="lg:col-span-4 bg-white p-5 rounded-2xl border border-[#E5EAF5] shadow-xs">
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-extrabold mb-2 border border-emerald-200">
-                🎁 1-Month Free Access
-              </div>
-              <div className="text-xs font-bold text-[#101B3B] mb-1">
-                Activate 1-Month Free Demo
-              </div>
-              <p className="text-[11px] text-[#7D89A5] mb-4">
-                Fill details for instant 1-month demo setup and tailored walkthrough.
-              </p>
-              <button
-                type="button"
-                onClick={() => setBookingModalOpen(true)}
-                className="w-full h-10 rounded-xl bg-[#101B3B] hover:bg-[#1e2a4f] text-white text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-2"
-              >
-                <Calendar className="size-3.5" />
-                <span>Claim Free Demo Now</span>
-              </button>
-              <div className="mt-3 text-center">
-                <span className="text-[10px] text-[#7D89A5]">⚡ 15-Min Response Guarantee</span>
-              </div>
             </div>
 
           </div>
+
+          <div className="mt-14 pt-6 border-t border-white/10 flex flex-wrap items-center justify-between text-xs font-mono text-slate-400 gap-4">
+            <div>27,000+ SHORTLISTS SHARED ACROSS INDIA</div>
+            <div className="text-[#D4F82C]">98.4% CLIENT SATISFACTION RATE</div>
+          </div>
+
         </div>
       </section>
 
-      {/* ── 11. Compact Dark Navy Footer ── */}
-      <footer className="bg-[#101B3B] text-white border-t border-slate-800 py-12 px-4 sm:px-8 lg:px-12">
-        <div className="max-w-7xl mx-auto space-y-8">
+      {/* ── SECTION 5: 4-STEP WORKFLOW ("A simpler rhythm for the whole hiring journey.") ── */}
+      <section id="workflow" className="py-20 px-4 sm:px-8 lg:px-12 max-w-7xl mx-auto scroll-mt-20">
+        
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-end mb-12">
+          <div className="lg:col-span-7">
+            <div className="text-[11px] font-bold uppercase tracking-wider text-[#73766C] mb-2">
+              End-to-End Workflow
+            </div>
+            <h2 className="text-3xl sm:text-5xl font-black text-[#111215] tracking-tight leading-[1.1]">
+              A simpler rhythm<br />
+              for the whole hiring journey.
+            </h2>
+          </div>
+          <div className="lg:col-span-5 text-sm sm:text-base text-[#575A51] leading-relaxed">
+            From job requisition to the signed offer letter, hireX removes the operational drag so your team can focus on people.
+          </div>
+        </div>
+
+        {/* 4 Cards Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-start">
-            
-            {/* Left Brand Lockup */}
-            <div className="md:col-span-5 space-y-3">
-              <div className="flex items-center gap-2">
-                <span className="size-2.5 rounded-full bg-[#5145FF]" />
-                <span className="font-extrabold text-base tracking-tight text-white">
-                  SNAB hireX
-                </span>
-              </div>
-              <p className="text-xs text-slate-300 leading-relaxed max-w-sm">
-                HireX Snab ATS — The AI-powered ATS that does the busywork for your recruiters. A flagship product of{' '}
-                <a href="https://snab.co.in" target="_blank" rel="noopener noreferrer" className="text-white hover:text-[#818CF8] font-semibold underline underline-offset-2">
-                  SNAB (snab.co.in)
-                </a>.
-              </p>
-              <div className="pt-1 flex flex-wrap items-center gap-3 text-xs text-slate-300">
-                <a href="mailto:hello@snab.co.in" className="inline-flex items-center gap-1.5 hover:text-white transition-colors">
-                  <Mail className="size-3.5 text-[#818CF8]" />
-                  <span>hello@snab.co.in</span>
-                </a>
-                <span className="text-slate-600">•</span>
-                <a href="https://wa.me/919511779317" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 hover:text-white transition-colors">
-                  <Phone className="size-3.5 text-emerald-400" />
-                  <span>+91 9511779317</span>
-                </a>
-              </div>
-              <div className="pt-2 flex items-center gap-3 text-[11px] text-slate-400">
-                <span className="px-2 py-0.5 rounded bg-white/10 text-white font-mono text-[10px]">
-                  GST Invoicing
-                </span>
-                <span className="px-2 py-0.5 rounded bg-white/10 text-white font-mono text-[10px]">
-                  Clean White Masking
-                </span>
-                <span className="px-2 py-0.5 rounded bg-white/10 text-white font-mono text-[10px]">
-                  Admin Forensic Logs
-                </span>
-              </div>
-            </div>
-
-            {/* Useful Links */}
-            <div className="md:col-span-4 grid grid-cols-2 gap-4 text-xs">
-              <div className="space-y-2">
-                <div className="font-bold text-white text-[11px] uppercase tracking-wider">Product</div>
-                <div>
-                  <a href="#why-hirex" onClick={(e) => scrollToSection(e, 'why-hirex')} className="text-slate-400 hover:text-white transition-colors">
-                    Why HireX
-                  </a>
-                </div>
-                <div>
-                  <a href="#pipeline" onClick={(e) => scrollToSection(e, 'pipeline')} className="text-slate-400 hover:text-white transition-colors">
-                    Hiring Pipeline
-                  </a>
-                </div>
-                <div>
-                  <a href="#comparison" onClick={(e) => scrollToSection(e, 'comparison')} className="text-slate-400 hover:text-white transition-colors">
-                    Capabilities
-                  </a>
-                </div>
-                <div>
-                  <a href="#pricing" onClick={(e) => scrollToSection(e, 'pricing')} className="text-slate-400 hover:text-white transition-colors">
-                    Market Pricing
-                  </a>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <div className="font-bold text-white text-[11px] uppercase tracking-wider">Access</div>
-                <div>
-                  <Link to="/active-jobs" className="text-slate-400 hover:text-white transition-colors">
-                    Public Job Board
-                  </Link>
-                </div>
-                <div>
-                  <button type="button" onClick={() => setBookingModalOpen(true)} className="text-slate-400 hover:text-white transition-colors text-left">
-                    Client Presentation
-                  </button>
-                </div>
-                <div>
-                  <Link to="/auth" className="text-slate-400 hover:text-white transition-colors">
-                    Recruiter Login
-                  </Link>
-                </div>
-              </div>
-            </div>
-
-            {/* Right Live Link / SNAB Info */}
-            <div className="md:col-span-3 space-y-2 text-right md:text-right">
-              <div className="font-bold text-white text-[11px] uppercase tracking-wider">A Product of SNAB</div>
-              <div>
-                <a
-                  href="https://snab.co.in"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#818CF8] hover:text-white hover:underline"
-                >
-                  <span>snab.co.in</span>
-                  <ArrowRight className="size-3.5" />
-                </a>
-              </div>
-              <p className="text-[11px] text-slate-300">
-                Inquiries:{' '}
-                <a href="mailto:hello@snab.co.in" className="text-white hover:underline font-medium">
-                  hello@snab.co.in
-                </a>
-              </p>
-              <p className="text-[10px] text-slate-500">
-                Enterprise Recruitment Infrastructure
+          {/* Step 1 */}
+          <div className="p-6 rounded-2xl border border-[#E4E7DC] bg-white shadow-2xs hover:border-[#111215] transition-all flex flex-col justify-between min-h-[220px]">
+            <div>
+              <div className="text-xs font-mono font-bold text-[#73766C] mb-4">01</div>
+              <h3 className="text-base font-bold text-[#111215] mb-2">Define the role</h3>
+              <p className="text-xs text-[#575A51] leading-relaxed">
+                AI crafts precision job descriptions and sets objective evaluation rubrics in seconds.
               </p>
             </div>
-
+            <div className="pt-4 border-t border-[#F1F2EC] text-[10px] font-bold uppercase tracking-wider text-[#73766C]">
+              Requisition
+            </div>
           </div>
 
-          {/* Bottom Copyright Strip */}
-          <div className="pt-6 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px] text-slate-400">
+          {/* Step 2 */}
+          <div className="p-6 rounded-2xl border border-[#E4E7DC] bg-white shadow-2xs hover:border-[#111215] transition-all flex flex-col justify-between min-h-[220px]">
             <div>
-              © 2026 SNAB Technologies Private Limited. All rights reserved.
+              <div className="text-xs font-mono font-bold text-[#73766C] mb-4">02</div>
+              <h3 className="text-base font-bold text-[#111215] mb-2">Bring in candidates</h3>
+              <p className="text-xs text-[#575A51] leading-relaxed">
+                Auto-parse incoming CVs from job portals, referrals, and inbound applications with 99% accuracy.
+              </p>
             </div>
-            <div className="flex items-center gap-4">
-              <button type="button" onClick={() => setBookingModalOpen(true)} className="hover:text-white transition-colors">
-                Book Walkthrough
-              </button>
-              <a href="https://wa.me/919511779317" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">
-                Support WhatsApp
-              </a>
+            <div className="pt-4 border-t border-[#F1F2EC] text-[10px] font-bold uppercase tracking-wider text-[#73766C]">
+              Sourcing & Parsing
+            </div>
+          </div>
+
+          {/* Step 3 */}
+          <div className="p-6 rounded-2xl border border-[#E4E7DC] bg-white shadow-2xs hover:border-[#111215] transition-all flex flex-col justify-between min-h-[220px]">
+            <div>
+              <div className="text-xs font-mono font-bold text-[#73766C] mb-4">03</div>
+              <h3 className="text-base font-bold text-[#111215] mb-2">Review with context</h3>
+              <p className="text-xs text-[#575A51] leading-relaxed">
+                Inspect match breakdowns, listen to voice screenings, and compare top candidates side-by-side.
+              </p>
+            </div>
+            <div className="pt-4 border-t border-[#F1F2EC] text-[10px] font-bold uppercase tracking-wider text-[#73766C]">
+              Screening & Scoring
+            </div>
+          </div>
+
+          {/* Step 4 */}
+          <div className="p-6 rounded-2xl border border-[#E4E7DC] bg-white shadow-2xs hover:border-[#111215] transition-all flex flex-col justify-between min-h-[220px]">
+            <div>
+              <div className="text-xs font-mono font-bold text-[#73766C] mb-4">04</div>
+              <h3 className="text-base font-bold text-[#111215] mb-2">Move people forward</h3>
+              <p className="text-xs text-[#575A51] leading-relaxed">
+                1-click WhatsApp invites, calendar scheduling, and collaborative client approvals.
+              </p>
+            </div>
+            <div className="pt-4 border-t border-[#F1F2EC] text-[10px] font-bold uppercase tracking-wider text-[#73766C]">
+              Interview & Offer
             </div>
           </div>
 
         </div>
+
+      </section>
+
+      {/* ── SECTION 6: ELECTRIC LIME BANNER STRIP ── */}
+      <div
+        onClick={() => setBookingModalOpen(true)}
+        className="bg-[#D4F82C] text-[#111215] py-4.5 px-4 sm:px-8 cursor-pointer hover:bg-[#c6ec22] transition-colors border-y border-[#BCE41E]"
+      >
+        <div className="max-w-7xl mx-auto flex items-center justify-between font-bold text-xs sm:text-sm">
+          <span>Better agreements mean space for better conversations. Explore hireX Pro →</span>
+          <span className="hidden sm:inline-block font-black underline">Book 1-Month Free Demo</span>
+        </div>
+      </div>
+
+      {/* ── SECTION 7: EDITORIAL BENEFITS ("Less admin. More attention.") ── */}
+      <section className="py-20 px-4 sm:px-8 lg:px-12 max-w-7xl mx-auto">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
+          
+          {/* Left Block */}
+          <div className="lg:col-span-5 space-y-6">
+            <h2 className="text-3xl sm:text-5xl font-black text-[#111215] tracking-tight leading-[1.1]">
+              Less admin.<br />
+              More attention.
+            </h2>
+            
+            <div
+              onClick={() => setBookingModalOpen(true)}
+              className="inline-flex items-center gap-3 p-2 rounded-full border border-[#E4E7DC] bg-white cursor-pointer hover:border-[#111215] transition-all"
+            >
+              <div className="size-10 rounded-full bg-[#111215] text-[#D4F82C] flex items-center justify-center font-bold">
+                →
+              </div>
+              <span className="text-xs font-bold text-[#111215] pr-4">Give your recruiters 14 hours back every single week.</span>
+            </div>
+          </div>
+
+          {/* Right 3 Article Rows */}
+          <div className="lg:col-span-7 divide-y divide-[#E4E7DC]">
+            
+            <div className="pb-6">
+              <h3 className="text-lg font-bold text-[#111215] mb-2 hover:text-[#575A51] transition-colors cursor-pointer">
+                Know what everyone is working on.
+              </h3>
+              <p className="text-xs sm:text-sm text-[#575A51] leading-relaxed">
+                Full visibility across team activity, pipeline bottlenecks, and open job requisitions without needing another status meeting.
+              </p>
+            </div>
+
+            <div className="py-6">
+              <h3 className="text-lg font-bold text-[#111215] mb-2 hover:text-[#575A51] transition-colors cursor-pointer">
+                Client work that never feels like work.
+              </h3>
+              <p className="text-xs sm:text-sm text-[#575A51] leading-relaxed">
+                Automated live share links replace clumsy PDF attachments, email back-and-forth, and lost candidates.
+              </p>
+            </div>
+
+            <div className="pt-6">
+              <h3 className="text-lg font-bold text-[#111215] mb-2 hover:text-[#575A51] transition-colors cursor-pointer">
+                Ask better interview questions.
+              </h3>
+              <p className="text-xs sm:text-sm text-[#575A51] leading-relaxed">
+                AI generates contextual interview scorecards targeted at candidate skill gaps and job requirements.
+              </p>
+            </div>
+
+          </div>
+
+        </div>
+      </section>
+
+      {/* ── SECTION 8: PRICING ESTIMATOR ── */}
+      <section id="pricing" className="py-20 px-4 sm:px-8 lg:px-12 max-w-7xl mx-auto border-t border-[#E4E7DC] scroll-mt-20">
+        <div className="text-center max-w-3xl mx-auto mb-12">
+          <div className="text-[11px] font-bold uppercase tracking-wider text-[#73766C] mb-2">
+            Transparent Pricing
+          </div>
+          <h2 className="text-3xl sm:text-5xl font-black text-[#111215] tracking-tight">
+            Calculate your exact monthly plan.
+          </h2>
+          <p className="mt-3 text-sm text-[#575A51]">
+            Scale smoothly with your hiring volume. Free Baileys WhatsApp engine, masked resumes, and zero lock-in contracts.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          
+          {/* Left Calculator Controls */}
+          <div className="lg:col-span-7 bg-white rounded-2xl border border-[#E4E7DC] p-6 sm:p-8 space-y-6 shadow-sm">
+            
+            {/* 1. Recruiters */}
+            <div>
+              <div className="flex items-center justify-between text-xs font-bold mb-2">
+                <span className="text-[#111215]">Recruiter & Team Seats</span>
+                <span className="px-2 py-0.5 rounded bg-[#F8F9F5] text-[#111215] font-black border border-[#E4E7DC]">
+                  {calcRecruiters} {calcRecruiters === 1 ? 'Seat' : 'Seats'}
+                </span>
+              </div>
+              <input
+                type="range"
+                min={1}
+                max={20}
+                value={calcRecruiters}
+                onChange={(e) => setCalcRecruiters(parseInt(e.target.value))}
+                className="w-full accent-[#111215] cursor-pointer"
+              />
+              <div className="flex justify-between text-[10px] text-[#73766C] mt-1 font-mono">
+                <span>1 Seat</span>
+                <span>5 Seats</span>
+                <span>10 Seats</span>
+                <span>20+ Seats</span>
+              </div>
+            </div>
+
+            {/* 2. Monthly Resumes */}
+            <div>
+              <div className="flex items-center justify-between text-xs font-bold mb-2">
+                <span className="text-[#111215]">Resumes Processed / Month</span>
+                <span className="px-2 py-0.5 rounded bg-[#D4F82C] text-[#111215] font-black">
+                  {calcResumes} Resumes
+                </span>
+              </div>
+              <input
+                type="range"
+                min={200}
+                max={10000}
+                step={200}
+                value={calcResumes}
+                onChange={(e) => setCalcResumes(parseInt(e.target.value))}
+                className="w-full accent-[#111215] cursor-pointer"
+              />
+              <div className="flex justify-between text-[10px] text-[#73766C] mt-1 font-mono">
+                <span>200</span>
+                <span>2,500</span>
+                <span>5,000</span>
+                <span>10,000+</span>
+              </div>
+            </div>
+
+            {/* 3. Billing Toggle */}
+            <div className="pt-2">
+              <div className="text-xs font-bold text-[#111215] mb-2">Billing Frequency</div>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setCalcBilling('annual')}
+                  className={`p-3 rounded-xl border text-left transition-all ${
+                    calcBilling === 'annual'
+                      ? 'border-[#111215] bg-[#111215] text-white'
+                      : 'border-[#E4E7DC] bg-[#F8F9F5] text-[#111215]'
+                  }`}
+                >
+                  <div className="text-xs font-bold flex items-center justify-between">
+                    <span>Annual Billing</span>
+                    <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-[#D4F82C] text-[#111215]">Save 20%</span>
+                  </div>
+                  <div className="text-[10px] text-slate-400 mt-1">Discounted yearly rate</div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCalcBilling('monthly')}
+                  className={`p-3 rounded-xl border text-left transition-all ${
+                    calcBilling === 'monthly'
+                      ? 'border-[#111215] bg-[#111215] text-white'
+                      : 'border-[#E4E7DC] bg-[#F8F9F5] text-[#111215]'
+                  }`}
+                >
+                  <div className="text-xs font-bold">Monthly Billing</div>
+                  <div className="text-[10px] text-[#73766C] mt-1">Cancel anytime</div>
+                </button>
+              </div>
+            </div>
+
+          </div>
+
+          {/* Right Quote Summary Card */}
+          <div className="lg:col-span-5 rounded-2xl border border-[#111215] bg-[#111215] text-white p-6 sm:p-8 space-y-6 shadow-xl">
+            <div className="flex items-center justify-between pb-4 border-b border-white/10">
+              <div>
+                <span className="text-[10px] uppercase tracking-wider text-[#D4F82C] font-bold">Recommended Tier</span>
+                <h3 className="text-xl font-black text-white">{quoteCalculation.tierName}</h3>
+              </div>
+              <HireXMark size={32} />
+            </div>
+
+            <div>
+              <div className="text-3xl sm:text-4xl font-black text-white">
+                ₹{quoteCalculation.subtotalMonthly.toLocaleString('en-IN')}
+                <span className="text-xs text-slate-400 font-normal"> / month</span>
+              </div>
+              <div className="text-xs text-slate-400 mt-1">
+                +18% GST (₹{quoteCalculation.gstMonthly.toLocaleString('en-IN')}) = <strong className="text-white">₹{quoteCalculation.finalMonthlyWithGst.toLocaleString('en-IN')} total</strong>
+              </div>
+            </div>
+
+            <div className="space-y-2 text-xs text-slate-300 pt-2 border-t border-white/10">
+              <div className="flex items-center gap-2">
+                <Check className="size-3.5 text-[#D4F82C]" />
+                <span>Unlimited WhatsApp candidate messaging included</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Check className="size-3.5 text-[#D4F82C]" />
+                <span>Zero-friction client review links with live sync</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Check className="size-3.5 text-[#D4F82C]" />
+                <span>Visual Kanban pipeline & slide-over resume preview</span>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setBookingModalOpen(true)}
+              className="w-full py-3.5 rounded-full bg-[#D4F82C] hover:bg-[#bde023] text-[#111215] text-xs font-black transition-all cursor-pointer shadow-sm flex items-center justify-center gap-2"
+            >
+              <span>Get Started With 1-Month Free Trial</span>
+              <span>↗</span>
+            </button>
+          </div>
+
+        </div>
+      </section>
+
+      {/* ── SECTION 9: FAQ ACCORDION ("A little more clarity.") ── */}
+      <section id="faq" className="py-20 px-4 sm:px-8 lg:px-12 max-w-7xl mx-auto border-t border-[#E4E7DC] scroll-mt-20">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
+          
+          {/* Left Title */}
+          <div className="lg:col-span-5 space-y-4">
+            <div className="text-[11px] font-bold uppercase tracking-wider text-[#73766C]">
+              Frequently Asked Questions
+            </div>
+            <h2 className="text-3xl sm:text-5xl font-black text-[#111215] tracking-tight leading-[1.1]">
+              A little more<br />
+              clarity.
+            </h2>
+            <p className="text-sm text-[#575A51] leading-relaxed">
+              Everything you need to know about hireX, setup time, and pricing.
+            </p>
+          </div>
+
+          {/* Right Accordion */}
+          <div className="lg:col-span-7 divide-y divide-[#E4E7DC]">
+            {FAQ_ITEMS.map((item, index) => {
+              const isOpen = openFaqIndex === index;
+              return (
+                <div key={item.q} className="py-5">
+                  <button
+                    type="button"
+                    onClick={() => setOpenFaqIndex(isOpen ? null : index)}
+                    className="w-full flex items-center justify-between text-left text-base font-bold text-[#111215] hover:text-[#575A51] transition-colors cursor-pointer gap-4"
+                  >
+                    <span>{item.q}</span>
+                    <span className="text-lg text-[#73766C]">{isOpen ? '−' : '+'}</span>
+                  </button>
+                  {isOpen && (
+                    <p className="mt-3 text-xs sm:text-sm text-[#575A51] leading-relaxed pr-6">
+                      {item.a}
+                    </p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+        </div>
+      </section>
+
+      {/* ── SECTION 10: DARK CTA ("Your next great hire. A clearer way forward.") ── */}
+      <section className="py-24 px-4 sm:px-8 lg:px-12 bg-[#111215] text-white relative overflow-hidden">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-12 relative z-10">
+          
+          <div className="space-y-6 max-w-2xl">
+            <h2 className="text-4xl sm:text-6xl font-black text-white tracking-tight leading-[1.08]">
+              Your next great hire.<br />
+              A clearer way forward.
+            </h2>
+            <p className="text-base text-slate-300 max-w-lg leading-relaxed">
+              Start your 30-day free trial. No credit card required. Onboard your hiring team in under 5 minutes.
+            </p>
+            <div>
+              <button
+                type="button"
+                onClick={() => setBookingModalOpen(true)}
+                className="inline-flex h-12 items-center gap-2.5 px-7 rounded-full bg-[#D4F82C] hover:bg-[#bde023] text-[#111215] text-sm font-black transition-all cursor-pointer group"
+              >
+                <span>Start free trial today</span>
+                <span className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform">↗</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Huge Diagonal Arrow Graphic */}
+          <div className="shrink-0 flex items-center justify-center opacity-90">
+            <svg viewBox="0 0 160 160" className="size-44 sm:size-64 stroke-[#D4F82C] stroke-[8] fill-none">
+              <path d="M40 120 L120 40 M120 40 L60 40 M120 40 L120 100" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </div>
+
+        </div>
+      </section>
+
+      {/* ── SECTION 11: SIGNATURE FOOTER WITH GIANT "hireX ↗" ── */}
+      <footer className="pt-20 pb-12 px-4 sm:px-8 lg:px-12 max-w-7xl mx-auto border-t border-[#E4E7DC] bg-[#F8F9F5]">
+        
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 pb-16">
+          <div>
+            <div className="mb-3">
+              <HireXLogo size="md" variant="full" />
+            </div>
+            <p className="text-xs text-[#73766C] leading-relaxed">
+              The AI-powered recruitment operating system for agile teams and modern staffing agencies.
+            </p>
+          </div>
+
+          <div className="space-y-2 text-xs">
+            <div className="font-bold text-[#111215] uppercase tracking-wider text-[11px]">Product</div>
+            <div><a href="#pipeline" onClick={(e) => scrollToSection(e, 'pipeline')} className="text-[#73766C] hover:text-[#111215]">Pipeline Kanban</a></div>
+            <div><a href="#client-portal" onClick={(e) => scrollToSection(e, 'client-portal')} className="text-[#73766C] hover:text-[#111215]">Client Portal</a></div>
+            <div><a href="#pricing" onClick={(e) => scrollToSection(e, 'pricing')} className="text-[#73766C] hover:text-[#111215]">Pricing Estimator</a></div>
+            <div><Link to="/active-jobs" className="text-[#73766C] hover:text-[#111215]">Job Board</Link></div>
+          </div>
+
+          <div className="space-y-2 text-xs">
+            <div className="font-bold text-[#111215] uppercase tracking-wider text-[11px]">Company</div>
+            <div><a href="https://snab.co.in" target="_blank" rel="noopener noreferrer" className="text-[#73766C] hover:text-[#111215]">About SNAB</a></div>
+            <div><button type="button" onClick={() => setBookingModalOpen(true)} className="text-[#73766C] hover:text-[#111215]">Book Demo</button></div>
+            <div><a href="mailto:hello@snab.co.in" className="text-[#73766C] hover:text-[#111215]">hello@snab.co.in</a></div>
+          </div>
+
+          <div className="space-y-2 text-xs">
+            <div className="font-bold text-[#111215] uppercase tracking-wider text-[11px]">Enterprise</div>
+            <div className="text-[#73766C]">GST Compliant Invoicing</div>
+            <div className="text-[#73766C]">Anti-Poaching Data Masking</div>
+            <div className="text-[#73766C]">Baileys WhatsApp Gateway</div>
+          </div>
+        </div>
+
+        {/* Giant Typographic Wordmark */}
+        <div className="py-6 border-t border-[#E4E7DC] select-none overflow-hidden">
+          <div className="text-[15vw] font-black tracking-tighter leading-none text-[#111215] flex items-center">
+            hireX<span className="text-[#8FB305]">↗</span>
+          </div>
+        </div>
+
+        {/* Copyright Bar */}
+        <div className="pt-6 border-t border-[#E4E7DC] flex flex-wrap items-center justify-between text-xs text-[#73766C] gap-3">
+          <div>© {new Date().getFullYear()} SNAB Technologies. All rights reserved.</div>
+          <div className="flex items-center gap-4">
+            <span>GST Registered</span>
+            <span>•</span>
+            <span>ISO Compliant Hosting</span>
+          </div>
+        </div>
+
       </footer>
 
-      {/* ── 12. Client Presentation Booking Modal (Integrated with Firestore) ── */}
-      {bookingModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
-          <div className="relative w-full max-w-lg bg-white rounded-3xl border border-[#E5EAF5] shadow-2xl p-6 sm:p-8">
+      {/* ── Slide-Over Candidate Drawer Modal (Demonstration) ── */}
+      {demoDrawerOpen && (
+        <div className="fixed inset-0 z-50 flex justify-end bg-black/50 backdrop-blur-xs transition-opacity animate-in fade-in duration-200">
+          <div className="w-full max-w-2xl bg-white h-full shadow-2xl flex flex-col border-l border-[#E4E7DC] animate-in slide-in-from-right duration-300">
             
-            {/* Close Button */}
+            {/* Drawer Header */}
+            <div className="p-5 border-b border-[#E4E7DC] flex items-center justify-between bg-[#F8F9F5]">
+              <div className="flex items-center gap-3">
+                <img
+                  src={demoActiveCandidate.avatar}
+                  alt={demoActiveCandidate.name}
+                  className="size-12 rounded-full object-cover border border-[#E4E7DC]"
+                />
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base font-bold text-[#111215]">{demoActiveCandidate.name}</h3>
+                    <span className="px-2 py-0.5 rounded-full bg-[#D4F82C] text-[#111215] text-xs font-black">
+                      {demoActiveCandidate.score}% Fit
+                    </span>
+                  </div>
+                  <p className="text-xs text-[#73766C]">{demoActiveCandidate.role} • Application ID: SNAB-9421</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDemoDrawerOpen(false)}
+                className="size-8 rounded-lg border border-[#E4E7DC] bg-white hover:bg-slate-100 flex items-center justify-center text-slate-700 cursor-pointer"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+
+            {/* Navigation Tabs */}
+            <div className="px-5 border-b border-[#E4E7DC] flex items-center gap-4 text-xs font-bold">
+              <button
+                type="button"
+                onClick={() => setDemoDrawerTab('overview')}
+                className={`py-3 border-b-2 cursor-pointer transition-colors ${
+                  demoDrawerTab === 'overview'
+                    ? 'border-[#111215] text-[#111215]'
+                    : 'border-transparent text-[#73766C] hover:text-[#111215]'
+                }`}
+              >
+                AI Fit Overview
+              </button>
+              <button
+                type="button"
+                onClick={() => setDemoDrawerTab('resume')}
+                className={`py-3 border-b-2 cursor-pointer transition-colors ${
+                  demoDrawerTab === 'resume'
+                    ? 'border-[#111215] text-[#111215]'
+                    : 'border-transparent text-[#73766C] hover:text-[#111215]'
+                }`}
+              >
+                Resume Document View
+              </button>
+              <button
+                type="button"
+                onClick={() => setDemoDrawerTab('whatsapp')}
+                className={`py-3 border-b-2 cursor-pointer transition-colors flex items-center gap-1.5 ${
+                  demoDrawerTab === 'whatsapp'
+                    ? 'border-[#111215] text-[#111215] font-black'
+                    : 'border-transparent text-[#73766C] hover:text-[#111215]'
+                }`}
+              >
+                <MessageCircle className="size-3.5 text-emerald-600" />
+                <span>WhatsApp Outreach</span>
+              </button>
+            </div>
+
+            {/* Drawer Body Tab Content */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+              {demoDrawerTab === 'overview' && (
+                <div className="space-y-5">
+                  <div className="p-4 rounded-xl bg-[#F8F9F5] border border-[#E4E7DC] space-y-2">
+                    <div className="flex items-center gap-2 text-xs font-bold text-[#111215]">
+                      <Brain className="size-4 text-[#8FB305]" />
+                      <span>HireX AI Match Reasoning</span>
+                    </div>
+                    <p className="text-xs text-[#575A51] leading-relaxed">
+                      Candidate has strong proficiency in {demoActiveCandidate.skills} with {demoActiveCandidate.experience}. High cultural alignment and short notice period.
+                    </p>
+                  </div>
+
+                  <div className="space-y-3">
+                    <h4 className="text-xs font-bold text-[#111215] uppercase tracking-wider">Scoring Breakdown</h4>
+                    <div className="space-y-2 text-xs">
+                      <div>
+                        <div className="flex justify-between text-[#73766C] mb-1">
+                          <span>Technical Skills Compatibility</span>
+                          <span className="font-bold text-[#111215]">{demoActiveCandidate.score}%</span>
+                        </div>
+                        <div className="w-full h-2 rounded-full bg-[#E4E7DC] overflow-hidden">
+                          <div className="h-full bg-[#D4F82C] rounded-full" style={{ width: `${demoActiveCandidate.score}%` }}></div>
+                        </div>
+                      </div>
+                      <div>
+                        <div className="flex justify-between text-[#73766C] mb-1">
+                          <span>Years of Relevant Industry Experience</span>
+                          <span className="font-bold text-[#111215]">92%</span>
+                        </div>
+                        <div className="w-full h-2 rounded-full bg-[#E4E7DC] overflow-hidden">
+                          <div className="h-full bg-[#111215] rounded-full" style={{ width: '92%' }}></div>
+                        </div>
+                      </div>
+                      <div>
+                        <div className="flex justify-between text-[#73766C] mb-1">
+                          <span>Communication & Voice AI Score</span>
+                          <span className="font-bold text-[#111215]">89%</span>
+                        </div>
+                        <div className="w-full h-2 rounded-full bg-[#E4E7DC] overflow-hidden">
+                          <div className="h-full bg-[#D4F82C] rounded-full" style={{ width: '89%' }}></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {demoDrawerTab === 'resume' && (
+                <div className="p-6 border border-[#E4E7DC] rounded-xl bg-white shadow-2xs font-sans text-xs space-y-4">
+                  <div className="border-b border-[#E4E7DC] pb-3 flex justify-between items-start">
+                    <div>
+                      <h4 className="text-base font-bold text-[#111215]">{demoActiveCandidate.name}</h4>
+                      <p className="text-[#73766C]">{demoActiveCandidate.role} • Bengaluru, India</p>
+                    </div>
+                    <span className="px-2 py-1 rounded bg-[#D4F82C] text-[#111215] font-mono text-[10px] font-bold">
+                      VERIFIED RESUME
+                    </span>
+                  </div>
+
+                  <div className="space-y-1">
+                    <div className="font-bold text-[#111215] text-[11px] uppercase tracking-wider">Professional Summary</div>
+                    <p className="text-[#575A51] leading-relaxed">
+                      Accomplished engineer with extensive experience building and scaling enterprise web applications. Specialized in TypeScript, modern reactive frontends, and cloud microservices.
+                    </p>
+                  </div>
+
+                  <div className="space-y-1">
+                    <div className="font-bold text-[#111215] text-[11px] uppercase tracking-wider">Experience</div>
+                    <div className="text-[#111215] font-bold">Senior Engineer • Apex Global Labs</div>
+                    <div className="text-[#73766C] text-[11px]">2022 — Present • Bengaluru, India</div>
+                    <p className="text-[#575A51] leading-relaxed pt-1">
+                      Architected high-throughput customer dashboards handling over 2M requests/day with sub-100ms response times.
+                    </p>
+                  </div>
+
+                  <div className="space-y-1">
+                    <div className="font-bold text-[#111215] text-[11px] uppercase tracking-wider">Core Skills</div>
+                    <div className="flex flex-wrap gap-1.5 pt-1">
+                      {demoActiveCandidate.skills.split(', ').map((skill) => (
+                        <span key={skill} className="px-2 py-0.5 rounded bg-[#F8F9F5] text-[#111215] text-[10px] font-semibold border border-[#E4E7DC]">
+                          {skill}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {demoDrawerTab === 'whatsapp' && (
+                <div className="space-y-4">
+                  <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 space-y-2">
+                    <div className="flex items-center gap-2 text-xs font-bold text-emerald-900">
+                      <MessageCircle className="size-4 text-emerald-600" />
+                      <span>WhatsApp Direct Invitation Template</span>
+                    </div>
+                    <p className="text-xs text-emerald-950">
+                      Pre-formatted message ready to send to <span className="font-bold">{demoActiveCandidate.name}</span>.
+                    </p>
+                  </div>
+
+                  <div className="p-4 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] space-y-2 font-mono text-xs text-[#111215]">
+                    <p>Hi {demoActiveCandidate.name},</p>
+                    <p>
+                      Great news! The hiring team at SNAB has reviewed your application for the {demoActiveCandidate.role} position and would love to invite you for an interview.
+                    </p>
+                    <p>Please click here to pick a time slot that works best for you: https://hirex.snab.co.in/schedule/sn-4921</p>
+                    <p>Best regards,<br />Talent Acquisition Team</p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDemoWhatsappSent(true);
+                      setTimeout(() => setDemoWhatsappSent(false), 2500);
+                    }}
+                    className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm"
+                  >
+                    {demoWhatsappSent ? (
+                      <>
+                        <Check className="size-4" />
+                        <span>Message Sent via WhatsApp!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Send className="size-4" />
+                        <span>Send WhatsApp Invite Now</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Drawer Footer Actions */}
+            <div className="p-4 border-t border-[#E4E7DC] bg-[#F8F9F5] flex items-center justify-between">
+              <span className="text-xs text-[#73766C]">hireX ATS Live Candidate Preview</span>
+              <button
+                type="button"
+                onClick={() => setDemoDrawerOpen(false)}
+                className="px-4 py-2 rounded-lg bg-[#111215] text-white text-xs font-bold hover:bg-black transition-colors cursor-pointer"
+              >
+                Close Drawer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── 1-Month Free Demo Booking Modal ── */}
+      {bookingModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="relative w-full max-w-lg bg-white rounded-3xl p-6 sm:p-8 shadow-2xl border border-[#E4E7DC] overflow-hidden">
+            
             <button
               type="button"
               onClick={() => setBookingModalOpen(false)}
-              className="absolute top-4 right-4 size-8 rounded-full bg-[#F8F9FF] border border-[#E5EAF5] flex items-center justify-center text-[#7D89A5] hover:text-[#17213F]"
+              className="absolute top-5 right-5 size-8 rounded-full border border-[#E4E7DC] bg-[#F8F9F5] hover:bg-slate-100 flex items-center justify-center text-slate-700 cursor-pointer"
             >
               <X className="size-4" />
             </button>
 
-            {formspreeState.succeeded || leadSubmitted ? (
-              <div className="text-center py-6">
-                <div className="size-12 rounded-full bg-[#EAFBF4] text-[#10B981] flex items-center justify-center mx-auto mb-3">
-                  <CheckCircle2 className="size-7" />
+            {leadSubmitted ? (
+              <div className="py-8 text-center space-y-4">
+                <div className="size-16 rounded-full bg-[#D4F82C] text-[#111215] mx-auto flex items-center justify-center">
+                  <Check className="size-8 stroke-[3]" />
                 </div>
-                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-[11px] font-bold mb-2 border border-emerald-200">
-                  🎁 1-Month Free Demo Reserved
-                </div>
-                <h3 className="text-lg font-bold text-[#101B3B]">Demo Request & Inquiry Received!</h3>
-                <p className="mt-2 text-xs text-[#566481]">
-                  Our talent solutions lead will reach out within 15 minutes to activate your 1-month free demo and schedule your live walkthrough.
+                <h3 className="text-2xl font-black text-[#111215]">You're All Set!</h3>
+                <p className="text-xs text-[#575A51] max-w-sm mx-auto">
+                  Our talent solutions team has received your request. We'll set up your 1-month free trial and reach out on WhatsApp/Email within 15 minutes.
                 </p>
-                <div className="mt-6">
-                  <a
-                    href="https://wa.me/919511779317?text=Hi%2C%20I%20have%20submitted%20inquiry%20for%201-Month%20Free%20Demo%20on%20HireX%20Snab"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#10B981] hover:bg-[#059669] text-white text-xs font-bold transition-all shadow-md"
-                  >
-                    <MessageCircle className="size-4" />
-                    <span>Chat on WhatsApp Directly</span>
-                  </a>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLeadSubmitted(false);
+                    setBookingModalOpen(false);
+                  }}
+                  className="px-6 py-2.5 rounded-full bg-[#111215] text-white text-xs font-bold"
+                >
+                  Close Window
+                </button>
               </div>
             ) : (
               <div>
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2 text-[#5145FF] text-xs font-bold">
-                    <Calendar className="size-4" />
-                    <span>Client Presentation & Walkthrough</span>
-                  </div>
-                  <span className="px-2.5 py-0.5 rounded-full bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 text-emerald-700 font-extrabold text-[10px]">
-                    🎁 1-Month Free Demo
-                  </span>
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#D4F82C] text-[#111215] text-[10px] font-black uppercase tracking-wider mb-3">
+                  ★ 1-Month Free Demo
                 </div>
-                <h3 className="text-xl font-black text-[#101B3B]">
-                  Claim Your 1-Month Free Demo
+                <h3 className="text-2xl font-black text-[#111215] tracking-tight">
+                  Claim your 30-day free trial.
                 </h3>
-                <p className="mt-1 text-xs text-[#7D89A5] mb-6">
-                  Get full 30-day platform access — AI resume parsing, candidate portal, WhatsApp job matching, and live walkthrough. Zero credit card required.
+                <p className="text-xs text-[#73766C] mt-1 mb-6">
+                  Get full platform access — AI resume parsing, candidate portal, WhatsApp job matching, and live walkthrough.
                 </p>
 
                 <form onSubmit={handleLeadSubmit} className="space-y-4">
-                  {/* Hidden context fields for Formspree */}
                   <input type="hidden" name="_subject" value="New 1-Month Free Demo Inquiry - HireX Snab" />
-                  <input type="hidden" name="offer" value="1-Month Free Demo" />
-                  <input type="hidden" name="inquiryType" value="1 Month Free Demo & Walkthrough" />
 
                   <div>
-                    <label className="block text-[11px] font-bold text-[#17213F] mb-1">Contact Name *</label>
+                    <label className="block text-[11px] font-bold text-[#111215] mb-1">Your Name *</label>
                     <input
                       type="text"
                       name="name"
-                      id="name"
                       required
                       value={leadForm.name}
                       onChange={(e) => setLeadForm({ ...leadForm, name: e.target.value })}
                       placeholder="e.g. Rahul Sharma"
-                      className="w-full h-10 px-3.5 rounded-xl border border-[#D5DCED] bg-[#F8F9FF] text-xs text-[#17213F] focus:outline-none focus:border-[#5145FF] focus:bg-white"
+                      className="w-full h-10 px-3.5 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] text-xs text-[#111215] focus:outline-none focus:border-[#111215] focus:bg-white"
                     />
-                    <ValidationError prefix="Name" field="name" errors={formspreeState.errors} className="text-red-500 text-[10px] mt-1" />
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-[11px] font-bold text-[#17213F] mb-1">Work Email *</label>
+                      <label className="block text-[11px] font-bold text-[#111215] mb-1">Work Email *</label>
                       <input
                         type="email"
                         name="email"
-                        id="email"
                         required
                         value={leadForm.email}
                         onChange={(e) => setLeadForm({ ...leadForm, email: e.target.value })}
                         placeholder="rahul@company.com"
-                        className="w-full h-10 px-3.5 rounded-xl border border-[#D5DCED] bg-[#F8F9FF] text-xs text-[#17213F] focus:outline-none focus:border-[#5145FF] focus:bg-white"
+                        className="w-full h-10 px-3.5 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] text-xs text-[#111215] focus:outline-none focus:border-[#111215] focus:bg-white"
                       />
-                      <ValidationError prefix="Email" field="email" errors={formspreeState.errors} className="text-red-500 text-[10px] mt-1" />
                     </div>
                     <div>
-                      <label className="block text-[11px] font-bold text-[#17213F] mb-1">Phone / WhatsApp *</label>
+                      <label className="block text-[11px] font-bold text-[#111215] mb-1">WhatsApp / Phone *</label>
                       <input
                         type="tel"
                         name="phone"
-                        id="phone"
                         required
                         value={leadForm.phone}
                         onChange={(e) => setLeadForm({ ...leadForm, phone: e.target.value })}
                         placeholder="+91 9876543210"
-                        className="w-full h-10 px-3.5 rounded-xl border border-[#D5DCED] bg-[#F8F9FF] text-xs text-[#17213F] focus:outline-none focus:border-[#5145FF] focus:bg-white"
+                        className="w-full h-10 px-3.5 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] text-xs text-[#111215] focus:outline-none focus:border-[#111215] focus:bg-white"
                       />
-                      <ValidationError prefix="Phone" field="phone" errors={formspreeState.errors} className="text-red-500 text-[10px] mt-1" />
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-bold text-[#17213F] mb-1">Company / Agency Name</label>
+                    <label className="block text-[11px] font-bold text-[#111215] mb-1">Company / Agency Name</label>
                     <input
                       type="text"
                       name="company"
-                      id="company"
                       value={leadForm.company}
                       onChange={(e) => setLeadForm({ ...leadForm, company: e.target.value })}
                       placeholder="e.g. Acme Talent Partners"
-                      className="w-full h-10 px-3.5 rounded-xl border border-[#D5DCED] bg-[#F8F9FF] text-xs text-[#17213F] focus:outline-none focus:border-[#5145FF] focus:bg-white"
+                      className="w-full h-10 px-3.5 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] text-xs text-[#111215] focus:outline-none focus:border-[#111215] focus:bg-white"
                     />
-                    <ValidationError prefix="Company" field="company" errors={formspreeState.errors} className="text-red-500 text-[10px] mt-1" />
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-bold text-[#17213F] mb-1">Monthly Hiring Volume</label>
+                    <label className="block text-[11px] font-bold text-[#111215] mb-1">Hiring Volume</label>
                     <select
                       name="hiringVolume"
-                      id="hiringVolume"
                       value={leadForm.hiringVolume}
                       onChange={(e) => setLeadForm({ ...leadForm, hiringVolume: e.target.value })}
-                      className="w-full h-10 px-3 rounded-xl border border-[#D5DCED] bg-[#F8F9FF] text-xs text-[#17213F] focus:outline-none focus:border-[#5145FF] focus:bg-white"
+                      className="w-full h-10 px-3 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] text-xs text-[#111215] focus:outline-none focus:border-[#111215] focus:bg-white"
                     >
                       <option value="1–5 roles / month">1–5 roles / month</option>
                       <option value="6–20 roles / month">6–20 roles / month</option>
@@ -2217,13 +1943,13 @@ I want to lock in this price and schedule a live demo.`
                     <button
                       type="submit"
                       disabled={submittingLead || formspreeState.submitting}
-                      className="w-full h-11 rounded-xl bg-gradient-to-r from-[#5145FF] to-[#3B82F6] hover:from-[#4135E8] hover:to-[#2563EB] text-white text-xs font-bold transition-all shadow-md shadow-[#5145FF]/20 cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
+                      className="w-full h-11 rounded-full bg-[#111215] hover:bg-black text-white text-xs font-black transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2 group"
                     >
-                      <span>{submittingLead || formspreeState.submitting ? 'Submitting to Formspree...' : 'Claim 1-Month Free Demo & Walkthrough'}</span>
-                      <ArrowRight className="size-4" />
+                      <span>{submittingLead || formspreeState.submitting ? 'Submitting...' : 'Claim 1-Month Free Demo'}</span>
+                      <span className="text-[#D4F82C] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform">↗</span>
                     </button>
-                    <div className="mt-2 text-center text-[10px] text-[#7D89A5]">
-                      ⚡ Instant 15-Min Response • No Credit Card • 1 Month Free Demo
+                    <div className="mt-2 text-center text-[10px] text-[#73766C]">
+                      ⚡ Instant 15-Min Response • No Credit Card • 100% Free Trial
                     </div>
                   </div>
                 </form>
