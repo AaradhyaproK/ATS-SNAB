@@ -636,7 +636,8 @@ export function buildWhatsAppInviteText(params: {
 
   const jobDetailsSection = showJobDetails && jobDetailsLines.length > 0 ? `\n\n*JOB REQUIREMENT DETAILS:*\n${jobDetailsLines.join('\n')}` : '';
 
-  const credentialsSection = showCredentials ? `\n\n👉 *Login and Apply for this Job on the Portal:*
+  const isVideoLink = interviewLink.includes('/interview/video') || interviewLink.includes('/interview/room') || interviewLink.includes('mode=video');
+  const credentialsSection = showCredentials ? `\n\n👉 *${isVideoLink ? '🎥 Direct AI Video Interview Link (Open Directly to Start):' : 'Login and Apply for this Job on the Portal:'}*
 🔗 ${interviewLink}` : '';
 
   const recruiterName = options?.recruiterName || 'Recruiting Desk';
@@ -648,7 +649,9 @@ export function buildWhatsAppInviteText(params: {
 
   const instructionsText = custom?.instructions
     ? renderTemplateText(custom.instructions, context)
-    : `1. Click the portal link above to inspect the job specifications.\n2. Login with your registered mobile/email and submit your application in 1 click.`;
+    : (isVideoLink
+        ? `1. Click your personalized video interview link above.\n2. Your candidate profile details will auto-load automatically.\n3. Complete quick camera & mic check and start your AI video interview.`
+        : `1. Click the portal link above to inspect the job specifications.\n2. Login with your registered mobile/email and submit your application in 1 click.`);
 
   const signoffText = custom?.signoff
     ? renderTemplateText(custom.signoff, context)
@@ -751,11 +754,17 @@ export async function sendBulkWhatsAppInvites(
       onProgress(i + 1, validCandidates.length, candidateDisplayName, false);
     }
 
+    let candidateSpecificLink = interviewLink;
+    if (candidate.email && !candidateSpecificLink.includes('email=')) {
+      const sep = candidateSpecificLink.includes('?') ? '&' : '?';
+      candidateSpecificLink = `${candidateSpecificLink}${sep}email=${encodeURIComponent(candidate.email)}${candidate.name ? `&name=${encodeURIComponent(candidate.name)}` : ''}`;
+    }
+
     const res = await sendInterviewWhatsAppInvite({
       phone: candidate.phone,
       candidateName: candidateDisplayName,
       jobTitle,
-      interviewLink,
+      interviewLink: candidateSpecificLink,
       accessCode,
       isReminder,
       options,

@@ -25,6 +25,7 @@ import TakeTest from './pages/TakeTest';
 import TestResults from './pages/TestResults';
 import ContactUs from './pages/ContactUs';
 import ReportBug from './pages/ReportBug';
+import Report from './pages/Report';
 import CreateInterview, { CreateInterviewSkeleton } from './pages/CreateInterview';
 import RecruiterInterviews, { RecruiterInterviewsSkeleton } from './pages/RecruiterInterviews';
 import TestAccess from './pages/TestAccess';
@@ -59,6 +60,8 @@ import CandidatePortal from './pages/CandidatePortal';
 import LandingPage from './pages/LandingPage';
 import ClientReviewPortal from './pages/ClientReviewPortal';
 
+import CandidateInterviewFlow from './pages/Interview';
+
 const DefaultRouteLoader = () => (
   <div className="flex items-center justify-center min-h-screen bg-background text-foreground">
     <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
@@ -88,7 +91,13 @@ const ProtectedRoute: React.FC<{
 
 const JobToCandidatePortalRedirect: React.FC = () => {
   const { interviewId } = useParams<{ interviewId: string }>();
-  return <Navigate to={interviewId ? `/candidate?job=${interviewId}` : '/candidate'} replace />;
+  const location = useLocation();
+  const search = location.search || '';
+  const isVideo = search.includes('mode=video') || search.includes('video=true') || search.includes('video=1') || search.includes('type=video');
+  if (isVideo && interviewId) {
+    return <Navigate to={`/interview/video/${interviewId}${search}`} replace />;
+  }
+  return <Navigate to={interviewId ? `/candidate?job=${interviewId}${search ? `&${search.replace(/^\?/, '')}` : ''}` : '/candidate'} replace />;
 };
 
 const DashboardRedirect: React.FC = () => {
@@ -251,11 +260,34 @@ const App: React.FC = () => {
               </ThemeProvider>
             } />
 
+            {/* Public Interactive AI Video Interview Room */}
+            <Route path="interview/video/:interviewId" element={
+              <ThemeProvider>
+                <CandidateInterviewFlow />
+              </ThemeProvider>
+            } />
+            <Route path="interview/room/:interviewId" element={
+              <ThemeProvider>
+                <CandidateInterviewFlow />
+              </ThemeProvider>
+            } />
+
             {/* Public Candidate Job Application Redirects (Directly to Candidate Portal) */}
             <Route path="interview/start/:interviewId" element={<JobToCandidatePortalRedirect />} />
             <Route path="voice-interview/*" element={<Navigate to="/candidate" replace />} />
             <Route path="voice-report/*" element={<Navigate to="/candidate" replace />} />
-            <Route path="report/*" element={<Navigate to="/candidate" replace />} />
+            
+            {/* Candidate & Recruiter Interview Assessment Report */}
+            <Route path="report/:interviewId/:submissionId" element={
+              <ThemeProvider>
+                <Report />
+              </ThemeProvider>
+            } />
+            <Route path="report/:interviewId" element={
+              <ThemeProvider>
+                <Report />
+              </ThemeProvider>
+            } />
             
             {/* Public Client Shortlist Review Portal */}
             <Route path="review/:shareId" element={

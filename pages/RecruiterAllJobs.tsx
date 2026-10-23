@@ -15,7 +15,6 @@ import { sendInterviewWhatsAppInvite, formatPhoneForWhatsApp, buildWhatsAppInvit
 import EditJobModal from './EditJob';
 import { normalizeJobData, fetchJobFetchedApiJobs, isJobStatusActive } from '../services/jobResolutionService';
 import WhatsAppConnectModal from '../components/WhatsAppConnectModal';
-import { useTheme } from '../context/ThemeContext';
 import { useBackgroundSend } from '../context/BackgroundSendContext';
 import { LocationCityInput } from '../components/LocationCityInput';
 import { EducationInput } from '../components/EducationInput';
@@ -53,7 +52,8 @@ import {
   User,
   Power,
   PowerOff,
-  Loader2
+  Loader2,
+  Video
 } from 'lucide-react';
 
 
@@ -98,6 +98,7 @@ export interface AllJobItem {
   candidateData?: any[];
   hasJobDoc?: boolean;
   hasInterviewDoc?: boolean;
+  isAiVideoInterview?: boolean;
 }
 
 const parseDeadlineMillis = (deadline: any): number => {
@@ -143,6 +144,25 @@ const formatExperienceDisplay = (exp: any): string => {
   return `${str} yrs`;
 };
 
+const safeStringEdu = (val: any): string => {
+  if (!val) return '';
+  if (typeof val === 'string') return val.trim();
+  if (Array.isArray(val)) {
+    return val
+      .map((item: any) => {
+        if (!item) return '';
+        if (typeof item === 'string') return item.trim();
+        return item.degree || item.title || item.name || '';
+      })
+      .filter(Boolean)
+      .join(', ');
+  }
+  if (typeof val === 'object') {
+    return val.degree || val.title || val.name || '';
+  }
+  return String(val).trim();
+};
+
 import { calculateJobMatchScore, CandidateMatchProfile } from '../services/jobMatchService';
 
 function getAISuggestedCandidatesForJob(job: any, candidates: any[], alreadyInvitedEmails: string[]) {
@@ -170,7 +190,7 @@ function getAISuggestedCandidatesForJob(job: any, candidates: any[], alreadyInvi
         candEdu = candidate.education.map((e: any) => typeof e === 'string' ? e : e?.degree || e?.title || '').filter(Boolean).join(', ');
       }
       if (!candEdu) {
-        candEdu = candidate.highestEducation || candidate.qualification || candidate.degree || '';
+        candEdu = safeStringEdu(candidate.highestEducation || candidate.qualification || candidate.degree || candidate.education || '');
       }
 
       let candExp = 0;
@@ -280,7 +300,6 @@ function getAISuggestedCandidatesForJob(job: any, candidates: any[], alreadyInvi
 
 const RecruiterAllJobs: React.FC = () => {
   const { user, userProfile } = useAuth();
-  const { isDark } = useTheme();
   const navigate = useNavigate();
   const messageBox = useMessageBox();
   const { startBackgroundSend } = useBackgroundSend();
@@ -301,7 +320,7 @@ const RecruiterAllJobs: React.FC = () => {
   const [deletingJobId, setDeletingJobId] = useState<string | null>(null);
 
   // Invite candidate state
-  const [inviteMode, setInviteMode] = useState<'single' | 'bulk' | 'invited' | 'ai_suggest'>('single');
+  const [inviteMode, setInviteMode] = useState<'bulk' | 'invited' | 'ai_suggest'>('ai_suggest');
   const [candidateEmailsInput, setCandidateEmailsInput] = useState('');
   const [inviteEmailsList, setInviteEmailsList] = useState<string[]>([]);
   const [parsedCandidates, setParsedCandidates] = useState<{ email: string; phone: string; name?: string; experience?: string }[]>([]);
@@ -351,6 +370,121 @@ const RecruiterAllJobs: React.FC = () => {
   const [showRosterWaDelayModal, setShowRosterWaDelayModal] = useState(false);
   const [rosterWaTarget, setRosterWaTarget] = useState<'whatsapp' | 'both'>('whatsapp');
   const [isWhatsAppModalOpen, setIsWhatsAppModalOpen] = useState(false);
+
+  // Always enforce Day Mode for the Recruiter section
+  useEffect(() => {
+    const root = document.documentElement;
+    const wasDark = root.classList.contains('dark');
+    root.classList.remove('dark');
+    return () => {
+      // restore dark mode if system/user preferences were dark when leaving
+      const savedTheme = localStorage.getItem('theme');
+      if (savedTheme === 'dark') {
+        root.classList.add('dark');
+      }
+    };
+  }, []);
+
+  // AI Video Interview state - persist user choice across sessions and jobs
+  const [isAiVideoInterview, setIsAiVideoInterview] = useState<boolean>(() => {
+    try {
+      const stored = localStorage.getItem('recruiter_pref_ai_video');
+      return stored !== null ? stored === 'true' : true;
+    } catch {
+      return true;
+    }
+  });
+
+  useEffect(() => {
+    if (invitingJob) {
+      let isChecked = true;
+      try {
+        const jobStored = localStorage.getItem(`job_ai_video_${invitingJob.id}`);
+        if (jobStored !== null) {
+          isChecked = jobStored === 'true';
+        } else if ((invitingJob as any).isAiVideoInterview !== undefined) {
+          isChecked = Boolean((invitingJob as any).isAiVideoInterview);
+        } else {
+          const globalPref = localStorage.getItem('recruiter_pref_ai_video');
+          isChecked = globalPref !== null ? globalPref === 'true' : true;
+        }
+      } catch {
+        isChecked = true;
+      }
+      setIsAiVideoInterview(isChecked);
+      setInviteMode(isChecked ? 'ai_suggest' : 'bulk');
+    }
+  }, [invitingJob]);
+
+  const handleToggleAiVideo = (checked: boolean) => {
+    setIsAiVideoInterview(checked);
+    try {
+      localStorage.setItem('recruiter_pref_ai_video', String(checked));
+      if (invitingJob?.id) {
+        localStorage.setItem(`job_ai_video_${invitingJob.id}`, String(checked));
+        updateDoc(doc(db, 'interviews', invitingJob.id), { isAiVideoInterview: checked }).catch(() => {});
+      }
+    } catch (err) {
+      console.warn('Could not persist ai video interview preference:', err);
+    }
+    if (checked) {
+      setInviteMode('ai_suggest');
+    }
+  };
+
+  const handleToggleSuggestedCandidate = (cand: any) => {
+    const targetEmail = (cand.email || '').trim().toLowerCase();
+    if (!targetEmail) return;
+    const isAdded = inviteEmailsList.some(e => e.toLowerCase() === targetEmail);
+    if (isAdded) {
+      setInviteEmailsList(prev => prev.filter(e => e.toLowerCase() !== targetEmail));
+      setParsedCandidates(prev => prev.filter(c => c.email.toLowerCase() !== targetEmail));
+    } else {
+      setInviteEmailsList(prev => [...prev, targetEmail]);
+      setParsedCandidates(prev => [
+        ...prev.filter(c => c.email.toLowerCase() !== targetEmail),
+        {
+          email: targetEmail,
+          phone: cand.phone || 'N/A',
+          name: cand.name || targetEmail.split('@')[0],
+          experience: cand.experience,
+          matchScore: `${cand.matchScore}%`
+        }
+      ]);
+    }
+  };
+
+  const handleSelectAllSuggestedCandidates = () => {
+    if (!aiSuggestedCandidates || aiSuggestedCandidates.length === 0) return;
+    const allEmailsToAdd: string[] = [];
+    const allParsedToAdd: any[] = [];
+    aiSuggestedCandidates.forEach(cand => {
+      const emailNorm = (cand.email || '').trim().toLowerCase();
+      if (emailNorm) {
+        allEmailsToAdd.push(emailNorm);
+        allParsedToAdd.push({
+          email: emailNorm,
+          phone: cand.phone || 'N/A',
+          name: cand.name || emailNorm.split('@')[0],
+          experience: cand.experience,
+          matchScore: `${cand.matchScore}%`
+        });
+      }
+    });
+    setInviteEmailsList(prev => Array.from(new Set([...prev, ...allEmailsToAdd])));
+    setParsedCandidates(prev => {
+      const existing = prev.filter(p => !allEmailsToAdd.some(e => e.toLowerCase() === p.email.toLowerCase()));
+      return [...existing, ...allParsedToAdd];
+    });
+    messageBox.showSuccess(`Selected all ${allEmailsToAdd.length} AI suggested candidate(s) from Resume Dump!`);
+  };
+
+  const handleClearSuggestedCandidates = () => {
+    const suggestedEmails = aiSuggestedCandidates.map(c => c.email?.trim().toLowerCase()).filter(Boolean);
+    setInviteEmailsList(prev => prev.filter(e => !suggestedEmails.includes(e.toLowerCase())));
+    setParsedCandidates(prev => prev.filter(c => !suggestedEmails.includes(c.email.toLowerCase())));
+    messageBox.showInfo("Cleared AI suggested candidates from invite list.");
+  };
 
   const handleEditCandidate = async (oldEmail: string, newEmail: string, newPhone: string, newName?: string) => {
     if (!invitingJob || !user) return;
@@ -423,9 +557,12 @@ const RecruiterAllJobs: React.FC = () => {
 
   const handleSendEmailReminder = async (candidateEmail: string) => {
     if (!invitingJob) return;
-    const targetLink = (invitingJob.interviewLink && !invitingJob.interviewLink.includes('/interview/'))
-      ? invitingJob.interviewLink
-      : `${window.location.origin}/candidate?job=${invitingJob.id}`;
+    const isVideo = isAiVideoInterview || Boolean((invitingJob as any).isAiVideoInterview);
+    const targetLink = isVideo
+      ? `${window.location.origin}/interview/video/${invitingJob.id}`
+      : ((invitingJob.interviewLink && !invitingJob.interviewLink.includes('/interview/'))
+          ? invitingJob.interviewLink
+          : `${window.location.origin}/candidate?job=${invitingJob.id}`);
     
     setRemindingCandidateEmail(candidateEmail);
     try {
@@ -494,12 +631,22 @@ const RecruiterAllJobs: React.FC = () => {
 
     const targetCandidateName = candData?.name && candData.name.trim() !== '' ? candData.name.trim() : (candidateEmail.split('@')[0] || 'Candidate');
 
+    const isVideo = isAiVideoInterview || Boolean((invitingJob as any).isAiVideoInterview);
+    let targetLink = isVideo
+      ? `${window.location.origin}/interview/video/${invitingJob.id}`
+      : ((invitingJob.interviewLink && !invitingJob.interviewLink.includes('/interview/'))
+          ? invitingJob.interviewLink
+          : `${window.location.origin}/candidate?job=${invitingJob.id}`);
+
+    if (candidateEmail && !targetLink.includes('email=')) {
+      const sep = targetLink.includes('?') ? '&' : '?';
+      targetLink = `${targetLink}${sep}email=${encodeURIComponent(candidateEmail)}&name=${encodeURIComponent(targetCandidateName)}`;
+    }
+
     const messageText = buildWhatsAppInviteText({
       candidateName: targetCandidateName,
       jobTitle: invitingJob.title,
-      interviewLink: (invitingJob.interviewLink && !invitingJob.interviewLink.includes('/interview/'))
-        ? invitingJob.interviewLink
-        : `${window.location.origin}/candidate?job=${invitingJob.id}`,
+      interviewLink: targetLink,
       accessCode: invitingJob.accessCode || '',
       isReminder: true,
       options: inviteOptions
@@ -516,9 +663,7 @@ const RecruiterAllJobs: React.FC = () => {
         phone: formattedPhone,
         candidateName: targetCandidateName,
         jobTitle: invitingJob.title,
-        interviewLink: (invitingJob.interviewLink && !invitingJob.interviewLink.includes('/interview/'))
-          ? invitingJob.interviewLink
-          : `${window.location.origin}/candidate?job=${invitingJob.id}`,
+        interviewLink: targetLink,
         accessCode: invitingJob.accessCode || '',
         isReminder: true,
         options: inviteOptions
@@ -540,9 +685,12 @@ const RecruiterAllJobs: React.FC = () => {
   };
   const handleSendRosterBulkEmailReminders = async () => {
     if (!invitingJob || !invitingJob.candidateEmails || invitingJob.candidateEmails.length === 0) return;
-    const targetLink = (invitingJob.interviewLink && !invitingJob.interviewLink.includes('/interview/'))
-      ? invitingJob.interviewLink
-      : `${window.location.origin}/candidate?job=${invitingJob.id}`;
+    const isVideo = isAiVideoInterview || Boolean((invitingJob as any).isAiVideoInterview);
+    const targetLink = isVideo
+      ? `${window.location.origin}/interview/video/${invitingJob.id}`
+      : ((invitingJob.interviewLink && !invitingJob.interviewLink.includes('/interview/'))
+          ? invitingJob.interviewLink
+          : `${window.location.origin}/candidate?job=${invitingJob.id}`);
     const candidatesPayload = invitingJob.candidateEmails.map((email: string) => ({ email }));
 
     startBackgroundSend({
@@ -587,9 +735,12 @@ const RecruiterAllJobs: React.FC = () => {
       return;
     }
 
-    const targetLink = (invitingJob.interviewLink && !invitingJob.interviewLink.includes('/interview/'))
-      ? invitingJob.interviewLink
-      : `${window.location.origin}/candidate?job=${invitingJob.id}`;
+    const isVideo = isAiVideoInterview || Boolean((invitingJob as any).isAiVideoInterview);
+    const targetLink = isVideo
+      ? `${window.location.origin}/interview/video/${invitingJob.id}`
+      : ((invitingJob.interviewLink && !invitingJob.interviewLink.includes('/interview/'))
+          ? invitingJob.interviewLink
+          : `${window.location.origin}/candidate?job=${invitingJob.id}`);
 
     startBackgroundSend({
       candidates: candidatesWithPhones,
@@ -626,9 +777,12 @@ const RecruiterAllJobs: React.FC = () => {
       return { email, phone: match?.phone, name: match?.name || email.split('@')[0] };
     });
 
-    const targetLink = (invitingJob.interviewLink && !invitingJob.interviewLink.includes('/interview/'))
-      ? invitingJob.interviewLink
-      : `${window.location.origin}/candidate?job=${invitingJob.id}`;
+    const isVideo = isAiVideoInterview || Boolean((invitingJob as any).isAiVideoInterview);
+    const targetLink = isVideo
+      ? `${window.location.origin}/interview/video/${invitingJob.id}`
+      : ((invitingJob.interviewLink && !invitingJob.interviewLink.includes('/interview/'))
+          ? invitingJob.interviewLink
+          : `${window.location.origin}/candidate?job=${invitingJob.id}`);
 
     startBackgroundSend({
       candidates: candidatesPayload,
@@ -844,8 +998,8 @@ const RecruiterAllJobs: React.FC = () => {
           employmentType: i.employmentType || existing?.employmentType || 'Full-time',
           description: i.description || existing?.description || '',
           skills: i.skills || existing?.skills || [],
-          qualifications: i.education || existing?.qualifications || '',
-          education: i.education || existing?.education || '',
+          qualifications: safeStringEdu(i.education || existing?.qualifications || ''),
+          education: safeStringEdu(i.education || existing?.education || ''),
           minExperience: i.minExperience ?? existing?.minExperience ?? 0,
           maxExperience: i.maxExperience ?? existing?.maxExperience ?? 0,
           experience: i.experience ?? existing?.experience ?? 0,
@@ -893,7 +1047,7 @@ const RecruiterAllJobs: React.FC = () => {
           experience: i.experience || existing?.experience || 'Freshers & Experienced',
           minExperience: i.minExperience ?? existing?.minExperience ?? 0,
           maxExperience: i.maxExperience ?? existing?.maxExperience ?? 0,
-          qualifications: i.qualifications || i.education || existing?.qualifications || '',
+          qualifications: safeStringEdu(i.qualifications || i.education || existing?.qualifications || ''),
           skills: Array.isArray(i.skills) ? i.skills : (i.skills ? String(i.skills).split(',').map((s: string) => s.trim()) : existing?.skills || []),
           salary: i.salaryRange || i.salary || existing?.salary || 'Competitive Salary',
           employmentType: i.employmentType || existing?.employmentType || 'Full-time',
@@ -1676,6 +1830,7 @@ const RecruiterAllJobs: React.FC = () => {
         });
 
         const updatePayload = {
+          isAiVideoInterview,
           candidateEmails: updatedCandidateEmails,
           candidateData: arrayUnion(...candidateDataToAdd),
           updatedAt: new Date()
@@ -1685,11 +1840,22 @@ const RecruiterAllJobs: React.FC = () => {
           updateDoc(doc(db, 'interviews', invitingJob.id), updatePayload).catch(() => {}),
           updateDoc(doc(db, 'jobs', invitingJob.id), updatePayload).catch(() => {})
         ]);
+      } else {
+        const updatePayload = {
+          isAiVideoInterview,
+          updatedAt: new Date()
+        };
+        await Promise.all([
+          updateDoc(doc(db, 'interviews', invitingJob.id), updatePayload).catch(() => {}),
+          updateDoc(doc(db, 'jobs', invitingJob.id), updatePayload).catch(() => {})
+        ]);
       }
 
-      const targetLink = (invitingJob.interviewLink && !invitingJob.interviewLink.includes('/interview/'))
-        ? invitingJob.interviewLink
-        : `${window.location.origin}/candidate?job=${invitingJob.id}`;
+      const targetLink = isAiVideoInterview
+        ? `${window.location.origin}/interview/video/${invitingJob.id}`
+        : ((invitingJob.interviewLink && !invitingJob.interviewLink.includes('/interview/'))
+            ? invitingJob.interviewLink
+            : `${window.location.origin}/candidate?job=${invitingJob.id}`);
 
       let candidatesPayload = finalEmails.map(email => {
         const parsed = parsedCandidates.find(c => c.email.toLowerCase() === email.toLowerCase()) ||
@@ -2166,50 +2332,144 @@ const RecruiterAllJobs: React.FC = () => {
 
 
 
-      {/* Invite Candidate Modal */}
+      {/* Invite Candidate Modal - Permanent Day Mode Bento Theme */}
       {invitingJob && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
-          <div className="relative w-full max-w-3xl bg-[#000] border border-white/[0.13] rounded-[10px] shadow-2xl flex flex-col overflow-hidden max-h-[90vh]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="relative w-full max-w-3xl rounded-3xl border border-[#E4E7DC] bg-[#F8F9F5] text-[#111215] shadow-2xl flex flex-col overflow-hidden max-h-[92vh] font-sans">
 
-            <div className="flex items-center justify-between border-b border-white/[0.11] bg-[#000] px-5 py-4 shrink-0">
-              <div>
-                <h3 className="geist-section-title text-white text-base font-bold flex items-center gap-2">
-                  <UserPlus className="w-4 h-4 text-[#83d0a3]" />
-                  Invite Candidate to Job
-                </h3>
-                <p className="geist-small text-[#8f8f8f] mt-0.5">Role: {invitingJob.title}</p>
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-[#E4E7DC] bg-white/90 px-6 py-4.5 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-[#D4F82C] text-[#111215] flex items-center justify-center shadow-sm shrink-0">
+                  <UserPlus className="w-5 h-5 text-[#111215]" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="text-base sm:text-lg font-black text-[#111215]">
+                      Invite Candidate to Job
+                    </h3>
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#111215]/5 text-[#575A51] border border-[#E4E7DC]">
+                      {invitingJob.title}
+                    </span>
+                  </div>
+                  <p className="text-xs text-[#575A51] font-medium mt-0.5">
+                    Send AI video pre-screening or standard ATS application invites with instant profile verification.
+                  </p>
+                </div>
               </div>
               <button
                 onClick={() => setInvitingJob(null)}
-                className="text-[#8f8f8f] hover:text-white p-1 rounded-[6px] hover:bg-white/10"
+                className="w-9 h-9 rounded-full flex items-center justify-center text-[#575A51] hover:text-[#111215] hover:bg-[#E4E7DC]/60 transition-colors cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="p-5 space-y-4 overflow-y-auto geist-small [scrollbar-color:#27272a_#000] [scrollbar-width:thin]">
-              {/* Invite Mode Selector */}
-              <div className="flex items-center gap-1 p-1 bg-white/[0.04] border border-white/[0.08] rounded-[6px] flex-wrap">
+            <div className="p-5 sm:p-6 space-y-4 overflow-y-auto [scrollbar-color:#c2c5ba_transparent] [scrollbar-width:thin]">
+              {/* AI Video Pre-Screening Interview Checkmark / Toggle Bento Card */}
+              <div className={`p-5 rounded-2xl border transition-all duration-200 ${
+                isAiVideoInterview
+                  ? 'border-2 border-[#D4F82C] bg-white shadow-lg shadow-[#D4F82C]/10 ring-2 ring-[#D4F82C]/30'
+                  : 'border border-[#E4E7DC] bg-white'
+              }`}>
+                <div className="flex items-start justify-between gap-4">
+                  <label className="flex items-start gap-3.5 cursor-pointer select-none flex-1">
+                    <div className="relative flex items-center justify-center mt-0.5">
+                      <input
+                        type="checkbox"
+                        checked={isAiVideoInterview}
+                        onChange={(e) => handleToggleAiVideo(e.target.checked)}
+                        className="w-5 h-5 rounded-lg border-[#E4E7DC] text-[#111215] focus:ring-0 focus:ring-offset-0 bg-white cursor-pointer accent-[#D4F82C]"
+                      />
+                    </div>
+                    <div className="space-y-1.5 flex-1">
+                      <div className="flex items-center gap-2.5 flex-wrap">
+                        <span className="font-black text-sm text-[#111215] flex items-center gap-2">
+                          <div className={`w-7 h-7 rounded-xl flex items-center justify-center ${
+                            isAiVideoInterview
+                              ? 'bg-[#D4F82C] text-[#111215]'
+                              : 'bg-[#111215]/5 text-[#575A51]'
+                          }`}>
+                            <Video className="w-4 h-4" />
+                          </div>
+                          <span>AI-Based Video Pre-Screening Interview</span>
+                        </span>
+                        <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black tracking-wide uppercase ${
+                          isAiVideoInterview
+                            ? 'bg-[#D4F82C] text-[#111215] shadow-xs'
+                            : 'bg-[#111215]/5 text-[#73766C]'
+                        }`}>
+                          {isAiVideoInterview ? '⚡ AI Video Link Active' : 'Normal ATS Application'}
+                        </span>
+                      </div>
+                      <p className="text-xs text-[#575A51] leading-relaxed font-medium">
+                        {isAiVideoInterview
+                          ? 'AI Video screening enabled. Candidates receive direct openable video interview links with auto-loaded profiles, webcam recording, and automated evaluation. Best-fit candidates from Resume Dump are suggested below.'
+                          : 'Tick this checkmark to enable direct AI Video Pre-Screening interviews and automatically suggest best-fit candidates from Resume Dump. When unticked, standard ATS candidate portal links are sent.'}
+                      </p>
+                    </div>
+                  </label>
+                </div>
+
+                {/* Direct Link Preview & Copy */}
+                <div className="mt-4 pt-3.5 border-t border-[#E4E7DC] flex items-center justify-between gap-3 flex-wrap">
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-[#73766C] shrink-0">
+                      {isAiVideoInterview ? 'Direct Video Link:' : 'Standard ATS Link:'}
+                    </span>
+                    <span className="text-xs font-mono font-bold text-[#111215] truncate bg-[#F8F9F5] px-3 py-1.5 rounded-xl border border-[#E4E7DC] select-all">
+                      {isAiVideoInterview
+                        ? `${window.location.origin}/interview/video/${invitingJob.id}`
+                        : `${window.location.origin}/candidate?job=${invitingJob.id}`}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const link = isAiVideoInterview
+                        ? `${window.location.origin}/interview/video/${invitingJob.id}`
+                        : `${window.location.origin}/candidate?job=${invitingJob.id}`;
+                      handleCopyLink(link);
+                    }}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#111215] text-white hover:bg-[#202227] text-xs font-bold shrink-0 transition-all cursor-pointer shadow-xs active:scale-95"
+                  >
+                    {copiedLink ? (
+                      <>
+                        <Check className="w-3.5 h-3.5 text-[#D4F82C]" />
+                        <span>Copied!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3.5 h-3.5" />
+                        <span>Copy Link</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Bento Tab Selector */}
+              <div className="flex items-center gap-1.5 p-1.5 bg-[#E4E7DC]/70 rounded-2xl flex-wrap">
                 <button
                   type="button"
-                  onClick={() => setInviteMode('single')}
-                  className={`geist-caption flex-1 py-1.5 px-2 rounded-[4px] font-semibold text-xs transition-all flex items-center justify-center gap-1.5 min-w-[110px] ${
-                    inviteMode === 'single'
-                      ? 'bg-white text-black shadow-sm'
-                      : 'text-[#8f8f8f] hover:text-white hover:bg-white/[0.04]'
+                  onClick={() => setInviteMode('ai_suggest')}
+                  className={`flex-1 py-2 px-3 rounded-xl font-black text-xs transition-all flex items-center justify-center gap-1.5 min-w-[140px] cursor-pointer ${
+                    inviteMode === 'ai_suggest'
+                      ? 'bg-[#D4F82C] text-[#111215] shadow-sm ring-2 ring-[#D4F82C]/30'
+                      : 'text-[#575A51] hover:text-[#111215] hover:bg-white/60'
                   }`}
                 >
-                  <FileText className="w-3.5 h-3.5" />
-                  <span>Single Candidate</span>
+                  <Sparkles className="w-3.5 h-3.5 text-[#111215]" />
+                  <span>Suggest AI Candidates</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => setInviteMode('bulk')}
-                  className={`geist-caption flex-1 py-1.5 px-2 rounded-[4px] font-semibold text-xs transition-all flex items-center justify-center gap-1.5 min-w-[95px] ${
+                  className={`flex-1 py-2 px-3 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-1.5 min-w-[110px] cursor-pointer ${
                     inviteMode === 'bulk'
-                      ? 'bg-white text-black shadow-sm'
-                      : 'text-[#8f8f8f] hover:text-white hover:bg-white/[0.04]'
+                      ? 'bg-[#111215] text-white shadow-sm'
+                      : 'text-[#575A51] hover:text-[#111215] hover:bg-white/60'
                   }`}
                 >
                   <Layers className="w-3.5 h-3.5" />
@@ -2219,204 +2479,29 @@ const RecruiterAllJobs: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setInviteMode('invited')}
-                  className={`geist-caption flex-1 py-1.5 px-2 rounded-[4px] font-semibold text-xs transition-all flex items-center justify-center gap-1.5 min-w-[130px] ${
+                  className={`flex-1 py-2 px-3 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-1.5 min-w-[130px] cursor-pointer ${
                     inviteMode === 'invited'
-                      ? 'bg-white text-black shadow-sm'
-                      : 'text-[#8f8f8f] hover:text-white hover:bg-white/[0.04]'
+                      ? 'bg-[#111215] text-white shadow-sm'
+                      : 'text-[#575A51] hover:text-[#111215] hover:bg-white/60'
                   }`}
                 >
                   <Users className="w-3.5 h-3.5" />
                   <span>Invited Candidates ({(invitingJob.candidateEmails || []).length})</span>
                 </button>
-
-                <button
-                  type="button"
-                  onClick={() => setInviteMode('ai_suggest')}
-                  className={`geist-caption flex-1 py-1.5 px-2 rounded-[4px] font-semibold text-xs transition-all flex items-center justify-center gap-1.5 min-w-[140px] ${
-                    inviteMode === 'ai_suggest'
-                      ? 'bg-emerald-400 text-black shadow-sm font-bold'
-                      : 'text-emerald-400 hover:text-emerald-300 hover:bg-white/[0.04]'
-                  }`}
-                >
-                  <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>Suggest AI Candidates</span>
-                </button>
               </div>
-
-
-              {inviteMode === 'single' && (
-                <>
-                  {/* Single Candidate Resume Upload + Optional Extra Text */}
-                  <div className="p-3 bg-white/[0.02] border border-white/[0.11] rounded-[6px] space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1.5">
-                        <Sparkles className="w-4 h-4 text-emerald-400" />
-                        <span className="geist-caption font-semibold text-white">Upload Single Resume + AI Analysis</span>
-                      </div>
-                    </div>
-
-                    <p className="geist-small text-[#8f8f8f]">
-                      Upload candidate resume (PDF, DOCX, TXT) and add optional recruiter notes. AI analyzes details, extracts contact info, saves to <strong>Resume Dump</strong>, and adds candidate to invite roster.
-                    </p>
-
-                    {/* File Picker */}
-                    <div>
-                      <label className="geist-label uppercase text-[#6b7280] block mb-1">
-                        Select Candidate Resume File
-                      </label>
-                      <input
-                        type="file"
-                        accept=".pdf,.docx,.txt"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) setSelectedResumeFile(file);
-                        }}
-                        className="geist-caption w-full rounded-[6px] border border-white/[0.11] bg-white/[0.03] p-2 text-white outline-none focus:border-white/[0.28] file:mr-3 file:py-1 file:px-2.5 file:rounded-[4px] file:border-0 file:text-xs file:font-semibold file:bg-white file:text-black hover:file:bg-[#eaeaea] cursor-pointer"
-                      />
-                      {selectedResumeFile && (
-                        <span className="geist-small text-emerald-400 block mt-1">
-                          Selected: {selectedResumeFile.name} ({(selectedResumeFile.size / 1024).toFixed(1)} KB)
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                      <div>
-                        <label className="geist-label uppercase text-[#6b7280] block mb-1">
-                          Location / City <span className="text-white font-semibold">*</span>
-                        </label>
-                        <LocationCityInput
-                          value={currentSingleLocation}
-                          onChange={setCurrentSingleLocation}
-                          placeholder="e.g. Nashik, Mumbai, Pune..."
-                          className="geist-caption w-full rounded-[6px] border border-white/[0.11] bg-white/[0.03] p-2.5 text-white outline-none focus:border-white/[0.28] placeholder:text-[#6b7280]"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="geist-label uppercase text-[#6b7280] block mb-1">
-                          Experience (Years) <span className="text-white font-semibold">*</span>
-                        </label>
-                        <input
-                          type="number"
-                          step="0.1"
-                          min="0"
-                          max="60"
-                          placeholder="e.g. 1.5 or 3.5 Yrs"
-                          value={currentSingleExp}
-                          onChange={(e) => setCurrentSingleExp(e.target.value)}
-                          className="geist-caption w-full rounded-[6px] border border-white/[0.11] bg-white/[0.03] p-2.5 text-white outline-none focus:border-white/[0.28] placeholder:text-[#6b7280]"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="geist-label uppercase text-[#6b7280] block mb-1">
-                          Highest Education <span className="text-white font-semibold">*</span>
-                        </label>
-                        <EducationInput
-                          value={currentSingleEducation}
-                          onChange={setCurrentSingleEducation}
-                          placeholder="Type or select education..."
-                          className="geist-caption w-full rounded-[6px] border border-white/[0.11] bg-white/[0.03] p-2.5 text-white outline-none focus:border-white/[0.28] placeholder:text-[#6b7280]"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="geist-label uppercase text-[#6b7280] block mb-1">
-                          Employment Type <span className="text-white font-semibold">*</span>
-                        </label>
-                        <EmploymentTypeMultiSelect
-                          values={currentSingleEmploymentTypes}
-                          onChange={setCurrentSingleEmploymentTypes}
-                          variant="dropdown"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Optional Extra Text Area */}
-                    <div>
-                      <label className="geist-label uppercase text-[#6b7280] block mb-1">
-                        Optional Extra Text / Recruiter Notes (Analyzed with Resume)
-                      </label>
-                      <textarea
-                        rows={2}
-                        placeholder="Enter optional extra text (e.g. candidate phone/email, referral notes, cover letter, or additional info to analyze with resume)..."
-                        value={resumeExtraText}
-                        onChange={(e) => setResumeExtraText(e.target.value)}
-                        className="geist-caption w-full rounded-[6px] border border-white/[0.11] bg-white/[0.03] p-2.5 text-[#d4d4d4] outline-none focus:border-white/[0.28] placeholder:text-[#6b7280]"
-                      />
-                    </div>
-
-
-                    {/* Process Action Button */}
-                    <button
-                      type="button"
-                      onClick={handleAnalyzeAndSaveResumeCandidate}
-                      disabled={!selectedResumeFile || analyzingResumeAI}
-                      className="geist-caption inline-flex h-9 w-full items-center justify-center gap-2 rounded-[6px] border border-emerald-600 bg-emerald-600 px-3 text-xs font-bold text-white shadow-sm transition-all hover:bg-emerald-500 disabled:border-emerald-700/50 disabled:bg-emerald-800/60 disabled:text-emerald-100/70 disabled:cursor-not-allowed cursor-pointer"
-                    >
-                      <Sparkles className="w-3.5 h-3.5 text-emerald-200" />
-                      <span className="font-bold text-white">{analyzingResumeAI ? 'Analyzing with AI & Saving to Resume Dump...' : 'Analyze Resume with AI & Save to Resume Dump'}</span>
-                    </button>
-                  </div>
-
-                  <div className="relative border-t border-white/[0.08] my-3">
-                    <span className="absolute left-1/2 -translate-x-1/2 -top-2.5 bg-[#000] px-2 text-[10px] uppercase text-[#6b7280] font-mono">
-                      OR ADD MANUALLY
-                    </span>
-                  </div>
-
-                  {/* Single Candidate Manual Input */}
-                  <div className="space-y-2">
-                    <label className="geist-label uppercase text-[#6b7280] block">
-                      Add Candidate Manually (Email & WhatsApp Contact)
-                    </label>
-                    <div className="flex flex-col sm:flex-row gap-2">
-                      <input
-                        type="text"
-                        placeholder="Candidate Name (e.g. Rahul Sharma)"
-                        value={currentSingleName}
-                        onChange={(e) => setCurrentSingleName(e.target.value)}
-                        className="geist-caption flex-1 h-9 rounded-[6px] border border-white/[0.11] bg-white/[0.03] px-3 text-white outline-none focus:border-white/[0.28] placeholder:text-[#6b7280]"
-                      />
-                      <input
-                        type="email"
-                        placeholder="Candidate email (e.g. candidate@example.com)"
-                        value={currentSingleEmail}
-                        onChange={(e) => setCurrentSingleEmail(e.target.value)}
-                        className="geist-caption flex-1 h-9 rounded-[6px] border border-white/[0.11] bg-white/[0.03] px-3 text-white outline-none focus:border-white/[0.28] placeholder:text-[#6b7280]"
-                      />
-                      <input
-                        type="tel"
-                        placeholder="WhatsApp Phone (+91...)"
-                        value={currentSinglePhone}
-                        onChange={(e) => setCurrentSinglePhone(e.target.value)}
-                        className="geist-caption w-full sm:w-1/4 h-9 rounded-[6px] border border-white/[0.11] bg-white/[0.03] px-3 text-white outline-none focus:border-white/[0.28] placeholder:text-[#6b7280]"
-                      />
-                      <button
-                        type="button"
-                        onClick={handleAddCandidate}
-                        className="geist-caption h-9 px-4 bg-white text-black hover:bg-[#eaeaea] rounded-[6px] font-semibold transition-colors shrink-0"
-                      >
-                        + Add Candidate
-                      </button>
-                    </div>
-                  </div>
-                </>
-              )}
 
               {inviteMode === 'bulk' && (
                 <>
                   {/* Bulk Candidate Document Upload (Excel, CSV, Multiple Resumes) */}
-                  <div className="p-4 bg-white/[0.02] border border-dashed border-white/[0.16] rounded-[8px] text-center space-y-2">
-                    <div className="flex items-center justify-center w-10 h-10 rounded-full bg-emerald-500/10 text-emerald-400 mx-auto mb-1">
-                      <FileText className="w-5 h-5" />
+                  <div className="p-6 bg-white border-2 border-dashed border-[#E4E7DC] rounded-2xl text-center space-y-3 shadow-sm">
+                    <div className="flex items-center justify-center w-12 h-12 rounded-2xl bg-[#D4F82C] text-[#111215] mx-auto shadow-sm">
+                      <FileText className="w-6 h-6" />
                     </div>
-                    <span className="geist-caption text-white font-semibold text-sm block">Bulk Import Candidate Files</span>
-                    <p className="geist-small text-[#8f8f8f] max-w-sm mx-auto">
+                    <span className="text-sm font-black text-[#111215] block">Bulk Import Candidate Files</span>
+                    <p className="text-xs text-[#575A51] max-w-sm mx-auto leading-relaxed">
                       Upload Excel (.xlsx, .xls), CSV, or multiple PDF/DOCX/TXT resumes. Auto-extracts Name, Phone Number, and Email Address.
                     </p>
-                    <label className="geist-caption inline-flex h-9 items-center justify-center gap-2 px-5 rounded-[6px] bg-white text-black font-semibold text-xs hover:bg-[#eaeaea] transition-colors cursor-pointer mt-2">
+                    <label className="inline-flex h-10 items-center justify-center gap-2 px-6 rounded-full bg-[#111215] text-white font-bold text-xs hover:bg-[#202227] transition-all cursor-pointer shadow-sm active:scale-95">
                       <span>{parsingDoc ? 'Parsing Document...' : 'Select File(s) (Excel / CSV / Resumes)'}</span>
                       <input
                         type="file"
@@ -2430,9 +2515,9 @@ const RecruiterAllJobs: React.FC = () => {
                   </div>
 
                   {/* Bulk Paste Multiple Emails */}
-                  <div className="space-y-1.5">
+                  <div className="p-5 bg-white border border-[#E4E7DC] rounded-2xl space-y-2 shadow-sm">
                     <div className="flex items-center justify-between">
-                      <label className="geist-label uppercase text-[#6b7280] block font-semibold text-xs">
+                      <label className="text-[11px] uppercase font-bold text-[#73766C] block">
                         Paste Multiple Emails
                       </label>
                       {candidateEmailsInput.trim() && (
@@ -2457,7 +2542,7 @@ const RecruiterAllJobs: React.FC = () => {
                             setCandidateEmailsInput('');
                             messageBox.showSuccess(`Added ${added} candidate email(s) to invite list!`);
                           }}
-                          className="text-xs text-emerald-400 hover:text-emerald-300 font-semibold transition-colors flex items-center gap-1"
+                          className="text-xs text-[#4D6500] hover:underline font-bold transition-colors flex items-center gap-1 cursor-pointer"
                         >
                           <Plus className="w-3.5 h-3.5" />
                           <span>Add Pasted Emails</span>
@@ -2469,16 +2554,53 @@ const RecruiterAllJobs: React.FC = () => {
                       placeholder="Enter or paste multiple candidate emails separated by comma or newline (e.g. alex@example.com, sara@company.org)..."
                       value={candidateEmailsInput}
                       onChange={(e) => setCandidateEmailsInput(e.target.value)}
-                      className="geist-caption w-full rounded-[6px] border border-white/[0.11] bg-white/[0.03] p-3 text-white outline-none focus:border-white/[0.28] placeholder:text-[#6b7280]"
+                      className="w-full rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] p-3 text-xs text-[#111215] outline-none focus:ring-2 focus:ring-[#8FB305] placeholder:text-[#8f8f8f]"
                     />
+                  </div>
+
+                  {/* Add Candidate Manually */}
+                  <div className="p-5 bg-white border border-[#E4E7DC] rounded-2xl space-y-3 shadow-sm">
+                    <label className="text-[11px] uppercase font-bold text-[#73766C] block">
+                      Add Candidate Manually (Email & WhatsApp Contact)
+                    </label>
+                    <div className="flex flex-col sm:flex-row gap-2.5">
+                      <input
+                        type="text"
+                        placeholder="Candidate Name (e.g. Rahul Sharma)"
+                        value={currentSingleName}
+                        onChange={(e) => setCurrentSingleName(e.target.value)}
+                        className="flex-1 h-10 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] px-3.5 text-xs text-[#111215] outline-none focus:ring-2 focus:ring-[#8FB305] placeholder:text-[#8f8f8f]"
+                      />
+                      <input
+                        type="email"
+                        placeholder="Candidate email (e.g. candidate@example.com)"
+                        value={currentSingleEmail}
+                        onChange={(e) => setCurrentSingleEmail(e.target.value)}
+                        className="flex-1 h-10 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] px-3.5 text-xs text-[#111215] outline-none focus:ring-2 focus:ring-[#8FB305] placeholder:text-[#8f8f8f]"
+                      />
+                      <input
+                        type="tel"
+                        placeholder="WhatsApp Phone (+91...)"
+                        value={currentSinglePhone}
+                        onChange={(e) => setCurrentSinglePhone(e.target.value)}
+                        className="w-full sm:w-1/4 h-10 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] px-3.5 text-xs text-[#111215] outline-none focus:ring-2 focus:ring-[#8FB305] placeholder:text-[#8f8f8f]"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleAddCandidate}
+                        className="h-10 px-5 bg-[#111215] text-white hover:bg-[#202227] rounded-full font-bold text-xs transition-all shrink-0 cursor-pointer shadow-sm active:scale-95"
+                      >
+                        + Add Candidate
+                      </button>
+                    </div>
                   </div>
                 </>
               )}
 
               {inviteMode === 'invited' && (
-                <div className="space-y-3">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/10 pb-2">
-                    <span className="geist-label uppercase text-[#6b7280] block font-semibold text-xs">
+                <div className="p-5 bg-white border border-[#E4E7DC] rounded-2xl space-y-3.5 shadow-sm">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#E4E7DC] pb-3">
+                    <span className="text-xs font-black text-[#111215] uppercase tracking-wide">
                       Invited Candidates Roster ({(invitingJob.candidateEmails || []).length})
                     </span>
 
@@ -2488,10 +2610,10 @@ const RecruiterAllJobs: React.FC = () => {
                           type="button"
                           onClick={handleSendRosterBulkEmailReminders}
                           disabled={bulkSendingRoster}
-                          className="geist-caption inline-flex h-7 items-center justify-center gap-1 rounded border border-blue-500/40 bg-blue-500/10 px-2 text-[11px] font-semibold text-blue-300 hover:bg-blue-500/20 disabled:opacity-40 transition-colors"
+                          className="inline-flex h-8 items-center justify-center gap-1.5 rounded-full border border-blue-500/30 bg-blue-50 px-3 text-xs font-bold text-blue-700 hover:bg-blue-100 disabled:opacity-40 transition-colors cursor-pointer"
                           title="Send bulk Email reminders to all candidates"
                         >
-                          <Mail className="w-3 h-3 text-blue-400" />
+                          <Mail className="w-3.5 h-3.5 text-blue-600" />
                           <span>Email Reminders</span>
                         </button>
 
@@ -2502,10 +2624,10 @@ const RecruiterAllJobs: React.FC = () => {
                             setShowRosterWaDelayModal(true);
                           }}
                           disabled={bulkSendingRoster}
-                          className="geist-caption inline-flex h-7 items-center justify-center gap-1 rounded border border-emerald-500/40 bg-emerald-500/10 px-2 text-[11px] font-semibold text-emerald-300 hover:bg-emerald-500/20 disabled:opacity-40 transition-colors"
+                          className="inline-flex h-8 items-center justify-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-50 px-3 text-xs font-bold text-emerald-800 hover:bg-emerald-100 disabled:opacity-40 transition-colors cursor-pointer"
                           title="Configure delay & send bulk WhatsApp reminders"
                         >
-                          <i className="fab fa-whatsapp text-xs text-emerald-400"></i>
+                          <MessageSquare className="w-3.5 h-3.5 text-emerald-600" />
                           <span>WhatsApp Reminders</span>
                         </button>
 
@@ -2516,10 +2638,10 @@ const RecruiterAllJobs: React.FC = () => {
                             setShowRosterWaDelayModal(true);
                           }}
                           disabled={bulkSendingRoster}
-                          className="geist-caption inline-flex h-7 items-center justify-center gap-1 rounded border border-amber-500/40 bg-amber-500/10 px-2 text-[11px] font-semibold text-amber-300 hover:bg-amber-500/20 disabled:opacity-40 transition-colors"
+                          className="inline-flex h-8 items-center justify-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-50 px-3 text-xs font-bold text-amber-800 hover:bg-amber-100 disabled:opacity-40 transition-colors cursor-pointer"
                           title="Configure delay & send BOTH Email + WhatsApp reminders"
                         >
-                          <Send className="w-3 h-3 text-amber-400" />
+                          <Send className="w-3.5 h-3.5 text-amber-600" />
                           <span>Both (Mail + WhatsApp)</span>
                         </button>
                       </div>
@@ -2527,7 +2649,7 @@ const RecruiterAllJobs: React.FC = () => {
                   </div>
 
                   {(!invitingJob.candidateEmails || invitingJob.candidateEmails.length === 0) ? (
-                    <div className="p-6 bg-white/[0.02] border border-white/[0.08] rounded-[6px] text-center text-[#8f8f8f]">
+                    <div className="p-8 text-center text-[#73766C] font-medium text-xs">
                       No candidates invited yet for this job.
                     </div>
                   ) : (
@@ -2542,17 +2664,17 @@ const RecruiterAllJobs: React.FC = () => {
                         const isWASending = remindingWhatsAppEmail === email;
 
                         return (
-                          <div key={email} className="bg-white/[0.025] border border-white/[0.11] rounded-[6px] p-3 shadow-sm space-y-2">
+                          <div key={email} className="bg-[#F8F9F5] border border-[#E4E7DC] rounded-2xl p-3.5 shadow-xs space-y-2">
                             {isEditing ? (
                               <div className="space-y-2">
-                                <div className="text-xs text-[#83d0a3] font-semibold">Editing Candidate Details:</div>
+                                <div className="text-xs text-[#4D6500] font-bold">Editing Candidate Details:</div>
                                 <div className="flex flex-col sm:flex-row gap-2">
                                   <input
                                     type="text"
                                     value={editedNameValue}
                                     onChange={(e) => setEditedNameValue(e.target.value)}
                                     placeholder="Candidate Full Name"
-                                    className="geist-caption w-full sm:w-1/3 h-8 rounded-[4px] border border-white/[0.11] bg-black px-2.5 text-xs text-white outline-none focus:border-white/30"
+                                    className="w-full sm:w-1/3 h-9 rounded-xl border border-[#E4E7DC] bg-white px-3 text-xs text-[#111215] outline-none"
                                     autoFocus
                                   />
                                   <input
@@ -2560,14 +2682,14 @@ const RecruiterAllJobs: React.FC = () => {
                                     value={editedEmailValue}
                                     onChange={(e) => setEditedEmailValue(e.target.value)}
                                     placeholder="Candidate Email"
-                                    className="geist-caption flex-1 h-8 rounded-[4px] border border-white/[0.11] bg-black px-2.5 text-xs text-white outline-none focus:border-white/30"
+                                    className="flex-1 h-9 rounded-xl border border-[#E4E7DC] bg-white px-3 text-xs text-[#111215] outline-none"
                                   />
                                   <input
                                     type="tel"
                                     value={editedPhoneValue}
                                     onChange={(e) => setEditedPhoneValue(e.target.value)}
                                     placeholder="WhatsApp Phone (+91...)"
-                                    className="geist-caption w-full sm:w-1/3 h-8 rounded-[4px] border border-white/[0.11] bg-black px-2.5 text-xs text-white outline-none focus:border-white/30"
+                                    className="w-full sm:w-1/3 h-9 rounded-xl border border-[#E4E7DC] bg-white px-3 text-xs text-[#111215] outline-none"
                                   />
                                 </div>
                                 <div className="flex items-center justify-end gap-2">
@@ -2580,7 +2702,7 @@ const RecruiterAllJobs: React.FC = () => {
                                       setEditedPhoneValue('');
                                     }}
                                     disabled={savingCandidateEdit}
-                                    className="geist-caption h-7 px-3 rounded border border-white/[0.11] bg-white/[0.03] text-[#d4d4d4] hover:bg-white/[0.06] text-xs"
+                                    className="h-8 px-4 rounded-full border border-[#E4E7DC] text-xs font-semibold text-[#575A51]"
                                   >
                                     Cancel
                                   </button>
@@ -2588,7 +2710,7 @@ const RecruiterAllJobs: React.FC = () => {
                                     type="button"
                                     onClick={() => handleEditCandidate(email, editedEmailValue, editedPhoneValue, editedNameValue)}
                                     disabled={savingCandidateEdit}
-                                    className="geist-caption h-7 px-3 rounded bg-white text-black font-semibold text-xs hover:bg-[#eaeaea]"
+                                    className="h-8 px-4 rounded-full bg-[#111215] text-white font-bold text-xs"
                                   >
                                     {savingCandidateEdit ? 'Saving...' : 'Save Changes'}
                                   </button>
@@ -2597,21 +2719,21 @@ const RecruiterAllJobs: React.FC = () => {
                             ) : (
                               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                                 <div className="flex flex-col min-w-0">
-                                  <div className="flex items-center gap-1.5">
-                                    <span className="font-semibold text-white truncate text-xs" title={candData?.name || email}>
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-bold text-[#111215] truncate text-xs" title={candData?.name || email}>
                                       {candData?.name && candData.name.trim() !== '' ? candData.name : email}
                                     </span>
                                     {candData?.name && candData.name.trim() !== '' && (
-                                      <span className="text-[11px] text-[#8f8f8f] truncate">({email})</span>
+                                      <span className="text-[11px] text-[#73766C] truncate font-mono">({email})</span>
                                     )}
                                   </div>
                                   {candPhone ? (
-                                    <span className="text-[11px] text-emerald-400 font-mono flex items-center gap-1 mt-0.5">
+                                    <span className="text-[11px] text-emerald-700 font-mono flex items-center gap-1 mt-0.5 font-bold">
                                       <Phone className="w-2.5 h-2.5" />
                                       {candPhone}
                                     </span>
                                   ) : (
-                                    <span className="text-[10px] text-[#6b7280] italic">No WhatsApp phone attached</span>
+                                    <span className="text-[10px] text-[#8f8f8f] italic">No WhatsApp phone attached</span>
                                   )}
                                 </div>
 
@@ -2624,42 +2746,41 @@ const RecruiterAllJobs: React.FC = () => {
                                       setEditedEmailValue(email);
                                       setEditedPhoneValue(candPhone);
                                     }}
-                                    className="geist-caption inline-flex items-center justify-center w-7 h-7 rounded border border-white/[0.11] bg-white/[0.03] text-[#d4d4d4] hover:bg-white/[0.08] hover:text-white transition-colors"
+                                    className="inline-flex items-center justify-center w-8 h-8 rounded-full border border-[#E4E7DC] bg-white text-[#575A51] hover:text-black transition-colors cursor-pointer"
                                     title="Edit Candidate Contact Details"
                                   >
-                                    <Edit className="w-3.5 h-3.5 text-[#d4d4d4]" />
+                                    <Edit className="w-3.5 h-3.5" />
                                   </button>
 
                                   <button
                                     type="button"
                                     onClick={() => handleSendEmailReminder(email)}
                                     disabled={isEmailSending}
-                                    className="geist-caption inline-flex items-center justify-center w-7 h-7 rounded border border-white/[0.11] bg-white/[0.04] text-[#d4d4d4] hover:bg-white/[0.08] hover:text-white transition-colors disabled:opacity-50"
+                                    className="inline-flex items-center justify-center w-8 h-8 rounded-full border border-blue-500/30 bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors disabled:opacity-50 cursor-pointer"
                                     title="Mail Reminder"
                                   >
-                                    <Mail className="w-3.5 h-3.5 text-blue-400" />
+                                    <Mail className="w-3.5 h-3.5 text-blue-600" />
                                   </button>
 
                                   <button
                                     type="button"
                                     onClick={() => handleSendWhatsAppReminder(email, candPhone)}
                                     disabled={isWASending}
-                                    className="geist-caption inline-flex items-center justify-center w-7 h-7 rounded border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-colors disabled:opacity-50"
+                                    className="inline-flex items-center justify-center w-8 h-8 rounded-full border border-emerald-500/30 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors disabled:opacity-50 cursor-pointer"
                                     title="WhatsApp Reminder"
                                   >
-                                    <MessageSquare className="w-3.5 h-3.5 text-emerald-400" />
+                                    <MessageSquare className="w-3.5 h-3.5 text-emerald-600" />
                                   </button>
 
                                   <button
                                     type="button"
                                     onClick={() => handleDeleteCandidateInvitation(email)}
-                                    className="geist-caption inline-flex items-center justify-center w-7 h-7 rounded border border-red-500/30 bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors cursor-pointer"
+                                    className="inline-flex items-center justify-center w-8 h-8 rounded-full border border-red-500/30 bg-red-50 text-red-600 hover:bg-red-100 transition-colors cursor-pointer"
                                     title="Delete Invitation"
                                   >
-                                    <Trash2 className="w-3.5 h-3.5 text-red-400" />
+                                    <Trash2 className="w-3.5 h-3.5" />
                                   </button>
                                 </div>
-
                               </div>
                             )}
                           </div>
@@ -2672,131 +2793,167 @@ const RecruiterAllJobs: React.FC = () => {
 
               {/* AI Candidate Suggestions Tab Panel */}
               {inviteMode === 'ai_suggest' && (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-[6px]">
+                <div className="space-y-3.5">
+                  <div className="flex items-center justify-between p-4 bg-white border border-[#E4E7DC] rounded-2xl flex-wrap gap-3 shadow-sm">
                     <div>
-                      <div className="flex items-center gap-1.5 text-emerald-400 font-semibold text-xs">
-                        <Sparkles className="w-4 h-4" />
+                      <div className="flex items-center gap-2 text-[#111215] font-black text-sm">
+                        <Sparkles className="w-4 h-4 text-[#8FB305]" />
                         <span>AI Candidate Recommendations ({aiSuggestedCandidates.length})</span>
                       </div>
-                      <p className="geist-small text-[#8f8f8f] mt-0.5 text-[11px]">
-                        Best matched candidates from your candidate pool based on skills & job requirements.
+                      <p className="text-xs text-[#575A51] mt-0.5 font-medium">
+                        {isAiVideoInterview
+                          ? 'Showing top matches from Resume Dump ready for AI Video Pre-Screening interview.'
+                          : 'Best matched candidates from your candidate pool based on skills & job requirements.'}
                       </p>
                     </div>
 
                     {aiSuggestedCandidates.length > 0 && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const top5 = aiSuggestedCandidates.slice(0, 5);
-                          let addedCount = 0;
-                          top5.forEach(cand => {
-                            const targetEmail = cand.email;
-                            if (targetEmail) {
-                              if (!inviteEmailsList.includes(targetEmail)) {
-                                setInviteEmailsList(prev => [...prev, targetEmail]);
-                                addedCount++;
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <button
+                          type="button"
+                          onClick={handleSelectAllSuggestedCandidates}
+                          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#D4F82C] text-[#111215] font-black text-xs hover:bg-[#c7eb22] transition-all shadow-sm shrink-0 cursor-pointer active:scale-95"
+                        >
+                          <Check className="w-3.5 h-3.5" />
+                          <span>Select All ({aiSuggestedCandidates.length})</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const top5 = aiSuggestedCandidates.slice(0, 5);
+                            let addedCount = 0;
+                            top5.forEach(cand => {
+                              const targetEmail = cand.email;
+                              if (targetEmail) {
+                                if (!inviteEmailsList.includes(targetEmail)) {
+                                  setInviteEmailsList(prev => [...prev, targetEmail]);
+                                  addedCount++;
+                                }
+                                setParsedCandidates(prev => [
+                                  ...prev.filter(c => c.email.toLowerCase() !== targetEmail.toLowerCase()),
+                                  { email: targetEmail, phone: cand.phone || 'N/A', name: cand.name, experience: cand.experience, matchScore: `${cand.matchScore}%` }
+                                ]);
                               }
-                              setParsedCandidates(prev => [
-                                ...prev.filter(c => c.email.toLowerCase() !== targetEmail.toLowerCase()),
-                                { email: targetEmail, phone: cand.phone || 'N/A', name: cand.name, experience: cand.experience, matchScore: `${cand.matchScore}%` }
-                              ]);
-                            }
-                          });
-                          messageBox.showSuccess(`Added top ${addedCount > 0 ? addedCount : Math.min(5, aiSuggestedCandidates.length)} AI candidate matches to invite list!`);
-                        }}
-                        className="geist-caption inline-flex items-center gap-1 px-2.5 py-1.5 rounded-[4px] bg-emerald-500 text-black font-bold text-xs hover:bg-emerald-400 transition-colors shrink-0"
-                      >
-                        <Sparkles className="w-3 h-3" />
-                        <span>+ Add Top 5</span>
-                      </button>
+                            });
+                            messageBox.showSuccess(`Added top ${addedCount > 0 ? addedCount : Math.min(5, aiSuggestedCandidates.length)} AI candidate matches to invite list!`);
+                          }}
+                          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#111215] text-white font-bold text-xs hover:bg-[#202227] transition-all shrink-0 cursor-pointer active:scale-95"
+                        >
+                          <Sparkles className="w-3.5 h-3.5 text-[#D4F82C]" />
+                          <span>+ Top 5</span>
+                        </button>
+
+                        {inviteEmailsList.some(email => aiSuggestedCandidates.some(c => c.email?.toLowerCase() === email.toLowerCase())) && (
+                          <button
+                            type="button"
+                            onClick={handleClearSuggestedCandidates}
+                            className="inline-flex items-center gap-1 px-3.5 py-2 rounded-full bg-red-50 border border-red-200 text-red-700 font-bold text-xs hover:bg-red-100 transition-all shrink-0 cursor-pointer active:scale-95"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                            <span>Clear</span>
+                          </button>
+                        )}
+                      </div>
                     )}
                   </div>
 
                   {loadingDumpCandidates ? (
-                    <div className="py-8 text-center text-[#8f8f8f]">
-                      <Sparkles className="w-5 h-5 animate-spin mx-auto text-emerald-400 mb-2" />
-                      Analyzing candidate profiles against job requirements...
+                    <div className="py-12 text-center text-[#73766C]">
+                      <Sparkles className="w-6 h-6 animate-spin mx-auto text-[#8FB305] mb-2" />
+                      <p className="text-xs font-bold">Analyzing candidate profiles against job requirements...</p>
                     </div>
                   ) : aiSuggestedCandidates.length === 0 ? (
-                    <div className="p-6 text-center border border-white/[0.08] rounded-[6px] bg-white/[0.02]">
-                      <Users className="w-8 h-8 text-[#6b7280] mx-auto mb-2" />
-                      <p className="geist-caption text-white font-medium">No new candidate recommendations found</p>
-                      <p className="geist-small text-[#6b7280] mt-1 max-w-sm mx-auto">
+                    <div className="p-8 text-center border border-[#E4E7DC] rounded-2xl bg-white">
+                      <Users className="w-10 h-10 text-[#73766C] mx-auto mb-2" />
+                      <p className="text-sm font-bold text-[#111215]">No new candidate recommendations found</p>
+                      <p className="text-xs text-[#73766C] mt-1 max-w-sm mx-auto">
                         All stored candidate profiles are already invited, or upload more resumes to generate matches.
                       </p>
                     </div>
                   ) : (
-                    <div className="space-y-2 max-h-[340px] overflow-y-auto pr-1 geist-small [scrollbar-color:#27272a_#000] [scrollbar-width:thin]">
+                    <div className="space-y-2.5 max-h-[360px] overflow-y-auto pr-1 [scrollbar-color:#c2c5ba_transparent] [scrollbar-width:thin]">
                       {aiSuggestedCandidates.map((cand) => {
-                        const isAdded = inviteEmailsList.includes(cand.email);
+                        const isAdded = inviteEmailsList.some(e => e.toLowerCase() === cand.email?.toLowerCase());
                         return (
                           <div
                             key={cand.id}
-                            className="flex items-start justify-between gap-3 p-3 bg-white/[0.03] border border-white/[0.09] rounded-[6px] hover:border-white/[0.2] transition-colors"
+                            onClick={() => handleToggleSuggestedCandidate(cand)}
+                            className={`flex items-start justify-between gap-3.5 p-4 rounded-2xl transition-all cursor-pointer ${
+                              isAdded
+                                ? 'bg-emerald-50/70 border-2 border-emerald-500/50 shadow-sm'
+                                : 'bg-white border border-[#E4E7DC] hover:border-[#8FB305]/50'
+                            }`}
                           >
-                            <div className="space-y-1 min-w-0 flex-1">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <span className="font-semibold text-white text-xs truncate">{cand.name}</span>
-                                <span className={`geist-small inline-flex items-center gap-1 rounded-[4px] px-2 py-0.5 font-bold text-[10px] ${
-                                  cand.matchScore >= 75
-                                    ? 'border border-emerald-500/40 bg-emerald-500/10 text-emerald-400'
-                                    : cand.matchScore >= 50
-                                    ? 'border border-blue-500/40 bg-blue-500/10 text-blue-400'
-                                    : 'border border-white/[0.15] bg-white/[0.05] text-[#d4d4d4]'
-                                }`}>
-                                  {cand.matchScore >= 75 ? '🔥' : '⚡'} {cand.matchScore}% Match
-                                </span>
-                                {cand.experience && cand.experience !== 'N/A' && (
-                                  <span className="text-[10px] text-[#83d0a3] bg-emerald-950/40 border border-emerald-500/20 px-1.5 py-0.2 rounded font-mono">
-                                    {cand.experience}
+                            <div className="flex items-start gap-3 min-w-0 flex-1">
+                              {/* Checkbox */}
+                              <div className="pt-0.5" onClick={(e) => e.stopPropagation()}>
+                                <input
+                                  type="checkbox"
+                                  checked={isAdded}
+                                  onChange={() => handleToggleSuggestedCandidate(cand)}
+                                  className="w-4.5 h-4.5 rounded-md border-[#E4E7DC] text-[#111215] focus:ring-0 cursor-pointer accent-[#D4F82C]"
+                                />
+                              </div>
+
+                              <div className="space-y-1 min-w-0 flex-1">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="font-black text-[#111215] text-xs sm:text-sm truncate">{cand.name}</span>
+                                  <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 font-black text-[10px] ${
+                                    cand.matchScore >= 75
+                                      ? 'border border-amber-300 bg-amber-100 text-amber-900'
+                                      : cand.matchScore >= 50
+                                      ? 'border border-blue-300 bg-blue-100 text-blue-900'
+                                      : 'border border-[#E4E7DC] bg-[#F8F9F5] text-[#575A51]'
+                                  }`}>
+                                    {cand.matchScore >= 75 ? '🔥' : '⚡'} {cand.matchScore}% Match
                                   </span>
-                                )}
-                              </div>
-
-                              <div className="text-[11px] text-[#8f8f8f] truncate font-mono">
-                                {cand.email} {cand.phone && cand.phone !== 'N/A' ? `· ${cand.phone}` : ''}
-                              </div>
-
-                              {cand.skills && cand.skills.length > 0 && (
-                                <div className="flex flex-wrap gap-1 mt-1">
-                                  {cand.skills.slice(0, 4).map((s: string) => (
-                                    <span key={s} className="text-[10px] text-[#d4d4d4] bg-white/[0.04] border border-white/[0.08] px-1.5 py-0.2 rounded">
-                                      {s}
+                                  {cand.experience && cand.experience !== 'N/A' && (
+                                    <span className="text-[10px] text-[#575A51] bg-[#F8F9F5] border border-[#E4E7DC] px-2 py-0.5 rounded-full font-bold">
+                                      {cand.experience}
                                     </span>
-                                  ))}
-                                  {cand.skills.length > 4 && (
-                                    <span className="text-[10px] text-[#6b7280] px-1 py-0.2">
-                                      +{cand.skills.length - 4} more
+                                  )}
+                                  {isAdded && (
+                                    <span className="text-[10px] text-emerald-700 font-bold flex items-center gap-0.5">
+                                      <Check className="w-3 h-3" /> Selected
                                     </span>
                                   )}
                                 </div>
-                              )}
+
+                                <div className="text-[11px] text-[#73766C] truncate font-mono">
+                                  {cand.email} {cand.phone && cand.phone !== 'N/A' ? `· ${cand.phone}` : ''}
+                                </div>
+
+                                {cand.skills && cand.skills.length > 0 && (
+                                  <div className="flex flex-wrap gap-1 mt-1">
+                                    {cand.skills.slice(0, 4).map((s: string) => (
+                                      <span key={s} className="text-[10px] font-medium text-[#111215] bg-[#F8F9F5] border border-[#E4E7DC] px-2 py-0.5 rounded-md">
+                                        {s}
+                                      </span>
+                                    ))}
+                                    {cand.skills.length > 4 && (
+                                      <span className="text-[10px] font-bold text-[#73766C] px-1 py-0.5">
+                                        +{cand.skills.length - 4} more
+                                      </span>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
                             </div>
 
                             <button
                               type="button"
-                              onClick={() => {
-                                const targetEmail = cand.email;
-                                if (targetEmail) {
-                                  if (!inviteEmailsList.includes(targetEmail)) {
-                                    setInviteEmailsList(prev => [...prev, targetEmail]);
-                                  }
-                                  setParsedCandidates(prev => [
-                                    ...prev.filter(c => c.email.toLowerCase() !== targetEmail.toLowerCase()),
-                                    { email: targetEmail, phone: cand.phone || 'N/A', name: cand.name, experience: cand.experience, matchScore: `${cand.matchScore}%` }
-                                  ]);
-                                  messageBox.showSuccess(`Added "${cand.name}" (${cand.matchScore}% Match) to invite list!`);
-                                }
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleToggleSuggestedCandidate(cand);
                               }}
-                              disabled={isAdded}
-                              className={`geist-caption inline-flex items-center gap-1 px-2.5 py-1.5 rounded-[4px] text-xs font-semibold shrink-0 transition-colors ${
+                              className={`inline-flex items-center gap-1 px-3.5 py-1.5 rounded-full text-xs font-black shrink-0 transition-all cursor-pointer shadow-xs active:scale-95 ${
                                 isAdded
-                                  ? 'border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 opacity-80 cursor-default'
-                                  : 'border border-white/20 bg-white text-black hover:bg-neutral-200'
+                                  ? 'border border-emerald-300 bg-emerald-100 text-emerald-800 hover:bg-emerald-200'
+                                  : 'bg-[#111215] text-white hover:bg-[#202227]'
                               }`}
                             >
-                              {isAdded ? '✓ Added' : '+ Add Candidate'}
+                              {isAdded ? '✓ Selected' : '+ Select'}
                             </button>
                           </div>
                         );
@@ -2806,40 +2963,43 @@ const RecruiterAllJobs: React.FC = () => {
                 </div>
               )}
 
-
-              {/* Delivery Channels Toggle */}
-              <div className="p-3 bg-white/[0.03] border border-white/[0.11] rounded-[6px] space-y-2">
-                <span className="geist-label uppercase text-[#6b7280] block font-semibold text-[11px]">
-                  Invitation Delivery Channels:
+              {/* Delivery Channels Bento Card */}
+              <div className="p-5 bg-white border border-[#E4E7DC] rounded-2xl space-y-3 shadow-sm">
+                <span className="text-[11px] uppercase font-bold text-[#73766C] block tracking-wider">
+                  INVITATION DELIVERY CHANNELS:
                 </span>
-                <div className="flex items-center gap-4 flex-wrap text-xs">
-                  <label className="flex items-center gap-2 cursor-pointer select-none text-white font-medium">
+                <div className="flex items-center gap-5 flex-wrap text-xs">
+                  <label className="flex items-center gap-2.5 cursor-pointer select-none text-[#111215] font-bold">
                     <input
                       type="checkbox"
                       checked={sendEmailChannel}
                       onChange={(e) => setSendEmailChannel(e.target.checked)}
                       className="w-4 h-4 rounded text-blue-600 focus:ring-0 cursor-pointer"
                     />
-                    <Mail className="w-4 h-4 text-blue-400" />
+                    <div className="w-6 h-6 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-600">
+                      <Mail className="w-3.5 h-3.5" />
+                    </div>
                     <span>Send Email Invitations</span>
                   </label>
 
-                  <label className="flex items-center gap-2 cursor-pointer select-none text-white font-medium">
+                  <label className="flex items-center gap-2.5 cursor-pointer select-none text-[#111215] font-bold">
                     <input
                       type="checkbox"
                       checked={sendWhatsAppChannel}
                       onChange={(e) => setSendWhatsAppChannel(e.target.checked)}
-                      className="w-4 h-4 rounded text-emerald-500 focus:ring-0 cursor-pointer"
+                      className="w-4 h-4 rounded text-emerald-600 focus:ring-0 cursor-pointer"
                     />
-                    <MessageSquare className="w-4 h-4 text-emerald-400" />
+                    <div className="w-6 h-6 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-600">
+                      <MessageSquare className="w-3.5 h-3.5" />
+                    </div>
                     <span>Send WhatsApp Invitations</span>
                   </label>
                 </div>
 
                 {sendWhatsAppChannel && (
-                  <div className="mt-2.5 pt-2.5 border-t border-border/40 grid grid-cols-1 sm:grid-cols-3 gap-3 items-center">
+                  <div className="mt-3 pt-3 border-t border-[#E4E7DC] grid grid-cols-1 sm:grid-cols-3 gap-3 items-center">
                     <div>
-                      <label className="text-[11px] text-muted-foreground block mb-1 font-medium">Min Delay</label>
+                      <label className="text-[11px] font-bold text-[#73766C] block mb-1">Min Delay</label>
                       <input
                         type="number"
                         min="1"
@@ -2850,11 +3010,11 @@ const RecruiterAllJobs: React.FC = () => {
                           setWaMinDelay(val === '' ? '' : Math.max(1, parseInt(val) || 1));
                         }}
                         placeholder="15"
-                        className="w-full h-8 rounded-md border border-input bg-background px-2.5 text-xs text-foreground outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 cursor-text"
+                        className="w-full h-9 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] px-3 text-xs text-[#111215] outline-none focus:ring-2 focus:ring-[#8FB305] cursor-text font-medium"
                       />
                     </div>
                     <div>
-                      <label className="text-[11px] text-muted-foreground block mb-1 font-medium">Max Delay</label>
+                      <label className="text-[11px] font-bold text-[#73766C] block mb-1">Max Delay</label>
                       <input
                         type="number"
                         min="1"
@@ -2865,21 +3025,21 @@ const RecruiterAllJobs: React.FC = () => {
                           setWaMaxDelay(val === '' ? '' : Math.max(1, parseInt(val) || 1));
                         }}
                         placeholder="25"
-                        className="w-full h-8 rounded-md border border-input bg-background px-2.5 text-xs text-foreground outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 cursor-text"
+                        className="w-full h-9 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] px-3 text-xs text-[#111215] outline-none focus:ring-2 focus:ring-[#8FB305] cursor-text font-medium"
                       />
                     </div>
                     <div>
-                      <label className="text-[11px] text-muted-foreground block mb-1 font-medium">Delay Unit</label>
+                      <label className="text-[11px] font-bold text-[#73766C] block mb-1">Delay Unit</label>
                       <select
                         value={waDelayUnit}
                         onChange={(e) => setWaDelayUnit(e.target.value as 'sec' | 'min')}
-                        className="w-full h-8 rounded-md border border-input bg-background px-2 text-xs text-foreground outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 cursor-pointer"
+                        className="w-full h-9 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] px-3 text-xs text-[#111215] outline-none focus:ring-2 focus:ring-[#8FB305] cursor-pointer font-medium"
                       >
-                        <option value="sec" className="bg-background text-foreground">Seconds (sec)</option>
-                        <option value="min" className="bg-background text-foreground">Minutes (min)</option>
+                        <option value="sec">Seconds (sec)</option>
+                        <option value="min">Minutes (min)</option>
                       </select>
                     </div>
-                    <p className="sm:col-span-3 text-[10px] text-emerald-500 dark:text-emerald-400 italic">
+                    <p className="sm:col-span-3 text-[11px] text-emerald-800 font-medium">
                       * Each WhatsApp message will pause for a random delay between {waMinDelay || 15} - {waMaxDelay || 25} {waDelayUnit} to protect your WhatsApp number from spam blocking.
                     </p>
                   </div>
@@ -2887,17 +3047,17 @@ const RecruiterAllJobs: React.FC = () => {
               </div>
 
               {sendingProgressMsg && (
-                <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-[6px] text-xs font-medium text-emerald-400 flex items-center gap-2 animate-pulse">
-                  <Sparkles className="w-4 h-4 animate-spin text-emerald-400" />
+                <div className="p-3.5 bg-emerald-50 border border-emerald-300 rounded-2xl text-xs font-bold text-emerald-800 flex items-center gap-2.5 animate-pulse">
+                  <Sparkles className="w-4 h-4 animate-spin text-emerald-600" />
                   <span>{sendingProgressMsg}</span>
                 </div>
               )}
 
               {/* Selected Candidates Roster */}
               {inviteEmailsList.length > 0 && (
-                <div className="pt-2 border-t border-white/[0.08]">
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="geist-label uppercase text-[#6b7280] block font-semibold text-xs">
+                <div className="p-4 bg-white border border-[#E4E7DC] rounded-2xl space-y-2.5 shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] uppercase font-bold text-[#73766C] block tracking-wider">
                       Selected Candidates ({inviteEmailsList.length}):
                     </span>
                     <button
@@ -2908,13 +3068,13 @@ const RecruiterAllJobs: React.FC = () => {
                         setCandidateEmailsInput('');
                         messageBox.showInfo('Cleared all candidate entries.');
                       }}
-                      className="text-xs text-red-400 hover:text-red-300 font-semibold transition-colors flex items-center gap-1 cursor-pointer"
+                      className="text-xs text-red-600 hover:text-red-700 font-bold transition-colors flex items-center gap-1 cursor-pointer"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                       <span>Remove All ({inviteEmailsList.length})</span>
                     </button>
                   </div>
-                  <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto p-2 bg-white/[0.02] border border-white/[0.08] rounded-[6px]">
+                  <div className="flex flex-wrap gap-2 max-h-36 overflow-y-auto p-2.5 bg-[#F8F9F5] border border-[#E4E7DC] rounded-xl">
                     {inviteEmailsList.map(email => {
                       const parsed = parsedCandidates.find(c => c.email.toLowerCase() === email.toLowerCase());
                       const phone = parsed?.phone && parsed.phone !== 'N/A' ? parsed.phone : '';
@@ -2927,27 +3087,27 @@ const RecruiterAllJobs: React.FC = () => {
                       return (
                         <span
                           key={email}
-                          className="geist-small inline-flex flex-col items-start gap-1 px-3 py-1.5 rounded-[6px] bg-white/[0.06] border border-white/[0.1] text-white min-w-[180px]"
+                          className="inline-flex flex-col items-start gap-1 px-3 py-2 rounded-xl bg-white border border-[#E4E7DC] text-[#111215] min-w-[180px] shadow-xs"
                         >
                           <div className="flex items-center gap-1.5 w-full justify-between">
-                            <span className="font-bold text-white text-xs flex items-center gap-1.5 truncate">
-                              <User className="w-3 h-3 text-emerald-400 shrink-0" />
+                            <span className="font-bold text-xs flex items-center gap-1.5 truncate">
+                              <User className="w-3 h-3 text-[#4D6500] shrink-0" />
                               {candName}
                             </span>
                             <button
                               type="button"
                               onClick={() => handleRemoveEmail(email)}
-                              className="text-[#8f8f8f] hover:text-[#ff8f8f] ml-1 cursor-pointer font-bold text-base"
+                              className="text-[#73766C] hover:text-red-600 ml-1 cursor-pointer font-bold text-base"
                               title="Remove candidate"
                             >
                               &times;
                             </button>
                           </div>
                           {!email.endsWith('@whatsapp.local') && (
-                            <span className="text-[10px] text-[#aaa] font-mono truncate max-w-[200px]">{email}</span>
+                            <span className="text-[10px] text-[#73766C] font-mono truncate max-w-[200px]">{email}</span>
                           )}
                           {phone && (
-                            <span className="text-[10px] text-emerald-400 font-mono flex items-center gap-1">
+                            <span className="text-[10px] text-emerald-700 font-mono flex items-center gap-1 font-bold">
                               <Phone className="w-2.5 h-2.5" />
                               {phone}
                             </span>
@@ -2958,45 +3118,59 @@ const RecruiterAllJobs: React.FC = () => {
                   </div>
                 </div>
               )}
-
-              <div className="p-3 bg-[#050505] border border-white/[0.08] rounded-[6px] space-y-1 geist-small">
-                <div className="flex items-center justify-between">
-                  <span className="text-[#8f8f8f]">Access Code:</span>
-                  <code className="text-[#83d0a3] font-mono">{invitingJob.accessCode || 'N/A'}</code>
-                </div>
-              </div>
             </div>
 
+            {/* Modal Footer */}
+            <div className="border-t border-[#E4E7DC] bg-white/90 px-6 py-4 flex items-center justify-between gap-3 shrink-0">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold text-[#73766C]">Access Code:</span>
+                <code className="text-xs font-mono font-black text-[#111215] bg-[#F8F9F5] px-2.5 py-1 rounded-lg border border-[#E4E7DC]">
+                  {invitingJob.accessCode || 'N/A'}
+                </code>
+              </div>
 
+              <div className="flex items-center gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setInvitingJob(null)}
+                  className="h-10 px-5 border border-[#E4E7DC] text-[#575A51] hover:text-[#111215] rounded-full font-bold text-xs hover:bg-[#E4E7DC]/50 transition-all cursor-pointer"
+                >
+                  Cancel
+                </button>
 
-            <div className="border-t border-white/[0.11] bg-[#000] px-5 py-3 flex items-center justify-end gap-2 shrink-0">
-              <button
-                type="button"
-                onClick={() => setInvitingJob(null)}
-                className="geist-caption h-8 px-3 border border-white/[0.11] text-[#d4d4d4] hover:text-white rounded-[6px] font-medium hover:bg-white/[0.04] cursor-pointer"
-              >
-                Cancel
-              </button>
+                <button
+                  type="button"
+                  onClick={() => handleSendInvites(true)}
+                  disabled={sendingInvites}
+                  className="inline-flex h-10 items-center gap-1.5 px-4 bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-300 rounded-full font-bold text-xs transition-all disabled:opacity-50 cursor-pointer shadow-xs active:scale-95"
+                >
+                  <Clock className="w-3.5 h-3.5" />
+                  <span>{sendingInvites ? 'Sending...' : 'Send Bulk Reminders'}</span>
+                </button>
 
-              <button
-                type="button"
-                onClick={() => handleSendInvites(true)}
-                disabled={sendingInvites}
-                className="geist-caption inline-flex h-8 items-center gap-1.5 px-3 bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 border border-amber-500/40 rounded-[6px] font-semibold text-xs transition-colors disabled:opacity-50 cursor-pointer"
-              >
-                <Clock className="w-3.5 h-3.5" />
-                <span>{sendingInvites ? 'Sending...' : 'Send Bulk Reminders'}</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleSendInvites(false)}
-                disabled={sendingInvites}
-                className="geist-caption inline-flex h-8 items-center gap-2 px-4 bg-white text-black hover:bg-[#eaeaea] rounded-[6px] font-semibold text-xs transition-colors disabled:opacity-50 cursor-pointer"
-              >
-                <Mail className="w-3.5 h-3.5" />
-                <span>{sendingInvites ? 'Sending...' : 'Send Invitations'}</span>
-              </button>
+                <button
+                  type="button"
+                  onClick={() => handleSendInvites(false)}
+                  disabled={sendingInvites}
+                  className={`inline-flex h-10 items-center gap-2 px-6 rounded-full font-black text-xs sm:text-sm transition-all disabled:opacity-50 cursor-pointer shadow-lg active:scale-95 ${
+                    isAiVideoInterview
+                      ? 'bg-[#D4F82C] text-[#111215] hover:bg-[#c7eb22] shadow-[#D4F82C]/25 ring-2 ring-[#D4F82C]/30'
+                      : 'bg-[#111215] text-white hover:bg-[#202227] shadow-black/20'
+                  }`}
+                >
+                  {isAiVideoInterview ? (
+                    <>
+                      <Video className="w-4 h-4" />
+                      <span>{sendingInvites ? 'Sending...' : 'Send Video Interview Invites'}</span>
+                    </>
+                  ) : (
+                    <>
+                      <Mail className="w-4 h-4" />
+                      <span>{sendingInvites ? 'Sending...' : 'Send ATS Invitations'}</span>
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         </div>

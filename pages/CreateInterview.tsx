@@ -67,7 +67,18 @@ type CandidateSuggestion = CandidateMatch;
 
 const splitCommaList = (val: any): string[] => {
   if (!val) return [];
-  if (Array.isArray(val)) return val.map(item => String(item).trim()).filter(Boolean);
+  if (Array.isArray(val)) {
+    return val
+      .map(item => {
+        if (!item) return '';
+        if (typeof item === 'object') return item.degree || item.title || item.name || '';
+        return String(item).trim();
+      })
+      .filter(Boolean);
+  }
+  if (typeof val === 'object') {
+    return [val.degree || val.title || val.name || ''].filter(Boolean);
+  }
   if (typeof val === 'string') return val.split(',').map((item) => item.trim()).filter(Boolean);
   return [String(val).trim()].filter(Boolean);
 };

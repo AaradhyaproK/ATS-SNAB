@@ -50,7 +50,8 @@ import {
   LockKeyhole,
   UserRound,
   Zap,
-  Brain
+  Brain,
+  Video
 } from 'lucide-react';
 import {
   collection,
@@ -122,7 +123,15 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
     }
   });
 
-  const [emailInput, setEmailInput] = useState('');
+  const [emailInput, setEmailInput] = useState(() => {
+    try {
+      const hashPart = window.location.hash.includes('?') ? window.location.hash.split('?')[1] : '';
+      const params = new URLSearchParams(window.location.search || hashPart);
+      return params.get('email') || '';
+    } catch {
+      return '';
+    }
+  });
   const [phonePasswordInput, setPhonePasswordInput] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
@@ -195,6 +204,22 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [profileSuccessMsg, setProfileSuccessMsg] = useState<string | null>(null);
   const [profileErrorMsg, setProfileErrorMsg] = useState<string | null>(null);
+
+  // Auto-redirect to Video Interview if mode=video or video=true is in URL
+  useEffect(() => {
+    try {
+      const hashPart = window.location.hash.includes('?') ? window.location.hash.split('?')[1] : '';
+      const params = new URLSearchParams(window.location.search || hashPart);
+      const isVideoMode = params.get('mode') === 'video' || params.get('video') === 'true' || params.get('video') === '1';
+      const jobId = params.get('job') || params.get('jobId');
+      if (isVideoMode && jobId) {
+        const queryStr = window.location.search || (hashPart ? `?${hashPart}` : '');
+        navigate(`/interview/video/${jobId}${queryStr}`, { replace: true });
+      }
+    } catch (e) {
+      console.warn('Video mode check error', e);
+    }
+  }, [navigate]);
 
   // Live Sync Candidate Profile from Firestore whenever candidate is logged in
   useEffect(() => {
@@ -678,7 +703,8 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
     const prof = (candidate.profile && typeof candidate.profile === 'object') ? candidate.profile : {};
     const candExp = Number(editForm.totalExperienceYears) || Number(candidate.totalExperienceYears) || Number(candidate.experienceYears) || Number(candidate.experience) || Number(prof.totalExperienceYears) || Number(prof.experienceYears) || Number(prof.experience) || 0;
 
-    const candEdu = editForm.highestEducation || candidate.highestEducation || candidate.education || (prof.education && Array.isArray(prof.education) ? prof.education[0]?.degree : prof.education) || 'Graduate';
+    const rawCandEdu = editForm.highestEducation || candidate.highestEducation || candidate.education || (prof.education && Array.isArray(prof.education) ? prof.education[0]?.degree : prof.education) || 'Graduate';
+    const candEdu = typeof rawCandEdu === 'string' ? rawCandEdu : (rawCandEdu?.degree || rawCandEdu?.title || (Array.isArray(rawCandEdu) && rawCandEdu[0]?.degree) || 'Graduate');
 
     const candSkills = editForm.skills && editForm.skills.length > 0
       ? editForm.skills
@@ -3791,6 +3817,20 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
                       >
                         Close
                       </button>
+
+                      {(modalJob.isAiVideoInterview || liveJob.isAiVideoInterview) && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const candEmailParam = candEmail ? `?email=${encodeURIComponent(candEmail)}&name=${encodeURIComponent(editForm.name || candidate?.name || '')}` : '';
+                            navigate(`/interview/video/${modalJob.id}${candEmailParam}`);
+                          }}
+                          className="px-5 py-2.5 rounded-full text-xs font-bold bg-[#D4F82C] text-[#111215] hover:bg-[#c7eb22] flex items-center gap-1.5 shadow-sm cursor-pointer"
+                        >
+                          <Video size={13} />
+                          <span>Start Video Interview</span>
+                        </button>
+                      )}
 
                       <button
                         type="button"

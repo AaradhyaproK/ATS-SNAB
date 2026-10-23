@@ -435,14 +435,18 @@ export async function sendInterviewInvitations(
       ? rawName.trim()
       : deriveNameFromEmail(email);
 
-    const htmlContent = getDesignerEmailTemplate(candidateName, jobTitle, interviewLink, accessCode, isReminder, mergedOptions);
+    const candidateLink = interviewLink.includes('email=')
+      ? interviewLink
+      : `${interviewLink}${interviewLink.includes('?') ? '&' : '?'}email=${encodeURIComponent(email)}&name=${encodeURIComponent(candidateName)}`;
+
+    const htmlContent = getDesignerEmailTemplate(candidateName, jobTitle, candidateLink, accessCode, isReminder, mergedOptions);
 
     const context = {
       candidate_name: candidateName,
       candidate_email: email,
       job_title: jobTitle,
       company_name: options?.companyName || 'SNAB hireX',
-      interview_link: interviewLink,
+      interview_link: candidateLink,
       access_code: accessCode,
       location: options?.location || 'As specified in Job Description',
       qualification: options?.qualification || options?.education || 'As per Job Description',

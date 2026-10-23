@@ -16,6 +16,7 @@ import * as pdfjsLib from 'pdfjs-dist';
 import { getCandidateRateLimitReachedMessage, isRateLimitReached, loadCompanyRateLimitStatus, recordCandidateSubmission } from '../services/rateLimitService';
 import { analyzeResumeText, readResumeText, saveResumeDumpCandidate, ParsedResumeProfile } from '../services/resumeService';
 import { useCompanyRateLimits } from '../hooks/useRecruiterRateLimits';
+import { useLiveKitInterview } from '../hooks/useLiveKitInterview';
 import { saveCandidateConsent } from '../services/candidateConsent';
 import { LocationCityInput } from '../components/LocationCityInput';
 import { EducationInput } from '../components/EducationInput';
@@ -23,6 +24,43 @@ import { isEducationMatching } from '../utils/educationMatcher';
 import { isLocationMatching } from '../data/maharashtraCities';
 import { ListenJDButton } from '../components/ListenJDButton';
 import { FormattedJobDescription } from '../utils/jobDescriptionFormatter';
+import {
+  Sparkles,
+  CheckCircle2,
+  User,
+  Mail,
+  Phone,
+  ArrowRight,
+  ShieldCheck,
+  FileText,
+  UploadCloud,
+  RefreshCw,
+  Briefcase,
+  GraduationCap,
+  MapPin,
+  Check,
+  Video,
+  AlertCircle,
+  X,
+  ExternalLink,
+  Eye,
+  ChevronRight,
+  Zap,
+  Building2,
+  Clock,
+  IndianRupee,
+  Gauge,
+  Shield,
+  Volume2,
+  VolumeX,
+  Key,
+  Mic,
+  Camera,
+  Bot,
+  Star,
+  Globe,
+  BrainCircuit
+} from 'lucide-react';
 
 
 // Setup PDF.js worker to enable PDF parsing
@@ -243,7 +281,36 @@ const TicTacToe: React.FC = () => {
   );
 };
 
-// --- Component: Candidate Info Form ---
+// --- Helper: Safely stringify education records (prevents Objects are not valid as React child error) ---
+const formatCandidateEducationString = (edu: any): string => {
+  if (!edu) return '';
+  if (typeof edu === 'string') return edu.trim();
+  if (Array.isArray(edu) && edu.length > 0) {
+    return edu
+      .map((e: any) => {
+        if (!e) return '';
+        if (typeof e === 'string') return e.trim();
+        return e.degree || e.title || e.qualification || [e.degree, e.institution].filter(Boolean).join(' - ') || '';
+      })
+      .filter(Boolean)
+      .join(', ');
+  }
+  if (typeof edu === 'object') {
+    return edu.degree || edu.title || edu.qualification || [edu.degree, edu.institution].filter(Boolean).join(' - ') || '';
+  }
+  return String(edu).trim();
+};
+
+const extractCandidateEdu = (cand: any): string => {
+  if (!cand) return '';
+  if (typeof cand.qualificationBasic === 'string' && cand.qualificationBasic.trim()) return cand.qualificationBasic.trim();
+  if (typeof cand.qualification === 'string' && cand.qualification.trim()) return cand.qualification.trim();
+  if (typeof cand.highestEducation === 'string' && cand.highestEducation.trim()) return cand.highestEducation.trim();
+  if (cand.education) return formatCandidateEducationString(cand.education);
+  return '';
+};
+
+// --- Component: Candidate Info Form (Landing Page Bento Theme) ---
 const CandidateInfoForm: React.FC<{
   jobTitle?: string;
   interviewId: string;
@@ -254,18 +321,22 @@ const CandidateInfoForm: React.FC<{
   user: any;
   userProfile: any;
 }> = ({ jobTitle, interviewId, interviewData, onBackToWelcome, onSubmit, errorMsg: initialError, user, userProfile }) => {
-  const [name, setName] = useState(userProfile?.fullname || userProfile?.name || '');
-  const [email, setEmail] = useState(user?.email || '');
-  const [phone, setPhone] = useState(userProfile?.phone || '');
+  const [searchParams] = useSearchParams();
+  const urlEmail = searchParams.get('email') || '';
+  const urlName = searchParams.get('name') || '';
+  const urlPhone = searchParams.get('phone') || '';
+
+  const [name, setName] = useState(urlName || userProfile?.fullname || userProfile?.name || '');
+  const [email, setEmail] = useState(urlEmail || user?.email || '');
+  const [phone, setPhone] = useState(urlPhone || userProfile?.phone || '');
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [uploadedResumeUrl, setUploadedResumeUrl] = useState<string | null>(null);
   const [isUploadingResume, setIsUploadingResume] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(initialError);
   const [showDuplicatePopup, setShowDuplicatePopup] = useState(false);
-  const { isDark } = useTheme();
   const [language, setLanguage] = useState('en');
 
-  // Pre-interview questionnaire states
+  // Pre-interview profile state
   const [gender, setGender] = useState('');
   const [dob, setDob] = useState('2000-01-01');
   const [maritalStatus, setMaritalStatus] = useState('');
@@ -280,11 +351,8 @@ const CandidateInfoForm: React.FC<{
   const [currentSalary, setCurrentSalary] = useState('');
   const [noticePeriodDays, setNoticePeriodDays] = useState('');
   const [reasonForJobChange, setReasonForJobChange] = useState('');
-  const [resumeUpdated, setResumeUpdated] = useState('yes');
   const [highlightedSkillsForJob, setHighlightedSkillsForJob] = useState('');
-  const [manualSkillInput, setManualSkillInput] = useState('');
   const [isFresher, setIsFresher] = useState(false);
-  const [formStep, setFormStep] = useState(1);
   const [previewModalUrl, setPreviewModalUrl] = useState<string | null>(null);
 
   const existingResumeUrl = userProfile?.resumeURL || userProfile?.resumeUrl;
@@ -293,7 +361,8 @@ const CandidateInfoForm: React.FC<{
   const [isParsingResumeFirst, setIsParsingResumeFirst] = useState(false);
   const [autofillNotice, setAutofillNotice] = useState<string | null>(null);
 
-  const handleResumeFirstFileChange = async (file: File) => {
+  // Resume upload handler for candidates not in database
+  const handleResumeFileChange = async (file: File) => {
     if (!file) return;
     setResumeFile(file);
     setIsParsingResumeFirst(true);
@@ -302,7 +371,6 @@ const CandidateInfoForm: React.FC<{
 
     try {
       const resumeText = await readResumeText(file, file.name);
-
       if (resumeText) {
         const profile = await analyzeResumeText(resumeText, file.name, {
           name: name || undefined,
@@ -310,219 +378,186 @@ const CandidateInfoForm: React.FC<{
           phone: phone || undefined,
         });
 
-        let extractedEmail = profile.email ? profile.email.toLowerCase().trim() : (email ? email.toLowerCase().trim() : '');
-
-        // 1. First, check if candidate is already present in database (resumeDumpCandidates / resumeDump)
-        let foundRecord: any = null;
-        if (extractedEmail && extractedEmail.includes('@') && extractedEmail.includes('.')) {
-          let snap = await getDocs(query(collection(db, 'resumeDumpCandidates'), where('email', '==', extractedEmail), limit(1))).catch(() => null);
-          if (!snap || snap.empty) {
-            snap = await getDocs(query(collection(db, 'resumeDumpCandidates'), where('profile.email', '==', extractedEmail), limit(1))).catch(() => null);
-          }
-          if (!snap || snap.empty) {
-            snap = await getDocs(query(collection(db, 'resumeDump'), where('email', '==', extractedEmail), limit(1))).catch(() => null);
-          }
-          if (snap && !snap.empty) {
-            const rawData: any = snap.docs[0].data();
-            foundRecord = { ...(rawData.profile || {}), ...rawData };
-            setFoundDumpCandidate(foundRecord);
-          }
+        if (profile.name && !name) setName(profile.name);
+        if (profile.email && !email) setEmail(profile.email.toLowerCase().trim());
+        if (profile.phone && !phone) setPhone(profile.phone);
+        if (profile.totalExperienceYears !== undefined && !totalExperienceYears) {
+          setTotalExperienceYears(String(profile.totalExperienceYears));
+          if (profile.totalExperienceYears === 0) setIsFresher(true);
+        }
+        if (profile.currentTitle && !designation) setDesignation(profile.currentTitle);
+        if (profile.location && !currentCity) setCurrentCity(profile.location);
+        if (profile.education && profile.education.length > 0 && !qualificationBasic) {
+          setQualificationBasic(profile.education[0].degree || '');
+        }
+        if (profile.skills && profile.skills.length > 0 && !highlightedSkillsForJob) {
+          setHighlightedSkillsForJob(profile.skills.join(', '));
         }
 
-        // Also check by phone if email didn't match and phone is available:
-        if (!foundRecord && (profile.phone || phone)) {
-          const rawPhone = (profile.phone || phone || '').replace(/\D/g, '');
-          if (rawPhone.length >= 10) {
-            let snap = await getDocs(query(collection(db, 'resumeDumpCandidates'), where('phone', '==', profile.phone || phone), limit(1))).catch(() => null);
-            if (!snap || snap.empty) {
-              snap = await getDocs(query(collection(db, 'resumeDumpCandidates'), where('profile.phone', '==', profile.phone || phone), limit(1))).catch(() => null);
-            }
-            if (!snap || snap.empty) {
-              snap = await getDocs(query(collection(db, 'resumeDump'), where('phone', '==', profile.phone || phone), limit(1))).catch(() => null);
-            }
-            if (snap && !snap.empty) {
-              const rawData: any = snap.docs[0].data();
-              foundRecord = { ...(rawData.profile || {}), ...rawData };
-              setFoundDumpCandidate(foundRecord);
-            }
-          }
-        }
-
-        // If candidate profile exists in resume dump, autofill from saved database record!
-        if (foundRecord) {
-          if (foundRecord.name) setName(foundRecord.name);
-          if (foundRecord.email) setEmail(foundRecord.email.toLowerCase());
-          if (foundRecord.phone) setPhone(foundRecord.phone);
-          if (foundRecord.gender) {
-            const rawG = foundRecord.gender.toString().trim().toLowerCase();
-            if (rawG.includes('female') || rawG === 'f') setGender('Female');
-            else if (rawG.includes('male') || rawG === 'm') setGender('Male');
-            else if (rawG.includes('other')) setGender('Other');
-          }
-          if (foundRecord.currentCity || foundRecord.location || foundRecord.city) setCurrentCity(foundRecord.currentCity || foundRecord.location || foundRecord.city);
-          if (foundRecord.nativePlace) setNativePlace(foundRecord.nativePlace);
-          if (foundRecord.dob) setDob(foundRecord.dob);
-          if (foundRecord.maritalStatus) setMaritalStatus(foundRecord.maritalStatus);
-          if (foundRecord.qualificationBasic || foundRecord.education) {
-            const eduStr = typeof foundRecord.education === 'string' ? foundRecord.education : (foundRecord.qualificationBasic || '');
-            setQualificationBasic(eduStr);
-          }
-          if (foundRecord.qualificationPG) setQualificationPG(foundRecord.qualificationPG);
-          if (foundRecord.totalExperienceYears !== undefined || foundRecord.experienceYears !== undefined || foundRecord.experience !== undefined) {
-            const expVal = foundRecord.totalExperienceYears ?? foundRecord.experienceYears ?? foundRecord.experience;
-            if (typeof expVal === 'number' || typeof expVal === 'string') {
-              const numExp = parseFloat(expVal.toString());
-              if (!isNaN(numExp)) {
-                if (numExp === 0) setIsFresher(true);
-                else setIsFresher(false);
-                setTotalExperienceYears(numExp.toString());
-              }
-            }
-          }
-          if (foundRecord.currentCompanyName || foundRecord.company) setCurrentCompanyName(foundRecord.currentCompanyName || foundRecord.company);
-          if (foundRecord.designation || foundRecord.currentTitle || foundRecord.role) setDesignation(foundRecord.designation || foundRecord.currentTitle || foundRecord.role);
-          if (foundRecord.currentSalary) setCurrentSalary(foundRecord.currentSalary.toString());
-          if (foundRecord.noticePeriodDays) setNoticePeriodDays(foundRecord.noticePeriodDays.toString());
-          if (foundRecord.reasonForJobChange) setReasonForJobChange(foundRecord.reasonForJobChange);
-          if (foundRecord.skills && Array.isArray(foundRecord.skills)) setHighlightedSkillsForJob(foundRecord.skills.join(', '));
-          if (foundRecord.resumeUrl || foundRecord.resumeURL) setUploadedResumeUrl(foundRecord.resumeUrl || foundRecord.resumeURL);
-
-          setAutofillNotice(`Found saved candidate profile in database! Details autofilled automatically.`);
-        } else {
-          // 2. If new candidate: ONLY fetch skills from the resume, nothing else!
-          if (profile.skills && profile.skills.length > 0) {
-            setHighlightedSkillsForJob(profile.skills.slice(0, 10).join(', '));
-          }
-
-          setAutofillNotice(`Resume uploaded! Skills auto-detected from resume. Please fill in your personal details below.`);
-        }
+        setAutofillNotice(`✨ Resume parsed! Profile details auto-filled for ${profile.name || file.name}`);
       }
-
-      setIsUploadingResume(true);
-      uploadToCloudinary(file, 'auto')
-        .then((url) => setUploadedResumeUrl(url))
-        .catch((err) => console.warn('Background upload notice:', err))
-        .finally(() => setIsUploadingResume(false));
     } catch (err: any) {
-      console.warn("Resume parsing error:", err);
-      setErrorMsg("Uploaded resume, but could not auto-extract text. Please verify your details below.");
+      console.warn("Resume parsing warning:", err);
     } finally {
       setIsParsingResumeFirst(false);
     }
   };
 
-  // Auto-restore candidate info form draft state on refresh
-  useEffect(() => {
-    try {
-      const saved = sessionStorage.getItem(`interview_info_draft_${interviewId}`);
-      if (saved) {
-        const p = JSON.parse(saved);
-        if (p.name) setName(p.name);
-        if (p.email) setEmail(p.email);
-        if (p.phone) setPhone(p.phone);
-        if (p.gender) setGender(p.gender);
-        if (p.currentCity) setCurrentCity(p.currentCity);
-        if (p.qualificationBasic) setQualificationBasic(p.qualificationBasic);
-        if (p.totalExperienceYears) setTotalExperienceYears(p.totalExperienceYears);
-        if (p.currentCompanyName) setCurrentCompanyName(p.currentCompanyName);
-        if (p.designation) setDesignation(p.designation);
-        if (p.currentSalary) setCurrentSalary(p.currentSalary);
-        if (p.noticePeriodDays) setNoticePeriodDays(p.noticePeriodDays);
-        if (p.language) setLanguage(p.language);
-        if (p.formStep) setFormStep(p.formStep);
-      }
-    } catch (err) {
-      console.warn("Restore interview info draft error:", err);
-    }
-  }, [interviewId]);
-
-  // Save candidate info form draft state on changes
-  useEffect(() => {
-    try {
-      if (name || email || phone || currentCity || qualificationBasic) {
-        const draft = {
-          name, email, phone, gender, currentCity, qualificationBasic,
-          totalExperienceYears, currentCompanyName, designation,
-          currentSalary, noticePeriodDays, language, formStep
-        };
-        sessionStorage.setItem(`interview_info_draft_${interviewId}`, JSON.stringify(draft));
-      }
-    } catch (err) {
-      console.warn("Save interview info draft error:", err);
-    }
-  }, [interviewId, name, email, phone, gender, currentCity, qualificationBasic, totalExperienceYears, currentCompanyName, designation, currentSalary, noticePeriodDays, language, formStep]);
-
-  // Email Lookup in Resume Dump for instant autofill & resume preview
+  // Real-time Search: Email or Phone lookup across Resume Dump & Candidate Database
   useEffect(() => {
     const trimmedEmail = (email || '').trim().toLowerCase();
-    if (!trimmedEmail || !trimmedEmail.includes('@') || !trimmedEmail.includes('.')) {
-      setFoundDumpCandidate(null);
+    const rawDigits = (phone || '').replace(/\D/g, '');
+    const cleanDigits = rawDigits.slice(-10);
+    const hasValidEmail = Boolean(trimmedEmail && trimmedEmail.includes('@') && trimmedEmail.includes('.'));
+    const hasValidPhone = cleanDigits.length === 10;
+
+    if (!hasValidEmail && !hasValidPhone) {
+      if (!urlEmail && !urlPhone) {
+        setFoundDumpCandidate(null);
+      }
       return;
     }
 
     const timer = setTimeout(async () => {
       setIsSearchingResumeDump(true);
       try {
-        let snap = await getDocs(query(collection(db, 'resumeDumpCandidates'), where('email', '==', trimmedEmail), limit(1))).catch(() => null);
-        if (!snap || snap.empty) {
-          snap = await getDocs(query(collection(db, 'resumeDump'), where('email', '==', trimmedEmail), limit(1))).catch(() => null);
+        let record: any = null;
+
+        // 1. Search by email
+        if (hasValidEmail) {
+          const emailVariants = Array.from(new Set([
+            trimmedEmail,
+            email.trim()
+          ])).filter(Boolean);
+
+          let snap = await getDocs(query(collection(db, 'resumeDumpCandidates'), where('email', 'in', emailVariants), limit(1))).catch(() => null);
+          if (!snap || snap.empty) {
+            snap = await getDocs(query(collection(db, 'resumeDumpCandidates'), where('profile.email', 'in', emailVariants), limit(1))).catch(() => null);
+          }
+          if (!snap || snap.empty) {
+            snap = await getDocs(query(collection(db, 'resumeDump'), where('email', 'in', emailVariants), limit(1))).catch(() => null);
+          }
+          if (!snap || snap.empty) {
+            snap = await getDocs(query(collection(db, 'resumeDump'), where('profile.email', 'in', emailVariants), limit(1))).catch(() => null);
+          }
+          if (!snap || snap.empty) {
+            snap = await getDocs(query(collection(db, 'candidates'), where('email', 'in', emailVariants), limit(1))).catch(() => null);
+          }
+          if (snap && !snap.empty) {
+            const raw = snap.docs[0].data();
+            record = { ...(raw.profile || {}), ...raw };
+          }
         }
 
-        if (snap && !snap.empty) {
-          const record = snap.docs[0].data();
+        // 2. Search by phone if not found by email
+        if (!record && hasValidPhone) {
+          const phoneVariants = Array.from(new Set([
+            cleanDigits,
+            `+91 ${cleanDigits}`,
+            `+91${cleanDigits}`,
+            `91${cleanDigits}`,
+            `0${cleanDigits}`,
+            phone.trim()
+          ])).filter(Boolean);
+
+          let snap = await getDocs(query(collection(db, 'resumeDumpCandidates'), where('phone', 'in', phoneVariants), limit(1))).catch(() => null);
+          if (!snap || snap.empty) {
+            snap = await getDocs(query(collection(db, 'resumeDumpCandidates'), where('profile.phone', 'in', phoneVariants), limit(1))).catch(() => null);
+          }
+          if (!snap || snap.empty) {
+            snap = await getDocs(query(collection(db, 'resumeDump'), where('phone', 'in', phoneVariants), limit(1))).catch(() => null);
+          }
+          if (!snap || snap.empty) {
+            snap = await getDocs(query(collection(db, 'resumeDump'), where('profile.phone', 'in', phoneVariants), limit(1))).catch(() => null);
+          }
+          if (!snap || snap.empty) {
+            snap = await getDocs(query(collection(db, 'candidates'), where('phone', 'in', phoneVariants), limit(1))).catch(() => null);
+          }
+          if (snap && !snap.empty) {
+            const raw = snap.docs[0].data();
+            record = { ...(raw.profile || {}), ...raw };
+          }
+        }
+
+        // 3. Search in interviewData.candidateData
+        if (!record && interviewData && (interviewData as any).candidateData) {
+          const list = (interviewData as any).candidateData;
+          if (Array.isArray(list)) {
+            const matched = list.find((c: any) => {
+              if (hasValidEmail && c.email && c.email.toLowerCase() === trimmedEmail) return true;
+              if (hasValidPhone && c.phone) {
+                const cDigits = String(c.phone).replace(/\D/g, '').slice(-10);
+                if (cDigits && cDigits === cleanDigits) return true;
+              }
+              return false;
+            });
+            if (matched) record = matched;
+          }
+        }
+
+        if (record) {
           setFoundDumpCandidate(record);
 
-          // Autofill fields from saved resume dump record if current state is empty
-          if (record.name && !name) setName(record.name);
+          // Auto-fill all candidate fields from database
+          if (record.name) setName(record.name);
+          if (record.email && !email) setEmail(record.email);
           if (record.phone && !phone) setPhone(record.phone);
-          if (record.gender && !gender) {
+          if (record.gender) {
             const rawG = record.gender.toString().trim().toLowerCase();
             if (rawG.includes('female') || rawG === 'f') setGender('Female');
             else if (rawG.includes('male') || rawG === 'm') setGender('Male');
             else if (rawG.includes('other')) setGender('Other');
           }
-          if ((record.location || record.city) && !currentCity) setCurrentCity(record.location || record.city);
-          if ((record.totalExperienceYears !== undefined || record.experienceYears !== undefined || record.experience !== undefined) && !totalExperienceYears) {
-            const expVal = record.totalExperienceYears ?? record.experienceYears ?? record.experience;
-            if (typeof expVal === 'number' || typeof expVal === 'string') {
-              const numExp = parseFloat(expVal.toString());
-              if (!isNaN(numExp)) {
-                if (numExp === 0) setIsFresher(true);
-                setTotalExperienceYears(numExp.toString());
-              }
+          if (record.location || record.city || record.currentCity) {
+            setCurrentCity(record.location || record.city || record.currentCity);
+          }
+          if (record.nativePlace) setNativePlace(record.nativePlace);
+          if (record.dob) setDob(record.dob);
+          if (record.maritalStatus) setMaritalStatus(record.maritalStatus);
+
+          const expVal = record.totalExperienceYears ?? record.experienceYears ?? record.experience;
+          if (expVal !== undefined && expVal !== null && expVal !== '') {
+            const numExp = parseFloat(expVal.toString());
+            if (!isNaN(numExp)) {
+              if (numExp === 0) setIsFresher(true);
+              setTotalExperienceYears(numExp.toString());
             }
           }
-          if (record.currentCompanyName && !currentCompanyName) setCurrentCompanyName(record.currentCompanyName);
-          if (record.designation && !designation) setDesignation(record.designation);
-          if ((record.qualificationBasic || record.education) && !qualificationBasic) {
-            const eduStr = typeof record.education === 'string' ? record.education : (record.qualificationBasic || '');
-            setQualificationBasic(eduStr);
+          if (record.currentCompanyName || record.currentCompany) {
+            setCurrentCompanyName(record.currentCompanyName || record.currentCompany);
           }
+          if (record.designation || record.currentTitle) {
+            setDesignation(record.designation || record.currentTitle);
+          }
+          const eduStr = extractCandidateEdu(record);
+          if (eduStr) setQualificationBasic(eduStr);
           if (record.resumeUrl || record.resumeURL) {
             setUploadedResumeUrl(record.resumeUrl || record.resumeURL);
           }
+
+          setAutofillNotice(`⚡ Profile verified & auto-loaded from Resume Dump!`);
         } else {
           setFoundDumpCandidate(null);
         }
       } catch (err) {
+        console.error("Resume dump candidate lookup error:", err);
         setFoundDumpCandidate(null);
       } finally {
         setIsSearchingResumeDump(false);
       }
-    }, 500);
+    }, 200);
 
     return () => clearTimeout(timer);
-  }, [email]);
+  }, [email, phone, interviewData]);
 
   useEffect(() => {
-      setErrorMsg(initialError);
+    setErrorMsg(initialError);
   }, [initialError]);
 
   const getProfileMismatches = (): string[] => {
     if (!interviewData) return [];
     const mismatches: string[] = [];
 
-    // 1. Gender Mismatch (ONLY if candidate filled gender & requirement is specific)
     const rawReqG = (interviewData.genderRequirement || (interviewData as any).gender || '').toString().trim().toLowerCase();
     const isReqFemale = rawReqG.includes('female');
     const isReqMale = !isReqFemale && (rawReqG.includes('male') || rawReqG === 'm' || rawReqG.includes('man'));
@@ -544,7 +579,6 @@ const CandidateInfoForm: React.FC<{
       }
     }
 
-    // 2. Location / City Mismatch (ONLY if candidate filled currentCity)
     const reqLoc = ((interviewData as any).location || (interviewData as any).jobLocation || (interviewData as any).city || '').toString().trim();
     if (reqLoc && currentCity.trim()) {
       if (!isLocationMatching(reqLoc, currentCity.trim())) {
@@ -552,7 +586,6 @@ const CandidateInfoForm: React.FC<{
       }
     }
 
-    // 3. Experience Mismatch (ONLY if candidate entered experience or checked isFresher)
     const reqExpText = ((interviewData as any).experienceRequired || (interviewData as any).minExperience || (interviewData as any).experience || '').toString();
     const reqExpMinMatch = reqExpText.match(/(\d+)/);
     const hasEnteredExp = isFresher || totalExperienceYears.trim() !== '';
@@ -564,7 +597,6 @@ const CandidateInfoForm: React.FC<{
       }
     }
 
-    // 4. Education Mismatch (ONLY if candidate filled qualificationBasic)
     const reqEdu = ((interviewData as any).education || (interviewData as any).qualification || '').toString().trim();
     if (reqEdu && qualificationBasic.trim()) {
       if (!isEducationMatching(qualificationBasic, reqEdu)) {
@@ -575,700 +607,436 @@ const CandidateInfoForm: React.FC<{
     return mismatches;
   };
 
-  const handleNext = () => {
-    if (formStep === 1) {
-      if (!resumeFile && !uploadedResumeUrl && !existingResumeUrl && !foundDumpCandidate?.resumeUrl && !foundDumpCandidate?.resumeURL) {
+  const handleDirectStart = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+
+    const activeEmail = (email || foundDumpCandidate?.email || '').trim().toLowerCase();
+    const activePhone = (phone || foundDumpCandidate?.phone || '').trim();
+    const activeName = (name || foundDumpCandidate?.name || (activeEmail ? activeEmail.split('@')[0] : 'Candidate')).trim();
+
+    if (!activeEmail && !activePhone) {
+      setErrorMsg("Please enter your registered Email Address or Mobile Number.");
+      return;
+    }
+
+    if (!foundDumpCandidate) {
+      if (!activeName) {
+        setErrorMsg("Please enter your Full Name to continue.");
+        return;
+      }
+      if (!resumeFile && !uploadedResumeUrl && !existingResumeUrl) {
         setErrorMsg("Please upload your resume to continue.");
         return;
       }
-      if (!name || !name.trim()) {
-        setErrorMsg("Please enter your Full Name.");
-        return;
-      }
-      if (!email || !email.trim()) {
-        setErrorMsg("Please enter your Email Address.");
-        return;
-      }
-      if (!phone || !phone.trim()) {
-        setErrorMsg("Please enter your Contact Number.");
-        return;
-      }
-      const rawDigits = phone.replace(/\D/g, '');
-      let core10Digit = rawDigits;
-      if (rawDigits.length === 12 && rawDigits.startsWith('91')) {
-        core10Digit = rawDigits.slice(2);
-      } else if (rawDigits.length === 11 && rawDigits.startsWith('0')) {
-        core10Digit = rawDigits.slice(1);
-      }
-
-      if (core10Digit.length !== 10) {
-        setErrorMsg("Please enter a valid 10-digit mobile number (e.g. 9876543210 or +91 9876543210).");
-        return;
-      }
-      const candGNorm = (gender || '').trim().toLowerCase();
-      if (!candGNorm || ['unspecified', 'unknown', 'select', 'not specified'].includes(candGNorm)) {
-        setErrorMsg("Please select your Gender.");
-        return;
-      }
-      if (!dob || !dob.trim()) {
-        setErrorMsg("Please select your Date of Birth.");
-        return;
-      }
-      if (!maritalStatus || !maritalStatus.trim()) {
-        setErrorMsg("Please select your Marital Status.");
-        return;
-      }
-      if (!currentCity || !currentCity.trim()) {
-        setErrorMsg("Please select/enter your Current City.");
-        return;
-      }
-      if (!nativePlace || !nativePlace.trim()) {
-        setErrorMsg("Please enter your Native Place.");
-        return;
-      }
-      setErrorMsg(null);
-      setFormStep(2);
-    } else if (formStep === 2) {
-      if (!qualificationBasic || !qualificationBasic.trim()) {
-        setErrorMsg("Please select or enter your Highest Qualification.");
-        return;
-      }
-      if (!isFresher) {
-        if (!totalExperienceYears || !totalExperienceYears.toString().trim()) {
-          setErrorMsg("Please enter your Total Work Experience (Years).");
-          return;
-        }
-        if (!totalExperienceMonths || !totalExperienceMonths.toString().trim()) {
-          setTotalExperienceMonths('0');
-        }
-        if (!currentCompanyName || !currentCompanyName.trim()) {
-          setErrorMsg("Please enter your Current Company Name.");
-          return;
-        }
-        if (!designation || !designation.trim()) {
-          setErrorMsg("Please enter your Current Designation.");
-          return;
-        }
-        if (!currentSalary || !currentSalary.trim()) {
-          setErrorMsg("Please enter your Current Salary (CTC Per annum).");
-          return;
-        }
-        if (!noticePeriodDays || !noticePeriodDays.toString().trim()) {
-          setErrorMsg("Please enter your Notice Period (in number of days).");
-          return;
-        }
-        if (!reasonForJobChange || !reasonForJobChange.trim()) {
-          setErrorMsg("Please select your Reason for job change.");
-          return;
-        }
-      }
-      setErrorMsg(null);
-      setFormStep(3);
     }
-  };
 
-  const handlePrevious = () => {
-    setFormStep(prev => prev - 1);
     setErrorMsg(null);
-  };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!resumeFile && !uploadedResumeUrl && !existingResumeUrl) {
-      setErrorMsg("Please upload your resume.");
-      return;
-    }
+    const candResumeUrl = uploadedResumeUrl || foundDumpCandidate?.resumeUrl || foundDumpCandidate?.resumeURL || existingResumeUrl;
+    const detectedMismatches = getProfileMismatches();
 
-    if (isUploadingResume) {
-      setErrorMsg("Please wait until the resume finishes uploading.");
-      return;
-    }
-
-    let calculatedAge = '';
+    let calculatedAge = '25';
     if (dob) {
       const today = new Date();
       const birthDate = new Date(dob);
       let ageNum = today.getFullYear() - birthDate.getFullYear();
       const m = today.getMonth() - birthDate.getMonth();
       if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
-          ageNum--;
+        ageNum--;
       }
       calculatedAge = ageNum.toString();
     }
 
-    setErrorMsg(null);
-
-    const detectedMismatches = getProfileMismatches();
-
-    onSubmit({ 
-      name, email, phone, gender, dob, age: calculatedAge, maritalStatus, currentCity, nativePlace,
-      qualificationBasic, qualificationPG, totalExperienceYears, totalExperienceMonths,
-      currentCompanyName, designation, currentSalary, noticePeriodDays, reasonForJobChange,
-      resumeUpdated, highlightedSkillsForJob, isFresher, language,
+    const finalCandInfo: CandidateInfo = {
+      name: activeName,
+      email: activeEmail,
+      phone: activePhone,
+      gender: gender || foundDumpCandidate?.gender || 'Unspecified',
+      dob: dob || foundDumpCandidate?.dob || '2000-01-01',
+      age: calculatedAge,
+      maritalStatus: maritalStatus || foundDumpCandidate?.maritalStatus || 'Single',
+      currentCity: currentCity || foundDumpCandidate?.location || foundDumpCandidate?.city || foundDumpCandidate?.currentCity || '',
+      nativePlace: nativePlace || foundDumpCandidate?.nativePlace || currentCity || '',
+      qualificationBasic: qualificationBasic || extractCandidateEdu(foundDumpCandidate) || '',
+      qualificationPG: qualificationPG || '',
+      totalExperienceYears: totalExperienceYears || (foundDumpCandidate?.totalExperienceYears !== undefined ? String(foundDumpCandidate.totalExperienceYears) : (foundDumpCandidate?.experience !== undefined ? String(foundDumpCandidate.experience) : (isFresher ? '0' : ''))),
+      totalExperienceMonths: totalExperienceMonths || '0',
+      currentCompanyName: currentCompanyName || foundDumpCandidate?.currentCompanyName || foundDumpCandidate?.currentCompany || '',
+      designation: designation || foundDumpCandidate?.designation || foundDumpCandidate?.currentTitle || '',
+      currentSalary: currentSalary || foundDumpCandidate?.currentSalary || '',
+      noticePeriodDays: noticePeriodDays || foundDumpCandidate?.noticePeriodDays || '0',
+      reasonForJobChange: reasonForJobChange || 'Career Growth',
+      resumeUpdated: 'yes',
+      highlightedSkillsForJob: highlightedSkillsForJob || (foundDumpCandidate?.skills ? (Array.isArray(foundDumpCandidate.skills) ? foundDumpCandidate.skills.join(', ') : foundDumpCandidate.skills) : ''),
+      isFresher: isFresher || (totalExperienceYears === '0'),
+      language,
       criteriaMismatches: detectedMismatches
-    }, resumeFile, existingResumeUrl, uploadedResumeUrl || undefined);
+    };
+
+    onSubmit(finalCandInfo, resumeFile, candResumeUrl, candResumeUrl);
   };
 
+  const candidateDisplayName = name || foundDumpCandidate?.name || (email ? email.split('@')[0] : 'Candidate');
+  const candidateDisplayExp = (foundDumpCandidate?.totalExperienceYears !== undefined || foundDumpCandidate?.experience !== undefined || totalExperienceYears)
+    ? `${foundDumpCandidate?.totalExperienceYears ?? foundDumpCandidate?.experience ?? totalExperienceYears} Years`
+    : (isFresher ? 'Fresher (0 Years)' : 'Not Specified');
+  const candidateRoleInfo = designation || foundDumpCandidate?.designation || foundDumpCandidate?.currentTitle || '';
+  const candidateCompanyInfo = currentCompanyName || foundDumpCandidate?.currentCompanyName || foundDumpCandidate?.currentCompany || '';
+  const candidateEdu = qualificationBasic || extractCandidateEdu(foundDumpCandidate) || '';
+  const hasResumeLoaded = Boolean(resumeFile || uploadedResumeUrl || existingResumeUrl || foundDumpCandidate?.resumeUrl || foundDumpCandidate?.resumeURL);
+
   return (
-      <div className="candidate-form-shell w-11/12 md:max-w-2xl lg:max-w-3xl bg-white dark:bg-gray-800 p-6 md:p-8 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 relative">
-        {showDuplicatePopup && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[11000] p-4">
-            <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 md:p-8 max-w-sm w-full border border-gray-100 dark:border-gray-700 shadow-2xl text-center animate-in scale-in duration-300">
-              <div className="w-16 h-16 rounded-full bg-red-50 dark:bg-red-950/40 text-red-500 flex items-center justify-center mb-5 mx-auto">
-                <i className="fas fa-exclamation-triangle text-3xl"></i>
-              </div>
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2.5">Attempt Blocked</h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed mb-6">
-                You have already taken this interview. Only one attempt is allowed.
-              </p>
-              <button 
-                type="button"
-                onClick={() => {
-                  setShowDuplicatePopup(false);
-                  onBackToWelcome();
-                }}
-                className="w-full py-3.5 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white font-bold rounded-xl shadow-lg shadow-red-500/20 active:scale-98 transition-all flex items-center justify-center"
-              >
-                OK
-              </button>
+    <div className="candidate-form-shell w-full max-w-xl mx-auto rounded-3xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] p-6 sm:p-8 md:p-10 shadow-2xl relative transition-all duration-300 font-sans">
+      {/* Duplicate Attempt Modal */}
+      {showDuplicatePopup && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[11000] p-4">
+          <div className="bg-white dark:bg-[#15161A] rounded-3xl p-6 md:p-8 max-w-sm w-full border border-[#E4E7DC] dark:border-white/10 shadow-2xl text-center">
+            <div className="w-14 h-14 rounded-full bg-red-500/10 text-red-500 flex items-center justify-center mb-4 mx-auto border border-red-500/20">
+              <AlertCircle size={28} />
             </div>
+            <h3 className="text-xl font-black text-[#111215] dark:text-[#F8F9F5] mb-2">Attempt Blocked</h3>
+            <p className="text-xs text-[#575A51] dark:text-neutral-400 leading-relaxed mb-6">
+              You have already completed this video interview. Only one attempt is permitted.
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                setShowDuplicatePopup(false);
+                onBackToWelcome();
+              }}
+              className="w-full py-3.5 bg-[#111215] dark:bg-white text-white dark:text-black font-bold rounded-full shadow-lg active:scale-98 transition-all cursor-pointer"
+            >
+              Back to Overview
+            </button>
           </div>
-        )}
-        <div className="candidate-form-header text-center mb-6">
-          <div className="candidate-form-kicker inline-block px-3 py-1 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-xs font-bold rounded-full mb-3 border border-blue-100 dark:border-blue-800">
-            {jobTitle || 'AI Interview'}
-          </div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Candidate details</h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400">Confirm the required information to continue.</p>
         </div>
-        
-        {userProfile && (
-          <div className="candidate-profile-card mb-6 p-5 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-2xl border border-blue-100 dark:border-blue-800/50 shadow-sm relative overflow-hidden">
-             <div className="flex items-center gap-3 mb-4">
-               <div className="candidate-profile-avatar bg-blue-600 dark:bg-blue-500 text-white w-10 h-10 rounded-xl shadow-md flex items-center justify-center font-black text-lg">
-                 {name.charAt(0).toUpperCase()}
-               </div>
-               <div>
-                 <p className="text-sm text-blue-900 dark:text-blue-200 font-bold mb-0">Profile loaded</p>
-                 <p className="text-xs text-blue-600 dark:text-blue-400 font-medium">These details will guide the interview.</p>
-               </div>
-             </div>
+      )}
 
-             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
-               <div className="candidate-profile-meta bg-white/60 dark:bg-black/20 p-2.5 rounded-lg border border-blue-100/50 dark:border-white/5">
-                 <p className="text-[10px] uppercase font-bold text-blue-500/80 dark:text-blue-400 mb-1">Stated Experience</p>
-                 <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">
-                   {userProfile.experience ? `${userProfile.experience} Years` : 'Fresher / 0 Years'}
-                 </p>
-               </div>
-               
-               <div className="candidate-profile-meta bg-white/60 dark:bg-black/20 p-2.5 rounded-lg border border-blue-100/50 dark:border-white/5">
-                 <p className="text-[10px] uppercase font-bold text-blue-500/80 dark:text-blue-400 mb-1">Top Skills</p>
-                 <div className="flex flex-wrap gap-1">
-                   {userProfile.skills && userProfile.skills.length > 0 ? (
-                     userProfile.skills.slice(0, 3).map((skill: string, i: number) => (
-                       <span key={i} className="candidate-skill-chip px-1.5 py-0.5 bg-blue-100 dark:bg-blue-800/40 text-[10px] rounded font-medium text-blue-700 dark:text-blue-300 whitespace-nowrap">
-                         {skill}
-                       </span>
-                     ))
-                   ) : (
-                     <span className="text-xs font-medium text-gray-500">Not specified</span>
-                   )}
-                   {userProfile.skills && userProfile.skills.length > 3 && (
-                     <span className="text-[10px] text-gray-500 font-medium self-center">+{userProfile.skills.length - 3}</span>
-                   )}
-                 </div>
-               </div>
-             </div>
-          </div>
-        )}
+      {/* Header */}
+      <div className="text-center mb-6 space-y-2">
+        <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold bg-[#D4F82C] text-[#111215] border border-[#8FB305]/30 tracking-wide uppercase shadow-sm">
+          <Video size={13} className="text-[#111215]" />
+          <span>{jobTitle || 'AI Video Pre-Screening'}</span>
+        </span>
+        <h2 className="text-2xl sm:text-3xl font-black text-[#111215] dark:text-[#F8F9F5] tracking-tight">
+          Candidate Verification
+        </h2>
+        <p className="text-xs sm:text-sm font-medium text-[#575A51] dark:text-neutral-400 max-w-md mx-auto">
+          Enter your registered email address or mobile number to load your profile and begin your interview.
+        </p>
+      </div>
 
-        {errorMsg && <div className="candidate-form-alert mb-4 p-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg text-sm">{errorMsg}</div>}
-        
-        <form onSubmit={handleSubmit} className="candidate-form-body space-y-4">
-          {/* Step Indicator */}
-          <div className="flex justify-between items-center mb-6">
-             <div className={`h-2 flex-1 rounded-l-full ${formStep >= 1 ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'}`}></div>
-             <div className={`h-2 flex-1 mx-1 ${formStep >= 2 ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'}`}></div>
-             <div className={`h-2 flex-1 rounded-r-full ${formStep >= 3 ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'}`}></div>
-          </div>
+      {/* Error Alert */}
+      {errorMsg && (
+        <div className="mb-5 p-3.5 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-xs font-semibold flex items-center gap-2">
+          <AlertCircle size={15} className="shrink-0" />
+          <span>{errorMsg}</span>
+        </div>
+      )}
 
-          {formStep === 1 && (
-            <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
-              {/* Mandatory Resume Upload First Banner - Day & Night Theme Adaptive */}
-              <div className="candidate-resume-first-card p-4 sm:p-5 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 dark:from-slate-900 dark:via-indigo-950 dark:to-purple-950 text-white rounded-2xl shadow-xl border border-blue-400/40 dark:border-indigo-500/40 relative overflow-hidden transition-all duration-300">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-11 h-11 rounded-xl bg-white/20 dark:bg-white/10 backdrop-blur-md text-white flex items-center justify-center font-black text-xl flex-shrink-0 border border-white/20 shadow-inner">
-                      <i className="fas fa-file-invoice text-xl"></i>
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <h3 className="text-sm sm:text-base font-black text-white mb-0.5 tracking-tight">
-                          Step 1: Upload Resume <span className="text-red-300 dark:text-red-400 font-extrabold">*</span> (Mandatory)
-                        </h3>
-                        {(resumeFile || uploadedResumeUrl || existingResumeUrl || (foundDumpCandidate && (foundDumpCandidate.resumeUrl || foundDumpCandidate.resumeURL))) && (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-400/20 text-emerald-200 border border-emerald-300/40 text-[10px] sm:text-[11px] font-black uppercase tracking-wider">
-                            <i className="fas fa-check-circle text-emerald-300 text-xs"></i> Saved Resume Loaded
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-xs text-blue-100 dark:text-indigo-200/90 font-medium leading-tight mt-0.5">
-                        Upload your resume (PDF, DOCX, TXT) to instantly auto-fill form details.
-                      </p>
-                    </div>
-                  </div>
-
-                  <label
-                    htmlFor="resume-first-upload-input"
-                    className={`px-4 py-2.5 rounded-xl font-black text-xs cursor-pointer flex items-center gap-2 whitespace-nowrap active:scale-95 transition-all shadow-lg select-none ${
-                      isParsingResumeFirst 
-                        ? 'bg-blue-100 text-blue-800 opacity-80 cursor-not-allowed' 
-                        : (resumeFile || uploadedResumeUrl || existingResumeUrl || (foundDumpCandidate && (foundDumpCandidate.resumeUrl || foundDumpCandidate.resumeURL)))
-                          ? 'bg-emerald-500 hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white shadow-emerald-500/30 dark:shadow-emerald-950/60 border border-emerald-300/50'
-                          : 'bg-white hover:bg-blue-50 text-blue-700 dark:bg-white dark:text-blue-900 shadow-blue-500/20'
-                    }`}
-                  >
-                    <i className={
-                      isParsingResumeFirst 
-                        ? "fas fa-spinner fa-spin text-blue-600" 
-                        : (resumeFile || uploadedResumeUrl || existingResumeUrl || (foundDumpCandidate && (foundDumpCandidate.resumeUrl || foundDumpCandidate.resumeURL))) 
-                          ? "fas fa-check-circle text-white text-sm" 
-                          : "fas fa-cloud-upload-alt text-blue-600"
-                    }></i>
-                    <span>
-                      {isParsingResumeFirst 
-                        ? 'Parsing & Auto-filling...' 
-                        : resumeFile 
-                          ? `✓ ${resumeFile.name}` 
-                          : (existingResumeUrl || (foundDumpCandidate && (foundDumpCandidate.resumeUrl || foundDumpCandidate.resumeURL))) 
-                            ? '✓ Saved Resume Loaded' 
-                            : 'Upload Resume File *'
-                      }
-                    </span>
-                  </label>
-                  <input
-                    id="resume-first-upload-input"
-                    type="file"
-                    accept=".pdf,.docx,.txt,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain"
-                    className="hidden"
-                    disabled={isParsingResumeFirst}
-                    onChange={(e) => {
-                      if (e.target.files && e.target.files[0]) {
-                        handleResumeFirstFileChange(e.target.files[0]);
-                      }
-                    }}
-                  />
-                </div>
-
-                {autofillNotice && (
-                  <div className="mt-3 pt-2.5 border-t border-white/20 dark:border-white/10 text-xs font-bold text-emerald-200 dark:text-emerald-300 flex items-center gap-2">
-                    <i className="fas fa-magic text-emerald-300 text-sm"></i>
-                    <span>{autofillNotice}</span>
-                  </div>
-                )}
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider block">Email Address <span className="text-red-500">*</span></label>
-                    {isSearchingResumeDump && (
-                      <span className="text-[11px] text-blue-600 dark:text-blue-400 font-bold flex items-center gap-1.5 bg-blue-50 dark:bg-blue-900/40 px-2.5 py-0.5 rounded-md border border-blue-200 dark:border-blue-800 animate-pulse">
-                        <i className="fas fa-circle-notch fa-spin"></i> Checking saved resume...
-                      </span>
-                    )}
-                  </div>
-                  <input type="email" placeholder="Email Address (e.g. john@example.com)" required value={email} onChange={e => setEmail(e.target.value)} className="w-full p-3 border border-gray-200 rounded-xl dark:bg-gray-700/50 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 outline-none text-gray-900 dark:text-white" />
-                </div>
-                <div>
-                  <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1 block">Full Name <span className="text-red-500">*</span></label>
-                  <input type="text" placeholder="John Doe" required value={name} onChange={e => setName(e.target.value)} className="w-full p-3 border border-gray-200 rounded-xl dark:bg-gray-700/50 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 outline-none text-gray-900 dark:text-white" />
-                </div>
-              </div>
-
-              {foundDumpCandidate && (
-                <div className="p-4 bg-emerald-50 dark:bg-emerald-950/70 border border-emerald-300 dark:border-emerald-700/80 rounded-2xl flex flex-wrap items-center justify-between gap-3 text-xs text-emerald-900 dark:text-emerald-100 shadow-md animate-in fade-in duration-300">
-                  <div className="flex items-center gap-3 font-bold">
-                    <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-extrabold text-base flex-shrink-0 shadow-md">
-                      <i className="fas fa-check"></i>
-                    </div>
-                    <div>
-                      <p className="font-black text-xs sm:text-sm">Saved Resume Profile Found for <span className="underline font-extrabold">{foundDumpCandidate.email}</span></p>
-                      <p className="text-[11px] font-medium text-emerald-800 dark:text-emerald-300 mt-0.5">Details autofilled automatically from database. Review or edit below.</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {(uploadedResumeUrl || foundDumpCandidate.resumeUrl || foundDumpCandidate.resumeURL) && (
-                      <button
-                        type="button"
-                        onClick={() => setPreviewModalUrl(uploadedResumeUrl || foundDumpCandidate.resumeUrl || foundDumpCandidate.resumeURL)}
-                        className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-600 text-white font-extrabold flex items-center gap-1.5 transition-all shadow-md text-xs cursor-pointer active:scale-95"
-                      >
-                        <i className="fas fa-eye text-sm"></i>
-                        <span>View Saved Resume</span>
-                      </button>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              <div>
-                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1 block">Contact Number <span className="text-red-500">*</span></label>
-                <input type="tel" required placeholder="e.g. 9545556045 or +91 9545556045" value={phone} onChange={e => setPhone(e.target.value)} className="w-full p-3 border border-gray-200 rounded-xl dark:bg-gray-700/50 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 outline-none" />
-              </div>
-
-              <div className="candidate-form-section bg-gray-50 dark:bg-gray-900/30 p-5 rounded-xl border border-gray-200 dark:border-gray-700 space-y-4 mt-6">
-                <h3 className="text-sm font-bold text-gray-800 dark:text-gray-200 uppercase tracking-wider mb-3">Personal Details</h3>
-                
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                   <div>
-                     <label className="text-xs font-bold text-gray-500 block mb-1">Gender <span className="text-red-500">*</span></label>
-                     <select required value={gender} onChange={e => setGender(e.target.value)} className="w-full p-2.5 border border-gray-200 rounded-lg dark:bg-gray-700/50 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 outline-none text-sm">
-                        <option value="" disabled>Select</option>
-                        <option value="Male">Male</option>
-                        <option value="Female">Female</option>
-                        <option value="Other">Other</option>
-                     </select>
-                   </div>
-                   <div>
-                     <label className="text-xs font-bold text-gray-500 block mb-1">Date of Birth <span className="text-red-500">*</span></label>
-                     <input type="date" required value={dob} onChange={e => setDob(e.target.value)} className="w-full p-2.5 border border-gray-200 rounded-lg dark:bg-gray-700/50 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 outline-none text-sm" />
-                   </div>
-                   <div>
-                     <label className="text-xs font-bold text-gray-500 block mb-1">Marital Status <span className="text-red-500">*</span></label>
-                     <select required value={maritalStatus} onChange={e => setMaritalStatus(e.target.value)} className="w-full p-2.5 border border-gray-200 rounded-lg dark:bg-gray-700/50 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 outline-none text-sm">
-                        <option value="" disabled>Select</option>
-                        <option value="Single">Single</option>
-                        <option value="Married">Married</option>
-                        <option value="Divorced">Divorced</option>
-                        <option value="Widowed">Widowed</option>
-                     </select>
-                   </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                   <div>
-                     <label className="text-xs font-bold text-gray-500 block mb-1">Current City <span className="text-red-500">*</span></label>
-                     <LocationCityInput
-                       value={currentCity}
-                       onChange={setCurrentCity}
-                       placeholder="Search city (e.g. Nashik, Pune, Mumbai)..."
-                       className="w-full p-2.5 border border-gray-200 rounded-lg dark:bg-gray-700/50 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 outline-none text-sm"
-                     />
-                   </div>
-                   <div>
-                     <label className="text-xs font-bold text-gray-500 block mb-1">Native Place <span className="text-red-500">*</span></label>
-                     <input type="text" placeholder="e.g. Pune" required value={nativePlace} onChange={e => setNativePlace(e.target.value)} className="w-full p-2.5 border border-gray-200 rounded-lg dark:bg-gray-700/50 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 outline-none text-sm" />
-                   </div>
-                   <div>
-                     <div className="flex items-center justify-between mb-1">
-                       <label className="text-xs font-bold text-gray-500 block">Experience (Years)</label>
-                       <label className="flex items-center gap-1 cursor-pointer">
-                         <input type="checkbox" checked={isFresher} onChange={e => setIsFresher(e.target.checked)} className="w-3.5 h-3.5 rounded text-blue-600 border-gray-300 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700" />
-                         <span className="text-[11px] font-semibold text-gray-600 dark:text-gray-400">Fresher</span>
-                       </label>
-                     </div>
-                     <input 
-                       type="number" 
-                       min="0" 
-                       disabled={isFresher} 
-                       placeholder={isFresher ? "0 Years (Fresher)" : "Years (e.g. 2)"} 
-                       value={isFresher ? "0" : totalExperienceYears} 
-                       onChange={e => setTotalExperienceYears(e.target.value)} 
-                       className="w-full p-2.5 border border-gray-200 rounded-lg dark:bg-gray-700/50 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 outline-none text-sm disabled:opacity-60 disabled:bg-gray-100 dark:disabled:bg-gray-800" 
-                     />
-                   </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {formStep === 2 && (
-            <div className="candidate-form-section bg-gray-50 dark:bg-gray-900/30 p-5 rounded-xl border border-gray-200 dark:border-gray-700 space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
-              <h3 className="text-sm font-bold text-gray-800 dark:text-gray-200 uppercase tracking-wider mb-3">Qualifications</h3>
-              <div className="grid grid-cols-1 gap-4">
-                 <div>
-                   <label className="text-xs font-bold text-gray-500 block mb-1">Highest Qualification <span className="text-red-500">*</span></label>
-                   <EducationInput
-                     value={qualificationBasic}
-                     onChange={setQualificationBasic}
-                     placeholder="Search or select degree (e.g. B.Tech Civil, BE Mech, Diploma, MBA, B.Com...)"
-                     className="w-full p-2.5 border border-gray-200 rounded-lg dark:bg-gray-700/50 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 outline-none text-sm"
-                   />
-                 </div>
-              </div>
-
-              <div className="flex items-center justify-between mb-3 mt-6">
-                  <h3 className="text-sm font-bold text-gray-800 dark:text-gray-200 uppercase tracking-wider">Professional Details</h3>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                      <input type="checkbox" checked={isFresher} onChange={e => setIsFresher(e.target.checked)} className="w-4 h-4 rounded text-blue-600 border-gray-300 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700" />
-                      <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">I am a Fresher</span>
-                  </label>
-              </div>
-              
-              {!isFresher && (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                     <div>
-                        <label className="text-xs font-bold text-gray-500 block mb-1">Total Work Experience <span className="text-red-500">*</span></label>
-                        <div className="flex gap-2">
-                           <input type="number" min="0" placeholder="Years" value={totalExperienceYears} onChange={e => setTotalExperienceYears(e.target.value)} className="w-1/2 p-2.5 border border-gray-200 rounded-lg dark:bg-gray-700/50 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 outline-none text-sm" />
-                           <input type="number" min="0" max="11" placeholder="Months" value={totalExperienceMonths} onChange={e => setTotalExperienceMonths(e.target.value)} className="w-1/2 p-2.5 border border-gray-200 rounded-lg dark:bg-gray-700/50 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 outline-none text-sm" />
-                        </div>
-                     </div>
-                     <div>
-                       <label className="text-xs font-bold text-gray-500 block mb-1">Current Company Name <span className="text-red-500">*</span></label>
-                       <input type="text" placeholder="Company Name" value={currentCompanyName} onChange={e => setCurrentCompanyName(e.target.value)} className="w-full p-2.5 border border-gray-200 rounded-lg dark:bg-gray-700/50 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 outline-none text-sm" />
-                     </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                     <div>
-                       <label className="text-xs font-bold text-gray-500 block mb-1">Designation <span className="text-red-500">*</span></label>
-                       <input type="text" placeholder="e.g. Software Engineer" value={designation} onChange={e => setDesignation(e.target.value)} className="w-full p-2.5 border border-gray-200 rounded-lg dark:bg-gray-700/50 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 outline-none text-sm" />
-                     </div>
-                     <div>
-                       <label className="text-xs font-bold text-gray-500 block mb-1">Current Salary (CTC Per annum) <span className="text-red-500">*</span></label>
-                       <input type="text" placeholder="e.g. 6.5 LPA" value={currentSalary} onChange={e => setCurrentSalary(e.target.value)} className="w-full p-2.5 border border-gray-200 rounded-lg dark:bg-gray-700/50 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 outline-none text-sm" />
-                     </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                     <div>
-                       <label className="text-xs font-bold text-gray-500 block mb-1">Notice Period (in number of days) <span className="text-red-500">*</span></label>
-                       <input type="number" min="0" placeholder="e.g. 30" value={noticePeriodDays} onChange={e => setNoticePeriodDays(e.target.value)} className="w-full p-2.5 border border-gray-200 rounded-lg dark:bg-gray-700/50 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 outline-none text-sm" />
-                     </div>
-                     <div>
-                       <label className="text-xs font-bold text-gray-500 block mb-1">Reason for job change <span className="text-red-500">*</span></label>
-                       <select value={reasonForJobChange} onChange={e => setReasonForJobChange(e.target.value)} className="w-full p-2.5 border border-gray-200 rounded-lg dark:bg-gray-700/50 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 outline-none text-sm">
-                          <option value="" disabled>Select reason</option>
-                          <option value="Salary Growth">Salary Growth</option>
-                          <option value="Professional Development">Professional Development</option>
-                          <option value="Job location not suitable">Job location not suitable</option>
-                          <option value="Job Timing not suitable">Job Timing not suitable</option>
-                          <option value="Company shut down / Layoff">Company shut down / Layoff</option>
-                          <option value="Currently not working">Currently not working</option>
-                          <option value="Prefer not to disclose">Prefer not to disclose</option>
-                       </select>
-                     </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {formStep === 3 && (
-            <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
-              <div className="candidate-form-section bg-gray-50 dark:bg-gray-900/30 p-5 rounded-xl border border-gray-200 dark:border-gray-700 space-y-4">
-                <h3 className="text-sm font-bold text-gray-800 dark:text-gray-200 uppercase tracking-wider mb-3">Additional Details</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                   <div>
-                     <label className="text-xs font-bold text-gray-500 block mb-1">Upload updated resume: <span className="text-red-500">*</span></label>
-                     <select required value={resumeUpdated} onChange={e => setResumeUpdated(e.target.value)} className="w-full p-2.5 border border-gray-200 rounded-lg dark:bg-gray-700/50 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 outline-none text-sm">
-                        <option value="" disabled>Select</option>
-                        <option value="Yes">Yes, it is updated</option>
-                        <option value="No">No, but I will update it later</option>
-                     </select>
-                   </div>
-                   <div>
-                     <label className="text-xs font-bold text-gray-500 block mb-1">Select skills as per the JD (Optional)</label>
-                     <div className="flex flex-col gap-2">
-                       <select 
-                         className="w-full p-2.5 border border-gray-200 rounded-lg dark:bg-gray-700/50 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 outline-none text-sm text-gray-500"
-                         onChange={(e) => {
-                           if (e.target.value) {
-                             const currentSkills = highlightedSkillsForJob ? highlightedSkillsForJob.split(',').map(s => s.trim()).filter(s => s) : [];
-                             if (!currentSkills.includes(e.target.value)) {
-                               setHighlightedSkillsForJob([...currentSkills, e.target.value].join(', '));
-                             }
-                             e.target.value = "";
-                           }
-                         }}
-                       >
-                         <option value="">-- Add predefined skills --</option>
-                         {["JavaScript", "TypeScript", "React", "Node.js", "Python", "Java", "C#", "C++", "SQL", "MongoDB", "AWS", "Docker", "Kubernetes", "Machine Learning", "Data Science", "UI/UX Design", "Project Management", "Digital Marketing", "Sales", "Customer Support", "Accounting", "Tally", "ERP", "SAP"].map(skill => (
-                           <option key={skill} value={skill}>{skill}</option>
-                         ))}
-                       </select>
-                       <div className="flex gap-2">
-                         <input
-                           type="text"
-                           value={manualSkillInput}
-                           onChange={e => setManualSkillInput(e.target.value)}
-                           onKeyDown={e => {
-                             if (e.key === 'Enter') {
-                               e.preventDefault();
-                               const val = manualSkillInput.trim();
-                               if (val) {
-                                 const currentSkills = highlightedSkillsForJob ? highlightedSkillsForJob.split(',').map(s => s.trim()).filter(s => s) : [];
-                                 if (!currentSkills.includes(val)) {
-                                   setHighlightedSkillsForJob([...currentSkills, val].join(', '));
-                                 }
-                                 setManualSkillInput('');
-                               }
-                             }
-                           }}
-                           placeholder="Or type a skill and click Add"
-                           className="flex-1 p-2.5 border border-gray-200 rounded-lg dark:bg-gray-700/50 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 outline-none text-sm"
-                         />
-                         <button
-                           type="button"
-                           onClick={() => {
-                             const val = manualSkillInput.trim();
-                             if (val) {
-                               const currentSkills = highlightedSkillsForJob ? highlightedSkillsForJob.split(',').map(s => s.trim()).filter(s => s) : [];
-                               if (!currentSkills.includes(val)) {
-                                 setHighlightedSkillsForJob([...currentSkills, val].join(', '));
-                               }
-                               setManualSkillInput('');
-                             }
-                           }}
-                           className="px-4 py-2.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 font-bold rounded-lg border border-blue-200 dark:border-blue-800 hover:bg-blue-200 dark:hover:bg-blue-800/50 transition-colors whitespace-nowrap text-sm"
-                         >
-                           Add
-                         </button>
-                       </div>
-                       {highlightedSkillsForJob && (
-                         <div className="flex flex-wrap gap-2 mt-1">
-                           {highlightedSkillsForJob.split(',').map(s => s.trim()).filter(s => s).map(skill => (
-                             <span key={skill} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 text-xs font-semibold text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700">
-                               {skill}
-                               <button 
-                                 type="button" 
-                                 onClick={() => {
-                                   const currentSkills = highlightedSkillsForJob.split(',').map(s => s.trim()).filter(s => s);
-                                   setHighlightedSkillsForJob(currentSkills.filter(s => s !== skill).join(', '));
-                                 }}
-                                 className="text-gray-400 hover:text-red-500 focus:outline-none transition-colors"
-                               >
-                                 <i className="fas fa-times text-[10px]"></i>
-                               </button>
-                             </span>
-                           ))}
-                         </div>
-                       )}
-                     </div>
-                   </div>
-                </div>
-              </div>
-              
-              {/* The label is now inside the LanguageSelector component */}
-              <LanguageSelector selectedLanguage={language} onLanguageChange={setLanguage} className="pt-2" />
-            </div>
-          )}
-
-          {/* Mismatch Alert Notice Banner */}
-          {getProfileMismatches().length > 0 && (
-            <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-700/60 text-amber-900 dark:text-amber-200 space-y-2 my-4 animate-in fade-in duration-300">
-              <div className="flex items-center gap-2 font-bold text-sm text-amber-800 dark:text-amber-300">
-                <i className="fas fa-exclamation-triangle text-amber-600 dark:text-amber-400"></i>
-                <span>Profile Criteria Notice</span>
-              </div>
-              <p className="text-xs leading-relaxed text-amber-800/90 dark:text-amber-300/90">
-                Your specified profile details differ from the preferred criteria for this role:
-              </p>
-              <ul className="list-disc list-inside text-xs font-semibold space-y-1 pl-1">
-                {getProfileMismatches().map((msg, idx) => (
-                  <li key={idx} className="text-amber-900 dark:text-amber-200">{msg}</li>
-                ))}
-              </ul>
-              <div className="text-xs pt-2 border-t border-amber-200 dark:border-amber-800/60 flex flex-wrap items-center justify-between gap-2">
-                <span className="font-medium text-amber-800 dark:text-amber-300">
-                  You may still proceed to take the interview, or explore positions tailored to your profile:
-                </span>
-                <a
-                  href="/jobs"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 font-extrabold text-xs text-blue-700 dark:text-blue-400 hover:underline bg-white/90 dark:bg-black/40 px-3 py-1.5 rounded-xl border border-blue-200 dark:border-blue-800 shadow-sm"
-                >
-                  <span>Explore More Matching Jobs</span>
-                  <i className="fas fa-external-link-alt text-[10px]"></i>
-                </a>
-              </div>
-            </div>
-          )}
-
-          <div className="sticky bottom-0 z-30 pt-3.5 pb-3.5 px-4 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-t border-gray-200 dark:border-gray-800 flex gap-4 mt-6 rounded-xl shadow-2xl">
-            {formStep > 1 && (
-              <button 
-                type="button" 
-                onClick={handlePrevious} 
-                className="w-1/3 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 p-3.5 rounded-xl font-bold hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors cursor-pointer"
-              >
-                Previous
-              </button>
-            )}
-            
-            {formStep < 3 ? (
-              <button 
-                type="button" 
-                onClick={handleNext} 
-                className={`${formStep > 1 ? 'w-2/3' : 'w-full'} bg-blue-600 text-white p-3.5 rounded-xl font-bold hover:bg-blue-700 shadow-lg shadow-blue-500/30 transition-all transform hover:-translate-y-0.5 cursor-pointer`}
-              >
-                Next Step
-              </button>
-            ) : (
-              <button 
-                type="submit" 
-                className="w-2/3 bg-green-600 text-white p-3.5 rounded-xl font-bold hover:bg-green-700 shadow-lg shadow-green-500/30 transition-all transform hover:-translate-y-0.5 cursor-pointer"
-              >
-                Proceed to Interview
-              </button>
+      {/* Primary Verification Inputs: Email & Mobile */}
+      <form onSubmit={handleDirectStart} className="space-y-4">
+        <div className="p-4 sm:p-5 rounded-2xl border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-[#1D1F24]/60 space-y-3.5">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] uppercase font-bold tracking-wider text-[#73766C] dark:text-neutral-400">
+              Verify Candidate Credentials
+            </span>
+            {isSearchingResumeDump && (
+              <span className="inline-flex items-center gap-1.5 text-xs text-[#8FB305] dark:text-[#D4F82C] font-bold animate-pulse">
+                <Sparkles size={12} className="animate-spin" />
+                <span>Checking Talent Cloud...</span>
+              </span>
             )}
           </div>
-        </form>
 
-        {/* Resume Document Preview Popup Modal */}
-        {previewModalUrl && (
-          <div className="fixed inset-0 z-[10000] bg-black/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-200">
-            <div className="bg-white dark:bg-slate-900 w-full max-w-4xl h-[90vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-gray-200 dark:border-gray-700">
-              {/* Modal Header */}
-              <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-slate-950 shrink-0">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center text-sm font-bold shadow-sm">
-                    <i className="fas fa-file-pdf"></i>
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-extrabold text-gray-900 dark:text-white">Resume Document Preview</h3>
-                    <p className="text-[11px] font-medium text-gray-500 dark:text-gray-400">{name || email || 'Candidate Resume'}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <a
-                    href={previewModalUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="px-3 py-1.5 rounded-lg bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-300 hover:bg-blue-100 text-xs font-bold transition-all flex items-center gap-1.5 border border-blue-200 dark:border-blue-800"
-                  >
-                    <i className="fas fa-external-link-alt"></i> Open in New Tab
-                  </a>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="text-[11px] font-bold text-[#575A51] dark:text-neutral-400 mb-1 flex items-center gap-1">
+                <Mail size={12} />
+                <span>Registered Email</span>
+              </label>
+              <input
+                type="email"
+                placeholder="name@example.com"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] text-[#111215] dark:text-[#F8F9F5] text-xs font-medium focus:outline-none focus:ring-2 focus:ring-[#8FB305] transition-all"
+              />
+            </div>
+
+            <div>
+              <label className="text-[11px] font-bold text-[#575A51] dark:text-neutral-400 mb-1 flex items-center gap-1">
+                <Phone size={12} />
+                <span>Mobile Number</span>
+              </label>
+              <input
+                type="tel"
+                placeholder="e.g. 9876543210"
+                value={phone}
+                onChange={e => setPhone(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] text-[#111215] dark:text-[#F8F9F5] text-xs font-medium focus:outline-none focus:ring-2 focus:ring-[#8FB305] transition-all"
+              />
+            </div>
+          </div>
+
+          <p className="text-[10px] text-[#73766C] dark:text-neutral-400 leading-tight">
+            ⚡ If you received an invite link, your email or mobile is matched with our database to auto-load your profile.
+          </p>
+        </div>
+
+        {/* 1. IF PRESENT IN RESUME DUMP: LOAD PROFILE FROM THERE */}
+        {foundDumpCandidate ? (
+          <div className="p-5 rounded-2xl border border-emerald-500/30 bg-emerald-500/[0.05] dark:bg-emerald-500/[0.08] space-y-4 animate-in fade-in duration-300">
+            <div className="flex items-center justify-between">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                <ShieldCheck size={13} />
+                <span>Profile Loaded from Resume Dump</span>
+              </span>
+              <div className="flex items-center gap-2">
+                {(uploadedResumeUrl || foundDumpCandidate.resumeUrl || foundDumpCandidate.resumeURL) && (
                   <button
                     type="button"
-                    onClick={() => setPreviewModalUrl(null)}
-                    className="w-8 h-8 rounded-lg bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 flex items-center justify-center text-sm font-bold transition-all cursor-pointer"
+                    onClick={() => setPreviewModalUrl(uploadedResumeUrl || foundDumpCandidate.resumeUrl || foundDumpCandidate.resumeURL)}
+                    className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 dark:text-emerald-400 hover:underline cursor-pointer"
                   >
-                    <i className="fas fa-times"></i>
+                    <Eye size={12} />
+                    <span>View Stored Resume</span>
                   </button>
-                </div>
-              </div>
-
-              {/* Modal Body / Embedded PDF/Doc Iframe */}
-              <div className="flex-1 bg-gray-100 dark:bg-slate-950 relative overflow-hidden">
-                <iframe
-                  src={previewModalUrl.includes('google.com') || previewModalUrl.endsWith('.doc') || previewModalUrl.endsWith('.docx')
-                    ? `https://docs.google.com/gview?url=${encodeURIComponent(previewModalUrl)}&embedded=true`
-                    : previewModalUrl}
-                  title="Resume Preview Modal"
-                  className="w-full h-full border-0"
+                )}
+                <label
+                  htmlFor="resume-update-optional"
+                  className="inline-flex items-center gap-1 text-[11px] font-bold text-[#575A51] dark:text-neutral-400 hover:text-[#111215] dark:hover:text-[#F8F9F5] cursor-pointer"
+                >
+                  <RefreshCw size={11} />
+                  <span>{resumeFile ? `Updated: ${resumeFile.name}` : 'Update Resume'}</span>
+                </label>
+                <input
+                  id="resume-update-optional"
+                  type="file"
+                  accept=".pdf,.docx,.txt,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain"
+                  className="hidden"
+                  onChange={e => {
+                    if (e.target.files && e.target.files[0]) {
+                      handleResumeFileChange(e.target.files[0]);
+                    }
+                  }}
                 />
               </div>
             </div>
+
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-[#111215] text-[#D4F82C] dark:bg-[#D4F82C] dark:text-[#111215] flex items-center justify-center font-black text-lg shadow-md shrink-0">
+                {candidateDisplayName.charAt(0).toUpperCase()}
+              </div>
+              <div className="min-w-0">
+                <h3 className="text-base sm:text-lg font-black text-[#111215] dark:text-[#F8F9F5] truncate">
+                  {candidateDisplayName}
+                </h3>
+                <p className="text-xs text-[#575A51] dark:text-neutral-400 truncate">
+                  {email || foundDumpCandidate.email || 'Email on file'} {phone || foundDumpCandidate.phone ? `• ${phone || foundDumpCandidate.phone}` : ''}
+                </p>
+              </div>
+            </div>
+
+            {/* Bento Details Grid */}
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <div className="p-2.5 rounded-xl bg-white/70 dark:bg-white/5 border border-emerald-500/20">
+                <span className="text-[10px] uppercase font-bold text-[#73766C] dark:text-neutral-400 block mb-0.5">Experience</span>
+                <span className="font-bold text-[#111215] dark:text-[#F8F9F5] truncate block">
+                  {candidateDisplayExp}
+                </span>
+              </div>
+
+              <div className="p-2.5 rounded-xl bg-white/70 dark:bg-white/5 border border-emerald-500/20">
+                <span className="text-[10px] uppercase font-bold text-[#73766C] dark:text-neutral-400 block mb-0.5">Role / Company</span>
+                <span className="font-bold text-[#111215] dark:text-[#F8F9F5] truncate block">
+                  {candidateRoleInfo ? `${candidateRoleInfo}${candidateCompanyInfo ? ` @ ${candidateCompanyInfo}` : ''}` : 'Ready for Evaluation'}
+                </span>
+              </div>
+
+              {candidateEdu && (
+                <div className="p-2.5 rounded-xl bg-white/70 dark:bg-white/5 border border-emerald-500/20">
+                  <span className="text-[10px] uppercase font-bold text-[#73766C] dark:text-neutral-400 block mb-0.5">Highest Qualification</span>
+                  <span className="font-bold text-[#111215] dark:text-[#F8F9F5] truncate block">
+                    {typeof candidateEdu === 'string' ? candidateEdu : formatCandidateEducationString(candidateEdu)}
+                  </span>
+                </div>
+              )}
+
+              <div className="p-2.5 rounded-xl bg-white/70 dark:bg-white/5 border border-emerald-500/20">
+                <span className="text-[10px] uppercase font-bold text-[#73766C] dark:text-neutral-400 block mb-0.5">Resume Status</span>
+                <span className="font-bold text-emerald-600 dark:text-emerald-400 truncate flex items-center gap-1">
+                  <Check size={12} />
+                  <span>{resumeFile ? 'New Resume Attached' : 'Loaded from Resume Dump'}</span>
+                </span>
+              </div>
+            </div>
+
+            {/* DIRECT START AI INTERVIEW BUTTON */}
+            <button
+              type="button"
+              onClick={handleDirectStart}
+              className="w-full py-4 px-6 rounded-full font-black text-sm sm:text-base bg-[#D4F82C] text-[#111215] hover:bg-[#c7eb22] shadow-xl shadow-[#D4F82C]/25 active:scale-95 transition-all flex items-center justify-center gap-2.5 cursor-pointer mt-2"
+            >
+              <Video size={18} />
+              <span>Direct Start AI Video Interview</span>
+              <ArrowRight size={18} />
+            </button>
+          </div>
+        ) : (
+          /* 2. ELSE: NOT IN RESUME DUMP -> GIVE OPTION TO ADD RESUME */
+          <div className="space-y-3.5 animate-in fade-in duration-300">
+            {(email.trim() || phone.trim()) && !isSearchingResumeDump && (
+              <div className="p-3.5 rounded-2xl border border-amber-500/25 bg-amber-500/10 text-amber-800 dark:text-amber-200 text-xs flex items-start gap-2.5">
+                <AlertCircle size={16} className="shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" />
+                <div>
+                  <p className="font-bold">Not Found in Resume Dump</p>
+                  <p className="text-[11px] opacity-85 mt-0.5">
+                    We could not find an existing profile with this email or mobile. Please add your resume below to continue.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <div className="p-4 sm:p-5 rounded-2xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] space-y-3.5 shadow-sm">
+              <div>
+                <label className="text-[11px] font-bold text-[#575A51] dark:text-neutral-400 mb-1 flex items-center gap-1">
+                  <User size={12} />
+                  <span>Full Name <span className="text-red-500">*</span></span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. John Doe"
+                  value={name}
+                  onChange={e => setName(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-[#1D1F24] text-[#111215] dark:text-[#F8F9F5] text-xs font-medium focus:outline-none focus:ring-2 focus:ring-[#8FB305] transition-all"
+                />
+              </div>
+
+              {/* Option to Add Resume */}
+              <div>
+                <label className="text-[11px] font-bold text-[#575A51] dark:text-neutral-400 mb-1.5 flex items-center justify-between">
+                  <span className="flex items-center gap-1">
+                    <FileText size={12} />
+                    <span>Upload Resume <span className="text-red-500">*</span></span>
+                  </span>
+                  {hasResumeLoaded && (
+                    <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-0.5">
+                      <Check size={10} /> Ready for Evaluation
+                    </span>
+                  )}
+                </label>
+
+                <label
+                  htmlFor="resume-upload-simple"
+                  className={`w-full flex flex-col items-center justify-center gap-2 p-5 rounded-2xl border-2 border-dashed transition-all cursor-pointer ${
+                    resumeFile
+                      ? 'border-emerald-500/40 bg-emerald-500/[0.05] text-emerald-700 dark:text-emerald-300'
+                      : 'border-[#E4E7DC] dark:border-white/15 bg-[#F8F9F5] dark:bg-[#1D1F24]/50 hover:border-[#8FB305] text-[#575A51] dark:text-neutral-300'
+                  }`}
+                >
+                  <div className="w-10 h-10 rounded-full bg-[#111215] text-[#D4F82C] dark:bg-[#D4F82C] dark:text-[#111215] flex items-center justify-center shadow-sm">
+                    <UploadCloud size={20} />
+                  </div>
+                  <div className="text-center">
+                    <p className="text-xs font-bold text-[#111215] dark:text-[#F8F9F5]">
+                      {isParsingResumeFirst
+                        ? 'Parsing resume details...'
+                        : resumeFile
+                        ? `✓ ${resumeFile.name}`
+                        : 'Click to Add Resume or Drag & Drop'}
+                    </p>
+                    <p className="text-[10px] text-[#73766C] dark:text-neutral-400 mt-0.5">
+                      PDF, DOCX or TXT (Max 10MB) • Details will auto-extract
+                    </p>
+                  </div>
+                </label>
+                <input
+                  id="resume-upload-simple"
+                  type="file"
+                  accept=".pdf,.docx,.txt,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain"
+                  className="hidden"
+                  onChange={e => {
+                    if (e.target.files && e.target.files[0]) {
+                      handleResumeFileChange(e.target.files[0]);
+                    }
+                  }}
+                />
+              </div>
+
+              {autofillNotice && (
+                <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1">
+                  <Sparkles size={11} />
+                  <span>{autofillNotice}</span>
+                </p>
+              )}
+            </div>
+
+            {/* Standard Start Button */}
+            <button
+              type="submit"
+              className="w-full py-4 px-6 rounded-full font-black text-sm bg-[#111215] hover:bg-[#202227] text-white dark:bg-[#D4F82C] dark:text-[#111215] dark:hover:bg-[#c7eb22] shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <Video size={16} />
+              <span>Proceed to AI Video Interview</span>
+              <ArrowRight size={16} />
+            </button>
           </div>
         )}
-      </div>
+      </form>
+
+      {/* Resume Document Preview Popup Modal */}
+      {previewModalUrl && (
+        <div className="fixed inset-0 z-[10000] bg-black/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-[#15161A] w-full max-w-4xl h-[90vh] rounded-3xl shadow-2xl flex flex-col overflow-hidden border border-[#E4E7DC] dark:border-white/10">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-full bg-[#111215] text-[#D4F82C] dark:bg-[#D4F82C] dark:text-[#111215] flex items-center justify-center text-sm font-bold shadow-sm">
+                  <FileText size={15} />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-[#111215] dark:text-[#F8F9F5]">Resume Document Preview</h3>
+                  <p className="text-[11px] font-medium text-[#575A51] dark:text-neutral-400">{name || email || 'Candidate Resume'}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <a
+                  href={previewModalUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-3.5 py-1.5 rounded-full bg-[#F8F9F5] dark:bg-white/5 text-[#111215] dark:text-[#F8F9F5] hover:bg-[#E4E7DC] text-xs font-bold transition-all flex items-center gap-1.5 border border-[#E4E7DC] dark:border-white/10"
+                >
+                  <ExternalLink size={12} />
+                  <span>Open in Tab</span>
+                </a>
+                <button
+                  type="button"
+                  onClick={() => setPreviewModalUrl(null)}
+                  className="w-8 h-8 rounded-full border border-[#E4E7DC] dark:border-white/10 text-[#575A51] dark:text-neutral-400 hover:text-black dark:hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Body */}
+            <div className="flex-1 bg-neutral-100 dark:bg-black/50 relative overflow-hidden">
+              <iframe
+                src={previewModalUrl.includes('google.com') || previewModalUrl.endsWith('.doc') || previewModalUrl.endsWith('.docx')
+                  ? `https://docs.google.com/gview?url=${encodeURIComponent(previewModalUrl)}&embedded=true`
+                  : previewModalUrl}
+                title="Resume Preview Modal"
+                className="w-full h-full border-0"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 };
+
 
 // --- Component: Virtual Avatar Instructions ---
 
@@ -1685,159 +1453,224 @@ const InterviewReadinessOnboarding: React.FC<{
   };
 
   return (
-    <div className="readiness-shell">
-      <div className="readiness-frame">
-        <div className="readiness-topbar">
-          <div>
-            <div className="readiness-label">Role: {interview.title}</div>
-            <h2 className="readiness-heading">{stages[activeStage].title}</h2>
+    <div className="w-full max-w-3xl mx-auto p-6 sm:p-8 rounded-3xl bg-white dark:bg-[#16171C] border border-[#E4E7DC] dark:border-white/10 shadow-xl space-y-6 animate-in fade-in duration-500">
+      {/* Topbar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#E4E7DC] dark:border-white/10 pb-5">
+        <div>
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#111215] text-[#D4F82C] text-[11px] font-black uppercase tracking-wider shadow-sm">
+            <Briefcase size={12} className="text-[#D4F82C]" />
+            <span>Role: {interview.title}</span>
+          </span>
+          <h2 className="text-xl sm:text-2xl font-black text-[#111215] dark:text-white mt-2 tracking-tight">
+            {stages[activeStage].title}
+          </h2>
+        </div>
+        <div className="flex items-center gap-3">
+          <button 
+            type="button" 
+            onClick={playStageAudio}
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#F8F9F5] dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 text-xs font-bold text-[#111215] dark:text-white hover:bg-[#E4E7DC]/60 transition-all cursor-pointer shadow-sm"
+          >
+            <Volume2 size={13} className={isSpeaking ? 'text-[#8FB305] animate-pulse' : 'text-[#73766C]'} />
+            <span>{isSpeaking ? 'Reading...' : 'Replay Voice'}</span>
+          </button>
+          <span className="text-xs font-black text-[#73766C] dark:text-neutral-400 bg-[#F8F9F5] dark:bg-white/5 px-3 py-1 rounded-full border border-[#E4E7DC] dark:border-white/10">
+            {activeStage + 1} / {stages.length}
+          </span>
+        </div>
+      </div>
+
+      {/* Progress Pill Track */}
+      <div className="flex items-center gap-2">
+        {stages.map((stage, index) => (
+          <span
+            key={stage.title}
+            className={`h-2 rounded-full transition-all duration-300 ${
+              index === activeStage 
+                ? 'w-10 bg-[#111215] dark:bg-[#D4F82C]' 
+                : index < activeStage 
+                  ? 'w-6 bg-[#111215]/50 dark:bg-[#D4F82C]/50' 
+                  : 'w-3 bg-[#E4E7DC] dark:bg-white/15'
+            }`}
+          ></span>
+        ))}
+      </div>
+
+      {/* Stage 0: Camera Check */}
+      {activeStage === 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 p-5 rounded-2xl bg-[#F8F9F5] dark:bg-white/[0.02] border border-[#E4E7DC] dark:border-white/10">
+          <div className="relative rounded-2xl overflow-hidden bg-[#111215] aspect-video sm:aspect-square flex items-center justify-center border border-white/10 shadow-inner">
+            <video ref={previewVideoRef} autoPlay muted playsInline className="w-full h-full object-cover" />
+            <div className="absolute inset-0 border-2 border-dashed border-[#D4F82C]/40 rounded-2xl pointer-events-none m-4"></div>
           </div>
-          <div className="readiness-topbar-right">
-            <button type="button" className="readiness-audio-btn" onClick={playStageAudio}>
-              <i className={`fas ${isSpeaking ? 'fa-volume-up' : 'fa-rotate-right'}`}></i>
-              {isSpeaking ? 'Reading' : 'Replay'}
+
+          <div className="flex flex-col justify-between space-y-4">
+            <div>
+              <p className="text-sm font-black text-[#111215] dark:text-white mb-2">Camera Alignment</p>
+              <p className="text-xs text-[#575A51] dark:text-[#A1A49B] mb-4">Center your face inside the viewfinder and ensure proper room lighting.</p>
+
+              <div className="space-y-2">
+                {['Face fully visible in frame', 'Sit upright & comfortable', 'Look directly at the webcam'].map((tip) => (
+                  <div key={tip} className="flex items-center gap-2 text-xs font-semibold text-[#111215] dark:text-neutral-300">
+                    <CheckCircle2 size={14} className="text-emerald-500 shrink-0" />
+                    <span>{tip}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className={`p-3 rounded-xl text-xs font-bold flex items-center gap-2 border ${
+              cameraReady 
+                ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20' 
+                : 'bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-500/20'
+            }`}>
+              {cameraReady ? <Check size={14} className="text-emerald-500" /> : <AlertCircle size={14} className="text-rose-500" />}
+              <span>{cameraReady ? 'Camera hardware is ready and verified.' : permissionError || 'Camera permission required.'}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Stage 1: Microphone Check */}
+      {activeStage === 1 && (
+        <div className="space-y-5 p-5 rounded-2xl bg-[#F8F9F5] dark:bg-white/[0.02] border border-[#E4E7DC] dark:border-white/10">
+          <div className="text-center max-w-md mx-auto">
+            <p className="text-sm font-black text-[#111215] dark:text-white mb-1">Microphone Voice Level Test</p>
+            <p className="text-xs text-[#575A51] dark:text-[#A1A49B]">Read the sentence below aloud to verify clear audio input.</p>
+          </div>
+
+          <div className="p-4 rounded-2xl bg-white dark:bg-[#16171C] border border-[#E4E7DC] dark:border-white/10 text-center font-bold text-sm text-[#111215] dark:text-white shadow-sm">
+            "{micPrompt}"
+          </div>
+
+          {/* Audio Meter */}
+          <div className="space-y-2 max-w-md mx-auto">
+            <div className="w-full bg-[#E4E7DC] dark:bg-white/10 rounded-full h-3 overflow-hidden p-0.5">
+              <div
+                className={`h-full rounded-full transition-all duration-150 ${voiceDetected ? 'bg-[#D4F82C]' : 'bg-[#111215]'}`}
+                style={{ width: `${Math.max(8, micLevel * 100)}%` }}
+              ></div>
+            </div>
+            <div className="flex items-center justify-between text-[11px] font-bold text-[#73766C] dark:text-neutral-400">
+              <span className="flex items-center gap-1">
+                <Mic size={12} className={voiceDetected ? 'text-emerald-500' : ''} />
+                <span>{voiceDetected ? 'Voice detected' : 'Listening for audio...'}</span>
+              </span>
+              <span>{Math.round(micLevel * 100)}%</span>
+            </div>
+          </div>
+
+          <div className={`p-3 rounded-xl text-xs font-bold text-center border max-w-md mx-auto ${
+            voiceDetected 
+              ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20' 
+              : 'bg-[#E4E7DC]/50 dark:bg-white/5 text-[#575A51] dark:text-neutral-300 border-[#E4E7DC] dark:border-white/10'
+          }`}>
+            {voiceDetected ? 'Microphone is functioning perfectly.' : 'Speak into your microphone to proceed.'}
+          </div>
+        </div>
+      )}
+
+      {/* Stage 2: Network Connectivity */}
+      {activeStage === 2 && (
+        <div className="space-y-5 p-5 rounded-2xl bg-[#F8F9F5] dark:bg-white/[0.02] border border-[#E4E7DC] dark:border-white/10">
+          <div className="text-center max-w-md mx-auto">
+            <p className="text-sm font-black text-[#111215] dark:text-white mb-1">Network Stability Check</p>
+            <p className="text-xs text-[#575A51] dark:text-[#A1A49B]">Verifying stable latency and bandwidth for video transmission.</p>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="bg-white dark:bg-[#16171C] p-3.5 rounded-2xl border border-[#E4E7DC] dark:border-white/10 text-center">
+              <span className="text-[10px] uppercase font-bold text-[#73766C] dark:text-neutral-400 tracking-wider">Status</span>
+              <p className="text-sm font-black text-[#111215] dark:text-white mt-1">
+                {networkState.online ? networkState.quality.toUpperCase() : 'OFFLINE'}
+              </p>
+            </div>
+            <div className="bg-white dark:bg-[#16171C] p-3.5 rounded-2xl border border-[#E4E7DC] dark:border-white/10 text-center">
+              <span className="text-[10px] uppercase font-bold text-[#73766C] dark:text-neutral-400 tracking-wider">Speed</span>
+              <p className="text-sm font-black text-[#111215] dark:text-white mt-1">
+                {networkState.downlink !== null ? `${networkState.downlink} Mbps` : 'N/A'}
+              </p>
+            </div>
+            <div className="bg-white dark:bg-[#16171C] p-3.5 rounded-2xl border border-[#E4E7DC] dark:border-white/10 text-center">
+              <span className="text-[10px] uppercase font-bold text-[#73766C] dark:text-neutral-400 tracking-wider">Latency</span>
+              <p className="text-sm font-black text-[#111215] dark:text-white mt-1">
+                {networkState.latency !== null ? `${networkState.latency} ms` : 'N/A'}
+              </p>
+            </div>
+            <div className="bg-white dark:bg-[#16171C] p-3.5 rounded-2xl border border-[#E4E7DC] dark:border-white/10 text-center">
+              <span className="text-[10px] uppercase font-bold text-[#73766C] dark:text-neutral-400 tracking-wider">Type</span>
+              <p className="text-sm font-black text-[#111215] dark:text-white mt-1">
+                {networkState.effectiveType || 'Broadband'}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
+            <span className="text-xs font-semibold text-[#575A51] dark:text-[#A1A49B]">
+              {networkState.message}
+            </span>
+            <button 
+              type="button" 
+              onClick={measureNetwork}
+              className="px-4 py-2 rounded-full bg-white dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 text-xs font-bold text-[#111215] dark:text-white hover:bg-[#E4E7DC]/60 transition-all cursor-pointer"
+            >
+              Recheck Speed
             </button>
-            <div className="readiness-step-text">Step {activeStage + 1} / {stages.length}</div>
           </div>
         </div>
+      )}
 
-        <div className="readiness-progress">
-          {stages.map((stage, index) => (
-            <span
-              key={stage.title}
-              className={`readiness-dot ${index === activeStage ? 'is-active' : ''} ${index < activeStage ? 'is-complete' : ''}`}
-            ></span>
-          ))}
+      {/* Stage 3: Summary & Ready */}
+      {activeStage === 3 && (
+        <div className="space-y-4 p-5 rounded-2xl bg-[#F8F9F5] dark:bg-white/[0.02] border border-[#E4E7DC] dark:border-white/10">
+          <p className="text-sm font-black text-[#111215] dark:text-white">All Hardware Checks Verified:</p>
+          <div className="space-y-2.5">
+            {summaryPoints.map((point) => (
+              <div key={point} className="flex items-center gap-3 p-3 rounded-xl bg-white dark:bg-[#16171C] border border-[#E4E7DC] dark:border-white/10 text-xs font-bold text-[#111215] dark:text-white shadow-xs">
+                <CheckCircle2 size={16} className="text-[#8FB305] dark:text-[#D4F82C] shrink-0" />
+                <span>{point}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Action Footer */}
+      <div className="flex items-center justify-between pt-3 border-t border-[#E4E7DC] dark:border-white/10">
+        <div>
+          {activeStage > 0 && (
+            <button 
+              type="button" 
+              onClick={previousStage}
+              className="px-5 py-2.5 rounded-full bg-[#F8F9F5] dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 text-xs font-bold text-[#111215] dark:text-white hover:bg-[#E4E7DC]/60 transition-all cursor-pointer"
+            >
+              Back
+            </button>
+          )}
         </div>
 
-        {activeStage === 0 && (
-          <div className="readiness-stage readiness-camera-stage">
-            <div className="readiness-camera-panel">
-              <div className="readiness-camera-frame">
-                <video ref={previewVideoRef} autoPlay muted playsInline className="readiness-camera-video" />
-                <div className="readiness-camera-mask">
-                  <div className="readiness-camera-mask-box"></div>
-                </div>
-              </div>
-            </div>
-
-            <div className="readiness-content-panel">
-              <p className="readiness-text">Center face in camera frame.</p>
-
-              <div className="readiness-note-list">
-                <div className="readiness-note-item">Face in frame</div>
-                <div className="readiness-note-item">Sit upright</div>
-                <div className="readiness-note-item">Look at camera</div>
-              </div>
-
-              <div className={`readiness-status ${cameraReady ? 'is-success' : 'is-danger'}`}>
-                {cameraReady ? 'Camera is ready.' : permissionError || 'Camera access needed. Check browser permissions.'}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {activeStage === 1 && (
-          <div className="readiness-stage">
-            <div className="readiness-content-panel readiness-content-panel-wide">
-              <p className="readiness-text">Speak aloud to test microphone.</p>
-
-              <div className="readiness-phrase-card">{micPrompt}</div>
-
-              <div className="readiness-waveform">
-                {waveformBars.map((height, index) => (
-                  <span key={index} style={{ height }} className={voiceDetected ? 'is-live' : ''}></span>
-                ))}
-              </div>
-
-              <div className="readiness-meter">
-                <div className="readiness-meter-track">
-                  <div
-                    className={`readiness-meter-fill ${voiceDetected ? 'is-live' : ''}`}
-                    style={{ width: `${Math.max(8, micLevel * 100)}%` }}
-                  ></div>
-                </div>
-                <div className="readiness-meter-text">
-                  <span>{voiceDetected ? 'Mic detected' : 'Waiting for speech'}</span>
-                  <strong>{Math.round(micLevel * 100)}%</strong>
-                </div>
-              </div>
-
-              <div className={`readiness-status ${voiceDetected ? 'is-success' : 'is-neutral'}`}>
-                {voiceDetected ? 'Microphone working.' : 'Speak to continue.'}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {activeStage === 2 && (
-          <div className="readiness-stage">
-            <div className="readiness-content-panel readiness-content-panel-wide">
-              <p className="readiness-text">Checking connection speed.</p>
-
-              <div className="readiness-network-grid">
-                <div className="readiness-network-item">
-                  <span>Status</span>
-                  <strong>{networkState.online ? networkState.quality.toUpperCase() : 'OFFLINE'}</strong>
-                </div>
-                <div className="readiness-network-item">
-                  <span>Downlink</span>
-                  <strong>{networkState.downlink !== null ? `${networkState.downlink} Mbps` : 'Unavailable'}</strong>
-                </div>
-                <div className="readiness-network-item">
-                  <span>Latency</span>
-                  <strong>{networkState.latency !== null ? `${networkState.latency} ms` : 'Unavailable'}</strong>
-                </div>
-                <div className="readiness-network-item">
-                  <span>Type</span>
-                  <strong>{networkState.effectiveType || 'Unknown'}</strong>
-                </div>
-              </div>
-
-              <div className={`readiness-status ${networkState.quality === 'offline' ? 'is-danger' : networkState.quality === 'weak' ? 'is-warning' : 'is-success'}`}>
-                {networkState.message}
-              </div>
-
-              <button type="button" className="readiness-secondary-btn" onClick={measureNetwork}>
-                Recheck connection
-              </button>
-            </div>
-          </div>
-        )}
-
-        {activeStage === 3 && (
-          <div className="readiness-stage">
-            <div className="readiness-content-panel readiness-content-panel-wide">
-              <p className="readiness-text">Ready to begin interview:</p>
-
-              <div className="readiness-summary-list">
-                {summaryPoints.map(point => (
-                  <div key={point} className="readiness-summary-item">{point}</div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        <div className="readiness-actions">
-          <div className="readiness-actions-left">
-            {activeStage > 0 && (
-              <button type="button" className="readiness-secondary-btn" onClick={previousStage}>
-                Back
-              </button>
-            )}
-          </div>
-          <div className="readiness-actions-right">
-            {activeStage < stages.length - 1 ? (
-              <button type="button" className="readiness-primary-btn" disabled={!canContinue} onClick={nextStage}>
-                Continue
-              </button>
-            ) : (
-              <button type="button" className="readiness-primary-btn" disabled={!canContinue} onClick={handleStart}>
-                Start interview
-              </button>
-            )}
-          </div>
+        <div>
+          {activeStage < stages.length - 1 ? (
+            <button 
+              type="button" 
+              disabled={!canContinue} 
+              onClick={nextStage}
+              className="px-7 py-3 rounded-full bg-[#111215] hover:bg-[#202227] text-[#D4F82C] hover:text-white font-black text-xs sm:text-sm shadow-md active:scale-95 disabled:opacity-40 transition-all cursor-pointer flex items-center gap-2"
+            >
+              <span>Continue</span>
+              <ArrowRight size={14} />
+            </button>
+          ) : (
+            <button 
+              type="button" 
+              disabled={!canContinue} 
+              onClick={handleStart}
+              className="px-8 py-3.5 rounded-full bg-[#111215] hover:bg-[#202227] text-[#D4F82C] hover:text-white font-black text-xs sm:text-sm shadow-lg shadow-black/15 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-40 transition-all cursor-pointer flex items-center gap-2"
+            >
+              <span>Start Video Interview</span>
+              <Zap size={15} className="fill-[#D4F82C]" />
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -1902,42 +1735,40 @@ const InterviewWelcomeScreen: React.FC<{
   }, [interview.title]);
 
   return (
-    <div className="w-full max-w-3xl mx-auto px-4 py-6 text-center animate-in fade-in slide-in-from-bottom-6 duration-500">
-      {/* Hologram Avatar card */}
-      <div className="mb-6 max-w-sm mx-auto bg-slate-900 dark:bg-slate-950 rounded-2xl p-6 border border-gray-200/10 shadow-2xl relative overflow-hidden flex flex-col items-center justify-center">
+    <div className="w-full max-w-4xl mx-auto px-4 py-4 sm:py-8 text-center animate-in fade-in slide-in-from-bottom-6 duration-500 font-sans">
+      {/* Hologram AI Recruiter Bento Card */}
+      <div className="mb-8 max-w-md mx-auto bg-[#111215] text-white rounded-3xl p-6 sm:p-7 border border-[#23262F] shadow-2xl shadow-black/20 relative overflow-hidden flex flex-col items-center justify-center">
         <style>{`
           @keyframes soundbar {
-            0%, 100% { height: 20%; }
+            0%, 100% { height: 25%; }
             50% { height: 100%; }
           }
         `}</style>
         
-        {/* Holographic scanning effect */}
-        <div className="absolute inset-0 opacity-10 pointer-events-none" style={{
-          backgroundImage: 'radial-gradient(circle, rgba(59,130,246,0.15) 1px, transparent 1px)',
-          backgroundSize: '16px 16px'
-        }}></div>
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-600/10 via-transparent to-purple-600/10 pointer-events-none"></div>
+        {/* Ambient neon lime aura */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(212,248,44,0.14)_0%,transparent_70%)] pointer-events-none" />
+        <div className="absolute -right-8 -top-8 w-32 h-32 rounded-full bg-[#D4F82C]/10 blur-2xl pointer-events-none" />
 
-        <div className="relative w-24 h-24 md:w-32 md:h-32 flex items-center justify-center">
-          <div className={`absolute inset-0 rounded-full border border-dashed border-blue-500/40 ${isSpeaking ? 'animate-spin' : 'animate-[spin_20s_linear_infinite]'} opacity-60`}></div>
-          <div className={`absolute inset-3 rounded-full border border-purple-500/20 bg-purple-500/5 transition-all duration-700 ${
-            isSpeaking ? 'scale-105 opacity-80 shadow-[0_0_25px_rgba(168,85,247,0.3)]' : 'scale-100 opacity-40 shadow-none'
-          }`}></div>
+        <div className="relative w-28 h-28 sm:w-32 sm:h-32 flex items-center justify-center mb-1">
+          {/* Orbiting dashed rings */}
+          <div className={`absolute inset-0 rounded-full border border-dashed border-[#D4F82C]/40 ${isSpeaking ? 'animate-spin' : 'animate-[spin_20s_linear_infinite]'} opacity-70`} />
+          <div className={`absolute inset-2.5 rounded-full border border-[#D4F82C]/20 bg-[#D4F82C]/5 transition-all duration-700 ${
+            isSpeaking ? 'scale-105 opacity-80 shadow-[0_0_25px_rgba(212,248,44,0.3)]' : 'scale-100 opacity-30 shadow-none'
+          }`} />
 
           <svg className="absolute w-full h-full pointer-events-none z-10" viewBox="0 0 100 100">
             <defs>
-              <linearGradient id="welcomeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#3b82f6" />
-                <stop offset="100%" stopColor="#8b5cf6" />
+              <linearGradient id="welcomeLimeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#D4F82C" />
+                <stop offset="100%" stopColor="#8FB305" />
               </linearGradient>
             </defs>
-            <circle cx="50" cy="50" r="32" fill="none" stroke="url(#welcomeGrad)" strokeWidth="1" strokeDasharray="5,15" className={`origin-center transition-all ${isSpeaking ? 'animate-[spin_4s_linear_infinite]' : 'animate-[spin_12s_linear_infinite]'}`} />
-            <circle cx="50" cy="50" r="28" fill="none" stroke="#8b5cf6" strokeWidth="1.5" strokeDasharray="40,20" className={`origin-center transition-all ${isSpeaking ? 'animate-[spin_6s_linear_infinite_reverse] opacity-80' : 'animate-[spin_18s_linear_infinite_reverse] opacity-40'}`} />
+            <circle cx="50" cy="50" r="33" fill="none" stroke="url(#welcomeLimeGrad)" strokeWidth="1.5" strokeDasharray="6,14" className={`origin-center transition-all ${isSpeaking ? 'animate-[spin_4s_linear_infinite]' : 'animate-[spin_12s_linear_infinite]'}`} />
+            <circle cx="50" cy="50" r="28" fill="none" stroke="#D4F82C" strokeWidth="1.5" strokeDasharray="35,25" className={`origin-center transition-all ${isSpeaking ? 'animate-[spin_6s_linear_infinite_reverse] opacity-80' : 'animate-[spin_18s_linear_infinite_reverse] opacity-40'}`} />
           </svg>
 
-          <div className={`relative w-16 h-16 md:w-20 md:h-20 rounded-full overflow-hidden border-2 border-blue-500/50 flex items-center justify-center shadow-[0_0_20px_rgba(59,130,246,0.3)] z-20 transition-all duration-300 ${
-            isSpeaking ? 'scale-105 border-purple-500 shadow-[0_0_30px_rgba(168,85,247,0.5)]' : ''
+          <div className={`relative w-18 h-18 sm:w-20 sm:h-20 rounded-full overflow-hidden border-2 border-[#D4F82C]/70 flex items-center justify-center shadow-[0_0_25px_rgba(212,248,44,0.3)] z-20 transition-all duration-300 ${
+            isSpeaking ? 'scale-105 border-[#D4F82C] shadow-[0_0_35px_rgba(212,248,44,0.5)]' : ''
           }`}>
             <img 
               src="/recruiter_avatar.png" 
@@ -1948,135 +1779,168 @@ const InterviewWelcomeScreen: React.FC<{
         </div>
 
         {/* Small speech frequency wave bars under avatar */}
-        <div className="h-4 flex items-end gap-0.5 mt-2.5 z-10">
+        <div className="h-4 flex items-end gap-1 mt-2 z-10">
           {isSpeaking ? (
             <>
-              <span className="w-0.5 bg-blue-400 rounded-full animate-[soundbar_0.8s_ease-in-out_infinite]" style={{ height: '40%' }}></span>
-              <span className="w-0.5 bg-blue-300 rounded-full animate-[soundbar_0.6s_ease-in-out_infinite_0.1s]" style={{ height: '80%' }}></span>
-              <span className="w-0.5 bg-purple-400 rounded-full animate-[soundbar_0.7s_ease-in-out_infinite_0.3s]" style={{ height: '50%' }}></span>
-              <span className="w-0.5 bg-purple-300 rounded-full animate-[soundbar_0.5s_ease-in-out_infinite_0.2s]" style={{ height: '100%' }}></span>
-              <span className="w-0.5 bg-blue-400 rounded-full animate-[soundbar_0.9s_ease-in-out_infinite_0.4s]" style={{ height: '30%' }}></span>
+              <span className="w-1 bg-[#D4F82C] rounded-full animate-[soundbar_0.8s_ease-in-out_infinite]" style={{ height: '40%' }}></span>
+              <span className="w-1 bg-[#D4F82C] rounded-full animate-[soundbar_0.6s_ease-in-out_infinite_0.1s]" style={{ height: '90%' }}></span>
+              <span className="w-1 bg-[#A4D804] rounded-full animate-[soundbar_0.7s_ease-in-out_infinite_0.3s]" style={{ height: '60%' }}></span>
+              <span className="w-1 bg-[#D4F82C] rounded-full animate-[soundbar_0.5s_ease-in-out_infinite_0.2s]" style={{ height: '100%' }}></span>
+              <span className="w-1 bg-[#D4F82C] rounded-full animate-[soundbar_0.9s_ease-in-out_infinite_0.4s]" style={{ height: '40%' }}></span>
             </>
           ) : (
-            <div className="flex gap-0.5">
-              <span className="w-0.5 h-1 bg-gray-500 rounded-full opacity-40"></span>
-              <span className="w-0.5 h-1 bg-gray-500 rounded-full opacity-40"></span>
-              <span className="w-0.5 h-1 bg-gray-500 rounded-full opacity-40"></span>
-              <span className="w-0.5 h-1 bg-gray-500 rounded-full opacity-40"></span>
-              <span className="w-0.5 h-1 bg-gray-500 rounded-full opacity-40"></span>
+            <div className="flex gap-1">
+              <span className="w-1 h-1 bg-white/30 rounded-full"></span>
+              <span className="w-1 h-1 bg-white/30 rounded-full"></span>
+              <span className="w-1 h-1 bg-white/30 rounded-full"></span>
+              <span className="w-1 h-1 bg-white/30 rounded-full"></span>
+              <span className="w-1 h-1 bg-white/30 rounded-full"></span>
             </div>
           )}
         </div>
 
         <div className="mt-3 text-center z-10 flex flex-col items-center">
-          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition-all duration-300 ${
-            isSpeaking ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider transition-all duration-300 ${
+            isSpeaking ? 'bg-[#D4F82C] text-[#111215] shadow-xs' : 'bg-white/10 text-[#D4F82C] border border-[#D4F82C]/30'
           }`}>
-            <span className={`w-1.5 h-1.5 rounded-full ${isSpeaking ? 'bg-blue-400 animate-ping' : 'bg-emerald-400'}`}></span>
-            {isSpeaking ? 'AI Recruiter speaking' : 'AI Recruiter (Standby)'}
+            <span className={`w-1.5 h-1.5 rounded-full ${isSpeaking ? 'bg-[#111215] animate-ping' : 'bg-[#D4F82C]'}`}></span>
+            {isSpeaking ? 'AI Recruiter Speaking' : 'AI Recruiter (Standby)'}
           </span>
-          <div className="flex flex-wrap items-center justify-center gap-2 mt-2.5 z-20">
+          <div className="flex flex-wrap items-center justify-center gap-2.5 mt-3.5 z-20">
             <button
               type="button"
               onClick={playWelcomeVoice}
-              className="px-4 py-1.5 rounded-full bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold shadow-md flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer"
+              className="px-4 py-2 rounded-full bg-[#D4F82C] hover:bg-[#c7eb22] text-[#111215] text-xs font-black shadow-md shadow-[#D4F82C]/20 flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer"
             >
-              <i className="fas fa-volume-up"></i>
+              <Volume2 className="w-3.5 h-3.5" />
               <span>Listen to Voice Greeting</span>
             </button>
             <button
               type="button"
               onClick={toggleMuteVoice}
-              className={`px-3.5 py-1.5 rounded-full text-xs font-bold shadow-md flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer border ${
+              className={`px-3.5 py-2 rounded-full text-xs font-bold shadow-xs flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer border ${
                 isVoiceMuted
                   ? 'bg-red-500/20 text-red-400 border-red-500/40 hover:bg-red-500/30'
-                  : 'bg-slate-800 text-slate-200 border-slate-700 hover:bg-slate-700'
+                  : 'bg-white/10 text-white/90 border-white/15 hover:bg-white/15'
               }`}
               title={isVoiceMuted ? "Unmute AI Voice" : "Mute AI Voice"}
             >
-              <i className={`fas ${isVoiceMuted ? 'fa-volume-mute text-red-400' : 'fa-volume-up text-blue-400'}`}></i>
+              {isVoiceMuted ? <VolumeX className="w-3.5 h-3.5 text-red-400" /> : <Volume2 className="w-3.5 h-3.5 text-[#D4F82C]" />}
               <span>{isVoiceMuted ? 'Voice Muted' : 'Mute AI Voice'}</span>
             </button>
           </div>
         </div>
       </div>
 
-      {/* Mobile-only Start Onboarding CTA (directly below avatar card for quick access) */}
+      {/* Mobile-only Start Onboarding CTA */}
       <div className="block md:hidden mb-6">
         <button 
           onClick={() => {
             unlockTTSAudio();
             onProceed();
           }}
-          className="w-full max-w-xs px-6 py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-extrabold rounded-2xl shadow-lg shadow-blue-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2 mx-auto"
+          className="w-full max-w-xs px-6 py-3.5 bg-[#111215] hover:bg-black text-white dark:bg-[#D4F82C] dark:hover:bg-[#c7eb22] dark:text-[#111215] font-black rounded-full shadow-lg shadow-black/10 active:scale-[0.98] transition-all flex items-center justify-center gap-2 mx-auto cursor-pointer"
         >
           <span>Start Onboarding</span>
-          <i className="fas fa-arrow-right text-sm"></i>
+          <ArrowRight className="w-4 h-4" />
         </button>
       </div>
 
       {/* Greeting and description */}
-      <h2 className="text-3xl font-extrabold text-gray-900 dark:text-white mb-2">
-        Let's Start Your AI Assessment!
-      </h2>
-      <p className="text-lg text-blue-600 dark:text-blue-400 font-bold mb-6">
-        Role: {interview.title}
-      </p>
-
-      {/* Process flow cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8 text-left">
-        <div className="bg-white dark:bg-white/5 p-5 rounded-2xl border border-gray-200 dark:border-white/10 shadow-sm transition-all hover:scale-[1.02]">
-          <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-3">
-            <i className="fas fa-user-edit text-lg"></i>
-          </div>
-          <h4 className="text-sm font-extrabold text-gray-900 dark:text-white mb-1">1. Access Details</h4>
-          <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">Enter your information and upload your resume for the AI to analyze.</p>
+      <div className="mb-8">
+        <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#111215] text-[#D4F82C] border border-[#23262F] text-[11px] font-mono font-bold uppercase tracking-wider mb-3 shadow-2xs">
+          <Zap className="w-3 h-3 text-[#D4F82C]" />
+          <span>AI Video Pre-Screening</span>
         </div>
-
-        <div className="bg-white dark:bg-white/5 p-5 rounded-2xl border border-gray-200 dark:border-white/10 shadow-sm transition-all hover:scale-[1.02]">
-          <div className="w-10 h-10 rounded-xl bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400 flex items-center justify-center mb-3">
-            <i className="fas fa-file-invoice text-lg"></i>
-          </div>
-          <h4 className="text-sm font-extrabold text-gray-900 dark:text-white mb-1">2. JD & Guidelines</h4>
-          <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">Review job responsibilities and standard rules of the assessment.</p>
-        </div>
-
-        <div className="bg-white dark:bg-white/5 p-5 rounded-2xl border border-gray-200 dark:border-white/10 shadow-sm transition-all hover:scale-[1.02]">
-          <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 flex items-center justify-center mb-3">
-            <i className="fas fa-video text-lg"></i>
-          </div>
-          <h4 className="text-sm font-extrabold text-gray-900 dark:text-white mb-1">3. System Check</h4>
-          <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">Verify your internet speed, microphone, and camera setup.</p>
-        </div>
-
-        <div className="bg-white dark:bg-white/5 p-5 rounded-2xl border border-gray-200 dark:border-white/10 shadow-sm transition-all hover:scale-[1.02]">
-          <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-3">
-            <i className="fas fa-brain text-lg"></i>
-          </div>
-          <h4 className="text-sm font-extrabold text-gray-900 dark:text-white mb-1">4. Interview Session</h4>
-          <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">Face our interactive AI, answer questions, and submit your responses.</p>
+        <h2 className="text-3xl sm:text-4xl md:text-[40px] font-black text-[#111215] dark:text-white tracking-tight leading-tight">
+          Let's Start Your AI Assessment!
+        </h2>
+        <div className="mt-3 flex items-center justify-center gap-2 flex-wrap">
+          <span className="text-sm font-semibold text-[#575A51] dark:text-[#8E9287]">Role:</span>
+          <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-white dark:bg-[#181A20] border border-[#E4E7DC] dark:border-[#2A2D36] text-[#111215] dark:text-white font-black text-xs sm:text-sm shadow-2xs">
+            <span className="w-2 h-2 rounded-full bg-[#D4F82C]"></span>
+            {interview.title}
+          </span>
         </div>
       </div>
 
-      {/* Enhanced Job Details & Highlights Box */}
-      <div className="bg-gradient-to-br from-white to-blue-50/40 dark:from-white/5 dark:to-blue-950/20 rounded-2xl border border-gray-200/80 dark:border-white/10 p-6 mb-8 text-left shadow-sm">
-        <div className="flex flex-wrap items-center justify-between gap-3 mb-4 pb-4 border-b border-gray-100 dark:border-white/10">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center text-sm shadow-sm">
-              <i className="fas fa-briefcase"></i>
+      {/* Process flow cards (Landing Page Bento 4-Col Grid) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8 text-left">
+        <div className="bg-white dark:bg-[#181A20] p-5 rounded-3xl border border-[#E4E7DC] dark:border-[#2A2D36] shadow-2xs hover:border-[#D4F82C] dark:hover:border-[#D4F82C] hover:shadow-lg hover:-translate-y-0.5 transition-all group relative flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <div className="w-10 h-10 rounded-2xl bg-[#111215] text-[#D4F82C] dark:bg-[#23262F] dark:text-[#D4F82C] flex items-center justify-center shadow-2xs group-hover:scale-105 transition-transform">
+                <User className="w-5 h-5" />
+              </div>
+              <span className="text-[10px] font-mono font-black text-[#73766C] dark:text-[#8E9287] uppercase tracking-wider">STEP 01</span>
+            </div>
+            <h4 className="text-sm font-black text-[#111215] dark:text-white mb-1.5">1. Access Details</h4>
+            <p className="text-xs text-[#575A51] dark:text-[#8E9287] leading-relaxed font-medium">Enter your information and upload your resume for the AI to analyze.</p>
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-[#181A20] p-5 rounded-3xl border border-[#E4E7DC] dark:border-[#2A2D36] shadow-2xs hover:border-[#D4F82C] dark:hover:border-[#D4F82C] hover:shadow-lg hover:-translate-y-0.5 transition-all group relative flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <div className="w-10 h-10 rounded-2xl bg-[#111215] text-[#D4F82C] dark:bg-[#23262F] dark:text-[#D4F82C] flex items-center justify-center shadow-2xs group-hover:scale-105 transition-transform">
+                <FileText className="w-5 h-5" />
+              </div>
+              <span className="text-[10px] font-mono font-black text-[#73766C] dark:text-[#8E9287] uppercase tracking-wider">STEP 02</span>
+            </div>
+            <h4 className="text-sm font-black text-[#111215] dark:text-white mb-1.5">2. JD & Guidelines</h4>
+            <p className="text-xs text-[#575A51] dark:text-[#8E9287] leading-relaxed font-medium">Review job responsibilities and standard rules of the assessment.</p>
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-[#181A20] p-5 rounded-3xl border border-[#E4E7DC] dark:border-[#2A2D36] shadow-2xs hover:border-[#D4F82C] dark:hover:border-[#D4F82C] hover:shadow-lg hover:-translate-y-0.5 transition-all group relative flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <div className="w-10 h-10 rounded-2xl bg-[#111215] text-[#D4F82C] dark:bg-[#23262F] dark:text-[#D4F82C] flex items-center justify-center shadow-2xs group-hover:scale-105 transition-transform">
+                <Video className="w-5 h-5" />
+              </div>
+              <span className="text-[10px] font-mono font-black text-[#73766C] dark:text-[#8E9287] uppercase tracking-wider">STEP 03</span>
+            </div>
+            <h4 className="text-sm font-black text-[#111215] dark:text-white mb-1.5">3. System Check</h4>
+            <p className="text-xs text-[#575A51] dark:text-[#8E9287] leading-relaxed font-medium">Verify your internet speed, microphone, and camera setup.</p>
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-[#181A20] p-5 rounded-3xl border border-[#E4E7DC] dark:border-[#2A2D36] shadow-2xs hover:border-[#D4F82C] dark:hover:border-[#D4F82C] hover:shadow-lg hover:-translate-y-0.5 transition-all group relative flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <div className="w-10 h-10 rounded-2xl bg-[#111215] text-[#D4F82C] dark:bg-[#23262F] dark:text-[#D4F82C] flex items-center justify-center shadow-2xs group-hover:scale-105 transition-transform">
+                <BrainCircuit className="w-5 h-5" />
+              </div>
+              <span className="text-[10px] font-mono font-black text-[#73766C] dark:text-[#8E9287] uppercase tracking-wider">STEP 04</span>
+            </div>
+            <h4 className="text-sm font-black text-[#111215] dark:text-white mb-1.5">4. Interview Session</h4>
+            <p className="text-xs text-[#575A51] dark:text-[#8E9287] leading-relaxed font-medium">Face our interactive AI, answer questions, and submit your responses.</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Enhanced Job Details & Highlights Box (Landing Page Bento Card) */}
+      <div className="bg-white dark:bg-[#181A20] rounded-3xl border border-[#E4E7DC] dark:border-[#2A2D36] p-6 sm:p-7 mb-8 text-left shadow-sm relative overflow-hidden">
+        {/* Subtle decorative lime accent line */}
+        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-[#D4F82C] to-transparent opacity-80" />
+
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-5 pb-5 border-b border-[#E4E7DC] dark:border-[#2A2D36]">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-[#111215] text-[#D4F82C] flex items-center justify-center text-sm shadow-2xs">
+              <Briefcase className="w-5 h-5" />
             </div>
             <div>
-              <h4 className="text-sm font-extrabold text-gray-900 dark:text-white uppercase tracking-wider">
+              <h4 className="text-sm font-black text-[#111215] dark:text-white uppercase tracking-wider">
                 Job Overview & Highlights
               </h4>
-              <p className="text-xs text-gray-500 dark:text-gray-400">
+              <p className="text-xs text-[#73766C] dark:text-[#8E9287] font-medium">
                 Key role specifications and assessment details
               </p>
             </div>
           </div>
 
-          <span className="px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/40 text-xs font-bold flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+          <span className="px-3.5 py-1 rounded-full bg-[#D4F82C] text-[#111215] text-xs font-black flex items-center gap-1.5 shadow-2xs">
+            <span className="w-2 h-2 rounded-full bg-[#111215] animate-pulse"></span>
             Actively Hiring
           </span>
         </div>
@@ -2084,63 +1948,63 @@ const InterviewWelcomeScreen: React.FC<{
         {/* Key Job Specifications Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 mb-5">
           {/* Salary / CTC */}
-          <div className="bg-white/80 dark:bg-white/5 p-3 rounded-xl border border-gray-100 dark:border-white/5">
-            <div className="text-[10px] font-bold text-gray-400 dark:text-gray-400 uppercase tracking-wider flex items-center gap-1">
-              <i className="fas fa-indian-rupee-sign text-emerald-500"></i> Salary / CTC
+          <div className="bg-[#F8F9F5] dark:bg-[#111215]/60 p-3.5 rounded-2xl border border-[#E4E7DC] dark:border-[#2A2D36]/80 flex flex-col justify-between">
+            <div className="text-[10px] font-mono font-bold text-[#73766C] dark:text-[#8E9287] uppercase tracking-wider flex items-center gap-1">
+              <IndianRupee className="w-3 h-3 text-[#111215] dark:text-[#D4F82C]" /> CTC
             </div>
-            <div className="text-xs font-black text-gray-900 dark:text-white mt-1 truncate">
+            <div className="text-xs sm:text-sm font-black text-[#111215] dark:text-white mt-1.5 truncate">
               {(interview as any).salary 
                 ? (typeof (interview as any).salary === 'number' ? `₹${((interview as any).salary / 100000).toFixed(1)} LPA` : (interview as any).salary)
-                : ((interview as any).salaryRange || (interview as any).ctc || '₹3.5 LPA - ₹6.0 LPA')}
+                : ((interview as any).salaryRange || (interview as any).ctc || '₹3.5 - 6.0 LPA')}
             </div>
           </div>
 
           {/* Location */}
-          <div className="bg-white/80 dark:bg-white/5 p-3 rounded-xl border border-gray-100 dark:border-white/5">
-            <div className="text-[10px] font-bold text-gray-400 dark:text-gray-400 uppercase tracking-wider flex items-center gap-1">
-              <i className="fas fa-location-dot text-rose-500"></i> Location
+          <div className="bg-[#F8F9F5] dark:bg-[#111215]/60 p-3.5 rounded-2xl border border-[#E4E7DC] dark:border-[#2A2D36]/80 flex flex-col justify-between">
+            <div className="text-[10px] font-mono font-bold text-[#73766C] dark:text-[#8E9287] uppercase tracking-wider flex items-center gap-1">
+              <MapPin className="w-3 h-3 text-[#111215] dark:text-[#D4F82C]" /> Location
             </div>
-            <div className="text-xs font-black text-gray-900 dark:text-white mt-1 truncate">
+            <div className="text-xs sm:text-sm font-black text-[#111215] dark:text-white mt-1.5 truncate">
               {(interview as any).location || (interview as any).jobLocation || (interview as any).city || 'Pune / On-Site'}
             </div>
           </div>
 
           {/* Experience */}
-          <div className="bg-white/80 dark:bg-white/5 p-3 rounded-xl border border-gray-100 dark:border-white/5">
-            <div className="text-[10px] font-bold text-gray-400 dark:text-gray-400 uppercase tracking-wider flex items-center gap-1">
-              <i className="fas fa-user-graduate text-blue-500"></i> Experience
+          <div className="bg-[#F8F9F5] dark:bg-[#111215]/60 p-3.5 rounded-2xl border border-[#E4E7DC] dark:border-[#2A2D36]/80 flex flex-col justify-between">
+            <div className="text-[10px] font-mono font-bold text-[#73766C] dark:text-[#8E9287] uppercase tracking-wider flex items-center gap-1">
+              <GraduationCap className="w-3 h-3 text-[#111215] dark:text-[#D4F82C]" /> Experience
             </div>
-            <div className="text-xs font-black text-gray-900 dark:text-white mt-1 truncate">
+            <div className="text-xs sm:text-sm font-black text-[#111215] dark:text-white mt-1.5 truncate">
               {(interview as any).experienceRequired || (interview as any).experienceLevel || (interview as any).minExperience || (interview as any).experience || '0 - 2 Years'}
             </div>
           </div>
 
           {/* Job Type */}
-          <div className="bg-white/80 dark:bg-white/5 p-3 rounded-xl border border-gray-100 dark:border-white/5">
-            <div className="text-[10px] font-bold text-gray-400 dark:text-gray-400 uppercase tracking-wider flex items-center gap-1">
-              <i className="fas fa-user-clock text-amber-500"></i> Job Type
+          <div className="bg-[#F8F9F5] dark:bg-[#111215]/60 p-3.5 rounded-2xl border border-[#E4E7DC] dark:border-[#2A2D36]/80 flex flex-col justify-between">
+            <div className="text-[10px] font-mono font-bold text-[#73766C] dark:text-[#8E9287] uppercase tracking-wider flex items-center gap-1">
+              <Clock className="w-3 h-3 text-[#111215] dark:text-[#D4F82C]" /> Job Type
             </div>
-            <div className="text-xs font-black text-gray-900 dark:text-white mt-1 truncate">
+            <div className="text-xs sm:text-sm font-black text-[#111215] dark:text-white mt-1.5 truncate">
               {(interview as any).employmentType || (interview as any).jobType || 'Full-Time'}
             </div>
           </div>
 
           {/* Assessment Duration */}
-          <div className="bg-white/80 dark:bg-white/5 p-3 rounded-xl border border-gray-100 dark:border-white/5">
-            <div className="text-[10px] font-bold text-gray-400 dark:text-gray-400 uppercase tracking-wider flex items-center gap-1">
-              <i className="fas fa-stopwatch text-indigo-500"></i> Duration
+          <div className="bg-[#F8F9F5] dark:bg-[#111215]/60 p-3.5 rounded-2xl border border-[#E4E7DC] dark:border-[#2A2D36]/80 flex flex-col justify-between">
+            <div className="text-[10px] font-mono font-bold text-[#73766C] dark:text-[#8E9287] uppercase tracking-wider flex items-center gap-1">
+              <Gauge className="w-3 h-3 text-[#111215] dark:text-[#D4F82C]" /> Duration
             </div>
-            <div className="text-xs font-black text-gray-900 dark:text-white mt-1 truncate">
+            <div className="text-xs sm:text-sm font-black text-[#111215] dark:text-white mt-1.5 truncate">
               {interview.duration || 15} Mins
             </div>
           </div>
 
           {/* Difficulty */}
-          <div className="bg-white/80 dark:bg-white/5 p-3 rounded-xl border border-gray-100 dark:border-white/5">
-            <div className="text-[10px] font-bold text-gray-400 dark:text-gray-400 uppercase tracking-wider flex items-center gap-1">
-              <i className="fas fa-layer-group text-purple-500"></i> Difficulty
+          <div className="bg-[#F8F9F5] dark:bg-[#111215]/60 p-3.5 rounded-2xl border border-[#E4E7DC] dark:border-[#2A2D36]/80 flex flex-col justify-between">
+            <div className="text-[10px] font-mono font-bold text-[#73766C] dark:text-[#8E9287] uppercase tracking-wider flex items-center gap-1">
+              <Sparkles className="w-3 h-3 text-[#111215] dark:text-[#D4F82C]" /> Difficulty
             </div>
-            <div className="text-xs font-black text-gray-900 dark:text-white mt-1 truncate">
+            <div className="text-xs sm:text-sm font-black text-[#111215] dark:text-white mt-1.5 truncate">
               {interview.difficulty || 'Medium'}
             </div>
           </div>
@@ -2148,25 +2012,27 @@ const InterviewWelcomeScreen: React.FC<{
 
         {/* Role Overview Description Text */}
         {interview.description && (
-          <div className="bg-white/60 dark:bg-black/20 p-4 rounded-xl border border-gray-100 dark:border-white/5">
-            <h5 className="text-[11px] font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
-              <i className="fas fa-align-left text-blue-500"></i> Role Description Summary
+          <div className="bg-[#F8F9F5] dark:bg-[#111215]/60 p-4 sm:p-5 rounded-2xl border border-[#E4E7DC] dark:border-[#2A2D36]/80">
+            <h5 className="text-[11px] font-black text-[#111215] dark:text-white uppercase tracking-wider mb-2 flex items-center gap-2">
+              <FileText className="w-3.5 h-3.5 text-[#8FB305]" /> Role Description Summary
             </h5>
-            <FormattedJobDescription description={interview.description} maxLines={4} className="text-xs" />
+            <FormattedJobDescription description={interview.description} maxLines={4} className="text-xs text-[#575A51] dark:text-[#8E9287] leading-relaxed" />
           </div>
         )}
       </div>
 
-      {/* Button to proceed */}
+      {/* Primary CTA Button */}
       <button 
         onClick={() => {
           unlockTTSAudio();
           onProceed();
         }}
-        className="px-10 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-extrabold rounded-2xl shadow-xl shadow-blue-500/25 hover:shadow-blue-500/35 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-2 mx-auto"
+        className="px-8 sm:px-10 py-4 sm:py-4.5 rounded-full bg-[#111215] hover:bg-black text-white dark:bg-[#D4F82C] dark:hover:bg-[#c7eb22] dark:text-[#111215] font-black text-sm sm:text-base shadow-xl shadow-black/10 dark:shadow-[#D4F82C]/15 active:scale-95 transition-all flex items-center gap-3 mx-auto cursor-pointer group"
       >
         <span>Start Onboarding</span>
-        <i className="fas fa-arrow-right"></i>
+        <span className="w-6 h-6 rounded-full bg-[#D4F82C] text-[#111215] dark:bg-[#111215] dark:text-[#D4F82C] flex items-center justify-center font-black text-xs group-hover:translate-x-0.5 transition-transform">
+          →
+        </span>
       </button>
     </div>
   );
@@ -2197,6 +2063,16 @@ const AccessCodeVerificationScreen: React.FC<{
       const tokenDoc = await getDoc(tokenDocRef);
 
       if (!tokenDoc.exists()) {
+        const interviewDoc = await getDoc(doc(db, 'interviews', interviewId)).catch(() => null);
+        const iData = interviewDoc?.data();
+        const codeMatches = iData && (
+          String(iData.accessCode || '').trim().toLowerCase() === token.trim().toLowerCase() ||
+          String(iData.jobNo || '').trim().toLowerCase() === token.trim().toLowerCase()
+        );
+        if (codeMatches) {
+          onSuccess();
+          return;
+        }
         throw new Error("Invalid or expired access code. Please check the code sent to your email.");
       }
 
@@ -2221,31 +2097,31 @@ const AccessCodeVerificationScreen: React.FC<{
   };
 
   return (
-    <div className="w-full max-w-md mx-auto px-4 py-8 bg-white dark:bg-gray-800/60 rounded-3xl border border-gray-200 dark:border-gray-700/50 shadow-xl text-center animate-in fade-in slide-in-from-bottom-6 duration-500">
-      <div className="w-14 h-14 rounded-2xl bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-4 mx-auto">
-        <i className="fas fa-key text-2xl"></i>
+    <div className="w-full max-w-md mx-auto px-6 py-8 bg-white dark:bg-[#181A20] rounded-3xl border border-[#E4E7DC] dark:border-[#2A2D36] shadow-xl text-center animate-in fade-in slide-in-from-bottom-6 duration-500 font-sans">
+      <div className="w-14 h-14 rounded-2xl bg-[#111215] text-[#D4F82C] flex items-center justify-center mb-4 mx-auto shadow-sm">
+        <Key className="w-6 h-6" />
       </div>
 
-      <h3 className="text-xl font-extrabold text-gray-900 dark:text-white mb-2">Access Code Verification</h3>
-      <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed mb-6">
+      <h3 className="text-xl font-black text-[#111215] dark:text-white mb-2">Access Code Verification</h3>
+      <p className="text-xs text-[#575A51] dark:text-[#8E9287] leading-relaxed mb-6 font-medium">
         This assessment is private. Please enter the unique access code sent to your email to proceed.
       </p>
 
       {error && (
-        <div className="mb-4 p-3.5 bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800/50 rounded-xl text-xs font-semibold leading-relaxed">
+        <div className="mb-4 p-3.5 bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800/50 rounded-2xl text-xs font-semibold leading-relaxed">
           {error}
         </div>
       )}
 
       <form onSubmit={handleVerify} className="space-y-4">
         <div className="text-left">
-          <label className="block text-xs font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-1.5">Access Code</label>
+          <label className="block text-[10px] font-mono font-bold uppercase tracking-wider text-[#73766C] dark:text-[#8E9287] mb-1.5">Access Code</label>
           <input 
             type="text" 
             value={token}
             onChange={(e) => setToken(e.target.value)}
             placeholder="e.g. token_xyz123"
-            className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-white font-mono"
+            className="w-full px-4 py-3 rounded-2xl border border-[#E4E7DC] dark:border-[#2A2D36] bg-[#F8F9F5] dark:bg-[#111215] text-sm focus:outline-none focus:ring-2 focus:ring-[#D4F82C]/50 dark:text-white font-mono"
             disabled={loading}
           />
         </div>
@@ -2253,7 +2129,7 @@ const AccessCodeVerificationScreen: React.FC<{
         <button 
           type="submit" 
           disabled={loading}
-          className="w-full py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold rounded-xl shadow-lg shadow-blue-500/20 active:scale-98 transition-all flex items-center justify-center gap-2"
+          className="w-full py-3.5 bg-[#111215] hover:bg-black text-white dark:bg-[#D4F82C] dark:hover:bg-[#c7eb22] dark:text-[#111215] font-black rounded-full shadow-lg shadow-black/10 active:scale-98 transition-all flex items-center justify-center gap-2 cursor-pointer"
         >
           {loading ? (
             <>
@@ -2263,7 +2139,7 @@ const AccessCodeVerificationScreen: React.FC<{
           ) : (
             <>
               <span>Verify & Proceed</span>
-              <i className="fas fa-arrow-right text-xs"></i>
+              <ArrowRight className="w-4 h-4" />
             </>
           )}
         </button>
@@ -2406,6 +2282,8 @@ const CandidateInterviewFlow: React.FC = () => {
 
         if (savedStep && savedStep !== 'validating' && savedStep !== 'finish') {
           setStep(savedStep);
+        } else if (searchParams.get('email') && !combinedData.requiresToken) {
+          setStep('collect-info');
         } else {
           sessionStorage.removeItem(`interview_wizard_step_${interviewId}`);
           setStep('welcome');
@@ -2534,11 +2412,15 @@ const CandidateInterviewFlow: React.FC = () => {
           resumeTextContent = parsedResumeText;
           resumeUrlToSave = remoteResumeUrl;
         } catch (error) {
-          console.error("Error fetching remote resume:", error);
-          throw new Error("Failed to process the uploaded resume.");
+          console.warn("Could not download remote resume, using profile text fallback:", error);
+          resumeTextContent = `Candidate: ${submittedInfo.name || 'Candidate'}\nEmail: ${submittedInfo.email}\nPhone: ${submittedInfo.phone}\nExperience: ${submittedInfo.totalExperienceYears || 0} years\nRole: ${submittedInfo.designation || 'Candidate'}\nCompany: ${submittedInfo.currentCompanyName || ''}\nQualification: ${submittedInfo.qualificationBasic || ''}`;
+          resumeMimeType = 'text/plain';
+          resumeUrlToSave = remoteResumeUrl;
         }
       } else {
-        throw new Error("A resume is required before the interview can begin.");
+        // Fallback when candidate profile is loaded from database without remote PDF
+        resumeTextContent = `Candidate: ${submittedInfo.name || 'Candidate'}\nEmail: ${submittedInfo.email}\nPhone: ${submittedInfo.phone}\nExperience: ${submittedInfo.totalExperienceYears || 0} years\nRole: ${submittedInfo.designation || 'Candidate'}\nCompany: ${submittedInfo.currentCompanyName || ''}\nQualification: ${submittedInfo.qualificationBasic || ''}`;
+        resumeMimeType = 'text/plain';
       }
 
       setLoadingMsg("AI is generating tailored questions... (approx 30s)");
@@ -2682,10 +2564,11 @@ const CandidateInterviewFlow: React.FC = () => {
 
   // --- RENDER ---
   const Container = ({ children }: { children: React.ReactNode }) => (
-    <div className="interview-flow-shell fixed inset-0 z-[9999] overflow-y-auto bg-gray-50 dark:bg-slate-950 text-gray-800 dark:text-gray-100 flex flex-col items-center justify-start py-12 px-4 transition-colors duration-500">
+    <div className="interview-flow-shell fixed inset-0 z-[9999] overflow-y-auto bg-[#F8F9F5] dark:bg-[#0D0E11] text-[#111215] dark:text-[#F8F9F5] flex flex-col items-center justify-start py-8 sm:py-12 px-4 transition-colors duration-500 font-sans">
       <div className="absolute top-4 right-4 z-[10000]">
         <DayNightToggle />
-      </div>      {children}
+      </div>
+      {children}
     </div>
   );
 
@@ -2798,28 +2681,29 @@ const CandidateInterviewFlow: React.FC = () => {
         <div className="w-full max-w-4xl mx-auto px-3 sm:px-6 py-3 sm:py-6 animate-in fade-in slide-in-from-bottom-6 duration-500">
           {/* Header Banner */}
           <div className="text-center mb-6 sm:mb-8">
-            <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-300 text-xs font-extrabold border border-blue-100 dark:border-blue-800/60 mb-3 uppercase tracking-wider">
-              <i className="fas fa-briefcase"></i> Job Description Review
+            <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#111215] text-[#D4F82C] text-xs font-black mb-3 uppercase tracking-wider shadow-sm">
+              <Briefcase size={14} className="text-[#D4F82C]" />
+              <span>Job Description Review</span>
             </span>
-            <h2 className="text-xl sm:text-2xl md:text-3xl font-extrabold text-gray-900 dark:text-white leading-tight">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-[#111215] dark:text-white leading-tight tracking-tight">
               {interview.title}
             </h2>
             {interview.department && (
-              <p className="text-xs sm:text-sm font-semibold text-gray-500 dark:text-gray-400 mt-1.5">
+              <p className="text-xs sm:text-sm font-semibold text-[#575A51] dark:text-[#A1A49B] mt-1.5">
                 Department: {interview.department}
               </p>
             )}
           </div>
 
-          {/* Key Parameters Cards Grid - Responsive for Mobile */}
+          {/* Key Parameters Bento Cards Grid */}
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5 sm:gap-3.5 mb-6 sm:mb-8">
             {/* Salary / CTC */}
-            <div className="bg-white dark:bg-slate-900/80 p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-gray-200/80 dark:border-white/10 shadow-sm flex flex-col items-center text-center transition-all duration-300 hover:border-emerald-500/40">
-              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-2">
-                <i className="fas fa-indian-rupee-sign text-sm sm:text-lg"></i>
+            <div className="bg-white dark:bg-[#16171C] p-4 rounded-2xl sm:rounded-3xl border border-[#E4E7DC] dark:border-white/10 shadow-sm flex flex-col items-center text-center transition-all duration-300 hover:border-[#111215] dark:hover:border-[#D4F82C] group">
+              <div className="w-10 h-10 rounded-xl bg-[#F8F9F5] dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 text-[#111215] dark:text-[#D4F82C] flex items-center justify-center mb-2.5 group-hover:scale-110 transition-transform">
+                <IndianRupee size={18} />
               </div>
-              <span className="text-[9px] sm:text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Salary / CTC</span>
-              <span className="text-xs sm:text-sm font-extrabold text-gray-900 dark:text-gray-100 mt-0.5 truncate max-w-full">
+              <span className="text-[10px] font-bold text-[#73766C] dark:text-neutral-400 uppercase tracking-widest">Salary / CTC</span>
+              <span className="text-xs sm:text-sm font-black text-[#111215] dark:text-white mt-1 truncate max-w-full">
                 {(interview as any).salary 
                   ? (typeof (interview as any).salary === 'number' ? `₹${((interview as any).salary / 100000).toFixed(1)} LPA` : (interview as any).salary)
                   : ((interview as any).salaryRange || (interview as any).ctc || '₹3.5 LPA - ₹6.0 LPA')}
@@ -2827,80 +2711,81 @@ const CandidateInterviewFlow: React.FC = () => {
             </div>
 
             {/* Location */}
-            <div className="bg-white dark:bg-slate-900/80 p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-gray-200/80 dark:border-white/10 shadow-sm flex flex-col items-center text-center transition-all duration-300 hover:border-rose-500/40">
-              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 flex items-center justify-center mb-2">
-                <i className="fas fa-location-dot text-sm sm:text-lg"></i>
+            <div className="bg-white dark:bg-[#16171C] p-4 rounded-2xl sm:rounded-3xl border border-[#E4E7DC] dark:border-white/10 shadow-sm flex flex-col items-center text-center transition-all duration-300 hover:border-[#111215] dark:hover:border-[#D4F82C] group">
+              <div className="w-10 h-10 rounded-xl bg-[#F8F9F5] dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 text-[#111215] dark:text-[#D4F82C] flex items-center justify-center mb-2.5 group-hover:scale-110 transition-transform">
+                <MapPin size={18} />
               </div>
-              <span className="text-[9px] sm:text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Location</span>
-              <span className="text-xs sm:text-sm font-extrabold text-gray-900 dark:text-gray-100 mt-0.5 truncate max-w-full">
+              <span className="text-[10px] font-bold text-[#73766C] dark:text-neutral-400 uppercase tracking-widest">Location</span>
+              <span className="text-xs sm:text-sm font-black text-[#111215] dark:text-white mt-1 truncate max-w-full">
                 {(interview as any).location || (interview as any).jobLocation || (interview as any).city || 'Pune / On-Site'}
               </span>
             </div>
 
             {/* Experience */}
-            <div className="bg-white dark:bg-slate-900/80 p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-gray-200/80 dark:border-white/10 shadow-sm flex flex-col items-center text-center transition-all duration-300 hover:border-blue-500/40">
-              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-2">
-                <i className="fas fa-user-graduate text-sm sm:text-lg"></i>
+            <div className="bg-white dark:bg-[#16171C] p-4 rounded-2xl sm:rounded-3xl border border-[#E4E7DC] dark:border-white/10 shadow-sm flex flex-col items-center text-center transition-all duration-300 hover:border-[#111215] dark:hover:border-[#D4F82C] group">
+              <div className="w-10 h-10 rounded-xl bg-[#F8F9F5] dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 text-[#111215] dark:text-[#D4F82C] flex items-center justify-center mb-2.5 group-hover:scale-110 transition-transform">
+                <GraduationCap size={18} />
               </div>
-              <span className="text-[9px] sm:text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Experience</span>
-              <span className="text-xs sm:text-sm font-extrabold text-gray-900 dark:text-gray-100 mt-0.5 truncate max-w-full">
+              <span className="text-[10px] font-bold text-[#73766C] dark:text-neutral-400 uppercase tracking-widest">Experience</span>
+              <span className="text-xs sm:text-sm font-black text-[#111215] dark:text-white mt-1 truncate max-w-full">
                 {(interview as any).experienceRequired || (interview as any).experienceLevel || (interview as any).minExperience || (interview as any).experience || '0 - 2 Years'}
               </span>
             </div>
 
             {/* Job Type */}
-            <div className="bg-white dark:bg-slate-900/80 p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-gray-200/80 dark:border-white/10 shadow-sm flex flex-col items-center text-center transition-all duration-300 hover:border-amber-500/40">
-              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 flex items-center justify-center mb-2">
-                <i className="fas fa-user-clock text-sm sm:text-lg"></i>
+            <div className="bg-white dark:bg-[#16171C] p-4 rounded-2xl sm:rounded-3xl border border-[#E4E7DC] dark:border-white/10 shadow-sm flex flex-col items-center text-center transition-all duration-300 hover:border-[#111215] dark:hover:border-[#D4F82C] group">
+              <div className="w-10 h-10 rounded-xl bg-[#F8F9F5] dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 text-[#111215] dark:text-[#D4F82C] flex items-center justify-center mb-2.5 group-hover:scale-110 transition-transform">
+                <Briefcase size={18} />
               </div>
-              <span className="text-[9px] sm:text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Job Type</span>
-              <span className="text-xs sm:text-sm font-extrabold text-gray-900 dark:text-gray-100 mt-0.5 truncate max-w-full">
+              <span className="text-[10px] font-bold text-[#73766C] dark:text-neutral-400 uppercase tracking-widest">Job Type</span>
+              <span className="text-xs sm:text-sm font-black text-[#111215] dark:text-white mt-1 truncate max-w-full">
                 {(interview as any).employmentType || (interview as any).jobType || 'Full-Time'}
               </span>
             </div>
 
             {/* Duration */}
-            <div className="bg-white dark:bg-slate-900/80 p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-gray-200/80 dark:border-white/10 shadow-sm flex flex-col items-center text-center transition-all duration-300 hover:border-indigo-500/40">
-              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mb-2">
-                <i className="fas fa-clock text-sm sm:text-lg"></i>
+            <div className="bg-white dark:bg-[#16171C] p-4 rounded-2xl sm:rounded-3xl border border-[#E4E7DC] dark:border-white/10 shadow-sm flex flex-col items-center text-center transition-all duration-300 hover:border-[#111215] dark:hover:border-[#D4F82C] group">
+              <div className="w-10 h-10 rounded-xl bg-[#F8F9F5] dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 text-[#111215] dark:text-[#D4F82C] flex items-center justify-center mb-2.5 group-hover:scale-110 transition-transform">
+                <Clock size={18} />
               </div>
-              <span className="text-[9px] sm:text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Duration</span>
-              <span className="text-xs sm:text-sm font-extrabold text-gray-900 dark:text-gray-100 mt-0.5">{interview.duration || 15} mins</span>
+              <span className="text-[10px] font-bold text-[#73766C] dark:text-neutral-400 uppercase tracking-widest">Duration</span>
+              <span className="text-xs sm:text-sm font-black text-[#111215] dark:text-white mt-1">{interview.duration || 15} mins</span>
             </div>
 
             {/* Difficulty */}
-            <div className="bg-white dark:bg-slate-900/80 p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-gray-200/80 dark:border-white/10 shadow-sm flex flex-col items-center text-center transition-all duration-300 hover:border-purple-500/40">
-              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-purple-50 dark:bg-purple-950/50 text-purple-600 dark:text-purple-400 flex items-center justify-center mb-2">
-                <i className="fas fa-tachometer-alt text-sm sm:text-lg"></i>
+            <div className="bg-white dark:bg-[#16171C] p-4 rounded-2xl sm:rounded-3xl border border-[#E4E7DC] dark:border-white/10 shadow-sm flex flex-col items-center text-center transition-all duration-300 hover:border-[#111215] dark:hover:border-[#D4F82C] group">
+              <div className="w-10 h-10 rounded-xl bg-[#F8F9F5] dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 text-[#111215] dark:text-[#D4F82C] flex items-center justify-center mb-2.5 group-hover:scale-110 transition-transform">
+                <Gauge size={18} />
               </div>
-              <span className="text-[9px] sm:text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Difficulty</span>
-              <span className="text-xs sm:text-sm font-extrabold text-gray-900 dark:text-gray-100 mt-0.5">{interview.difficulty || 'Medium'}</span>
+              <span className="text-[10px] font-bold text-[#73766C] dark:text-neutral-400 uppercase tracking-widest">Difficulty</span>
+              <span className="text-xs sm:text-sm font-black text-[#111215] dark:text-white mt-1">{interview.difficulty || 'Medium'}</span>
             </div>
 
             {/* Strictness */}
-            <div className="bg-white dark:bg-slate-900/80 p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-gray-200/80 dark:border-white/10 shadow-sm flex flex-col items-center text-center transition-all duration-300 hover:border-rose-500/40">
-              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 flex items-center justify-center mb-2">
-                <i className="fas fa-shield-alt text-sm sm:text-lg"></i>
+            <div className="bg-white dark:bg-[#16171C] p-4 rounded-2xl sm:rounded-3xl border border-[#E4E7DC] dark:border-white/10 shadow-sm flex flex-col items-center text-center transition-all duration-300 hover:border-[#111215] dark:hover:border-[#D4F82C] group">
+              <div className="w-10 h-10 rounded-xl bg-[#F8F9F5] dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 text-[#111215] dark:text-[#D4F82C] flex items-center justify-center mb-2.5 group-hover:scale-110 transition-transform">
+                <Shield size={18} />
               </div>
-              <span className="text-[9px] sm:text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Strictness</span>
-              <span className="text-xs sm:text-sm font-extrabold text-gray-900 dark:text-gray-100 mt-0.5">{interview.strictness || 'Medium'}</span>
+              <span className="text-[10px] font-bold text-[#73766C] dark:text-neutral-400 uppercase tracking-widest">Strictness</span>
+              <span className="text-xs sm:text-sm font-black text-[#111215] dark:text-white mt-1">{interview.strictness || 'Medium'}</span>
             </div>
 
             {/* Language */}
-            <div className="bg-white dark:bg-slate-900/80 p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-gray-200/80 dark:border-white/10 shadow-sm flex flex-col items-center text-center transition-all duration-300 hover:border-cyan-500/40">
-              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-cyan-50 dark:bg-cyan-950/50 text-cyan-600 dark:text-cyan-400 flex items-center justify-center mb-2">
-                <i className="fas fa-globe text-sm sm:text-lg"></i>
+            <div className="bg-white dark:bg-[#16171C] p-4 rounded-2xl sm:rounded-3xl border border-[#E4E7DC] dark:border-white/10 shadow-sm flex flex-col items-center text-center transition-all duration-300 hover:border-[#111215] dark:hover:border-[#D4F82C] group">
+              <div className="w-10 h-10 rounded-xl bg-[#F8F9F5] dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 text-[#111215] dark:text-[#D4F82C] flex items-center justify-center mb-2.5 group-hover:scale-110 transition-transform">
+                <Globe size={18} />
               </div>
-              <span className="text-[9px] sm:text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Language</span>
-              <span className="text-xs sm:text-sm font-extrabold text-gray-900 dark:text-gray-100 mt-0.5">{formatLanguageName(interviewState.language)}</span>
+              <span className="text-[10px] font-bold text-[#73766C] dark:text-neutral-400 uppercase tracking-widest">Language</span>
+              <span className="text-xs sm:text-sm font-black text-[#111215] dark:text-white mt-1">{formatLanguageName(interviewState.language)}</span>
             </div>
           </div>
 
           {/* Job Description details box */}
-          <div className="bg-white dark:bg-slate-900/80 rounded-2xl border border-gray-200/80 dark:border-white/10 shadow-md p-4 sm:p-6 md:p-8 mb-6 sm:mb-8">
-            <div className="flex items-center justify-between border-b border-gray-100 dark:border-white/10 pb-3.5 mb-4 flex-wrap gap-2.5">
-              <h3 className="text-sm sm:text-base font-extrabold text-gray-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
-                <i className="fas fa-file-alt text-blue-500"></i> Role & Responsibilities
+          <div className="bg-white dark:bg-[#16171C] rounded-3xl border border-[#E4E7DC] dark:border-white/10 shadow-sm p-5 sm:p-7 md:p-8 mb-6 sm:mb-8">
+            <div className="flex items-center justify-between border-b border-[#E4E7DC] dark:border-white/10 pb-4 mb-4 flex-wrap gap-2.5">
+              <h3 className="text-sm sm:text-base font-black text-[#111215] dark:text-white uppercase tracking-wider flex items-center gap-2">
+                <FileText size={18} className="text-[#111215] dark:text-[#D4F82C]" />
+                <span>Role & Responsibilities</span>
               </h3>
               <ListenJDButton
                 title={interview.title}
@@ -2910,29 +2795,29 @@ const CandidateInterviewFlow: React.FC = () => {
               />
             </div>
             
-            <div className="max-h-[420px] overflow-y-auto pr-2 custom-scrollbar leading-relaxed text-sm sm:text-base text-gray-800 dark:text-gray-200 select-text selection:bg-blue-500/35 touch-pan-y">
+            <div className="max-h-[420px] overflow-y-auto pr-2 custom-scrollbar leading-relaxed text-sm sm:text-base text-[#111215] dark:text-[#E4E7DC] select-text selection:bg-[#D4F82C]/40 touch-pan-y font-medium">
               <FormattedJobDescription description={interview.description} />
             </div>
           </div>
 
           {/* Action Callouts & Next button */}
-          <div className="sticky bottom-0 z-30 bg-blue-50/95 dark:bg-slate-900/95 backdrop-blur-xl rounded-2xl border border-blue-300 dark:border-blue-700/60 p-4 sm:p-5 mb-4 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-2xl">
+          <div className="sticky bottom-0 z-30 bg-white/95 dark:bg-[#16171C]/95 backdrop-blur-xl rounded-2xl sm:rounded-3xl border border-[#E4E7DC] dark:border-white/15 p-4 sm:p-5 mb-4 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl">
             <div className="flex items-center gap-3 text-center sm:text-left">
-              <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/60 text-blue-600 dark:text-blue-400 flex-shrink-0 flex items-center justify-center mx-auto sm:mx-0">
-                <i className="fas fa-info-circle text-lg"></i>
+              <div className="w-10 h-10 rounded-2xl bg-[#D4F82C] text-[#111215] flex-shrink-0 flex items-center justify-center mx-auto sm:mx-0 shadow-sm">
+                <Zap size={20} className="fill-[#111215]" />
               </div>
               <div>
-                <h4 className="text-sm font-bold text-blue-950 dark:text-blue-200">Ready to begin?</h4>
-                <p className="text-xs text-blue-800/90 dark:text-blue-300/90 mt-0.5">Please review the details above. The next step will verify your audio and video.</p>
+                <h4 className="text-sm font-black text-[#111215] dark:text-white">Ready to begin?</h4>
+                <p className="text-xs text-[#575A51] dark:text-[#A1A49B] mt-0.5">Please review the details above. The next step will verify your audio and video.</p>
               </div>
             </div>
             
             <button 
               onClick={() => setStep('instructions')}
-              className="w-full sm:w-auto px-7 py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-extrabold rounded-xl shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 group whitespace-nowrap cursor-pointer"
+              className="w-full sm:w-auto px-8 py-3.5 bg-[#111215] hover:bg-[#202227] text-[#D4F82C] hover:text-white font-black text-xs sm:text-sm rounded-full shadow-lg shadow-black/10 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 group whitespace-nowrap cursor-pointer"
             >
-              Proceed to Hardware Check
-              <i className="fas fa-arrow-right text-sm transition-transform group-hover:translate-x-1"></i>
+              <span>Proceed to Hardware Check</span>
+              <ArrowRight size={16} className="transition-transform group-hover:translate-x-1" />
             </button>
           </div>
         </div>
@@ -2980,6 +2865,9 @@ const CandidateInterviewFlow: React.FC = () => {
       <ActiveInterviewSession
         state={interviewState}
         setState={setInterviewState}
+        candidateInfo={candidateInfo}
+        jobTitle={interviewState.jobTitle || (interview as any)?.title || (interview as any)?.jobTitle}
+        jobId={interviewId}
         onFinish={(result?: { terminated?: boolean }) => {
           setInterviewTerminated(Boolean(result?.terminated));
           setStep('finish');
@@ -3002,7 +2890,10 @@ const ActiveInterviewSession: React.FC<{
   setState: React.Dispatch<React.SetStateAction<InterviewState>>;
   onFinish: (result?: { terminated?: boolean }) => void;
   onTabSwitch: () => void;
-}> = ({ state, setState, onFinish, onTabSwitch }) => {
+  candidateInfo?: CandidateInfo;
+  jobTitle?: string;
+  jobId?: string;
+}> = ({ state, setState, onFinish, onTabSwitch, candidateInfo, jobTitle, jobId }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -3026,6 +2917,29 @@ const ActiveInterviewSession: React.FC<{
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isVoiceMuted, setIsVoiceMuted] = useState(() => getMuteTTS());
+
+  const livekit = useLiveKitInterview({
+    jobId: jobId || state.jobId,
+    jobTitle: jobTitle || state.jobTitle,
+    candidateName: candidateInfo?.name || 'Candidate',
+    candidateEmail: candidateInfo?.email || '',
+    questions: state.questions,
+    enabled: true,
+    onComplete: (data) => {
+      console.log('[LiveKit Auto-Submission]: All questions completed by AI Interviewer', data);
+      handleSessionFinish();
+    },
+    onQuestionChange: (index) => {
+      if (typeof index === 'number' && index >= 0 && index < state.questions.length) {
+        setState(prev => ({
+          ...prev,
+          currentQuestionIndex: index
+        }));
+      }
+    },
+  });
+
+  const isAiSpeaking = isSpeaking || livekit.isAgentSpeaking;
 
   const toggleMuteVoice = () => {
     const next = !isVoiceMuted;
@@ -3512,224 +3426,400 @@ const ActiveInterviewSession: React.FC<{
     return null;
   };
 
-  // --- SPLIT-PANEL DASHBOARD LAYOUT ---
+  // --- SPLIT-PANEL DASHBOARD LAYOUT (LANDING PAGE BENTO THEME) ---
   return (
     <div
-      className="interview-room-shell fixed inset-0 z-[9999] bg-gray-100 dark:bg-slate-950 text-gray-900 dark:text-white flex flex-col overflow-hidden select-none"
+      className="interview-room-shell fixed inset-0 z-[9999] bg-[#F8F9F5] dark:bg-[#0D0E11] text-[#111215] dark:text-[#F8F9F5] flex flex-col overflow-hidden select-none font-sans"
       style={{ WebkitTouchCallout: 'none', WebkitUserSelect: 'none', userSelect: 'none' }}
     >
       {renderFullscreenOverlay()}
 
-      {cameraError && (
-        <div className="interview-room-banner-wrap px-2 md:px-3 pt-2 md:pt-3">
-          <div className="interview-room-banner w-full px-3 md:px-5 py-2.5 md:py-3 bg-red-50 dark:bg-red-900/30 rounded-lg md:rounded-xl border border-red-200 dark:border-red-700/50 shadow-sm text-red-700 dark:text-red-300 text-xs md:text-sm font-medium">
-            {cameraError}
-          </div>
-        </div>
-      )}
+      {/* Subtle blueprint dot-matrix grid overlay */}
+      <div 
+        className="absolute inset-0 pointer-events-none opacity-40 dark:opacity-20 z-0" 
+        style={{
+          backgroundImage: 'radial-gradient(circle, rgba(17,18,21,0.08) 1px, transparent 1px)',
+          backgroundSize: '24px 24px'
+        }} 
+      />
 
-      {/* Main content: camera/avatar (left/top) + question (right/bottom) */}
-      <div className="interview-room-grid flex-1 flex flex-col md:flex-row gap-2 md:gap-3 p-2 md:p-3 overflow-hidden min-h-0">
-
-        {/* Left/Top panel: AI Interviewer & camera feed */}
-        <div className="interview-room-camera-column w-full md:w-5/12 flex flex-col sm:flex-row md:flex-col gap-1.5 md:gap-3 shrink-0 md:shrink md:min-h-0">
-          {/* AI Interviewer Avatar Card - Hidden on mobile screen for cleaner camera feed & full question space */}
-          <div className="interview-room-avatar-card hidden md:flex relative h-auto py-2.5 px-3 md:py-5 md:px-5 md:flex-1 bg-slate-900 dark:bg-slate-950 rounded-xl md:rounded-2xl overflow-hidden border border-gray-200/10 dark:border-white/5 shadow-xl flex-col items-center justify-center">
-            <style>{`
-              @keyframes soundbar {
-                0%, 100% { height: 20%; }
-                50% { height: 100%; }
-              }
-            `}</style>
-            
-            {/* Holographic scanner grid backdrop */}
-            <div className="absolute inset-0 opacity-10 pointer-events-none" style={{
-              backgroundImage: 'radial-gradient(circle, rgba(59,130,246,0.15) 1px, transparent 1px)',
-              backgroundSize: '16px 16px'
-            }}></div>
-            <div className="absolute inset-0 bg-gradient-to-br from-blue-600/10 via-transparent to-purple-600/10 pointer-events-none"></div>
-            
-            {/* Advanced AI Hologram Visualizer */}
-            <div className="relative w-16 h-16 sm:w-20 sm:h-20 md:w-36 md:h-36 flex items-center justify-center">
-              {/* Outer orbit/ring with rotating dash */}
-              <div className={`absolute inset-0 rounded-full border border-dashed border-blue-500/40 ${isSpeaking ? 'animate-spin' : 'animate-[spin_20s_linear_infinite]'} opacity-60`}></div>
-              
-              {/* Middle glowing shell */}
-              <div className={`absolute inset-2 md:inset-3 rounded-full border border-purple-500/20 bg-purple-500/5 transition-all duration-700 ${
-                isSpeaking ? 'scale-105 opacity-80 shadow-[0_0_25px_rgba(168,85,247,0.3)]' : 'scale-100 opacity-40 shadow-none'
-              }`}></div>
-
-              {/* Holographic sound waves / node mesh */}
-              <svg className="absolute w-full h-full pointer-events-none z-10" viewBox="0 0 100 100">
-                <defs>
-                  <linearGradient id="avatarGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#3b82f6" />
-                    <stop offset="100%" stopColor="#8b5cf6" />
-                  </linearGradient>
-                </defs>
-
-                {/* Animated speech frequency wave arcs */}
-                <circle cx="50" cy="50" r="32" fill="none" stroke="url(#avatarGrad)" strokeWidth="1" strokeDasharray="5,15" className={`origin-center transition-all ${isSpeaking ? 'animate-[spin_4s_linear_infinite]' : 'animate-[spin_12s_linear_infinite]'}`} />
-                <circle cx="50" cy="50" r="28" fill="none" stroke="#8b5cf6" strokeWidth="1.5" strokeDasharray="40,20" className={`origin-center transition-all ${isSpeaking ? 'animate-[spin_6s_linear_infinite_reverse] opacity-80' : 'animate-[spin_18s_linear_infinite_reverse] opacity-40'}`} />
-
-                {/* Neural grid nodes when speaking */}
-                {isSpeaking ? (
-                  <>
-                    <path d="M 30,50 Q 50,20 70,50 Q 50,80 30,50" fill="none" stroke="#3b82f6" strokeWidth="0.5" opacity="0.3" className="animate-pulse" />
-                    <path d="M 50,30 Q 80,50 50,70 Q 20,50 50,30" fill="none" stroke="#8b5cf6" strokeWidth="0.5" opacity="0.3" className="animate-pulse" />
-                  </>
-                ) : null}
-              </svg>
-
-              {/* Centered Hologram Core with Recruiter Image */}
-              <div className={`relative w-12 h-12 sm:w-14 sm:h-14 md:w-22 md:h-22 rounded-full overflow-hidden border-2 border-blue-500/50 flex items-center justify-center shadow-[0_0_20px_rgba(59,130,246,0.3)] z-20 transition-all duration-300 ${
-                isSpeaking ? 'scale-105 border-purple-500 shadow-[0_0_30px_rgba(168,85,247,0.5)]' : ''
-              }`}>
-                <img 
-                  src="/recruiter_avatar.png" 
-                  alt="AI Recruiter" 
-                  className={`w-full h-full object-cover transition-transform duration-300 ${isSpeaking ? 'scale-105' : 'scale-100'}`} 
-                />
-              </div>
+      {/* Top Bento Header Bar */}
+      <header className="relative z-10 shrink-0 px-4 py-2.5 md:px-6 md:py-3 border-b border-[#E4E7DC] dark:border-white/10 bg-white/80 dark:bg-[#16171C]/80 backdrop-blur-md flex items-center justify-between gap-3 shadow-xs">
+        {/* Left: Brand + Role Badge */}
+        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+          <div className="flex items-center gap-2 shrink-0">
+            <div className="w-8 h-8 rounded-xl bg-[#111215] text-[#D4F82C] flex items-center justify-center font-black text-xs shadow-md">
+              <Sparkles size={15} className="text-[#D4F82C]" />
             </div>
-
-            {/* Small speech frequency wave bars under avatar */}
-            <div className="h-3 md:h-4 flex items-end gap-0.5 mt-1.5 md:mt-2.5 z-10">
-              {isSpeaking ? (
-                <>
-                  <span className="w-0.5 bg-blue-400 rounded-full animate-[soundbar_0.8s_ease-in-out_infinite]" style={{ height: '40%' }}></span>
-                  <span className="w-0.5 bg-blue-300 rounded-full animate-[soundbar_0.6s_ease-in-out_infinite_0.1s]" style={{ height: '80%' }}></span>
-                  <span className="w-0.5 bg-purple-400 rounded-full animate-[soundbar_0.7s_ease-in-out_infinite_0.3s]" style={{ height: '50%' }}></span>
-                  <span className="w-0.5 bg-purple-300 rounded-full animate-[soundbar_0.5s_ease-in-out_infinite_0.2s]" style={{ height: '100%' }}></span>
-                  <span className="w-0.5 bg-blue-400 rounded-full animate-[soundbar_0.9s_ease-in-out_infinite_0.4s]" style={{ height: '30%' }}></span>
-                </>
-              ) : (
-                <div className="flex gap-0.5">
-                  <span className="w-0.5 h-1 bg-gray-500 rounded-full opacity-40"></span>
-                  <span className="w-0.5 h-1 bg-gray-500 rounded-full opacity-40"></span>
-                  <span className="w-0.5 h-1 bg-gray-500 rounded-full opacity-40"></span>
-                  <span className="w-0.5 h-1 bg-gray-500 rounded-full opacity-40"></span>
-                  <span className="w-0.5 h-1 bg-gray-500 rounded-full opacity-40"></span>
-                </div>
-              )}
-            </div>
-
-            {/* Speaking/Listening Status Indicator */}
-            <div className="mt-1.5 md:mt-4 text-center z-10 flex flex-col items-center">
-              <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 md:px-3 md:py-1 rounded-full text-[10px] md:text-xs font-extrabold transition-all duration-300 ${
-                isSpeaking 
-                  ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30 animate-pulse' 
-                  : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-              }`}>
-                <span className={`w-1.5 h-1.5 rounded-full ${isSpeaking ? 'bg-blue-400 animate-ping' : 'bg-emerald-400'}`}></span>
-                {isSpeaking ? 'AI Recruiter Speaking...' : 'Listening...'}
+            <div className="hidden sm:flex items-center gap-1.5">
+              <span className="text-xs font-black tracking-wider uppercase text-[#111215] dark:text-white">ATS SNAB</span>
+              <span className="text-[9px] px-2 py-0.5 rounded-full bg-[#D4F82C] text-[#111215] font-black uppercase tracking-wider shadow-2xs">
+                AI INTERVIEW
               </span>
             </div>
           </div>
 
-          {/* Camera Card */}
-          <div className="interview-room-camera-card relative min-h-[140px] h-[22vh] sm:h-auto sm:flex-1 md:min-h-[180px] bg-gray-900 rounded-xl md:rounded-2xl overflow-hidden border border-gray-700/50 shadow-xl shrink-0">
-            {/* Mobile AI Recruiter Floating Badge Overlay */}
-            <div className="md:hidden absolute top-2.5 left-2.5 z-20 flex items-center gap-2 px-2.5 py-1 rounded-full bg-slate-950/85 backdrop-blur-md border border-purple-500/40 shadow-lg text-white">
-              <div className="relative w-5 h-5 rounded-full overflow-hidden border border-purple-400/60 shrink-0">
-                <img src="/recruiter_avatar.png" alt="AI Recruiter" className="w-full h-full object-cover" />
+          <div className="h-4 w-px bg-[#E4E7DC] dark:bg-white/10 hidden sm:block" />
+
+          {/* Job Title Pill */}
+          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#F8F9F5] dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 text-xs font-bold text-[#111215] dark:text-white truncate max-w-[180px] sm:max-w-xs">
+            <Briefcase size={12} className="text-[#73766C] dark:text-neutral-400 shrink-0" />
+            <span className="truncate">{jobTitle || state.jobTitle || 'AI Video Assessment'}</span>
+          </div>
+
+          {/* Candidate Name Badge */}
+          {candidateInfo?.name && (
+            <div className="hidden lg:flex items-center gap-1.5 px-3 py-1 rounded-full bg-white dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 text-xs font-medium text-[#73766C] dark:text-neutral-300">
+              <User size={12} className="text-[#111215] dark:text-white" />
+              <span className="font-bold text-[#111215] dark:text-white">{candidateInfo.name}</span>
+            </div>
+          )}
+        </div>
+
+        {/* Center: Live Progress Steps */}
+        <div className="hidden md:flex items-center gap-2">
+          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#F8F9F5] dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 text-xs font-mono font-bold">
+            <span className="text-[#73766C] dark:text-neutral-400">Question</span>
+            <span className="font-black text-[#111215] dark:text-[#D4F82C]">{state.currentQuestionIndex + 1}</span>
+            <span className="text-neutral-400">/</span>
+            <span>{state.questions.length}</span>
+          </div>
+          <div className="flex items-center gap-1">
+            {state.questions.map((_, i) => (
+              <div 
+                key={i} 
+                className={`h-1.5 rounded-full transition-all duration-300 ${
+                  i === state.currentQuestionIndex 
+                    ? 'w-6 bg-[#D4F82C] shadow-[0_0_10px_rgba(212,248,44,0.6)]' 
+                    : i < state.currentQuestionIndex 
+                      ? 'w-2.5 bg-[#111215] dark:bg-white' 
+                      : 'w-2 bg-[#E4E7DC] dark:bg-white/15'
+                }`}
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* Right: Proctor & LiveKit Status Badges */}
+        <div className="flex items-center gap-2">
+          {livekit.isConnected ? (
+            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#D4F82C]/15 border border-[#D4F82C]/35 text-[#111215] dark:text-[#D4F82C] text-[11px] font-black tracking-wide">
+              <span className="w-2 h-2 rounded-full bg-[#D4F82C] animate-pulse"></span>
+              <span className="hidden sm:inline">LIVEKIT AI</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-[11px] font-bold">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+              <span className="hidden sm:inline">AI READY</span>
+            </div>
+          )}
+
+          <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full border text-[11px] font-mono font-bold transition-all ${
+            isFullscreen 
+              ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20' 
+              : 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20 animate-pulse'
+          }`}>
+            <ShieldCheck size={13} className={isFullscreen ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'} />
+            <span className="hidden sm:inline">{isFullscreen ? 'PROCTOR ARMED' : 'FULLSCREEN REQUIRED'}</span>
+          </div>
+        </div>
+      </header>
+
+      {cameraError && (
+        <div className="interview-room-banner-wrap px-4 pt-3 relative z-10">
+          <div className="w-full px-4 py-3 bg-rose-500/10 rounded-2xl border border-rose-500/20 text-rose-700 dark:text-rose-300 text-xs font-semibold flex items-center gap-2">
+            <AlertCircle size={15} />
+            <span>{cameraError}</span>
+          </div>
+        </div>
+      )}
+
+      {/* Main Content Grid: camera/avatar (left) + question/voice (right) */}
+      <div className="interview-room-grid flex-1 flex flex-col md:flex-row gap-3 md:gap-4 p-3 md:p-4 overflow-hidden min-h-0 relative z-10">
+
+        {/* Left panel: AI Recruiter Hologram Station & Candidate Camera Feed */}
+        <div className="interview-room-camera-column w-full md:w-5/12 flex flex-col sm:flex-row md:flex-col gap-3 shrink-0 md:shrink md:min-h-0">
+          
+          {/* AI Interviewer Avatar Card */}
+          <div className="hidden md:flex relative h-auto py-5 px-5 md:flex-1 bg-[#111215] rounded-3xl overflow-hidden border border-white/10 shadow-2xl flex-col items-center justify-between">
+            <style>{`
+              @keyframes soundbar {
+                0%, 100% { height: 25%; }
+                50% { height: 100%; }
+              }
+            `}</style>
+            
+            {/* Holographic scanner blueprint backdrop */}
+            <div className="absolute inset-0 opacity-20 pointer-events-none" style={{
+              backgroundImage: 'radial-gradient(circle, rgba(212,248,44,0.18) 1px, transparent 1px)',
+              backgroundSize: '16px 16px'
+            }}></div>
+            <div className="absolute inset-0 bg-gradient-to-br from-[#D4F82C]/10 via-transparent to-blue-500/5 pointer-events-none"></div>
+
+            {/* Top Micro-Header */}
+            <div className="w-full flex items-center justify-between px-2 z-10">
+              <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-[#D4F82C]">
+                <Sparkles size={11} className="text-[#D4F82C]" />
+                <span>AI Interviewer</span>
+              </span>
+              <span className="text-[9px] font-mono px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-neutral-400 font-bold tracking-wider">
+                REALTIME 2.5
+              </span>
+            </div>
+            
+            {/* AI Hologram Visualizer Core */}
+            <div className="relative w-28 h-28 md:w-36 md:h-36 flex items-center justify-center my-auto">
+              {/* Outer orbit ring with rotating dash */}
+              <div className={`absolute inset-0 rounded-full border border-dashed border-[#D4F82C]/50 ${isAiSpeaking ? 'animate-spin' : 'animate-[spin_20s_linear_infinite]'} opacity-80`}></div>
+              
+              {/* Middle glowing glass shell */}
+              <div className={`absolute inset-3 rounded-full border border-white/10 bg-white/5 transition-all duration-700 ${
+                isAiSpeaking ? 'scale-105 opacity-90 shadow-[0_0_35px_rgba(212,248,44,0.35)]' : 'scale-100 opacity-40 shadow-none'
+              }`}></div>
+
+              {/* Dynamic Speech wave arcs */}
+              <svg className="absolute w-full h-full pointer-events-none z-10" viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="32" fill="none" stroke="#D4F82C" strokeWidth="1" strokeDasharray="5,15" className={`origin-center transition-all ${isAiSpeaking ? 'animate-[spin_4s_linear_infinite]' : 'animate-[spin_12s_linear_infinite]'}`} />
+                <circle cx="50" cy="50" r="28" fill="none" stroke="#FFFFFF" strokeWidth="1.2" strokeDasharray="40,20" className={`origin-center transition-all ${isAiSpeaking ? 'animate-[spin_6s_linear_infinite_reverse] opacity-80' : 'animate-[spin_18s_linear_infinite_reverse] opacity-30'}`} />
+              </svg>
+
+              {/* Centered Avatar Core with Fallback */}
+              <div className={`relative w-18 h-18 md:w-22 md:h-22 rounded-full overflow-hidden border-2 flex items-center justify-center shadow-xl z-20 transition-all duration-300 ${
+                isAiSpeaking 
+                  ? 'scale-105 border-[#D4F82C] shadow-[0_0_35px_rgba(212,248,44,0.45)]' 
+                  : 'border-white/20 bg-gradient-to-tr from-[#16171C] to-[#202227]'
+              }`}>
+                <img 
+                  src="/recruiter_avatar.png" 
+                  alt="" 
+                  onError={(e) => {
+                    (e.currentTarget as HTMLElement).style.display = 'none';
+                  }}
+                  className={`w-full h-full object-cover transition-transform duration-300 ${isAiSpeaking ? 'scale-105' : 'scale-100'}`} 
+                />
+                <div className="absolute inset-0 flex items-center justify-center text-[#D4F82C] -z-10 bg-[#16171C]">
+                  <Bot size={34} />
+                </div>
+              </div>
+            </div>
+
+            {/* High-Fidelity Sound wave bars */}
+            <div className="h-5 flex items-end gap-1 mt-2 z-10">
+              {isAiSpeaking ? (
+                <>
+                  <span className="w-1 bg-[#D4F82C] rounded-full animate-[soundbar_0.8s_ease-in-out_infinite]" style={{ height: '40%' }}></span>
+                  <span className="w-1 bg-white rounded-full animate-[soundbar_0.6s_ease-in-out_infinite_0.1s]" style={{ height: '80%' }}></span>
+                  <span className="w-1 bg-[#D4F82C] rounded-full animate-[soundbar_0.7s_ease-in-out_infinite_0.3s]" style={{ height: '60%' }}></span>
+                  <span className="w-1 bg-[#D4F82C] rounded-full animate-[soundbar_0.5s_ease-in-out_infinite_0.2s]" style={{ height: '100%' }}></span>
+                  <span className="w-1 bg-white rounded-full animate-[soundbar_0.9s_ease-in-out_infinite_0.4s]" style={{ height: '70%' }}></span>
+                  <span className="w-1 bg-[#D4F82C] rounded-full animate-[soundbar_0.7s_ease-in-out_infinite_0.15s]" style={{ height: '50%' }}></span>
+                  <span className="w-1 bg-[#D4F82C] rounded-full animate-[soundbar_0.6s_ease-in-out_infinite_0.35s]" style={{ height: '30%' }}></span>
+                </>
+              ) : (
+                <div className="flex gap-1">
+                  {[...Array(7)].map((_, i) => (
+                    <span key={i} className="w-1 h-1.5 bg-white/20 rounded-full"></span>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Speaking/Listening Status Pill */}
+            <div className="mt-2 text-center z-10 flex flex-col items-center">
+              <span className={`inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs font-black transition-all duration-300 ${
+                isAiSpeaking 
+                  ? 'bg-[#D4F82C]/20 text-[#D4F82C] border border-[#D4F82C]/40 shadow-[0_0_15px_rgba(212,248,44,0.25)] animate-pulse' 
+                  : 'bg-white/10 text-neutral-300 border border-white/15'
+              }`}>
+                <span className={`w-2 h-2 rounded-full ${isAiSpeaking ? 'bg-[#D4F82C] animate-ping' : 'bg-emerald-400'}`}></span>
+                <span>{isAiSpeaking ? 'AI Recruiter Speaking...' : 'AI Listening to You'}</span>
+              </span>
+            </div>
+          </div>
+
+          {/* Camera Viewfinder Card with Futuristic HUD */}
+          <div className="relative min-h-[160px] h-[25vh] sm:h-auto sm:flex-1 md:min-h-[210px] bg-[#111215] rounded-3xl overflow-hidden border border-[#E4E7DC] dark:border-white/10 shadow-xl shrink-0">
+            {/* Viewfinder HUD Corner Brackets */}
+            <div className="absolute top-3 left-3 w-4 h-4 border-t-2 border-l-2 border-[#D4F82C]/70 rounded-tl pointer-events-none z-10" />
+            <div className="absolute top-3 right-3 w-4 h-4 border-t-2 border-r-2 border-[#D4F82C]/70 rounded-tr pointer-events-none z-10" />
+            <div className="absolute bottom-3 left-3 w-4 h-4 border-b-2 border-l-2 border-[#D4F82C]/70 rounded-bl pointer-events-none z-10" />
+            <div className="absolute bottom-3 right-3 w-4 h-4 border-b-2 border-r-2 border-[#D4F82C]/70 rounded-br pointer-events-none z-10" />
+
+            {/* Mobile AI Recruiter Floating Badge */}
+            <div className="md:hidden absolute top-2.5 left-2.5 z-20 flex items-center gap-2 px-3 py-1 rounded-full bg-[#111215]/90 backdrop-blur-md border border-[#D4F82C]/30 text-white">
+              <div className="relative w-5 h-5 rounded-full overflow-hidden border border-[#D4F82C]/60 shrink-0">
+                <img src="/recruiter_avatar.png" alt="" className="w-full h-full object-cover" />
               </div>
               <div className="flex items-center gap-1.5 text-[11px] font-bold">
-                <span className={`w-1.5 h-1.5 rounded-full ${isSpeaking ? 'bg-purple-400 animate-ping' : 'bg-emerald-400'}`}></span>
-                <span className={isSpeaking ? 'text-purple-300 font-extrabold' : 'text-emerald-300 font-semibold'}>
-                  {isSpeaking ? 'AI Speaking...' : 'AI Listening'}
+                <span className={`w-1.5 h-1.5 rounded-full ${isAiSpeaking ? 'bg-[#D4F82C] animate-ping' : 'bg-emerald-400'}`}></span>
+                <span className={isAiSpeaking ? 'text-[#D4F82C] font-black' : 'text-neutral-300'}>
+                  {isAiSpeaking ? 'AI Speaking...' : 'AI Listening'}
                 </span>
               </div>
             </div>
 
-            <video ref={videoRef} autoPlay muted playsInline className="interview-room-camera-video w-full h-full object-cover transform scale-x-[-1]" />
+            <video ref={videoRef} autoPlay muted playsInline className="w-full h-full object-cover transform scale-x-[-1]" />
 
-            {/* Countdown Overlay (scoped to camera) */}
+            {/* Countdown Overlay with Bento Typography */}
             {sessionReady && countdown > 0 && (
-              <div className="interview-room-countdown absolute inset-0 bg-black/70 backdrop-blur-sm flex flex-col items-center justify-center z-20 rounded-xl md:rounded-2xl">
-                <p className="text-white/80 text-[10px] sm:text-xs md:text-sm font-light mb-0.5 tracking-widest uppercase">Get Ready</p>
-                <span className="text-3xl sm:text-4xl md:text-6xl font-black text-white">{countdown}</span>
+              <div className="absolute inset-0 bg-[#111215]/85 backdrop-blur-md flex flex-col items-center justify-center z-20 animate-in fade-in">
+                <span className="px-3.5 py-1 rounded-full bg-white/10 border border-white/20 text-neutral-300 text-[11px] font-black uppercase tracking-widest mb-3">
+                  Get Ready to Answer
+                </span>
+                <span className="text-6xl md:text-8xl font-black text-[#D4F82C] tracking-tight drop-shadow-[0_0_25px_rgba(212,248,44,0.4)]">
+                  {countdown}
+                </span>
+                <p className="text-white/60 text-xs font-medium mt-2">Question starts automatically</p>
               </div>
             )}
 
-            {/* TicTacToe during processing (scoped to camera) */}
+            {/* TicTacToe during processing */}
             {processingVideo && <TicTacToe />}
-
-            {/* Gradient bottom edge */}
-            <div className="absolute bottom-0 left-0 right-0 h-10 bg-gradient-to-t from-gray-900/80 to-transparent pointer-events-none"></div>
           </div>
 
           {/* Status Bar Below Camera */}
-          <div className="interview-room-meta flex items-center justify-between px-2 md:px-4 py-1 md:py-2.5 bg-white dark:bg-gray-800/60 rounded-lg md:rounded-xl border border-gray-200 dark:border-gray-700/50 shadow-sm">
-            <div className="flex items-center gap-1.5 md:gap-3">
-              {/* REC Indicator */}
+          <div className="flex items-center justify-between px-4 py-2.5 bg-white dark:bg-[#16171C] rounded-2xl border border-[#E4E7DC] dark:border-white/10 shadow-sm">
+            <div className="flex items-center gap-2">
               {isRecording ? (
-                <div className="interview-room-badge is-recording flex items-center gap-1 md:gap-1.5 bg-red-500/15 text-red-600 dark:text-red-400 px-2 md:px-2.5 py-0.5 md:py-1 rounded-md md:rounded-lg text-[10px] md:text-[11px] font-extrabold uppercase tracking-wider">
-                  <div className="w-1.5 md:w-2 h-1.5 md:h-2 bg-red-500 rounded-full animate-ping"></div>
-                  REC
+                <div className="flex items-center gap-1.5 bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider">
+                  <div className="w-2 h-2 bg-rose-500 rounded-full animate-ping"></div>
+                  <span>LIVE REC</span>
                 </div>
               ) : !cameraReady ? (
-                <div className="interview-room-badge is-pending flex items-center gap-1 md:gap-1.5 bg-yellow-500/15 text-yellow-600 dark:text-yellow-400 px-2 md:px-2.5 py-0.5 md:py-1 rounded-md md:rounded-lg text-[10px] md:text-[11px] font-extrabold uppercase tracking-wider">
-                  <div className="w-1.5 md:w-2 h-1.5 md:h-2 bg-yellow-500 rounded-full"></div>
-                  INITIALIZING
+                <div className="flex items-center gap-1.5 bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider">
+                  <div className="w-2 h-2 bg-amber-500 rounded-full"></div>
+                  <span>INITIALIZING</span>
                 </div>
               ) : (
-                <div className="interview-room-badge flex items-center gap-1 md:gap-1.5 bg-gray-100 dark:bg-gray-700/50 text-gray-500 dark:text-gray-400 px-2 md:px-2.5 py-0.5 md:py-1 rounded-md md:rounded-lg text-[10px] md:text-[11px] font-semibold">
-                  <div className="w-1.5 md:w-2 h-1.5 md:h-2 bg-gray-400 rounded-full"></div>
-                  STANDBY
+                <div className="flex items-center gap-1.5 bg-[#F8F9F5] dark:bg-white/5 text-[#73766C] dark:text-neutral-400 border border-[#E4E7DC] dark:border-white/10 px-2.5 py-1 rounded-full text-[10px] font-bold">
+                  <div className="w-2 h-2 bg-neutral-400 rounded-full"></div>
+                  <span>STANDBY</span>
                 </div>
               )}
+
+              <div className="hidden sm:flex items-center gap-1 text-[11px] text-[#73766C] dark:text-neutral-400 font-medium">
+                <Camera size={12} />
+                <span>1080p HD</span>
+              </div>
             </div>
-            <div className={`interview-room-badge ${isFullscreen ? 'is-good bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20' : 'is-pending bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border-yellow-500/20'} px-2 md:px-2.5 py-0.5 md:py-1 rounded-md md:rounded-lg text-[10px] md:text-[11px] font-mono font-semibold border`}>
-              {isFullscreen ? 'FULLSCREEN ON' : 'FULLSCREEN OFF'}
+
+            <div className={`px-3 py-1 rounded-full text-[10px] font-mono font-bold border flex items-center gap-1.5 ${
+              isFullscreen 
+                ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20' 
+                : 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20'
+            }`}>
+              <ShieldCheck size={12} />
+              <span>{isFullscreen ? 'FULLSCREEN PROCTOR ON' : 'FULLSCREEN OFF'}</span>
             </div>
           </div>
         </div>
 
-        {/* Right/Bottom panel: Question Card + Voice Controls */}
-        <div className="interview-room-question-column w-full md:w-7/12 flex flex-col gap-2 md:gap-3 min-h-0 flex-1">
-          {/* Question Card */}
-          <div className="interview-room-question-card flex-1 flex flex-col bg-white dark:bg-slate-900/90 rounded-xl md:rounded-2xl border border-gray-200/90 dark:border-white/10 shadow-xl overflow-hidden min-h-0">
+        {/* Right panel: Bento Question Card + Spoken Response & Voice Controls */}
+        <div className="interview-room-question-column w-full md:w-7/12 flex flex-col gap-3 min-h-0 flex-1">
+          {/* Bento Question Card */}
+          <div className="flex-1 flex flex-col bg-white dark:bg-[#16171C] rounded-3xl border border-[#E4E7DC] dark:border-white/10 shadow-2xl overflow-hidden min-h-0">
 
-            {/* Question Header: Counter + Timer */}
-            <div className="interview-room-question-header flex items-center justify-between px-3.5 md:px-6 py-2.5 md:py-4 border-b border-gray-100 dark:border-white/10 shrink-0">
-              <div className="flex items-center gap-2 md:gap-3">
-                <div className="interview-room-question-icon w-7 h-7 md:w-9 md:h-9 rounded-lg bg-blue-500/10 dark:bg-blue-500/20 flex items-center justify-center text-blue-600 dark:text-blue-400">
-                  <i className="fas fa-list-ol text-xs md:text-sm"></i>
+            {/* Question Header: Counter + Countdown Timer */}
+            <div className="flex items-center justify-between px-6 md:px-8 py-3.5 md:py-4 border-b border-[#E4E7DC] dark:border-white/10 shrink-0 bg-white/50 dark:bg-transparent">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-[#F8F9F5] dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 flex items-center justify-center text-[#111215] dark:text-[#D4F82C]">
+                  <Briefcase size={16} />
                 </div>
                 <div>
-                  <p className="text-[9px] md:text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-widest font-bold">Question</p>
-                  <p className="text-sm md:text-lg font-black text-gray-900 dark:text-white">
-                    {state.currentQuestionIndex + 1} <span className="text-gray-400 dark:text-gray-500 text-xs md:text-sm font-normal">/ {state.questions.length}</span>
+                  <p className="text-[10px] text-[#73766C] dark:text-neutral-400 uppercase tracking-widest font-black">Question Index</p>
+                  <p className="text-base md:text-xl font-black text-[#111215] dark:text-white">
+                    {state.currentQuestionIndex + 1} <span className="text-neutral-400 text-xs md:text-sm font-normal">/ {state.questions.length}</span>
                   </p>
                 </div>
               </div>
-              {/* Timer */}
-              <div className={`interview-room-timer flex items-center gap-1.5 md:gap-2 px-3 md:px-4 py-1.5 md:py-2 rounded-lg md:rounded-xl font-mono font-black text-xs md:text-sm transition-colors ${timeLeft < 30
-                ? 'bg-red-50 text-red-600 border-red-200 dark:bg-red-950/50 dark:text-red-400 dark:border-red-800/80 animate-pulse'
-                : 'bg-gray-50 text-gray-800 border-gray-200 dark:bg-gray-800/80 dark:text-white dark:border-gray-700'
-                } border shadow-sm`}>
-                <div className={`w-2 h-2 rounded-full ${isRecording ? 'bg-red-500 animate-ping' : 'bg-gray-400 dark:bg-gray-500'}`}></div>
-                <i className="fas fa-clock text-xs opacity-60"></i>
-                {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}
+
+              {/* Countdown Timer Pill */}
+              <div className={`flex items-center gap-2 px-4 py-1.5 rounded-full font-mono font-black text-xs md:text-sm border transition-colors shadow-2xs ${
+                timeLeft < 30
+                  ? 'bg-rose-50 text-rose-600 border-rose-200 dark:bg-rose-950/50 dark:text-rose-400 dark:border-rose-800 animate-pulse'
+                  : 'bg-[#F8F9F5] text-[#111215] border-[#E4E7DC] dark:bg-white/5 dark:text-white dark:border-white/10'
+              }`}>
+                <div className={`w-2 h-2 rounded-full ${isRecording ? 'bg-rose-500 animate-ping' : 'bg-neutral-400'}`}></div>
+                <Clock size={13} className="opacity-70" />
+                <span>{Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}</span>
               </div>
             </div>
 
-            {/* Question Body - Highly Readable for Mobile & Laptop */}
-            <div className="interview-room-question-body flex-1 overflow-y-auto px-4 md:px-7 py-4 md:py-7 flex items-start touch-pan-y custom-scrollbar">
-              <div className="w-full">
-                <p className="interview-room-question-label text-[10px] md:text-xs text-blue-600 dark:text-blue-400 font-extrabold uppercase tracking-widest mb-2.5 md:mb-4 flex items-center gap-1.5">
-                  <i className="fas fa-microphone-alt"></i> Speak your response clearly below
-                </p>
-                <h2 className="text-sm sm:text-base md:text-lg font-bold leading-relaxed text-gray-900 dark:text-white selection:bg-blue-500/30">
-                  {currentQ}
+            {/* Horizontal Dynamic Neon Lime Progress Line */}
+            <div className="w-full bg-[#E4E7DC]/60 dark:bg-white/5 h-1">
+              <div 
+                className="bg-[#D4F82C] h-1 transition-all duration-500 shadow-[0_0_10px_rgba(212,248,44,0.6)]"
+                style={{ width: `${((state.currentQuestionIndex + 1) / state.questions.length) * 100}%` }}
+              />
+            </div>
+
+            {/* Question Body */}
+            <div className="flex-1 overflow-y-auto px-6 md:px-8 py-6 md:py-8 flex flex-col justify-between touch-pan-y custom-scrollbar">
+              <div>
+                <div className="flex flex-wrap items-center gap-2 mb-4">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#111215] text-[#D4F82C] text-[10px] font-black uppercase tracking-wider shadow-xs">
+                    <Mic size={11} className="text-[#D4F82C]" />
+                    <span>Speak Your Response Clearly Below</span>
+                  </span>
+                  {livekit.isConnected && (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 text-[10px] font-bold">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                      {livekit.isAgentSpeaking ? 'Alex (AI) is Speaking...' : livekit.isCandidateSpeaking ? 'Listening to You...' : 'Realtime Voice AI Active'}
+                    </span>
+                  )}
+                </div>
+
+                {livekit.lastCompliment && (
+                  <div className="mb-4 px-4 py-3 rounded-2xl bg-[#D4F82C]/20 border border-[#D4F82C]/50 text-[#111215] dark:text-[#D4F82C] text-xs font-black flex items-center gap-2 animate-fade-in shadow-xs">
+                    <Sparkles size={16} className="text-[#111215] dark:text-[#D4F82C] shrink-0" />
+                    <span>Alex: "{livekit.lastCompliment}"</span>
+                  </div>
+                )}
+
+                {livekit.isCrossQuestioning && (
+                  <div className="mb-4 px-4 py-3 rounded-2xl bg-gradient-to-r from-amber-500/15 via-orange-500/10 to-transparent border border-amber-500/30 text-amber-800 dark:text-amber-300 text-xs font-black flex items-center gap-2 animate-pulse">
+                    <Sparkles size={16} className="text-amber-500 shrink-0" />
+                    <span>AI Cross-Questioning: Probing In-Depth Technical Architecture & Real-World Decisions</span>
+                  </div>
+                )}
+
+                <h2 className="text-xl sm:text-2xl md:text-3xl font-black leading-relaxed text-[#111215] dark:text-white selection:bg-[#D4F82C]/40 tracking-tight">
+                  {livekit.currentQuestionText || currentQ}
                 </h2>
+              </div>
+
+              {/* Candidate Audio Listening Status Card */}
+              <div className="mt-6 pt-4 border-t border-[#E4E7DC]/60 dark:border-white/5">
+                <div className="p-4 rounded-2xl bg-[#F8F9F5] dark:bg-white/[0.03] border border-[#E4E7DC] dark:border-white/10 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-white dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 flex items-center justify-center text-[#111215] dark:text-[#D4F82C] shrink-0">
+                      <Mic size={16} className={isRecording ? 'text-rose-500 animate-pulse' : 'text-[#73766C] dark:text-neutral-400'} />
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-[#111215] dark:text-white">
+                        {isRecording ? 'Listening to your microphone...' : 'Microphone is on standby'}
+                      </p>
+                      <p className="text-[11px] text-[#73766C] dark:text-neutral-400">
+                        {isRecording ? 'Speak clearly at normal pace. AI records both video and audio.' : 'Recording begins automatically when countdown concludes.'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {isRecording && (
+                    <div className="flex items-center gap-1">
+                      <span className="w-1 h-3 bg-emerald-500 rounded-full animate-[soundbar_0.6s_ease-in-out_infinite]" />
+                      <span className="w-1 h-5 bg-emerald-500 rounded-full animate-[soundbar_0.5s_ease-in-out_infinite_0.1s]" />
+                      <span className="w-1 h-4 bg-emerald-500 rounded-full animate-[soundbar_0.7s_ease-in-out_infinite_0.2s]" />
+                      <span className="w-1 h-2 bg-emerald-500 rounded-full animate-[soundbar_0.4s_ease-in-out_infinite_0.3s]" />
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
             {/* Action Buttons & Voice Controls */}
-            <div className="interview-room-question-actions flex flex-row items-center justify-between gap-2 px-3.5 md:px-6 py-2.5 md:py-4 border-t border-gray-100 dark:border-white/10 bg-gray-50/70 dark:bg-slate-900/50 shrink-0">
-              <div className="flex items-center gap-1.5 sm:gap-2">
+            <div className="flex flex-row items-center justify-between gap-3 px-6 md:px-8 py-4 border-t border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5]/70 dark:bg-white/[0.02] shrink-0">
+              <div className="flex items-center gap-2">
                 <button
                   type="button"
                   onClick={(e) => {
@@ -3746,63 +3836,49 @@ const ActiveInterviewSession: React.FC<{
                       onError: () => setIsSpeaking(false),
                     });
                   }}
-                  onTouchEnd={(e) => {
-                    e.preventDefault();
-                    if (getMuteTTS()) return;
-                    unlockTTSAudio();
-                    speak.stop();
-                    setIsSpeaking(true);
-                    const langMap: Record<string, string> = { en: 'en', hi: 'hi-IN', mr: 'mr-IN' };
-                    const ttsLang = langMap[state.language] || 'en';
-                    speak(currentQ, {
-                      lang: ttsLang,
-                      onEnd: () => setIsSpeaking(false),
-                      onError: () => setIsSpeaking(false),
-                    });
-                  }}
-                  className={`px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl border text-xs font-extrabold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95 select-none ${
+                  className={`px-4 py-2.5 rounded-full border text-xs font-black transition-all flex items-center gap-2 cursor-pointer shadow-xs active:scale-95 ${
                     isSpeaking
-                      ? 'bg-blue-600 text-white border-blue-500 shadow-blue-500/30 animate-pulse'
-                      : 'bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/70 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800/80'
+                      ? 'bg-[#111215] text-[#D4F82C] border-[#111215] shadow-md animate-pulse'
+                      : 'bg-white dark:bg-white/5 hover:bg-[#E4E7DC]/50 text-[#111215] dark:text-white border-[#E4E7DC] dark:border-white/10'
                   }`}
                   title="Replay Voice Aloud"
                 >
-                  <i className={`fas ${isSpeaking ? 'fa-pause' : 'fa-volume-high'} text-xs`}></i>
+                  <Volume2 size={14} className={isSpeaking ? 'text-[#D4F82C]' : ''} />
                   <span>{isSpeaking ? 'Speaking...' : 'Replay Voice'}</span>
                 </button>
                 <button
                   type="button"
                   onClick={toggleMuteVoice}
-                  className={`px-2.5 py-1.5 sm:px-3.5 sm:py-2 rounded-xl text-xs font-extrabold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm border active:scale-95 select-none ${
+                  className={`px-3.5 py-2.5 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-xs border active:scale-95 ${
                     isVoiceMuted
-                      ? 'bg-red-50 dark:bg-red-950/60 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800/80 hover:bg-red-100'
-                      : 'bg-gray-100 dark:bg-gray-800/80 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:bg-gray-200'
+                      ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
+                      : 'bg-white dark:bg-white/5 text-[#73766C] dark:text-neutral-300 border-[#E4E7DC] dark:border-white/10 hover:bg-[#E4E7DC]/50'
                   }`}
                   title={isVoiceMuted ? "Unmute AI Voice" : "Mute AI Voice"}
                 >
-                  <i className={`fas ${isVoiceMuted ? 'fa-volume-xmark text-red-500' : 'fa-volume-high text-gray-400'}`}></i>
+                  <Mic size={13} className={isVoiceMuted ? 'text-rose-500' : ''} />
                   <span className="hidden sm:inline">{isVoiceMuted ? 'Voice Muted' : 'Mute Voice'}</span>
                 </button>
               </div>
 
-              {/* Next / Stop Button */}
+              {/* Next / Stop CTA Button */}
               {isRecording ? (
                 <button
                   onClick={stopRecording}
-                  className="interview-room-primary-button flex items-center gap-2 px-4 sm:px-6 py-2 sm:py-2.5 rounded-xl font-extrabold text-xs sm:text-sm bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 shadow-lg shadow-blue-500/25 active:scale-95 cursor-pointer"
+                  className="flex items-center gap-2 px-7 py-3 rounded-full font-black text-xs sm:text-sm bg-[#111215] hover:bg-[#202227] text-[#D4F82C] hover:text-white shadow-xl shadow-black/15 hover:scale-[1.02] active:scale-95 transition-all cursor-pointer"
                 >
-                  Next
-                  <i className="fas fa-arrow-right"></i>
+                  <span>{state.currentQuestionIndex >= state.questions.length - 1 ? 'Finish & Submit' : 'Next Question'}</span>
+                  <ArrowRight size={15} />
                 </button>
               ) : processingVideo || isStopping ? (
-                <div className="interview-room-state-chip flex items-center gap-2 px-3.5 sm:px-6 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700">
-                  <i className="fas fa-circle-notch fa-spin"></i>
-                  Loading next...
+                <div className="flex items-center gap-2 px-5 py-2.5 rounded-full text-xs sm:text-sm font-bold text-[#73766C] dark:text-neutral-400 bg-white dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10">
+                  <RefreshCw size={13} className="animate-spin text-[#D4F82C]" />
+                  <span>Loading next...</span>
                 </div>
               ) : (
-                <div className="interview-room-state-chip is-muted flex items-center gap-2 px-3.5 sm:px-6 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700">
-                  <i className="fas fa-hourglass-half"></i>
-                  Ready
+                <div className="flex items-center gap-2 px-5 py-2.5 rounded-full text-xs sm:text-sm font-bold text-[#73766C] dark:text-neutral-400 bg-white dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10">
+                  <Clock size={13} />
+                  <span>Ready</span>
                 </div>
               )}
             </div>
@@ -3810,19 +3886,19 @@ const ActiveInterviewSession: React.FC<{
         </div>
       </div>
 
-      <div className="interview-room-footer shrink-0 px-2 md:px-3 pb-2 md:pb-3">
+      <div className="interview-room-footer shrink-0 px-3 md:px-4 pb-3 relative z-10">
         {/* Tab-switch warning banner (red, real-time) */}
         {tabWarning && (
-          <div className="interview-room-warning w-full px-3 md:px-5 py-2 md:py-3 bg-red-50 dark:bg-red-900/30 rounded-lg md:rounded-xl border border-red-200 dark:border-red-700/50 shadow-sm flex items-center gap-2 md:gap-3">
-            <div className="w-5 md:w-7 h-5 md:h-7 rounded-md md:rounded-lg bg-red-500/15 flex items-center justify-center shrink-0">
-              <i className="fas fa-exclamation-triangle text-red-500 text-[10px] md:text-xs"></i>
+          <div className="interview-room-warning w-full px-4 py-3 bg-red-500/10 dark:bg-red-950/40 rounded-2xl border border-red-500/20 shadow-md flex items-center gap-3 animate-in fade-in">
+            <div className="w-8 h-8 rounded-xl bg-red-500/20 text-red-600 dark:text-red-400 flex items-center justify-center shrink-0">
+              <AlertCircle size={16} />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-[9px] md:text-[10px] text-red-600 dark:text-red-400 uppercase tracking-widest font-bold mb-0.5">Security Alert</p>
-              <p className="text-xs md:text-sm text-red-700 dark:text-red-300 font-semibold truncate">{tabWarning}</p>
+              <p className="text-[10px] text-red-600 dark:text-red-400 uppercase tracking-widest font-black mb-0.5">Security Alert</p>
+              <p className="text-xs md:text-sm text-red-700 dark:text-red-300 font-bold truncate">{tabWarning}</p>
             </div>
-            <div className="hidden sm:flex items-center gap-1.5 px-2 py-1 rounded-full bg-red-500/10 text-red-600 dark:text-red-400 text-[10px] font-mono font-bold shrink-0">
-              <div className="w-1.5 h-1.5 bg-red-500 rounded-full"></div>
+            <div className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-500/15 text-red-600 dark:text-red-400 text-[10px] font-mono font-black shrink-0">
+              <div className="w-1.5 h-1.5 bg-red-500 rounded-full animate-ping"></div>
               FLAGGED
             </div>
           </div>
@@ -4124,54 +4200,51 @@ const InterviewSubmission: React.FC<{
   }, []);
 
   return (
-      <>
-      <div className="interview-completion-shell min-h-screen bg-gray-50 dark:bg-transparent flex flex-col items-center justify-center p-4 text-center">
-        <div className="interview-completion-spinner relative w-28 h-28 mb-6 flex items-center justify-center">
+    <>
+      <div className="interview-completion-shell min-h-screen bg-[#F8F9F5] dark:bg-[#0D0E11] flex flex-col items-center justify-center p-4 text-center font-sans">
+        <div className="relative w-28 h-28 mb-6 flex items-center justify-center">
           {/* Glowing background ring */}
-          <div className="absolute inset-0 rounded-full bg-emerald-500/10 dark:bg-emerald-500/20 blur-xl animate-pulse"></div>
+          <div className="absolute inset-0 rounded-full bg-[#D4F82C]/10 blur-xl animate-pulse"></div>
           
           {/* Static track circle */}
-          <div className="absolute inset-0 border-4 border-emerald-100 dark:border-emerald-950/60 rounded-full"></div>
+          <div className="absolute inset-0 border-4 border-[#E4E7DC] dark:border-white/10 rounded-full"></div>
           
           {/* Animated spinning progress arc */}
-          <div className="absolute inset-0 border-4 border-t-emerald-500 border-r-emerald-400 border-b-transparent border-l-transparent rounded-full animate-spin"></div>
-          
-          {/* Inner accent ring */}
-          <div className="absolute inset-2 border border-dashed border-emerald-500/30 rounded-full animate-[spin_15s_linear_infinite]"></div>
+          <div className="absolute inset-0 border-4 border-t-[#111215] dark:border-t-[#D4F82C] border-r-[#111215]/40 dark:border-r-[#D4F82C]/40 border-b-transparent border-l-transparent rounded-full animate-spin"></div>
 
           {/* Centered Icon Container */}
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             {showCompletionPopup || status === 'Successfully Submitted!' ? (
-              <i className="fas fa-check text-3xl text-emerald-500 leading-none animate-in zoom-in duration-300"></i>
+              <Check size={36} className="text-emerald-500 animate-in zoom-in duration-300" />
             ) : (
-              <i className="fas fa-brain text-3xl text-emerald-500 leading-none animate-pulse"></i>
+              <BrainCircuit size={36} className="text-[#111215] dark:text-[#D4F82C] animate-pulse" />
             )}
           </div>
         </div>
 
-        {/* Dynamic Title based on submission progress */}
-        <h2 className="interview-completion-title text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white mb-2">
+        {/* Dynamic Title */}
+        <h2 className="text-2xl sm:text-4xl font-black text-[#111215] dark:text-white mb-2 tracking-tight">
           {terminated 
             ? 'Interview Terminated' 
             : (showCompletionPopup || status === 'Successfully Submitted!' ? 'Assessment Submitted!' : 'Submitting Assessment...')}
         </h2>
 
         {/* Status description */}
-        <p className={`interview-completion-status mb-4 ${terminated ? 'text-red-500 font-bold' : 'text-gray-600 dark:text-gray-300 font-medium'}`}>
+        <p className={`mb-5 text-sm sm:text-base ${terminated ? 'text-rose-500 font-bold' : 'text-[#575A51] dark:text-[#A1A49B] font-medium'}`}>
           {terminated ? 'Session revoked due to security violations.' : status}
         </p>
 
         {/* Warning Alert Box: Do Not Refresh */}
         {!showCompletionPopup && !terminated && (
-          <div className="mb-8 px-5 py-3 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-300 text-xs font-semibold flex items-center justify-center gap-2.5 max-w-md shadow-sm animate-pulse">
-            <i className="fas fa-triangle-exclamation text-sm text-amber-500"></i>
-            <span>Please <strong>do NOT refresh or close</strong> this page while we process and upload your answers.</span>
+          <div className="mb-6 px-5 py-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-300 text-xs font-bold flex items-center justify-center gap-2 max-w-md shadow-sm">
+            <AlertCircle size={15} className="shrink-0 text-amber-500" />
+            <span>Please <strong>do NOT refresh or close</strong> this window while we process and upload your evaluation.</span>
           </div>
         )}
 
-        <div className="interview-completion-fact bg-white dark:bg-gray-800 p-6 rounded-2xl max-w-lg text-center border border-gray-100 dark:border-gray-700 shadow-xl">
-          <p className="text-xs font-bold text-blue-500 uppercase mb-3 tracking-widest">While we process</p>
-          <p className="text-gray-700 dark:text-gray-300 italic text-lg transition-all duration-500">"{facts[factIndex]}"</p>
+        <div className="bg-white dark:bg-[#16171C] p-6 rounded-3xl max-w-lg text-center border border-[#E4E7DC] dark:border-white/10 shadow-lg">
+          <p className="text-[11px] font-black text-[#73766C] dark:text-neutral-400 uppercase mb-2 tracking-widest">While we evaluate</p>
+          <p className="text-[#111215] dark:text-[#E4E7DC] font-semibold italic text-base leading-relaxed transition-all duration-500">"{facts[factIndex]}"</p>
         </div>
 
         {(showCompletionPopup || status === 'Successfully Submitted!') && (
@@ -4179,38 +4252,38 @@ const InterviewSubmission: React.FC<{
             <button 
               type="button"
               onClick={() => navigate('/jobs')} 
-              className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold py-3 px-5 rounded-xl shadow-md transition-all flex items-center justify-center gap-2 text-sm cursor-pointer"
+              className="w-full bg-[#111215] hover:bg-[#202227] text-[#D4F82C] hover:text-white font-black py-3.5 px-6 rounded-full shadow-lg shadow-black/10 transition-all flex items-center justify-center gap-2 text-xs sm:text-sm cursor-pointer"
             >
-              <i className="fas fa-briefcase"></i>
+              <Briefcase size={15} />
               <span>Explore All Jobs</span>
             </button>
             <button 
               type="button"
               onClick={() => navigate('/upload-resume')} 
-              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-5 rounded-xl shadow-md transition-all flex items-center justify-center gap-2 text-sm cursor-pointer"
+              className="w-full bg-white dark:bg-white/5 hover:bg-[#E4E7DC]/50 text-[#111215] dark:text-white font-black py-3.5 px-6 rounded-full border border-[#E4E7DC] dark:border-white/10 transition-all flex items-center justify-center gap-2 text-xs sm:text-sm cursor-pointer"
             >
-              <i className="fas fa-file-arrow-up"></i>
+              <FileText size={15} />
               <span>Upload Resume</span>
             </button>
           </div>
         )}
       </div>
 
-      {/* Thank You Modal Popup with Rating & View More Jobs button */}
+      {/* Thank You Modal Popup with Rating */}
       {showCompletionPopup && createPortal(
-        <div className="interview-completion-overlay fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center z-[10000] p-4" onClick={() => navigate('/jobs')}>
-          <div className="interview-completion-modal bg-white dark:bg-gray-800 rounded-3xl shadow-2xl w-full max-w-lg text-center p-6 sm:p-8 m-4 animate-fade-in-up border border-gray-100 dark:border-gray-700 overflow-hidden" onClick={e => e.stopPropagation()}>
-            <div className="w-16 h-16 mx-auto bg-emerald-100 dark:bg-emerald-950/60 rounded-full flex items-center justify-center mb-4 border-4 border-emerald-200 dark:border-emerald-800/60 shadow-lg shadow-emerald-500/10">
-                <i className="fas fa-check text-3xl text-emerald-500"></i>
+        <div className="fixed inset-0 bg-black/75 backdrop-blur-md flex items-center justify-center z-[10000] p-4" onClick={() => navigate('/jobs')}>
+          <div className="bg-white dark:bg-[#16171C] rounded-3xl shadow-2xl w-full max-w-lg text-center p-6 sm:p-8 m-4 animate-in zoom-in-95 duration-300 border border-[#E4E7DC] dark:border-white/10 overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="w-16 h-16 mx-auto bg-[#D4F82C] text-[#111215] rounded-2xl flex items-center justify-center mb-4 shadow-lg shadow-black/10">
+              <Check size={32} strokeWidth={3} />
             </div>
-            <h3 className="font-extrabold text-2xl sm:text-3xl text-gray-900 dark:text-white mb-2">Thank You!</h3>
-            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 mb-5 leading-relaxed">
-              Your interview assessment has been successfully submitted. The recruiter will review your application and reach out shortly!
+            <h3 className="font-black text-2xl sm:text-3xl text-[#111215] dark:text-white mb-2 tracking-tight">Thank You!</h3>
+            <p className="text-xs sm:text-sm text-[#575A51] dark:text-[#A1A49B] mb-5 leading-relaxed font-medium">
+              Your interview assessment has been successfully recorded. The hiring team has been notified and will review your performance shortly.
             </p>
 
-            {/* Candidate Experience Star Rating System */}
-            <div className="bg-gray-50 dark:bg-gray-900/50 p-4 rounded-2xl border border-gray-100 dark:border-gray-700/60 mb-5">
-              <p className="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-2">
+            {/* Candidate Experience Rating */}
+            <div className="bg-[#F8F9F5] dark:bg-white/[0.02] p-5 rounded-2xl border border-[#E4E7DC] dark:border-white/10 mb-6">
+              <p className="text-[11px] font-black text-[#73766C] dark:text-neutral-400 uppercase tracking-wider mb-2.5">
                 Rate Your Interview Experience
               </p>
               <div className="flex items-center justify-center gap-2 my-1">
@@ -4224,42 +4297,43 @@ const InterviewSubmission: React.FC<{
                     }}
                     onMouseEnter={() => setHoverRating(star)}
                     onMouseLeave={() => setHoverRating(0)}
-                    className="p-1 text-2xl transition-transform hover:scale-125 focus:outline-none"
+                    className="p-1 text-2xl transition-transform hover:scale-125 focus:outline-none cursor-pointer"
                     title={`${star} Star${star > 1 ? 's' : ''}`}
                   >
-                    <i className={`fa-star ${star <= (hoverRating || candidateRating) ? 'fas text-amber-400 drop-shadow' : 'far text-gray-300 dark:text-gray-600'}`}></i>
+                    <Star 
+                      size={24} 
+                      className={`${star <= (hoverRating || candidateRating) ? 'fill-amber-400 text-amber-400' : 'text-neutral-300 dark:text-neutral-600'}`} 
+                    />
                   </button>
                 ))}
               </div>
               {ratingSubmitted && (
-                <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400 mt-1 animate-in fade-in">
-                  <i className="fas fa-check-circle mr-1"></i> Thank you for rating ({candidateRating}/5 stars)!
+                <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400 mt-2 animate-in fade-in flex items-center justify-center gap-1.5">
+                  <CheckCircle2 size={13} />
+                  <span>Thank you for rating ({candidateRating}/5 stars)!</span>
                 </p>
               )}
             </div>
 
-            {/* Action Buttons: View All Jobs & Upload Resume */}
-            <div className="space-y-3 mt-6">
-              {/* Primary CTA: View All Open Jobs */}
+            {/* Action Buttons */}
+            <div className="space-y-3">
               <button 
                 type="button"
                 onClick={() => navigate('/jobs')} 
-                className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-extrabold py-3.5 px-5 rounded-xl shadow-lg shadow-blue-500/25 hover:shadow-blue-500/35 hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-2.5 text-sm cursor-pointer"
+                className="w-full bg-[#111215] hover:bg-[#202227] text-[#D4F82C] hover:text-white font-black py-4 px-6 rounded-full shadow-lg shadow-black/10 hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-2.5 text-xs sm:text-sm cursor-pointer"
               >
-                <i className="fas fa-briefcase text-base"></i>
+                <Briefcase size={16} />
                 <span>Explore All Open Jobs</span>
-                <i className="fas fa-arrow-right text-xs ml-1"></i>
+                <ArrowRight size={14} />
               </button>
 
-              {/* Secondary CTA: Upload Resume for More Roles */}
               <button 
                 type="button"
                 onClick={() => navigate('/upload-resume')} 
-                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold py-3.5 px-5 rounded-xl shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/35 hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-2.5 text-sm cursor-pointer"
+                className="w-full bg-[#F8F9F5] dark:bg-white/5 hover:bg-[#E4E7DC]/60 text-[#111215] dark:text-white font-black py-3.5 px-6 rounded-full border border-[#E4E7DC] dark:border-white/10 transition-all flex items-center justify-center gap-2 text-xs sm:text-sm cursor-pointer"
               >
-                <i className="fas fa-file-arrow-up text-base"></i>
-                <span>Upload Resume for More Jobs</span>
-                <i className="fas fa-chevron-right text-xs ml-1"></i>
+                <FileText size={15} />
+                <span>Upload Resume for More Roles</span>
               </button>
             </div>
           </div>

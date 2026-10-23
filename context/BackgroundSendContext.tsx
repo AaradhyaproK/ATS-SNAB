@@ -184,11 +184,17 @@ export const BackgroundSendProvider: React.FC<{ children: React.ReactNode }> = (
 
           const formattedPhone = formatPhoneForWhatsApp(candidate.phone || '');
           if (formattedPhone) {
+            let candidateSpecificLink = opts.interviewLink;
+            if (candidate.email && !candidateSpecificLink.includes('email=')) {
+              const sep = candidateSpecificLink.includes('?') ? '&' : '?';
+              candidateSpecificLink = `${candidateSpecificLink}${sep}email=${encodeURIComponent(candidate.email)}${candidateDisplayName ? `&name=${encodeURIComponent(candidateDisplayName)}` : ''}`;
+            }
+
             const waRes = await sendInterviewWhatsAppInvite({
               phone: formattedPhone,
               candidateName: candidateDisplayName,
               jobTitle: opts.jobTitle,
-              interviewLink: opts.interviewLink,
+              interviewLink: candidateSpecificLink,
               accessCode: opts.accessCode,
               isReminder: !!opts.isReminder,
               options: opts.options
