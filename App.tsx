@@ -40,6 +40,8 @@ import {
 } from './components/ui/interview-loading-skeleton';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import TermsOfService from './pages/TermsOfService';
+import CandidateDataCharter from './pages/CandidateDataCharter';
+import SecurityWhitepaper from './pages/SecurityWhitepaper';
 import SubmitReview from './pages/SubmitReview';
 import ReviewsPage from './pages/Reviews';
 import OurJourney from './pages/OurJourney';
@@ -129,6 +131,7 @@ const App: React.FC = () => {
             <Route path="/" element={<LandingPage />} />
             <Route path="landing" element={<LandingPage />} />
             <Route path="auth" element={<AuthPage />} />
+            <Route path="login" element={<AuthPage />} />
             <Route path="dashboard" element={<DashboardRedirect />} />
             <Route path="admin-dashboard" element={<Navigate to="/admin" replace />} />
             <Route path="recruiter-jobs" element={<Navigate to="/recruiter/jobs" replace />} />
@@ -137,6 +140,8 @@ const App: React.FC = () => {
             <Route path="report-bug" element={<ReportBug />} />
             <Route path="privacy-policy" element={<PrivacyPolicy />} />
             <Route path="terms-of-service" element={<TermsOfService />} />
+            <Route path="candidate-data-charter" element={<CandidateDataCharter />} />
+            <Route path="security-whitepaper" element={<SecurityWhitepaper />} />
             <Route path="status" element={<StatusPage />} />
             <Route path="blog/:id" element={
               <ThemeProvider>

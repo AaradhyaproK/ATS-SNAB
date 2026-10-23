@@ -1671,109 +1671,128 @@ export default function HotLeads() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-gray-50 dark:bg-[#000] text-gray-900 dark:text-white font-sans pt-1 sm:pt-1.5 transition-colors">
+    <div className="flex min-h-screen flex-col bg-[#F8F9F5] text-[#111215] font-sans transition-colors">
       {/* ── 1. Top Section Header ── */}
-      <section className="shrink-0 border-b border-gray-200 dark:border-white/[0.11] bg-white dark:bg-[#000] transition-colors">
-        <div className="flex flex-col gap-2.5 px-4 py-2.5 sm:px-6 sm:py-3 lg:px-7 xl:flex-row xl:items-start xl:justify-between">
+      <section className="shrink-0 border-b border-[#E4E7DC] bg-[#F8F9F5]">
+        <div className="flex flex-col gap-3 px-4 py-4 sm:px-6 sm:py-5 lg:px-8 xl:flex-row xl:items-center xl:justify-between">
           <div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2.5">
               <Link
                 to="/recruiter/jobs"
-                className="geist-caption inline-flex h-7 items-center gap-1.5 rounded-[5px] border border-gray-300 dark:border-white/[0.14] bg-white dark:bg-white/[0.04] px-2.5 text-xs font-medium text-gray-800 dark:text-[#d4d4d4] shadow-xs dark:shadow-none transition-all hover:bg-gray-50 dark:hover:bg-white/[0.08] hover:border-gray-400 dark:hover:border-white/[0.25] hover:text-gray-900 dark:hover:text-white"
+                className="inline-flex items-center gap-1.5 rounded-full border border-[#E4E7DC] bg-white px-3 py-1 text-xs font-semibold text-[#111215] shadow-xs transition-colors hover:bg-[#F8F9F5]"
               >
-                <ArrowLeft className="w-3 h-3 text-gray-500 dark:text-[#8f8f8f]" />
+                <ArrowLeft className="w-3 h-3 text-[#575A51]" />
                 <span>Dashboard</span>
               </Link>
-              <span className="geist-label uppercase text-gray-500 dark:text-[#6b7280] text-[10px] tracking-wider font-semibold">Candidate Pipeline</span>
+              <div className="inline-flex items-center gap-1.5 rounded-full border border-[#E4E7DC] bg-white px-3 py-1 text-[11px] font-semibold tracking-wider uppercase text-[#575A51] shadow-xs">
+                <span className="h-1.5 w-1.5 rounded-full bg-[#8FB305] animate-pulse" />
+                <span>Candidate Pipeline</span>
+              </div>
             </div>
-            <h1 className="geist-page-title mt-1 text-gray-900 dark:text-white flex items-center gap-2">
-              <User className="w-5 h-5 text-emerald-500" />
+            <h1 className="mt-2 text-2xl sm:text-3xl font-bold tracking-tight text-[#111215] flex items-center gap-2.5 flex-wrap">
+              <User className="w-6 h-6 text-[#111215]" />
               <span>Candidate Responses & Applications</span>
             </h1>
-            <p className="geist-small mt-0.5 text-gray-600 dark:text-[#8f8f8f] max-w-3xl text-xs">
+            <p className="mt-1 text-xs sm:text-sm text-[#575A51] max-w-3xl">
               Manage candidate applications, review resumes, progress ATS pipeline stages, and dispatch candidate email notifications.
             </p>
           </div>
 
-          <div className="flex items-center gap-2 pt-0.5">
+          <div className="flex items-center gap-2 shrink-0">
             <Link
               to="/recruiter/all-jobs"
-              className="geist-caption inline-flex h-8 items-center gap-2 rounded-[6px] border border-gray-300 dark:border-white/[0.14] bg-white dark:bg-white/[0.04] px-3.5 text-xs font-medium text-gray-800 dark:text-[#d4d4d4] shadow-xs dark:shadow-none transition-all hover:bg-gray-50 dark:hover:bg-white/[0.08] hover:border-gray-400 dark:hover:border-white/[0.25] hover:text-gray-900 dark:hover:text-white"
+              className="inline-flex items-center gap-2 rounded-full border border-[#E4E7DC] bg-white px-4 py-2 text-xs font-semibold text-[#111215] shadow-xs transition-colors hover:bg-[#F8F9F5]"
             >
-              <Briefcase className="w-3.5 h-3.5 text-gray-600 dark:text-[#a3a3a3]" />
+              <Briefcase className="w-3.5 h-3.5 text-[#575A51]" />
               <span>All Jobs</span>
             </Link>
           </div>
         </div>
       </section>
 
-      {/* ── 2. KPI Metrics Bar ── */}
-      <section className="border-b border-gray-200 dark:border-white/[0.11] bg-white dark:bg-[#000] transition-colors">
-        <div className="grid grid-cols-2 divide-y divide-gray-200 dark:divide-white/[0.11] sm:grid-cols-4 sm:divide-y-0 sm:divide-x">
-          <div className="px-4 py-3.5 sm:px-6 lg:px-7">
-            <p className="geist-label uppercase text-[10px] text-gray-500 dark:text-[#8f8f8f] font-semibold tracking-wider flex items-center gap-1.5">
-              <User className="size-3 text-gray-400 dark:text-[#8f8f8f]" />
-              <span>Total Applications</span>
-            </p>
-            <div className="geist-page-title mt-1 text-gray-900 dark:text-white font-bold">{stats.total}</div>
-            <p className="geist-small mt-0.5 text-[11px] text-gray-500 dark:text-[#6b7280]">All candidate responses received</p>
+      {/* ── 2. KPI Metrics Bento Grid ── */}
+      <section className="px-4 pt-5 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5 sm:gap-4">
+          <div className="rounded-2xl border border-[#E4E7DC] bg-white p-4 sm:p-5 shadow-xs transition-all hover:-translate-y-0.5 hover:border-[#111215]/30 hover:shadow-md">
+            <div className="flex items-center justify-between">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-[#73766C]">
+                Total Applications
+              </p>
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg border border-[#E4E7DC] bg-[#F8F9F5] text-[#111215]">
+                <User className="size-3.5" />
+              </div>
+            </div>
+            <div className="mt-3 text-2xl sm:text-3xl font-extrabold tracking-tight text-[#111215]">{stats.total}</div>
+            <p className="mt-1 text-[11px] text-[#575A51]">All candidate responses received</p>
           </div>
 
-          <div className="px-4 py-3.5 sm:px-6 lg:px-7">
-            <p className="geist-label uppercase text-[10px] text-blue-600 dark:text-blue-400 font-semibold tracking-wider flex items-center gap-1.5">
-              <Clock className="size-3 text-blue-600 dark:text-blue-400" />
-              <span>Under Review</span>
-            </p>
-            <div className="geist-page-title mt-1 text-gray-900 dark:text-white font-bold">{stats.underReview}</div>
-            <p className="geist-small mt-0.5 text-[11px] text-gray-500 dark:text-[#6b7280]">New applications awaiting decision</p>
+          <div className="rounded-2xl border border-[#E4E7DC] bg-white p-4 sm:p-5 shadow-xs transition-all hover:-translate-y-0.5 hover:border-[#111215]/30 hover:shadow-md">
+            <div className="flex items-center justify-between">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-[#73766C]">
+                Under Review
+              </p>
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg border border-[#E4E7DC] bg-[#F8F9F5] text-[#111215]">
+                <Clock className="size-3.5 text-blue-600" />
+              </div>
+            </div>
+            <div className="mt-3 text-2xl sm:text-3xl font-extrabold tracking-tight text-[#111215]">{stats.underReview}</div>
+            <p className="mt-1 text-[11px] text-[#575A51]">New applications awaiting decision</p>
           </div>
 
-          <div className="px-4 py-3.5 sm:px-6 lg:px-7">
-            <p className="geist-label uppercase text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold tracking-wider flex items-center gap-1.5">
-              <CheckCircle2 className="size-3 text-emerald-600 dark:text-emerald-400" />
-              <span>Shortlisted</span>
-            </p>
-            <div className="geist-page-title mt-1 text-gray-900 dark:text-white font-bold">{stats.shortlisted}</div>
-            <p className="geist-small mt-0.5 text-[11px] text-gray-500 dark:text-[#6b7280]">Candidates selected for interviews</p>
+          <div className="rounded-2xl border border-[#E4E7DC] bg-white p-4 sm:p-5 shadow-xs transition-all hover:-translate-y-0.5 hover:border-[#111215]/30 hover:shadow-md">
+            <div className="flex items-center justify-between">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-[#73766C]">
+                Shortlisted
+              </p>
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg border border-[#E4E7DC] bg-[#F8F9F5] text-[#111215]">
+                <CheckCircle2 className="size-3.5 text-emerald-600" />
+              </div>
+            </div>
+            <div className="mt-3 text-2xl sm:text-3xl font-extrabold tracking-tight text-[#111215]">{stats.shortlisted}</div>
+            <p className="mt-1 text-[11px] text-[#575A51]">Candidates selected for interviews</p>
           </div>
 
-          <div className="px-4 py-3.5 sm:px-6 lg:px-7">
-            <p className="geist-label uppercase text-[10px] text-indigo-600 dark:text-indigo-400 font-semibold tracking-wider flex items-center gap-1.5">
-              <Calendar className="size-3 text-indigo-600 dark:text-indigo-400" />
-              <span>Interviews Scheduled</span>
-            </p>
-            <div className="geist-page-title mt-1 text-gray-900 dark:text-white font-bold">{stats.scheduled}</div>
-            <p className="geist-small mt-0.5 text-[11px] text-gray-500 dark:text-[#6b7280]">Scheduled & active interview rounds</p>
+          <div className="rounded-2xl border border-[#E4E7DC] bg-white p-4 sm:p-5 shadow-xs transition-all hover:-translate-y-0.5 hover:border-[#111215]/30 hover:shadow-md">
+            <div className="flex items-center justify-between">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-[#73766C]">
+                Interviews Scheduled
+              </p>
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg border border-[#E4E7DC] bg-[#F8F9F5] text-[#111215]">
+                <Calendar className="size-3.5 text-indigo-600" />
+              </div>
+            </div>
+            <div className="mt-3 text-2xl sm:text-3xl font-extrabold tracking-tight text-[#111215]">{stats.scheduled}</div>
+            <p className="mt-1 text-[11px] text-[#575A51]">Scheduled & active interview rounds</p>
           </div>
         </div>
       </section>
 
-      {/* ── 3. Controls & Filter Section (Compact, Ultra-Clean & Accessible) ── */}
-      <section className="border-b border-gray-200/90 dark:border-white/[0.08] bg-white dark:bg-[#070709] px-3.5 py-2 sm:px-6 lg:px-7 transition-colors">
-        <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-2.5">
+      {/* ── 3. Controls & Filter Section ── */}
+      <section className="px-4 pt-5 sm:px-6 lg:px-8">
+        <div className="rounded-2xl border border-[#E4E7DC] bg-white p-3.5 sm:p-4 shadow-xs flex flex-col xl:flex-row xl:items-center xl:justify-between gap-3">
           
           {/* Segmented Filter Pills */}
           <div
             role="tablist"
             aria-label="Filter applications by status"
-            className="flex items-center gap-1 rounded-lg border border-gray-200/80 dark:border-white/[0.08] bg-gray-100/70 dark:bg-white/[0.03] p-1 overflow-x-auto no-scrollbar scroll-smooth"
+            className="flex items-center gap-1 rounded-full border border-[#E4E7DC] bg-[#F8F9F5] p-1 overflow-x-auto no-scrollbar scroll-smooth"
           >
             <button
               type="button"
               role="tab"
               aria-selected={activeTab === 'all' && stageFilter === 'all'}
               onClick={() => handleTabChange('all')}
-              className={`geist-caption inline-flex h-7.5 cursor-pointer items-center justify-center gap-1.5 rounded-md px-2.5 sm:px-3 text-xs font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+              className={`inline-flex h-8 cursor-pointer items-center justify-center gap-1.5 rounded-full px-3.5 text-xs font-semibold transition-all focus-visible:outline-none ${
                 activeTab === 'all' && stageFilter === 'all'
-                  ? 'bg-white dark:bg-white/[0.12] text-gray-900 dark:text-white font-semibold shadow-xs border border-gray-200/70 dark:border-white/10'
-                  : 'text-gray-600 dark:text-[#a1a1aa] hover:bg-white/60 dark:hover:bg-white/[0.05] hover:text-gray-900 dark:hover:text-white'
+                  ? 'bg-[#111215] text-white shadow-xs'
+                  : 'text-[#575A51] hover:text-[#111215]'
               }`}
             >
               <span>All</span>
-              <span className={`inline-flex items-center justify-center min-w-[18px] h-4.5 px-1 rounded-full text-[10px] font-mono font-medium ${
+              <span className={`inline-flex items-center justify-center min-w-[18px] h-4.5 px-1.5 rounded-full text-[10px] font-mono font-bold ${
                 activeTab === 'all' && stageFilter === 'all'
-                  ? 'bg-gray-100 dark:bg-white/20 text-gray-900 dark:text-white'
-                  : 'bg-gray-200/70 dark:bg-white/[0.07] text-gray-600 dark:text-[#8f8f8f]'
+                  ? 'bg-white/20 text-white'
+                  : 'bg-white border border-[#E4E7DC] text-[#111215]'
               }`}>
                 {stats.total}
               </span>
@@ -1784,18 +1803,18 @@ export default function HotLeads() {
               role="tab"
               aria-selected={activeTab === 'under_review'}
               onClick={() => handleTabChange('under_review')}
-              className={`geist-caption inline-flex h-7.5 cursor-pointer items-center justify-center gap-1.5 rounded-md px-2.5 sm:px-3 text-xs font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+              className={`inline-flex h-8 cursor-pointer items-center justify-center gap-1.5 rounded-full px-3.5 text-xs font-semibold transition-all focus-visible:outline-none ${
                 activeTab === 'under_review'
-                  ? 'bg-white dark:bg-white/[0.12] text-blue-700 dark:text-blue-300 font-semibold shadow-xs border border-blue-200 dark:border-blue-500/30'
-                  : 'text-gray-600 dark:text-[#a1a1aa] hover:bg-white/60 dark:hover:bg-white/[0.05] hover:text-gray-900 dark:hover:text-white'
+                  ? 'bg-[#111215] text-white shadow-xs'
+                  : 'text-[#575A51] hover:text-[#111215]'
               }`}
             >
               <Clock className="w-3.5 h-3.5 text-blue-500 shrink-0" />
               <span>Review</span>
-              <span className={`inline-flex items-center justify-center min-w-[18px] h-4.5 px-1 rounded-full text-[10px] font-mono font-medium ${
+              <span className={`inline-flex items-center justify-center min-w-[18px] h-4.5 px-1.5 rounded-full text-[10px] font-mono font-bold ${
                 activeTab === 'under_review'
-                  ? 'bg-blue-100 dark:bg-blue-500/25 text-blue-800 dark:text-blue-300'
-                  : 'bg-gray-200/70 dark:bg-white/[0.07] text-gray-600 dark:text-[#8f8f8f]'
+                  ? 'bg-white/20 text-white'
+                  : 'bg-white border border-[#E4E7DC] text-[#111215]'
               }`}>
                 {stats.underReview}
               </span>
@@ -1806,18 +1825,18 @@ export default function HotLeads() {
               role="tab"
               aria-selected={activeTab === 'shortlisted'}
               onClick={() => handleTabChange('shortlisted')}
-              className={`geist-caption inline-flex h-7.5 cursor-pointer items-center justify-center gap-1.5 rounded-md px-2.5 sm:px-3 text-xs font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${
+              className={`inline-flex h-8 cursor-pointer items-center justify-center gap-1.5 rounded-full px-3.5 text-xs font-semibold transition-all focus-visible:outline-none ${
                 activeTab === 'shortlisted'
-                  ? 'bg-white dark:bg-white/[0.12] text-emerald-700 dark:text-emerald-300 font-semibold shadow-xs border border-emerald-200 dark:border-emerald-500/30'
-                  : 'text-gray-600 dark:text-[#a1a1aa] hover:bg-white/60 dark:hover:bg-white/[0.05] hover:text-gray-900 dark:hover:text-white'
+                  ? 'bg-[#111215] text-white shadow-xs'
+                  : 'text-[#575A51] hover:text-[#111215]'
               }`}
             >
               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
               <span>Shortlisted</span>
-              <span className={`inline-flex items-center justify-center min-w-[18px] h-4.5 px-1 rounded-full text-[10px] font-mono font-medium ${
+              <span className={`inline-flex items-center justify-center min-w-[18px] h-4.5 px-1.5 rounded-full text-[10px] font-mono font-bold ${
                 activeTab === 'shortlisted'
-                  ? 'bg-emerald-100 dark:bg-emerald-500/25 text-emerald-800 dark:text-emerald-300'
-                  : 'bg-gray-200/70 dark:bg-white/[0.07] text-gray-600 dark:text-[#8f8f8f]'
+                  ? 'bg-[#D4F82C] text-[#111215]'
+                  : 'bg-white border border-[#E4E7DC] text-[#111215]'
               }`}>
                 {stats.shortlisted}
               </span>
@@ -1828,18 +1847,18 @@ export default function HotLeads() {
               role="tab"
               aria-selected={activeTab === 'scheduled'}
               onClick={() => handleTabChange('scheduled')}
-              className={`geist-caption inline-flex h-7.5 cursor-pointer items-center justify-center gap-1.5 rounded-md px-2.5 sm:px-3 text-xs font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
+              className={`inline-flex h-8 cursor-pointer items-center justify-center gap-1.5 rounded-full px-3.5 text-xs font-semibold transition-all focus-visible:outline-none ${
                 activeTab === 'scheduled'
-                  ? 'bg-white dark:bg-white/[0.12] text-indigo-700 dark:text-indigo-300 font-semibold shadow-xs border border-indigo-200 dark:border-indigo-500/30'
-                  : 'text-gray-600 dark:text-[#a1a1aa] hover:bg-white/60 dark:hover:bg-white/[0.05] hover:text-gray-900 dark:hover:text-white'
+                  ? 'bg-[#111215] text-white shadow-xs'
+                  : 'text-[#575A51] hover:text-[#111215]'
               }`}
             >
               <Calendar className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
               <span>Interviews</span>
-              <span className={`inline-flex items-center justify-center min-w-[18px] h-4.5 px-1 rounded-full text-[10px] font-mono font-medium ${
+              <span className={`inline-flex items-center justify-center min-w-[18px] h-4.5 px-1.5 rounded-full text-[10px] font-mono font-bold ${
                 activeTab === 'scheduled'
-                  ? 'bg-indigo-100 dark:bg-indigo-500/25 text-indigo-800 dark:text-indigo-300'
-                  : 'bg-gray-200/70 dark:bg-white/[0.07] text-gray-600 dark:text-[#8f8f8f]'
+                  ? 'bg-white/20 text-white'
+                  : 'bg-white border border-[#E4E7DC] text-[#111215]'
               }`}>
                 {stats.scheduled}
               </span>
@@ -1850,18 +1869,18 @@ export default function HotLeads() {
               role="tab"
               aria-selected={activeTab === 'hired'}
               onClick={() => handleTabChange('hired')}
-              className={`geist-caption inline-flex h-7.5 cursor-pointer items-center justify-center gap-1.5 rounded-md px-2.5 sm:px-3 text-xs font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500 ${
+              className={`inline-flex h-8 cursor-pointer items-center justify-center gap-1.5 rounded-full px-3.5 text-xs font-semibold transition-all focus-visible:outline-none ${
                 activeTab === 'hired'
-                  ? 'bg-white dark:bg-white/[0.12] text-green-700 dark:text-green-300 font-semibold shadow-xs border border-green-200 dark:border-green-500/30'
-                  : 'text-gray-600 dark:text-[#a1a1aa] hover:bg-white/60 dark:hover:bg-white/[0.05] hover:text-gray-900 dark:hover:text-white'
+                  ? 'bg-[#111215] text-white shadow-xs'
+                  : 'text-[#575A51] hover:text-[#111215]'
               }`}
             >
-              <Award className="w-3.5 h-3.5 text-green-500 shrink-0" />
+              <Award className="w-3.5 h-3.5 text-[#D4F82C] shrink-0" />
               <span>Hired</span>
-              <span className={`inline-flex items-center justify-center min-w-[18px] h-4.5 px-1 rounded-full text-[10px] font-mono font-medium ${
+              <span className={`inline-flex items-center justify-center min-w-[18px] h-4.5 px-1.5 rounded-full text-[10px] font-mono font-bold ${
                 activeTab === 'hired'
-                  ? 'bg-green-100 dark:bg-green-500/25 text-green-800 dark:text-green-300'
-                  : 'bg-gray-200/70 dark:bg-white/[0.07] text-gray-600 dark:text-[#8f8f8f]'
+                  ? 'bg-white/20 text-white'
+                  : 'bg-white border border-[#E4E7DC] text-[#111215]'
               }`}>
                 {stats.hired}
               </span>
@@ -1871,24 +1890,24 @@ export default function HotLeads() {
           {/* Inline Compact Filter Toolbar */}
           <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
             {/* Search Box */}
-            <div className="relative flex-1 sm:flex-initial sm:w-[190px] md:w-[210px] xl:w-[230px]">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-gray-400 dark:text-[#8f8f8f] pointer-events-none" />
+            <div className="relative flex-1 sm:flex-initial sm:w-[190px] md:w-[220px] xl:w-[240px]">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 size-3.5 text-[#73766C] pointer-events-none" />
               <input
                 type="text"
                 placeholder="Search candidates..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="geist-caption h-8 w-full rounded-md border border-gray-200 dark:border-white/[0.1] bg-white dark:bg-[#0c0c0e] pl-8 pr-7 text-xs text-gray-900 dark:text-white outline-none placeholder:text-gray-400 dark:placeholder:text-[#6b7280] focus:border-blue-500 dark:focus:border-white/20 focus:ring-1 focus:ring-blue-500/20 transition-all"
+                className="h-9 w-full rounded-full border border-[#E4E7DC] bg-[#F8F9F5] pl-9 pr-8 text-xs text-[#111215] outline-none placeholder:text-[#73766C] focus:bg-white focus:border-[#111215] transition-all"
                 aria-label="Search applicants by name, email, phone, or job number"
               />
               {searchTerm && (
                 <button
                   type="button"
                   onClick={() => setSearchTerm('')}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-white transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#73766C] hover:text-[#111215] transition-colors"
                   aria-label="Clear search"
                 >
-                  <X className="size-3" />
+                  <X className="size-3.5" />
                 </button>
               )}
             </div>
@@ -1898,47 +1917,51 @@ export default function HotLeads() {
               <button
                 type="button"
                 onClick={() => setIsJobDropdownOpen(!isJobDropdownOpen)}
-                className={`geist-caption h-8 rounded-md border px-2.5 text-xs outline-none transition-all flex items-center justify-between gap-1.5 max-w-[155px] sm:max-w-[190px] xl:max-w-[210px] cursor-pointer focus-visible:ring-2 focus-visible:ring-blue-500 ${
+                className={`h-9 rounded-full border px-3 text-xs outline-none transition-all flex items-center justify-between gap-1.5 max-w-[165px] sm:max-w-[200px] xl:max-w-[220px] cursor-pointer shadow-xs ${
                   selectedJobId !== 'all'
-                    ? 'border-emerald-500/40 bg-emerald-50/80 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 font-medium'
-                    : 'border-gray-200 dark:border-white/[0.1] bg-white dark:bg-[#0c0c0e] text-gray-700 dark:text-[#d4d4d4] hover:border-gray-300 dark:hover:border-white/20'
+                    ? 'border-[#111215] bg-[#111215] text-white font-semibold'
+                    : 'border-[#E4E7DC] bg-white text-[#111215] hover:bg-[#F8F9F5]'
                 }`}
                 title={selectedJobTitle}
                 aria-label="Filter by job role"
               >
                 <div className="flex items-center gap-1.5 min-w-0 flex-1 text-left">
-                  <Briefcase className={`size-3 shrink-0 ${selectedJobId !== 'all' ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400 dark:text-[#8f8f8f]'}`} />
+                  <Briefcase className={`size-3 shrink-0 ${selectedJobId !== 'all' ? 'text-[#D4F82C]' : 'text-[#73766C]'}`} />
                   <span className="truncate">{selectedJobTitle}</span>
                 </div>
-                <ChevronDown className={`size-3 shrink-0 text-gray-400 dark:text-[#8f8f8f] transition-transform duration-200 ${isJobDropdownOpen ? 'rotate-180' : ''}`} />
+                <ChevronDown className={`size-3 shrink-0 transition-transform duration-200 ${selectedJobId !== 'all' ? 'text-white' : 'text-[#73766C]'} ${isJobDropdownOpen ? 'rotate-180' : ''}`} />
               </button>
 
               {isJobDropdownOpen && (
-                <div className="absolute right-0 top-full mt-1.5 z-50 w-[280px] sm:w-[320px] rounded-lg border border-gray-200 dark:border-white/[0.12] bg-white dark:bg-[#0d0d10] shadow-xl dark:shadow-2xl backdrop-blur-xl overflow-hidden animate-in fade-in zoom-in-95 duration-100">
-                  <div className="p-2 border-b border-gray-100 dark:border-white/[0.08]">
+                <div className="absolute right-0 top-full mt-2 z-50 w-[280px] sm:w-[320px] rounded-2xl border border-[#E4E7DC] bg-white shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-100 p-2">
+                  <div className="p-1 mb-1.5">
                     <div className="relative">
-                      <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3 text-gray-400" />
+                      <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3 text-[#73766C]" />
                       <input
                         ref={jobSearchInputRef}
                         type="text"
                         placeholder="Search jobs..."
                         value={jobSearchQuery}
                         onChange={(e) => setJobSearchQuery(e.target.value)}
-                        className="h-7 w-full rounded-md border border-gray-200 dark:border-white/[0.1] bg-gray-50/60 dark:bg-black/60 pl-7 pr-2 text-xs text-gray-900 dark:text-white outline-none focus:border-blue-500"
+                        className="h-8 w-full rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] pl-8 pr-2 text-xs text-[#111215] outline-none focus:bg-white focus:border-[#111215]"
                       />
                     </div>
                   </div>
-                  <div className="max-h-[220px] overflow-y-auto p-1 divide-y divide-gray-100 dark:divide-white/[0.04]">
+                  <div className="max-h-[220px] overflow-y-auto space-y-1">
                     <button
                       type="button"
                       onClick={() => { setSelectedJobId('all'); setIsJobDropdownOpen(false); }}
-                      className="w-full text-left px-2.5 py-1.5 text-xs font-medium text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/[0.06] rounded flex items-center justify-between"
+                      className={`w-full text-left px-3 py-2 text-xs rounded-xl flex items-center justify-between transition-colors ${
+                        selectedJobId === 'all'
+                          ? 'bg-[#111215] text-white font-bold'
+                          : 'text-[#111215] hover:bg-[#F8F9F5]'
+                      }`}
                     >
                       <div className="flex items-center gap-2">
-                        <Briefcase className="size-3 text-gray-400" />
+                        <Briefcase className="size-3" />
                         <span>All Jobs</span>
                       </div>
-                      {selectedJobId === 'all' && <Check className="size-3 text-emerald-500" />}
+                      {selectedJobId === 'all' && <Check className="size-3 text-[#D4F82C]" />}
                     </button>
                     {jobs
                       .filter(j => !jobSearchQuery.trim() || (j.title || '').toLowerCase().includes(jobSearchQuery.toLowerCase()))
@@ -1947,10 +1970,14 @@ export default function HotLeads() {
                           key={j.id}
                           type="button"
                           onClick={() => { setSelectedJobId(j.id); setIsJobDropdownOpen(false); }}
-                          className="w-full text-left px-2.5 py-1.5 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/[0.06] rounded flex items-center justify-between"
+                          className={`w-full text-left px-3 py-2 text-xs rounded-xl flex items-center justify-between transition-colors ${
+                            selectedJobId === j.id
+                              ? 'bg-[#111215] text-white font-bold'
+                              : 'text-[#111215] hover:bg-[#F8F9F5]'
+                          }`}
                         >
                           <span className="truncate">{j.title || 'Untitled Role'}</span>
-                          {selectedJobId === j.id && <Check className="size-3 text-emerald-500" />}
+                          {selectedJobId === j.id && <Check className="size-3 text-[#D4F82C]" />}
                         </button>
                       ))}
                   </div>
@@ -1963,10 +1990,10 @@ export default function HotLeads() {
               <select
                 value={stageFilter}
                 onChange={(e) => handleStageChange(e.target.value)}
-                className={`geist-caption h-8 rounded-md border px-2 text-xs outline-none cursor-pointer max-w-[125px] sm:max-w-[145px] transition-all focus-visible:ring-2 focus-visible:ring-blue-500 ${
+                className={`h-9 rounded-full border px-3 text-xs outline-none cursor-pointer max-w-[130px] sm:max-w-[150px] transition-all shadow-xs ${
                   stageFilter !== 'all'
-                    ? 'border-indigo-500/40 bg-indigo-50/80 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 font-medium'
-                    : 'border-gray-200 dark:border-white/[0.1] bg-white dark:bg-[#0c0c0e] text-gray-700 dark:text-[#d4d4d4] hover:border-gray-300 dark:hover:border-white/20'
+                    ? 'border-[#111215] bg-[#111215] text-white font-bold'
+                    : 'border-[#E4E7DC] bg-white text-[#111215] hover:bg-[#F8F9F5]'
                 }`}
                 aria-label="Filter by ATS Stage"
               >
@@ -1982,10 +2009,10 @@ export default function HotLeads() {
               <select
                 value={scoreSortOrder}
                 onChange={(e) => setScoreSortOrder(e.target.value as any)}
-                className={`geist-caption h-8 rounded-md border px-2.5 text-xs outline-none cursor-pointer max-w-[155px] sm:max-w-[180px] transition-all focus-visible:ring-2 focus-visible:ring-emerald-500 ${
+                className={`h-9 rounded-full border px-3 text-xs outline-none cursor-pointer max-w-[160px] sm:max-w-[185px] transition-all shadow-xs ${
                   scoreSortOrder !== 'default'
-                    ? 'border-emerald-500/40 bg-emerald-50/90 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 font-bold'
-                    : 'border-gray-200 dark:border-white/[0.1] bg-white dark:bg-[#0c0c0e] text-gray-700 dark:text-[#d4d4d4] hover:border-gray-300 dark:hover:border-white/20'
+                    ? 'border-[#8FB305] bg-[#D4F82C] text-[#111215] font-bold'
+                    : 'border-[#E4E7DC] bg-white text-[#111215] hover:bg-[#F8F9F5]'
                 }`}
                 aria-label="Sort Candidates by AI Match Score"
               >
@@ -2000,7 +2027,7 @@ export default function HotLeads() {
               <button
                 type="button"
                 onClick={handleResetFilters}
-                className="geist-caption h-8 inline-flex items-center gap-1 rounded-md px-2 text-[11px] text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/[0.06] transition-colors shrink-0"
+                className="h-9 inline-flex items-center gap-1 rounded-full border border-[#E4E7DC] bg-white px-3 text-xs font-semibold text-[#575A51] hover:text-[#111215] hover:bg-[#F8F9F5] transition-colors shrink-0 shadow-xs"
                 title="Reset all filters"
                 aria-label="Reset all filters"
               >
@@ -2011,7 +2038,7 @@ export default function HotLeads() {
 
             {/* Bulk Actions */}
             {selectedLeadIds.length > 0 && (
-              <div className="flex items-center gap-1.5 shrink-0 pl-1 border-l border-gray-200 dark:border-white/10">
+              <div className="flex items-center gap-1.5 shrink-0 pl-1 border-l border-[#E4E7DC]">
                 <button
                   type="button"
                   onClick={() => {
@@ -2019,7 +2046,7 @@ export default function HotLeads() {
                     executeDeleteLeads(selectedLeads);
                   }}
                   disabled={isDeletingLeads}
-                  className="geist-caption inline-flex h-8 items-center justify-center gap-1.5 rounded-md border border-red-500/40 bg-red-500/10 px-2.5 text-xs font-semibold text-red-600 dark:text-red-400 hover:bg-red-500/20 transition-colors disabled:opacity-50"
+                  className="inline-flex h-9 items-center justify-center gap-1.5 rounded-full border border-red-500/40 bg-red-500/10 px-3 text-xs font-semibold text-red-600 hover:bg-red-500/20 transition-colors disabled:opacity-50"
                   aria-label={`Delete ${selectedLeadIds.length} selected candidates`}
                 >
                   <Trash2 className="w-3.5 h-3.5" />
@@ -2028,7 +2055,7 @@ export default function HotLeads() {
                 <button
                   type="button"
                   onClick={() => setSelectedLeadIds([])}
-                  className="geist-caption inline-flex h-8 items-center justify-center px-1.5 text-[11px] text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
+                  className="inline-flex h-9 items-center justify-center px-2 text-xs text-[#575A51] hover:text-[#111215]"
                   aria-label="Deselect all candidates"
                 >
                   <X className="size-3.5" />
@@ -2040,23 +2067,24 @@ export default function HotLeads() {
       </section>
 
       {/* ── Unique Client Review Link for Selected Job ── */}
+      {/* ── Unique Client Review Link for Selected Job ── */}
       {selectedJobId !== 'all' && activeJobShortlist && (
-        <div className="px-4 pt-3 sm:px-6 lg:px-7">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 px-4 py-3 rounded-xl border border-blue-500/30 bg-blue-500/5 dark:bg-blue-500/10 backdrop-blur-xs">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="size-8 rounded-lg bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-sm">
-                <Share2 size={15} />
+        <div className="px-4 pt-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 px-4 py-3 sm:px-5 sm:py-4 rounded-2xl border border-[#E4E7DC] bg-white shadow-xs">
+            <div className="flex items-center gap-3.5 min-w-0">
+              <div className="size-9 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] text-[#111215] flex items-center justify-center shrink-0 shadow-xs">
+                <Share2 size={16} />
               </div>
               <div className="min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-xs font-bold text-slate-900 dark:text-white">
+                  <span className="text-xs font-bold text-[#111215]">
                     Client Review Link
                   </span>
-                  <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                  <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
                     ● {shortlistedCountForJob} Shortlisted (Live Realtime Sync)
                   </span>
                 </div>
-                <p className="text-xs text-slate-500 dark:text-neutral-400 font-mono truncate mt-0.5">
+                <p className="text-xs text-[#575A51] font-mono truncate mt-0.5">
                   {activeJobShortlist.shortlistUrl}
                 </p>
               </div>
@@ -2070,9 +2098,9 @@ export default function HotLeads() {
                   setLinkCopied(true);
                   setTimeout(() => setLinkCopied(false), 2500);
                 }}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-95"
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-[#E4E7DC] bg-white text-[#111215] hover:bg-[#F8F9F5] text-xs font-semibold transition-all shadow-xs cursor-pointer active:scale-95"
               >
-                {linkCopied ? <Check size={13} /> : <Copy size={13} />}
+                {linkCopied ? <Check size={13} className="text-emerald-500" /> : <Copy size={13} className="text-[#575A51]" />}
                 <span>{linkCopied ? 'Copied!' : 'Copy Link'}</span>
               </button>
 
@@ -2080,9 +2108,9 @@ export default function HotLeads() {
                 href={activeJobShortlist.shortlistUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-300 dark:border-white/10 bg-white dark:bg-[#1a1a1a] hover:bg-slate-50 dark:hover:bg-[#252525] text-slate-700 dark:text-neutral-200 text-xs font-bold transition-all cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-[#E4E7DC] bg-white text-[#111215] hover:bg-[#F8F9F5] text-xs font-semibold transition-all shadow-xs cursor-pointer"
               >
-                <ExternalLink size={13} />
+                <ExternalLink size={13} className="text-[#575A51]" />
                 <span>Open Portal ↗</span>
               </a>
 
@@ -2092,9 +2120,9 @@ export default function HotLeads() {
                 )}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#25D366] hover:bg-[#20bd5a] text-white text-xs font-bold shadow-xs transition-all"
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#111215] hover:bg-[#202227] text-white text-xs font-semibold shadow-xs transition-all"
               >
-                <MessageCircle size={13} />
+                <MessageCircle size={13} className="text-[#25D366]" />
                 <span>WhatsApp</span>
               </a>
             </div>
@@ -2103,15 +2131,15 @@ export default function HotLeads() {
       )}
 
       {/* ── 4. Main Applications Table ── */}
-      <div className="px-4 py-5 sm:px-6 lg:px-7">
-        <div className="rounded-[8px] border border-gray-200 dark:border-white/[0.11] bg-white dark:bg-[#000] overflow-hidden shadow-sm dark:shadow-none transition-colors">
+      <div className="px-4 py-5 sm:px-6 lg:px-8">
+        <div className="rounded-3xl border border-[#E4E7DC] bg-white overflow-hidden shadow-xs transition-colors">
           {filteredLeads.length === 0 ? (
             <div className="py-16 text-center">
-              <div className="size-12 rounded-full border border-gray-200 dark:border-white/[0.11] bg-gray-50 dark:bg-white/[0.03] flex items-center justify-center mx-auto mb-3 text-emerald-500">
+              <div className="size-12 rounded-full border border-[#E4E7DC] bg-[#F8F9F5] flex items-center justify-center mx-auto mb-3 text-[#111215]">
                 <User className="w-6 h-6" />
               </div>
-              <h3 className="geist-subheading text-gray-900 dark:text-white">No candidate applications found</h3>
-              <p className="geist-small mt-1 text-gray-500 dark:text-[#8f8f8f] max-w-sm mx-auto">
+              <h3 className="text-base font-bold text-[#111215]">No candidate applications found</h3>
+              <p className="mt-1 text-xs text-[#575A51] max-w-sm mx-auto">
                 {searchTerm || selectedJobId !== 'all' || stageFilter !== 'all'
                   ? 'No applicants match the selected filters. Try clearing your search or filter options.'
                   : 'When candidates apply for your posted jobs, their full profile and resume will automatically appear here!'}
@@ -2121,41 +2149,41 @@ export default function HotLeads() {
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="border-b border-gray-200 dark:border-white/[0.11] bg-gray-50 dark:bg-[#050505]">
-                    <th className="geist-label w-10 px-3 py-2.5 text-center">
+                  <tr className="border-b border-[#E4E7DC] bg-[#F8F9F5]">
+                    <th className="w-10 px-3 py-3 text-center">
                       <button
                         type="button"
                         onClick={handleToggleSelectAll}
-                        className="text-gray-400 dark:text-[#8f8f8f] hover:text-gray-700 dark:hover:text-white transition-colors"
+                        className="text-[#73766C] hover:text-[#111215] transition-colors"
                       >
                         {filteredLeads.length > 0 && filteredLeads.every((l) => selectedLeadIds.includes(l.id)) ? (
-                          <CheckSquare className="size-3.5 text-blue-600 dark:text-blue-400" />
+                          <CheckSquare className="size-3.5 text-[#111215]" />
                         ) : (
                           <Square className="size-3.5" />
                         )}
                       </button>
                     </th>
-                    <th className="geist-label whitespace-nowrap px-4 py-2.5 uppercase text-[10px] tracking-wider font-semibold text-gray-500 dark:text-[#8f8f8f]">
+                    <th className="whitespace-nowrap px-4 py-3 uppercase text-[11px] tracking-wider font-bold text-[#73766C]">
                       Candidate Profile
                     </th>
-                    <th className="geist-label whitespace-nowrap px-4 py-2.5 uppercase text-[10px] tracking-wider font-semibold text-gray-500 dark:text-[#8f8f8f]">
+                    <th className="whitespace-nowrap px-4 py-3 uppercase text-[11px] tracking-wider font-bold text-[#73766C]">
                       Applied Role
                     </th>
-                    <th className="geist-label whitespace-nowrap px-4 py-2.5 uppercase text-[10px] tracking-wider font-semibold text-gray-500 dark:text-[#8f8f8f]">
+                    <th className="whitespace-nowrap px-4 py-3 uppercase text-[11px] tracking-wider font-bold text-[#73766C]">
                       AI Match Score
                     </th>
-                    <th className="geist-label whitespace-nowrap px-4 py-2.5 uppercase text-[10px] tracking-wider font-semibold text-gray-500 dark:text-[#8f8f8f]">
+                    <th className="whitespace-nowrap px-4 py-3 uppercase text-[11px] tracking-wider font-bold text-[#73766C]">
                       Application Details
                     </th>
-                    <th className="geist-label whitespace-nowrap px-4 py-2.5 uppercase text-[10px] tracking-wider font-semibold text-gray-500 dark:text-[#8f8f8f]">
+                    <th className="whitespace-nowrap px-4 py-3 uppercase text-[11px] tracking-wider font-bold text-[#73766C]">
                       ATS Stage & Status
                     </th>
-                    <th className="geist-label whitespace-nowrap px-4 py-2.5 text-right uppercase text-[10px] tracking-wider font-semibold text-gray-500 dark:text-[#8f8f8f] min-w-[190px]">
+                    <th className="whitespace-nowrap px-4 py-3 text-right uppercase text-[11px] tracking-wider font-bold text-[#73766C] min-w-[190px]">
                       Actions
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100 dark:divide-white/[0.07]">
+                <tbody className="divide-y divide-[#E4E7DC]">
                   {filteredLeads.map((lead) => {
                     const isSelected = selectedLeadIds.includes(lead.id);
                     const job = jobs.find((j) => j.id === lead.jobId);

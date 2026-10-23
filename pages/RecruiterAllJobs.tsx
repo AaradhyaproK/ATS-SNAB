@@ -1782,199 +1782,206 @@ const RecruiterAllJobs: React.FC = () => {
   };
 
   return (
-    <div className="flex min-h-screen flex-col bg-[#000] text-white font-sans">
+    <div className="flex min-h-screen flex-col bg-[#F8F9F5] text-[#111215] font-sans">
       {/* Top Header Section */}
-      <section className="shrink-0 border-b border-white/[0.11] bg-[#000]">
-        <div className="flex flex-col gap-4 px-4 py-5 sm:px-6 lg:px-7 xl:flex-row xl:items-start xl:justify-between">
+      <section className="shrink-0 border-b border-[#E4E7DC] bg-white">
+        <div className="flex flex-col gap-4 px-4 py-5 sm:px-6 lg:px-8 xl:flex-row xl:items-start xl:justify-between">
           <div>
-            <Link
-              to="/recruiter/jobs"
-              className="geist-caption inline-flex h-8 items-center gap-2 rounded-[6px] border border-white/[0.11] bg-white/[0.03] px-3 font-medium text-[#d4d4d4] transition-colors hover:bg-white/[0.06] hover:text-white"
-            >
-              <ArrowLeft className="w-3.5 h-3.5" />
-              <span>Dashboard</span>
-            </Link>
-            <h1 className="geist-page-title mt-2 text-white">All Job Postings</h1>
-            <p className="geist-small mt-1 text-[#8f8f8f]">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#D4F82C]/30 text-[#4D6500] text-[11px] font-bold tracking-wider uppercase">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#8FB305] animate-pulse" />
+                03 • Job Management
+              </span>
+            </div>
+            <div className="flex items-center gap-3">
+              <Link
+                to="/recruiter/jobs"
+                className="inline-flex h-8 items-center gap-1.5 rounded-full border border-[#E4E7DC] bg-white px-3 text-xs font-semibold text-[#111215] transition-colors hover:bg-[#F8F9F5] shadow-xs"
+              >
+                <ArrowLeft className="w-3.5 h-3.5 text-[#575A51]" />
+                <span>Dashboard</span>
+              </Link>
+              <h1 className="text-xl sm:text-2xl font-black text-[#111215] tracking-tight">All Job Postings</h1>
+            </div>
+            <p className="mt-1 text-xs text-[#575A51]">
               Manage and view all job openings, invite candidates, view detailed descriptions, and edit roles.
             </p>
           </div>
           <div className="flex items-center gap-2">
             <Link
               to="/recruiter/interview/create"
-              className="geist-caption inline-flex h-8 items-center justify-center gap-2 rounded-[6px] border border-white bg-white px-3 font-medium text-black transition-colors hover:bg-[#eaeaea]"
+              className="inline-flex h-9 items-center justify-center gap-2 rounded-full bg-[#111215] px-4 text-xs font-semibold text-white transition-colors hover:bg-[#202227] shadow-xs"
             >
-              <Plus className="w-3.5 h-3.5" />
+              <Plus className="w-3.5 h-3.5 text-[#D4F82C]" />
               <span>Create Job</span>
             </Link>
           </div>
         </div>
       </section>
 
-      {/* Metrics Strip */}
-      <section className="grid shrink-0 grid-cols-2 border-b border-white/[0.11] sm:grid-cols-3 lg:grid-cols-5">
-        <div className="border-r border-white/[0.11] px-4 py-4 sm:px-6 lg:px-7">
-          <p className="geist-label uppercase text-[#6b7280]">Total Jobs</p>
-          <p className="geist-metric mt-2 tabular-nums text-white">{jobs.length}</p>
+      {/* 5 High-Contrast Bento Stat Cards */}
+      <section className="grid shrink-0 grid-cols-2 gap-3.5 sm:gap-4 px-4 pt-5 sm:px-6 lg:px-8 sm:grid-cols-3 lg:grid-cols-5">
+        <div className="rounded-2xl border border-[#E4E7DC] bg-white p-4 sm:p-5 shadow-xs">
+          <p className="text-[11px] font-bold uppercase tracking-wider text-[#73766C]">Total Jobs</p>
+          <p className="mt-2 text-2xl sm:text-3xl font-black tracking-tight tabular-nums text-[#111215]">{jobs.length}</p>
         </div>
-        <div className="border-r border-white/[0.11] px-4 py-4 sm:px-6 lg:px-7">
-          <p className="geist-label uppercase text-[#6b7280]">Active Jobs</p>
-          <p className="geist-metric mt-2 tabular-nums text-[#83d0a3]">
+        <div className="rounded-2xl border border-[#E4E7DC] bg-white p-4 sm:p-5 shadow-xs">
+          <p className="text-[11px] font-bold uppercase tracking-wider text-[#73766C]">Active Jobs</p>
+          <p className="mt-2 text-2xl sm:text-3xl font-black tracking-tight tabular-nums text-emerald-600">
             {jobs.filter(j => isJobStatusActive(j)).length}
           </p>
         </div>
-        <div className="border-r border-white/[0.11] px-4 py-4 sm:px-6 lg:px-7">
-          <p className="geist-label uppercase text-[#6b7280]">Applied Candidates</p>
-          <p className="geist-metric mt-2 tabular-nums text-blue-400">
+        <div className="rounded-2xl border border-[#E4E7DC] bg-white p-4 sm:p-5 shadow-xs">
+          <p className="text-[11px] font-bold uppercase tracking-wider text-[#73766C]">Applied Candidates</p>
+          <p className="mt-2 text-2xl sm:text-3xl font-black tracking-tight tabular-nums text-[#111215]">
             {totalAppliedCount}
           </p>
         </div>
-        <div className="border-r border-white/[0.11] px-4 py-4 sm:px-6 lg:px-7">
-          <p className="geist-label uppercase text-[#6b7280]">Invited Candidates</p>
-          <p className="geist-metric mt-2 tabular-nums text-white">
+        <div className="rounded-2xl border border-[#E4E7DC] bg-white p-4 sm:p-5 shadow-xs">
+          <p className="text-[11px] font-bold uppercase tracking-wider text-[#73766C]">Invited Candidates</p>
+          <p className="mt-2 text-2xl sm:text-3xl font-black tracking-tight tabular-nums text-[#111215]">
             {jobs.reduce((acc, j) => acc + (j.candidateEmails?.length || 0), 0)}
           </p>
         </div>
-        <div className="px-4 py-4 sm:px-6 lg:px-7 col-span-2 sm:col-span-1">
-          <p className="geist-label uppercase text-[#6b7280]">Departments</p>
-          <p className="geist-metric mt-2 tabular-nums text-white">
+        <div className="rounded-2xl border border-[#E4E7DC] bg-white p-4 sm:p-5 shadow-xs col-span-2 sm:col-span-1">
+          <p className="text-[11px] font-bold uppercase tracking-wider text-[#73766C]">Departments</p>
+          <p className="mt-2 text-2xl sm:text-3xl font-black tracking-tight tabular-nums text-[#111215]">
             {categoriesList.length > 1 ? categoriesList.length - 1 : 0}
           </p>
         </div>
       </section>
 
-      {/* Search & Filter Toolbar */}
-      <section className="shrink-0 border-b border-white/[0.11] px-4 py-3 sm:px-6 lg:px-7">
-        <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-          <div className="flex flex-wrap items-center gap-2 flex-1">
-            <div className="relative w-full sm:w-auto sm:min-w-[260px] xl:max-w-md flex-1">
-              <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[11px] text-[#6b7280] w-3.5 h-3.5" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search jobs by Job No, title, skills, location..."
-                className="geist-caption h-9 w-full rounded-[6px] border border-white/[0.11] bg-white/[0.03] pl-9 pr-8 text-white outline-none transition-colors placeholder:text-[#6b7280] focus:border-white/[0.28] focus:bg-white/[0.05]"
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#8f8f8f] hover:text-white"
+      {/* Search & Filter Toolbar in Bento Card */}
+      <section className="px-4 pt-4 sm:px-6 lg:px-8">
+        <div className="rounded-2xl border border-[#E4E7DC] bg-white p-3 sm:p-4 shadow-xs">
+          <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+            <div className="flex flex-wrap items-center gap-2 flex-1">
+              <div className="relative w-full sm:w-auto sm:min-w-[260px] xl:max-w-md flex-1">
+                <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#73766C] w-3.5 h-3.5" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search jobs by Job No, title, skills, location..."
+                  className="h-9 w-full rounded-full border border-[#E4E7DC] bg-[#F8F9F5] pl-9 pr-8 text-xs text-[#111215] outline-none transition-colors placeholder:text-[#73766C] focus:border-[#111215] focus:bg-white"
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#73766C] hover:text-[#111215] cursor-pointer"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+
+              <div className="flex rounded-full border border-[#E4E7DC] bg-[#F8F9F5] p-1">
+                {(['All', 'Active', 'Expired'] as const).map(status => (
+                  <button
+                    key={status}
+                    type="button"
+                    onClick={() => setStatusFilter(status)}
+                    className={`inline-flex h-7 items-center gap-1.5 rounded-full px-3 text-xs font-semibold transition-colors cursor-pointer ${
+                      statusFilter === status
+                        ? 'bg-[#111215] text-white shadow-xs'
+                        : 'text-[#575A51] hover:text-[#111215]'
+                    }`}
+                  >
+                    {status === 'Expired' ? 'Inactive' : status}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#73766C]">Dept</span>
+                <select
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                  className="h-8 rounded-full border border-[#E4E7DC] bg-[#F8F9F5] px-3 text-xs text-[#111215] font-medium outline-none transition-colors focus:border-[#111215] focus:bg-white cursor-pointer"
                 >
-                  <X className="w-3.5 h-3.5" />
+                  {categoriesList.map(cat => (
+                    <option key={cat} value={cat}>{cat === 'All' ? 'All Departments' : cat}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#73766C]">Type</span>
+                <select
+                  value={selectedEmploymentType}
+                  onChange={(e) => setSelectedEmploymentType(e.target.value)}
+                  className="h-8 rounded-full border border-[#E4E7DC] bg-[#F8F9F5] px-3 text-xs text-[#111215] font-medium outline-none transition-colors focus:border-[#111215] focus:bg-white cursor-pointer"
+                >
+                  {employmentTypesList.map(type => (
+                    <option key={type} value={type}>{type === 'All' ? 'All Job Types' : type}</option>
+                  ))}
+                </select>
+              </div>
+
+              {(searchQuery || statusFilter !== 'All' || selectedCategory !== 'All' || selectedEmploymentType !== 'All') && (
+                <button
+                  onClick={() => { setSearchQuery(''); setStatusFilter('All'); setSelectedCategory('All'); setSelectedEmploymentType('All'); }}
+                  className="inline-flex h-8 items-center justify-center rounded-full border border-[#E4E7DC] bg-white px-3 text-xs font-semibold text-[#111215] transition-colors hover:bg-[#F8F9F5] cursor-pointer shadow-2xs"
+                >
+                  Reset
                 </button>
               )}
             </div>
-
-            <div className="flex rounded-[6px] border border-white/[0.11] bg-white/[0.03] p-0.5">
-              {(['All', 'Active', 'Expired'] as const).map(status => (
-                <button
-                  key={status}
-                  type="button"
-                  onClick={() => setStatusFilter(status)}
-                  className={`geist-caption inline-flex h-7 items-center gap-1.5 rounded-[4px] px-3 font-medium transition-colors ${
-                    statusFilter === status
-                      ? status === 'Active'
-                        ? 'bg-[#071a12] text-[#83d0a3]'
-                        : status === 'Expired'
-                        ? 'bg-[#180707] text-[#ff8f8f]'
-                        : 'bg-white/[0.08] text-white'
-                      : 'text-[#6b7280] hover:text-[#d4d4d4]'
-                  }`}
-                >
-                  {status === 'Expired' ? 'Inactive' : status}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="flex items-center gap-2">
-              <span className="geist-label uppercase text-[#6b7280]">Dept</span>
-              <select
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
-                className="geist-caption h-9 rounded-[6px] border border-white/[0.11] bg-[#050505] px-3 text-[#d4d4d4] outline-none transition-colors focus:border-white/[0.28]"
-              >
-                {categoriesList.map(cat => (
-                  <option key={cat} value={cat}>{cat === 'All' ? 'All Departments' : cat}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <span className="geist-label uppercase text-[#6b7280]">Type</span>
-              <select
-                value={selectedEmploymentType}
-                onChange={(e) => setSelectedEmploymentType(e.target.value)}
-                className="geist-caption h-9 rounded-[6px] border border-white/[0.11] bg-[#050505] px-3 text-[#d4d4d4] outline-none transition-colors focus:border-white/[0.28]"
-              >
-                {employmentTypesList.map(type => (
-                  <option key={type} value={type}>{type === 'All' ? 'All Job Types' : type}</option>
-                ))}
-              </select>
-            </div>
-
-            {(searchQuery || statusFilter !== 'All' || selectedCategory !== 'All' || selectedEmploymentType !== 'All') && (
-              <button
-                onClick={() => { setSearchQuery(''); setStatusFilter('All'); setSelectedCategory('All'); setSelectedEmploymentType('All'); }}
-                className="geist-caption inline-flex h-9 items-center justify-center rounded-[6px] border border-white/[0.11] bg-white/[0.03] px-3 font-medium text-[#d4d4d4] transition-colors hover:bg-white/[0.06] hover:text-white"
-              >
-                Clear
-              </button>
-            )}
           </div>
         </div>
       </section>
 
       {/* Main Jobs Listing Content */}
-      <div className="flex-1 p-4 sm:p-6 lg:p-7">
+      <div className="flex-1 p-4 sm:p-6 lg:p-8">
         {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {Array.from({ length: 6 }).map((_, idx) => (
               <div
                 key={idx}
-                className="h-56 rounded-[6px] border border-white/[0.11] bg-white/[0.02] p-4 animate-pulse flex flex-col justify-between"
+                className="h-64 rounded-3xl border border-[#E4E7DC] bg-white p-5 animate-pulse flex flex-col justify-between shadow-xs"
               >
                 <div>
-                  <div className="h-3 w-20 bg-white/10 rounded mb-2" />
-                  <div className="h-5 w-3/4 bg-white/10 rounded mb-2" />
-                  <div className="h-3 w-1/2 bg-white/5 rounded mb-3" />
-                  <div className="h-10 w-full bg-white/5 rounded" />
+                  <div className="h-4 w-24 bg-[#F8F9F5] rounded-full mb-3" />
+                  <div className="h-6 w-3/4 bg-[#F8F9F5] rounded-lg mb-2" />
+                  <div className="h-3 w-1/2 bg-[#F8F9F5] rounded-full mb-4" />
+                  <div className="h-12 w-full bg-[#F8F9F5] rounded-xl" />
                 </div>
                 <div className="flex gap-2">
-                  <div className="h-8 flex-1 bg-white/10 rounded" />
-                  <div className="h-8 flex-1 bg-white/5 rounded" />
+                  <div className="h-9 flex-1 bg-[#F8F9F5] rounded-full" />
+                  <div className="h-9 flex-1 bg-[#F8F9F5] rounded-full" />
                 </div>
               </div>
             ))}
           </div>
         ) : filteredJobs.length === 0 ? (
-          <div className="flex min-h-[300px] items-center justify-center rounded-[6px] border border-dashed border-white/[0.11] p-12 text-center">
+          <div className="flex min-h-[340px] items-center justify-center rounded-3xl border border-dashed border-[#E4E7DC] bg-white p-12 text-center shadow-xs">
             <div>
-              <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-[6px] border border-white/[0.11] bg-white/[0.03] text-[#8f8f8f]">
-                <Briefcase className="w-5 h-5" />
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl border border-[#E4E7DC] bg-[#F8F9F5] text-[#575A51]">
+                <Briefcase className="w-6 h-6" />
               </div>
-              <p className="geist-caption mt-4 text-[#d4d4d4]">No jobs found matching your filters.</p>
-              <div className="mt-3 flex justify-center gap-2">
+              <p className="mt-4 text-sm font-semibold text-[#111215]">No jobs found matching your filters.</p>
+              <p className="mt-1 text-xs text-[#73766C]">Try modifying your search query or reset the filters.</p>
+              <div className="mt-4 flex justify-center gap-2">
                 <button
                   onClick={() => { setSearchQuery(''); setStatusFilter('All'); setSelectedCategory('All'); setSelectedEmploymentType('All'); }}
-                  className="geist-caption inline-flex h-8 items-center justify-center rounded-[6px] border border-white/[0.11] bg-white/[0.03] px-3 font-medium text-[#d4d4d4] transition-colors hover:bg-white/[0.06] hover:text-white"
+                  className="inline-flex h-9 items-center justify-center rounded-full border border-[#E4E7DC] bg-white px-4 text-xs font-semibold text-[#111215] transition-colors hover:bg-[#F8F9F5] cursor-pointer shadow-2xs"
                 >
                   Clear Filters
                 </button>
                 <Link
                   to="/recruiter/interview/create"
-                  className="geist-caption inline-flex h-8 items-center justify-center gap-2 rounded-[6px] border border-white bg-white px-3 font-medium text-black transition-colors hover:bg-[#eaeaea]"
+                  className="inline-flex h-9 items-center justify-center gap-2 rounded-full bg-[#111215] px-4 text-xs font-semibold text-white transition-colors hover:bg-[#202227] shadow-xs"
                 >
-                  <Plus className="w-3.5 h-3.5" />
+                  <Plus className="w-3.5 h-3.5 text-[#D4F82C]" />
                   <span>Create Job</span>
                 </Link>
               </div>
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {filteredJobs.map((job) => {
               const skillsList = formatSkillsList(job.skills);
               const isJobActive = isJobStatusActive(job);
@@ -1986,12 +1993,12 @@ const RecruiterAllJobs: React.FC = () => {
                 <article
                   key={job.id}
                   onClick={() => navigate(`/recruiter/interview/${job.id}/overview`)}
-                  className="group rounded-[8px] border border-white/[0.11] bg-white/[0.02] p-4 sm:p-5 transition-all duration-200 hover:bg-white/[0.04] hover:border-white/[0.22] hover:shadow-md flex flex-col justify-between cursor-pointer"
+                  className="group rounded-3xl border border-[#E4E7DC] bg-white p-5 sm:p-6 transition-all duration-200 hover:-translate-y-1 hover:border-[#111215]/30 hover:shadow-lg flex flex-col justify-between cursor-pointer"
                 >
                   <div>
                     {/* Top Row: Category & Status */}
-                    <div className="flex items-center justify-between gap-2 mb-2.5">
-                      <span className="geist-small inline-block rounded-[6px] border border-white/[0.11] bg-white/[0.03] px-2.5 py-0.5 font-medium text-[#d4d4d4] truncate max-w-[65%]">
+                    <div className="flex items-center justify-between gap-2 mb-3">
+                      <span className="text-[11px] font-semibold text-[#575A51] bg-[#F8F9F5] border border-[#E4E7DC] px-2.5 py-0.5 rounded-full truncate max-w-[65%]">
                         {job.category || job.department || 'General'}
                       </span>
 
@@ -2001,16 +2008,16 @@ const RecruiterAllJobs: React.FC = () => {
                           onClick={(e) => handleToggleJobStatus(job, e)}
                           disabled={togglingJobId === job.id}
                           title={isJobActive ? "Click to Deactivate job" : "Click to Activate job"}
-                          className={`geist-small inline-flex items-center gap-1.5 rounded-[6px] px-2.5 py-0.5 font-mono text-xs transition-all duration-150 cursor-pointer ${
+                          className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 font-mono text-xs transition-all duration-150 cursor-pointer ${
                             isExpired
-                              ? "border border-[#3f1d1d] bg-[#180707] text-[#ff8f8f] hover:bg-[#280c0c] hover:border-rose-500/50"
-                              : "border border-[#0e2f22] bg-[#071a12] text-[#83d0a3] hover:bg-[#0c3021] hover:border-emerald-500/50"
+                              ? "border border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
+                              : "border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
                           } ${togglingJobId === job.id ? "opacity-60 cursor-not-allowed" : ""}`}
                         >
                           {togglingJobId === job.id ? (
                             <Loader2 className="h-2.5 w-2.5 animate-spin text-current" />
                           ) : (
-                            <span className={`h-1.5 w-1.5 rounded-full ${isJobActive ? 'bg-[#50e3c2] animate-pulse' : 'bg-[#ff6b6b]'}`} />
+                            <span className={`h-1.5 w-1.5 rounded-full ${isJobActive ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`} />
                           )}
                           <span>{isJobActive ? 'Active' : 'Inactive'}</span>
                         </button>
@@ -2019,20 +2026,20 @@ const RecruiterAllJobs: React.FC = () => {
 
                     {/* Job Title & Company */}
                     <h2
-                      className="geist-caption text-base font-semibold text-white group-hover:text-primary transition-colors truncate"
+                      className="text-base sm:text-lg font-bold text-[#111215] group-hover:text-black transition-colors truncate"
                       title={job.title}
                     >
                       {job.title}
                     </h2>
 
-                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5 geist-small text-[#8f8f8f]">
+                    <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 mt-1.5 text-xs text-[#575A51]">
                       {job.jobNo && (
-                        <span className="font-mono text-emerald-400 font-bold bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded text-[11px]">
-                          Job No: {job.jobNo}
+                        <span className="font-mono text-[#111215] font-bold bg-[#D4F82C] px-2 py-0.5 rounded-full text-[10px]">
+                          #{job.jobNo}
                         </span>
                       )}
                       <span className="flex items-center gap-1 truncate">
-                        <MapPin className="w-3 h-3 text-[#6b7280] shrink-0" />
+                        <MapPin className="w-3 h-3 text-[#73766C] shrink-0" />
                         <span className="truncate">{job.location || 'Remote'}</span>
                       </span>
                       {job.employmentType && (
@@ -2041,29 +2048,29 @@ const RecruiterAllJobs: React.FC = () => {
                     </div>
 
                     {/* Short Description */}
-                    <p className="geist-small mt-2.5 text-[#8f8f8f] line-clamp-2 hover:text-[#d4d4d4] transition-colors leading-relaxed">
+                    <p className="mt-2.5 text-xs text-[#575A51] line-clamp-2 leading-relaxed">
                       {getJobDescriptionSnippet(job.description, 160)}
                     </p>
 
                     {/* Specifications Grid */}
-                    <div className="mt-3.5 pt-2.5 border-t border-white/[0.08] grid grid-cols-2 gap-x-3 gap-y-2 geist-small text-[#8f8f8f]">
+                    <div className="mt-3.5 pt-3 border-t border-[#E4E7DC] grid grid-cols-2 gap-x-3 gap-y-2 text-xs text-[#575A51]">
                       <div className="flex items-center gap-1.5 min-w-0" title={`Experience: ${formatExperienceDisplay(job.experience)}`}>
-                        <span className="text-[#6b7280] shrink-0">Exp:</span>
-                        <span className="text-white font-medium truncate">{formatExperienceDisplay(job.experience)}</span>
+                        <span className="text-[#73766C] shrink-0">Exp:</span>
+                        <span className="text-[#111215] font-semibold truncate">{formatExperienceDisplay(job.experience)}</span>
                       </div>
                       <div className="flex items-center gap-1.5 min-w-0" title={`Salary: ${job.salary || job.salaryRange || 'Not specified'}`}>
-                        <span className="text-[#6b7280] shrink-0">Salary:</span>
-                        <span className="text-white font-medium truncate">{job.salary || job.salaryRange || 'Not specified'}</span>
+                        <span className="text-[#73766C] shrink-0">Salary:</span>
+                        <span className="text-[#111215] font-semibold truncate">{job.salary || job.salaryRange || 'Not specified'}</span>
                       </div>
                       <div className="flex items-center gap-1.5 min-w-0" title={`${appliedCount} candidate${appliedCount === 1 ? '' : 's'} applied`}>
-                        <Users className="w-3.5 h-3.5 text-blue-400 shrink-0" />
-                        <span className="text-[#6b7280] shrink-0">Applied:</span>
-                        <span className="text-white font-semibold truncate">{appliedCount} candidate{appliedCount === 1 ? '' : 's'}</span>
+                        <Users className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                        <span className="text-[#73766C] shrink-0">Applied:</span>
+                        <span className="text-[#111215] font-semibold truncate">{appliedCount} candidate{appliedCount === 1 ? '' : 's'}</span>
                       </div>
                       <div className="flex items-center gap-1.5 min-w-0" title={`${invitedCount} candidate${invitedCount === 1 ? '' : 's'} invited`}>
-                        <Send className="w-3.5 h-3.5 text-purple-400 shrink-0" />
-                        <span className="text-[#6b7280] shrink-0">Invited:</span>
-                        <span className="text-white font-semibold truncate">{invitedCount} candidate{invitedCount === 1 ? '' : 's'}</span>
+                        <Send className="w-3.5 h-3.5 text-purple-600 shrink-0" />
+                        <span className="text-[#73766C] shrink-0">Invited:</span>
+                        <span className="text-[#111215] font-semibold truncate">{invitedCount} candidate{invitedCount === 1 ? '' : 's'}</span>
                       </div>
                     </div>
 
@@ -2073,13 +2080,13 @@ const RecruiterAllJobs: React.FC = () => {
                         {skillsList.slice(0, 3).map((skill, sIdx) => (
                           <span
                             key={sIdx}
-                            className="geist-small text-[11px] px-2 py-0.5 rounded-[4px] bg-white/[0.04] border border-white/[0.08] text-[#d4d4d4]"
+                            className="text-[11px] px-2.5 py-0.5 rounded-full bg-[#F8F9F5] border border-[#E4E7DC] text-[#111215] font-medium"
                           >
                             {skill}
                           </span>
                         ))}
                         {skillsList.length > 3 && (
-                          <span className="geist-small text-[11px] text-[#6b7280] self-center">
+                          <span className="text-[11px] text-[#73766C] self-center font-medium">
                             +{skillsList.length - 3}
                           </span>
                         )}
@@ -2088,17 +2095,17 @@ const RecruiterAllJobs: React.FC = () => {
                   </div>
 
                   {/* Card Actions */}
-                  <div className="mt-4 pt-3 border-t border-white/[0.08] flex items-center justify-between gap-2">
+                  <div className="mt-4 pt-3.5 border-t border-[#E4E7DC] flex items-center justify-between gap-2">
                     <button
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
                         setInvitingJob(job);
                       }}
-                      className="geist-caption flex-1 inline-flex h-8 items-center justify-center gap-1.5 rounded-[6px] border border-white bg-white px-3 font-semibold text-black text-xs transition-colors hover:bg-[#eaeaea] shadow-sm"
+                      className="flex-1 inline-flex h-8 items-center justify-center gap-1.5 rounded-full bg-[#111215] px-3 font-semibold text-white text-xs transition-colors hover:bg-[#202227] shadow-xs cursor-pointer"
                       title="Invite candidate"
                     >
-                      <UserPlus className="w-3.5 h-3.5" />
+                      <UserPlus className="w-3.5 h-3.5 text-[#D4F82C]" />
                       <span className="truncate">Invite</span>
                     </button>
 
@@ -2108,10 +2115,10 @@ const RecruiterAllJobs: React.FC = () => {
                         e.stopPropagation();
                         navigate(`/recruiter/interview/${job.id}/responses`);
                       }}
-                      className="geist-caption inline-flex h-8 items-center justify-center gap-1.5 rounded-[6px] border border-white/[0.11] bg-white/[0.03] px-2.5 font-medium text-[#d4d4d4] text-xs transition-colors hover:bg-white/[0.06] hover:text-white"
+                      className="inline-flex h-8 items-center justify-center gap-1.5 rounded-full border border-[#E4E7DC] bg-white px-3 font-semibold text-[#111215] text-xs transition-colors hover:bg-[#F8F9F5] cursor-pointer shadow-2xs"
                       title="See candidate responses"
                     >
-                      <FileText className="w-3.5 h-3.5 text-[#9ca3af]" />
+                      <FileText className="w-3.5 h-3.5 text-[#575A51]" />
                       <span>Responses</span>
                     </button>
 
@@ -2121,10 +2128,10 @@ const RecruiterAllJobs: React.FC = () => {
                         e.stopPropagation();
                         setEditingJobId(job.id);
                       }}
-                      className="geist-caption inline-flex h-8 items-center justify-center gap-1.5 rounded-[6px] border border-white/[0.11] bg-white/[0.03] px-2.5 font-medium text-[#d4d4d4] text-xs transition-colors hover:bg-white/[0.06] hover:text-white"
+                      className="inline-flex h-8 items-center justify-center gap-1.5 rounded-full border border-[#E4E7DC] bg-white px-3 font-semibold text-[#111215] text-xs transition-colors hover:bg-[#F8F9F5] cursor-pointer shadow-2xs"
                       title="Edit job"
                     >
-                      <Edit className="w-3.5 h-3.5 text-[#9ca3af]" />
+                      <Edit className="w-3.5 h-3.5 text-[#575A51]" />
                       <span>Edit</span>
                     </button>
 
@@ -2132,7 +2139,7 @@ const RecruiterAllJobs: React.FC = () => {
                       type="button"
                       onClick={(e) => handleDeleteJob(job.id, job.title, e)}
                       disabled={deletingJobId === job.id}
-                      className="geist-caption inline-flex h-8 w-8 items-center justify-center rounded-[6px] border border-red-500/25 bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:border-red-400/50 text-xs transition-colors disabled:opacity-50 shrink-0"
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-red-200 bg-red-50 text-red-600 hover:bg-red-100 text-xs transition-colors disabled:opacity-50 shrink-0 cursor-pointer"
                       title="Delete job"
                     >
                       {deletingJobId === job.id ? (

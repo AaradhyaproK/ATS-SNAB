@@ -2115,30 +2115,33 @@ const ResumeDump: React.FC = () => {
   }
 
   return (
-    <div className="w-full min-h-[calc(100vh-3.5rem)] bg-[#000] text-white">
+    <div className="w-full min-h-[calc(100vh-3.5rem)] bg-[#F8F9F5] text-[#111215]">
 
-      <section className="border-b border-white/[0.11] bg-[#000]">
-        <div className="flex flex-col gap-4 px-4 py-5 sm:px-6 lg:px-7 xl:flex-row xl:items-start xl:justify-between">
+      <section className="border-b border-[#E4E7DC] bg-[#F8F9F5]">
+        <div className="flex flex-col gap-4 px-4 py-5 sm:px-6 lg:px-8 xl:flex-row xl:items-start xl:justify-between">
           <div className="min-w-0">
-            <p className="geist-label uppercase text-[#6b7280]">Recruiter Library</p>
-            <h1 className="geist-page-title mt-2 text-white">Resume Dump</h1>
-            <p className="geist-small mt-1 max-w-2xl text-[#8f8f8f]">
+            <div className="inline-flex items-center gap-2 rounded-full border border-[#E4E7DC] bg-white px-3 py-1 text-[11px] font-semibold tracking-wider uppercase text-[#575A51] shadow-xs">
+              <span className="h-1.5 w-1.5 rounded-full bg-[#8FB305] animate-pulse" />
+              <span>02 • Recruiter Library</span>
+            </div>
+            <h1 className="mt-2 text-2xl sm:text-3xl font-bold tracking-tight text-[#111215]">Resume Dump</h1>
+            <p className="mt-1 max-w-2xl text-xs sm:text-sm text-[#575A51]">
               Upload resumes once, extract candidate details, and keep Cloudinary links ready for upcoming interview creation. Mark candidates as Hired to exclude them from automated suggestions.
             </p>
           </div>
 
-          <div className="ml-auto flex shrink-0 items-center gap-2">
+          <div className="ml-auto flex shrink-0 items-center gap-2 flex-wrap">
             <div className="relative w-full sm:w-[220px] lg:w-[260px]">
-              <Search className="absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-[#8f8f8f]" strokeWidth={1.8} />
+              <Search className="absolute left-3.5 top-1/2 size-3.5 -translate-y-1/2 text-[#73766C]" strokeWidth={1.8} />
               <input
                 type="text"
                 placeholder="Search..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="geist-caption h-9 w-full rounded-[6px] border border-white/[0.11] bg-[#050505] pl-9 pr-3 text-white outline-none placeholder:text-[#6b7280] focus:border-white/[0.24]"
+                className="h-9 w-full rounded-full border border-[#E4E7DC] bg-white pl-9 pr-3 text-xs text-[#111215] outline-none placeholder:text-[#73766C] focus:border-[#111215] shadow-xs"
               />
             </div>
-            <div className="flex shrink-0 items-center gap-1.5 rounded-[6px] border border-white/[0.16] bg-white/[0.04] p-0.5">
+            <div className="flex shrink-0 items-center gap-1.5 rounded-full border border-[#E4E7DC] bg-white p-0.5 shadow-xs">
               <button
                 type="button"
                 onClick={() => {
@@ -2146,59 +2149,59 @@ const ResumeDump: React.FC = () => {
                   setCopiedUploadPortalLink(true);
                   setTimeout(() => setCopiedUploadPortalLink(false), 2500);
                 }}
-                className="geist-caption inline-flex h-8 cursor-pointer items-center justify-center gap-1.5 rounded-[4px] px-2.5 font-medium text-[#d4d4d4] transition-colors hover:bg-white/[0.08] hover:text-white"
+                className="inline-flex h-8 cursor-pointer items-center justify-center gap-1.5 rounded-full px-3 text-xs font-semibold text-[#111215] transition-colors hover:bg-[#F8F9F5]"
                 title="Copy public candidate upload link to clipboard"
               >
-                {copiedUploadPortalLink ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} strokeWidth={1.8} />}
+                {copiedUploadPortalLink ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} className="text-[#575A51]" strokeWidth={1.8} />}
                 <span>{copiedUploadPortalLink ? 'Link Copied!' : 'Copy Upload Link'}</span>
               </button>
 
-              <div className="h-4 w-[1px] bg-white/[0.16]" />
+              <div className="h-4 w-[1px] bg-[#E4E7DC]" />
 
               <a
                 href={`${window.location.origin}/upload-resume`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="geist-caption inline-flex h-8 cursor-pointer items-center justify-center gap-1.5 rounded-[4px] px-2.5 font-medium text-[#d4d4d4] transition-colors hover:bg-white/[0.08] hover:text-white"
+                className="inline-flex h-8 cursor-pointer items-center justify-center gap-1.5 rounded-full px-3 text-xs font-semibold text-[#111215] transition-colors hover:bg-[#F8F9F5]"
                 title="Open public candidate upload page in a new tab"
               >
-                <ExternalLink size={14} strokeWidth={1.8} />
+                <ExternalLink size={14} className="text-[#575A51]" strokeWidth={1.8} />
                 <span>Open Link</span>
               </a>
             </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setSelectedUploadFiles([]);
-                  setUploadModalExtraInfo('');
-                  setIsUploadModalOpen(true);
-                }}
-                className="geist-caption inline-flex h-9 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-[6px] border border-white bg-white px-3.5 font-semibold text-black transition-colors hover:bg-[#eaeaea]"
-              >
-                <UploadCloud size={14} strokeWidth={1.8} />
-                Upload resumes
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedUploadFiles([]);
+                setUploadModalExtraInfo('');
+                setIsUploadModalOpen(true);
+              }}
+              className="inline-flex h-9 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-full bg-[#111215] px-4 font-semibold text-white transition-colors hover:bg-[#202227] shadow-xs text-xs"
+            >
+              <UploadCloud size={14} className="text-[#D4F82C]" strokeWidth={2} />
+              <span>Upload resumes</span>
+            </button>
           </div>
-        </section>
+        </div>
+      </section>
 
       {/* Interactive Naukri-Style Filter Bar */}
-      <section className="border-b border-gray-200 dark:border-white/[0.11] bg-slate-50 dark:bg-[#050505] px-4 py-3 sm:px-6 lg:px-7 space-y-3">
+      <section className="border-b border-[#E4E7DC] bg-white px-4 py-3.5 sm:px-6 lg:px-8 space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0">
-            {/* Searchable Job Role Selector (Shows Job No, Title, Company & Auto-Ranks by AI Match Score) */}
+            {/* Searchable Job Role Selector */}
             <div className="relative shrink-0">
               <button
                 type="button"
                 onClick={() => setIsJobSelectorOpen(prev => !prev)}
-                className={`geist-caption h-8 inline-flex items-center gap-1.5 rounded-[6px] border px-2.5 text-xs font-medium transition-all shadow-2xs cursor-pointer max-w-[260px] ${
+                className={`h-9 inline-flex items-center gap-2 rounded-full border px-3 text-xs font-semibold transition-all shadow-xs cursor-pointer max-w-[260px] ${
                   selectedJobId !== 'all' && activeSelectedJob
-                    ? 'bg-blue-500/10 border-blue-500/40 text-blue-700 dark:text-blue-300 font-semibold'
-                    : 'border-gray-300 dark:border-white/[0.11] bg-white dark:bg-[#111] text-slate-800 dark:text-white hover:border-gray-400 dark:hover:border-white/30'
+                    ? 'bg-[#111215] border-[#111215] text-white'
+                    : 'border-[#E4E7DC] bg-[#F8F9F5] text-[#111215] hover:bg-white'
                 }`}
                 title="Click to search and select target job role"
               >
-                <Briefcase size={13} className="shrink-0 text-gray-500 dark:text-[#8f8f8f]" />
+                <Briefcase size={13} className={`shrink-0 ${selectedJobId !== 'all' ? 'text-[#D4F82C]' : 'text-[#73766C]'}`} />
                 <span className="truncate">
                   {selectedJobId !== 'all' && activeSelectedJob
                     ? `${activeSelectedJob.jobNo ? `#${activeSelectedJob.jobNo} ` : ''}${activeSelectedJob.title || 'Job'}`
@@ -2211,31 +2214,31 @@ const ResumeDump: React.FC = () => {
                       setSelectedJobId('all');
                       setIsJobSelectorOpen(false);
                     }}
-                    className="ml-1 p-0.5 hover:bg-black/10 dark:hover:bg-white/15 rounded-full"
+                    className="ml-1 p-0.5 hover:bg-white/20 rounded-full"
                     title="Clear Job Selection"
                   >
-                    <XCircle size={12} className="text-gray-400 hover:text-red-500" />
+                    <XCircle size={12} className="text-white/70 hover:text-white" />
                   </span>
                 ) : (
-                  <ChevronDown size={12} className="text-gray-500 dark:text-[#8f8f8f] shrink-0 ml-0.5" />
+                  <ChevronDown size={12} className="text-[#73766C] shrink-0 ml-0.5" />
                 )}
               </button>
 
               {/* Searchable Floating Job Role Menu */}
               {isJobSelectorOpen && (
                 <div
-                  className="absolute left-0 top-full mt-1.5 z-[9999] w-80 sm:w-96 rounded-lg border border-gray-200 dark:border-white/15 bg-white dark:bg-[#0c0c0d] p-3 shadow-2xl backdrop-blur-md animate-in fade-in zoom-in duration-100"
+                  className="absolute left-0 top-full mt-2 z-[9999] w-80 sm:w-96 rounded-2xl border border-[#E4E7DC] bg-white p-3 shadow-2xl animate-in fade-in zoom-in duration-100"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <div className="flex items-center justify-between gap-2 mb-2 pb-2 border-b border-gray-200 dark:border-white/10">
+                  <div className="flex items-center justify-between gap-2 mb-2 pb-2 border-b border-[#E4E7DC]">
                     <div className="relative flex-1">
-                      <Search size={12} className="absolute left-2.5 top-2.5 text-gray-400" />
+                      <Search size={12} className="absolute left-2.5 top-2.5 text-[#73766C]" />
                       <input
                         type="text"
                         value={jobSearchQuery}
                         onChange={(e) => setJobSearchQuery(e.target.value)}
                         placeholder="Search by Job No, Title, Company, City..."
-                        className="w-full h-7 pl-7 pr-2 rounded bg-gray-100 dark:bg-white/[0.06] border border-gray-200 dark:border-white/[0.08] text-xs text-slate-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
+                        className="w-full h-8 pl-8 pr-2 rounded-xl bg-[#F8F9F5] border border-[#E4E7DC] text-xs text-[#111215] placeholder-[#73766C] focus:outline-none focus:border-[#111215] focus:bg-white"
                         autoFocus
                       />
                     </div>
@@ -2243,7 +2246,7 @@ const ResumeDump: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => setJobSearchQuery('')}
-                        className="text-[11px] text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                        className="text-[11px] text-[#73766C] hover:text-[#111215]"
                       >
                         Clear
                       </button>
@@ -2258,21 +2261,21 @@ const ResumeDump: React.FC = () => {
                         setSelectedJobId('all');
                         setIsJobSelectorOpen(false);
                       }}
-                      className={`w-full flex items-center justify-between p-2 rounded-md text-left transition-colors cursor-pointer ${
+                      className={`w-full flex items-center justify-between p-2 rounded-xl text-left transition-colors cursor-pointer ${
                         selectedJobId === 'all'
-                          ? 'bg-blue-50 dark:bg-white/[0.08] text-blue-700 dark:text-blue-300 font-semibold'
-                          : 'hover:bg-gray-50 dark:hover:bg-white/[0.04] text-slate-700 dark:text-gray-300'
+                          ? 'bg-[#111215] text-white font-bold'
+                          : 'hover:bg-[#F8F9F5] text-[#111215]'
                       }`}
                     >
                       <div className="flex items-center gap-2">
-                        <Archive size={13} className="text-gray-400" />
+                        <Archive size={13} className={selectedJobId === 'all' ? 'text-[#D4F82C]' : 'text-[#73766C]'} />
                         <span className="text-xs">All Job Roles ({jobs.length} Available)</span>
                       </div>
-                      {selectedJobId === 'all' && <Check size={13} className="text-blue-600 dark:text-blue-400" />}
+                      {selectedJobId === 'all' && <Check size={13} className="text-[#D4F82C]" />}
                     </button>
 
                     {filteredJobsList.length === 0 ? (
-                      <div className="py-4 text-center text-xs text-gray-400">
+                      <div className="py-4 text-center text-xs text-[#73766C]">
                         No jobs found matching "{jobSearchQuery}".
                       </div>
                     ) : (
@@ -2287,34 +2290,31 @@ const ResumeDump: React.FC = () => {
                               setSelectedJobId(j.id);
                               setIsJobSelectorOpen(false);
                             }}
-                            className={`w-full p-2 rounded-md text-left transition-colors cursor-pointer border ${
+                            className={`w-full p-2.5 rounded-xl text-left transition-colors cursor-pointer border ${
                               isSelected
-                                ? 'bg-blue-50 dark:bg-blue-950/30 border-blue-300 dark:border-blue-700/50'
-                                : 'border-transparent hover:bg-gray-50 dark:hover:bg-white/[0.04]'
+                                ? 'bg-[#111215] border-[#111215] text-white'
+                                : 'border-transparent hover:bg-[#F8F9F5] text-[#111215]'
                             }`}
                           >
                             <div className="flex items-start justify-between gap-2">
                               <div className="min-w-0 flex-1">
                                 <div className="flex items-center gap-1.5 flex-wrap">
                                   {jobNoDisplay && (
-                                    <span className="inline-flex items-center px-1.5 py-0.2 font-mono text-[10px] font-bold rounded bg-gray-200 dark:bg-white/10 text-slate-800 dark:text-gray-200">
+                                    <span className={`inline-flex items-center px-1.5 py-0.2 font-mono text-[10px] font-bold rounded ${
+                                      isSelected ? 'bg-white/20 text-white' : 'bg-[#F8F9F5] border border-[#E4E7DC] text-[#111215]'
+                                    }`}>
                                       {jobNoDisplay}
                                     </span>
                                   )}
-                                  <span className="text-xs font-semibold text-slate-900 dark:text-white truncate">
+                                  <span className="text-xs font-semibold truncate">
                                     {j.title || j.jobRole || 'Untitled Job'}
                                   </span>
                                 </div>
-                                <div className="text-[11px] text-gray-500 dark:text-[#8f8f8f] mt-0.5 truncate">
+                                <div className={`text-[11px] mt-0.5 truncate ${isSelected ? 'text-white/70' : 'text-[#73766C]'}`}>
                                   {j.company || j.companyName || 'Hiring Partner'} • {j.city || j.location || 'Nashik'}
                                 </div>
-                                <div className="flex items-center gap-2 mt-1 text-[10px] text-gray-400">
-                                  {j.experience && <span>💼 {j.experience}</span>}
-                                  {j.department && <span>🏷️ {j.department}</span>}
-                                  {j.qualification && <span className="truncate max-w-[120px]">🎓 {j.qualification}</span>}
-                                </div>
                               </div>
-                              {isSelected && <Check size={14} className="text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />}
+                              {isSelected && <Check size={14} className="text-[#D4F82C] shrink-0 mt-0.5" />}
                             </div>
                           </button>
                         );
@@ -2326,22 +2326,22 @@ const ResumeDump: React.FC = () => {
             </div>
 
             {/* Status Filter Segregated Toggles */}
-            <div className="flex items-center gap-1 bg-gray-200/80 dark:bg-[#111] border border-gray-300 dark:border-white/[0.11] rounded-[8px] p-0.5 text-xs">
+            <div className="flex items-center gap-1 bg-[#F8F9F5] border border-[#E4E7DC] rounded-full p-1 text-xs">
               <button
                 type="button"
                 onClick={() => setStatusFilter('available')}
-                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-[6px] font-semibold transition-all cursor-pointer ${
+                className={`flex items-center gap-1.5 px-3 py-1 rounded-full font-semibold transition-all cursor-pointer ${
                   statusFilter === 'available'
-                    ? 'bg-white dark:bg-white text-slate-900 dark:text-black shadow-xs'
-                    : 'text-gray-600 dark:text-[#8f8f8f] hover:text-black dark:hover:text-white'
+                    ? 'bg-[#111215] text-white shadow-xs'
+                    : 'text-[#575A51] hover:text-[#111215]'
                 }`}
                 title="Active available candidates ready for job matching"
               >
                 <span>Active</span>
                 <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded-full ${
                   statusFilter === 'available'
-                    ? 'bg-blue-100 dark:bg-black/15 text-blue-700 dark:text-black'
-                    : 'bg-gray-300/70 dark:bg-white/10 text-gray-700 dark:text-gray-300'
+                    ? 'bg-[#D4F82C] text-[#111215]'
+                    : 'bg-white border border-[#E4E7DC] text-[#111215]'
                 }`}>
                   {availableCandidatesCount}
                 </span>
@@ -2350,10 +2350,10 @@ const ResumeDump: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setStatusFilter('hired')}
-                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-[6px] font-semibold transition-all cursor-pointer ${
+                className={`flex items-center gap-1.5 px-3 py-1 rounded-full font-semibold transition-all cursor-pointer ${
                   statusFilter === 'hired'
                     ? 'bg-emerald-600 text-white shadow-xs'
-                    : 'text-gray-600 dark:text-[#8f8f8f] hover:text-emerald-600 dark:hover:text-emerald-400'
+                    : 'text-[#575A51] hover:text-emerald-700'
                 }`}
                 title="Candidates marked as Hired (excluded from automated job suggestions)"
               >
@@ -2361,7 +2361,7 @@ const ResumeDump: React.FC = () => {
                 <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded-full ${
                   statusFilter === 'hired'
                     ? 'bg-white/20 text-white'
-                    : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400'
+                    : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                 }`}>
                   {hiredCandidatesCount}
                 </span>
@@ -2370,10 +2370,10 @@ const ResumeDump: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setStatusFilter('blocked')}
-                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-[6px] font-semibold transition-all cursor-pointer ${
+                className={`flex items-center gap-1.5 px-3 py-1 rounded-full font-semibold transition-all cursor-pointer ${
                   statusFilter === 'blocked'
                     ? 'bg-red-600 text-white shadow-xs'
-                    : 'text-gray-600 dark:text-[#8f8f8f] hover:text-red-500 dark:hover:text-red-400'
+                    : 'text-[#575A51] hover:text-red-700'
                 }`}
                 title="Candidates who have been banned and blocked from all job matching"
               >
@@ -2382,7 +2382,7 @@ const ResumeDump: React.FC = () => {
                 <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded-full ${
                   statusFilter === 'blocked'
                     ? 'bg-white/20 text-white'
-                    : 'bg-red-500/15 text-red-700 dark:text-red-400'
+                    : 'bg-red-50 text-red-700 border border-red-200'
                 }`}>
                   {blockedCandidatesCount}
                 </span>
@@ -2392,11 +2392,11 @@ const ResumeDump: React.FC = () => {
 
           {/* Right side of Row 1: Candidate Counter & Reset Filters */}
           <div className="flex items-center gap-3 shrink-0">
-            <span className="text-xs text-slate-500 dark:text-[#8f8f8f] font-medium">
+            <span className="text-xs text-[#575A51] font-medium">
               {isSearchOrFilterActive ? (
-                <>Showing all <strong className="text-slate-900 dark:text-white">{filteredCandidates.length}</strong> matching candidates</>
+                <>Showing all <strong className="text-[#111215]">{filteredCandidates.length}</strong> matching candidates</>
               ) : (
-                <>Showing <strong className="text-slate-900 dark:text-white">{paginatedCandidates.length}</strong> of {filteredCandidates.length} candidates {totalPages > 1 ? `(Page ${currentPage} of ${totalPages})` : ''}</>
+                <>Showing <strong className="text-[#111215]">{paginatedCandidates.length}</strong> of {filteredCandidates.length} candidates {totalPages > 1 ? `(Page ${currentPage} of ${totalPages})` : ''}</>
               )}
             </span>
 
@@ -2404,7 +2404,7 @@ const ResumeDump: React.FC = () => {
               <button
                 type="button"
                 onClick={handleClearAllFilters}
-                className="geist-caption inline-flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 dark:hover:text-emerald-300 font-semibold underline cursor-pointer"
+                className="inline-flex items-center gap-1 text-xs text-[#111215] hover:underline font-semibold cursor-pointer"
               >
                 <RotateCcw size={12} />
                 <span>Reset All</span>
@@ -2414,19 +2414,18 @@ const ResumeDump: React.FC = () => {
         </div>
 
         {/* ROW 2: Facet Filters (Skills, Industry, Experience, Location, More Filters) */}
-        <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-gray-200/70 dark:border-white/[0.06]">
-          <div className="flex items-center gap-1 text-xs text-gray-400 dark:text-[#737373] font-semibold mr-1 shrink-0">
+        <div className="flex flex-wrap items-center gap-2 pt-2.5 border-t border-[#E4E7DC]">
+          <div className="flex items-center gap-1 text-xs text-[#73766C] font-semibold mr-1 shrink-0">
             <Filter size={12} />
             <span className="uppercase text-[10px] tracking-wider">Filters:</span>
           </div>
 
           {/* Skill Rec Box Filter (Multi-Select Checkmarks) */}
             <div className="flex items-center gap-1 shrink-0 relative">
-              <Filter size={13} className="text-gray-500 dark:text-[#8f8f8f] shrink-0" />
               <button
                 type="button"
                 onClick={() => setIsSkillRecBoxOpen(prev => !prev)}
-                className="geist-caption h-8 inline-flex items-center justify-between gap-1.5 rounded-[6px] border border-gray-300 dark:border-white/[0.11] bg-white dark:bg-[#111] px-2.5 text-xs text-slate-800 dark:text-white outline-none focus:border-black dark:focus:border-white/30 cursor-pointer min-w-[140px] max-w-[180px] font-normal shadow-2xs"
+                className="h-8 inline-flex items-center justify-between gap-1.5 rounded-full border border-[#E4E7DC] bg-[#F8F9F5] hover:bg-white px-3 text-xs text-[#111215] outline-none cursor-pointer min-w-[140px] max-w-[180px] font-medium shadow-2xs transition-colors"
                 title="Click to select multiple skills with checkmarks"
               >
                 <span className="truncate">
@@ -2434,7 +2433,7 @@ const ResumeDump: React.FC = () => {
                     ? `Skills (${selectedSkills.length})`
                     : `All Skills (${uniqueSkillsList.length})`}
                 </span>
-                <ChevronDown size={12} className="text-gray-500 dark:text-[#8f8f8f] shrink-0 ml-1" />
+                <ChevronDown size={12} className="text-[#73766C] shrink-0 ml-1" />
               </button>
 
               {/* Floating Recommended Skills Box (Rec Box) */}
@@ -2909,103 +2908,104 @@ const ResumeDump: React.FC = () => {
         </section>
       )}
 
-      <section className="flex min-h-[360px] flex-col">
-        {filteredCandidates.length === 0 && !uploading ? (
-          statusFilter === 'hired' ? (
-            <div className="flex min-h-[380px] flex-col items-center justify-center p-8 text-center border-b border-white/[0.11]">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-500 mb-3 border border-emerald-500/20">
-                <UserCheck size={24} />
+      <section className="p-4 sm:p-6 lg:p-8">
+        <div className="rounded-3xl border border-[#E4E7DC] bg-white overflow-hidden shadow-xs">
+          {filteredCandidates.length === 0 && !uploading ? (
+            statusFilter === 'hired' ? (
+              <div className="flex min-h-[380px] flex-col items-center justify-center p-8 text-center">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-600 mb-3 border border-emerald-500/20">
+                  <UserCheck size={24} />
+                </div>
+                <h3 className="text-base font-bold text-[#111215]">No Hired Candidates Found</h3>
+                <p className="text-xs text-[#575A51] mt-1 max-w-sm">
+                  Candidates marked as Hired appear exclusively in this view and are excluded from active job matching.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setStatusFilter('available')}
+                  className="mt-4 px-4 py-2 rounded-full bg-[#111215] text-white font-semibold text-xs hover:bg-[#202227] transition-colors cursor-pointer shadow-xs"
+                >
+                  Switch to Active Candidates ({availableCandidatesCount})
+                </button>
               </div>
-              <h3 className="text-base font-semibold text-white">No Hired Candidates Found</h3>
-              <p className="text-xs text-[#8f8f8f] mt-1 max-w-sm">
-                Candidates marked as Hired appear exclusively in this view and are excluded from active job matching.
-              </p>
-              <button
-                type="button"
-                onClick={() => setStatusFilter('available')}
-                className="mt-4 px-3.5 py-1.5 rounded-md bg-white text-black font-semibold text-xs hover:bg-neutral-200 transition-colors cursor-pointer"
-              >
-                Switch to Active Candidates ({availableCandidatesCount})
-              </button>
-            </div>
-          ) : statusFilter === 'blocked' ? (
-            <div className="flex min-h-[380px] flex-col items-center justify-center p-8 text-center border-b border-white/[0.11]">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-500/10 text-red-500 mb-3 border border-red-500/20">
-                <Ban size={24} />
+            ) : statusFilter === 'blocked' ? (
+              <div className="flex min-h-[380px] flex-col items-center justify-center p-8 text-center">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-red-500/10 text-red-600 mb-3 border border-red-500/20">
+                  <Ban size={24} />
+                </div>
+                <h3 className="text-base font-bold text-[#111215]">No Banned Candidates Found</h3>
+                <p className="text-xs text-[#575A51] mt-1 max-w-sm">
+                  Candidates who have been banned and blocked will appear here exclusively.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setStatusFilter('available')}
+                  className="mt-4 px-4 py-2 rounded-full bg-[#111215] text-white font-semibold text-xs hover:bg-[#202227] transition-colors cursor-pointer shadow-xs"
+                >
+                  Switch to Active Candidates ({availableCandidatesCount})
+                </button>
               </div>
-              <h3 className="text-base font-semibold text-white">No Banned Candidates Found</h3>
-              <p className="text-xs text-[#8f8f8f] mt-1 max-w-sm">
-                Candidates who have been banned and blocked will appear here exclusively.
+            ) : (
+            <label
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              className={`flex min-h-[420px] cursor-pointer flex-col items-center justify-center border-2 border-dashed m-6 rounded-2xl px-4 py-14 text-center transition-colors sm:px-6 lg:px-7 ${
+                isDraggingResume
+                  ? 'border-[#111215] bg-[#F8F9F5]'
+                  : 'border-[#E4E7DC] bg-[#F8F9F5]/50 hover:bg-[#F8F9F5]'
+              }`}
+            >
+              <div className={`flex h-14 w-14 items-center justify-center rounded-2xl border transition-colors ${
+                isDraggingResume
+                  ? 'border-[#111215] bg-[#111215] text-white'
+                  : 'border-[#E4E7DC] bg-white text-[#575A51] shadow-2xs'
+              }`}>
+                <UploadCloud size={24} strokeWidth={1.7} />
+              </div>
+              <h2 className="geist-section-title mt-4 text-[#111215] font-bold">
+                {isDraggingResume ? 'Drop resumes here' : 'Drag and drop resumes here'}
+              </h2>
+              <p className="geist-caption mt-2 max-w-md text-[#575A51]">
+                Drop PDF, DOCX, or TXT resumes anywhere in this box. Missing email, phone, or skills will not block saving.
               </p>
-              <button
-                type="button"
-                onClick={() => setStatusFilter('available')}
-                className="mt-4 px-3.5 py-1.5 rounded-md bg-white text-black font-semibold text-xs hover:bg-neutral-200 transition-colors cursor-pointer"
-              >
-                Switch to Active Candidates ({availableCandidatesCount})
-              </button>
-            </div>
+            </label>
+            )
           ) : (
-          <label
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
-            className={`flex min-h-[420px] cursor-pointer flex-col items-center justify-center border-b border-dashed px-4 py-14 text-center transition-colors sm:px-6 lg:px-7 ${
-              isDraggingResume
-                ? 'border-white bg-white/[0.06]'
-                : 'border-white/[0.11] bg-transparent hover:bg-white/[0.025]'
-            }`}
-          >
-            <div className={`flex h-14 w-14 items-center justify-center rounded-[8px] border transition-colors ${
-              isDraggingResume
-                ? 'border-white bg-white text-black'
-                : 'border-white/[0.16] bg-white/[0.03] text-[#8f8f8f]'
-            }`}>
-              <UploadCloud size={24} strokeWidth={1.7} />
-            </div>
-            <h2 className="geist-section-title mt-4 text-white">
-              {isDraggingResume ? 'Drop resumes here' : 'Drag and drop resumes here'}
-            </h2>
-            <p className="geist-caption mt-2 max-w-md text-[#8f8f8f]">
-              Drop PDF, DOCX, or TXT resumes anywhere in this box. Missing email, phone, or skills will not block saving.
-            </p>
-          </label>
-          )
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-white/[0.11] text-left">
-              <thead className="bg-[#080808]">
-                <tr>
-                  <th className="w-8 px-2 py-2 text-center border-b border-gray-200 dark:border-white/[0.08] bg-gray-50/70 dark:bg-white/[0.02]">
-                    <input
-                      type="checkbox"
-                      checked={paginatedCandidates.length > 0 && paginatedCandidates.every(c => selectedCandidateIds.includes(c.id))}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          const allIds = Array.from(new Set([...selectedCandidateIds, ...paginatedCandidates.map(c => c.id)]));
-                          setSelectedCandidateIds(allIds);
-                        } else {
-                          const pageIds = new Set(paginatedCandidates.map(c => c.id));
-                          setSelectedCandidateIds(selectedCandidateIds.filter(id => !pageIds.has(id)));
-                        }
-                      }}
-                      className="rounded border-gray-300 dark:border-white/20 bg-white dark:bg-[#111] text-black dark:text-white focus:ring-0 cursor-pointer h-3.5 w-3.5 accent-black dark:accent-white"
-                      title="Select all candidates on this page"
-                    />
-                  </th>
-                  <th className="geist-label whitespace-nowrap px-3 py-2 text-left uppercase text-[10px] tracking-wider font-semibold text-gray-500 dark:text-[#8f8f8f] border-b border-gray-200 dark:border-white/[0.08] bg-gray-50/70 dark:bg-white/[0.02]">Candidate</th>
-                  {selectedJobId !== 'all' && (
-                    <th className="geist-label whitespace-nowrap px-3 py-2 text-left uppercase text-[10px] tracking-wider font-semibold text-gray-500 dark:text-[#8f8f8f] border-b border-gray-200 dark:border-white/[0.08] bg-gray-50/70 dark:bg-white/[0.02]">Match Score</th>
-                  )}
-                  <th className="geist-label whitespace-nowrap px-3 py-2 text-left uppercase text-[10px] tracking-wider font-semibold text-gray-500 dark:text-[#8f8f8f] border-b border-gray-200 dark:border-white/[0.08] bg-gray-50/70 dark:bg-white/[0.02]">Phone & Email</th>
-                  <th className="geist-label whitespace-nowrap px-3 py-2 text-left uppercase text-[10px] tracking-wider font-semibold text-gray-500 dark:text-[#8f8f8f] border-b border-gray-200 dark:border-white/[0.08] bg-gray-50/70 dark:bg-white/[0.02]">Experience</th>
-                  <th className="geist-label whitespace-nowrap px-3 py-2 text-left uppercase text-[10px] tracking-wider font-semibold text-gray-500 dark:text-[#8f8f8f] border-b border-gray-200 dark:border-white/[0.08] bg-gray-50/70 dark:bg-white/[0.02]">Education</th>
-                  <th className="geist-label whitespace-nowrap px-3 py-2 text-left uppercase text-[10px] tracking-wider font-semibold text-gray-500 dark:text-[#8f8f8f] border-b border-gray-200 dark:border-white/[0.08] bg-gray-50/70 dark:bg-white/[0.02]">Status</th>
-                  <th className="geist-label whitespace-nowrap px-3 py-2 text-left uppercase text-[10px] tracking-wider font-semibold text-gray-500 dark:text-[#8f8f8f] border-b border-gray-200 dark:border-white/[0.08] bg-gray-50/70 dark:bg-white/[0.02]">Uploaded</th>
-                  <th className="geist-label whitespace-nowrap px-3 py-2 text-right uppercase text-[10px] tracking-wider font-semibold text-gray-500 dark:text-[#8f8f8f] border-b border-gray-200 dark:border-white/[0.08] bg-gray-50/70 dark:bg-white/[0.02] w-[235px] min-w-[235px]">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200 dark:divide-white/[0.08]">
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-[#E4E7DC] text-left">
+                <thead className="bg-[#F8F9F5]">
+                  <tr>
+                    <th className="w-8 px-3 py-3 text-center border-b border-[#E4E7DC]">
+                      <input
+                        type="checkbox"
+                        checked={paginatedCandidates.length > 0 && paginatedCandidates.every(c => selectedCandidateIds.includes(c.id))}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            const allIds = Array.from(new Set([...selectedCandidateIds, ...paginatedCandidates.map(c => c.id)]));
+                            setSelectedCandidateIds(allIds);
+                          } else {
+                            const pageIds = new Set(paginatedCandidates.map(c => c.id));
+                            setSelectedCandidateIds(selectedCandidateIds.filter(id => !pageIds.has(id)));
+                          }
+                        }}
+                        className="rounded border-[#E4E7DC] bg-white text-[#111215] focus:ring-0 cursor-pointer h-3.5 w-3.5 accent-[#111215]"
+                        title="Select all candidates on this page"
+                      />
+                    </th>
+                    <th className="whitespace-nowrap px-3 py-3 text-left uppercase text-[10px] tracking-wider font-semibold text-[#73766C] border-b border-[#E4E7DC]">Candidate</th>
+                    {selectedJobId !== 'all' && (
+                      <th className="whitespace-nowrap px-3 py-3 text-left uppercase text-[10px] tracking-wider font-semibold text-[#73766C] border-b border-[#E4E7DC]">Match Score</th>
+                    )}
+                    <th className="whitespace-nowrap px-3 py-3 text-left uppercase text-[10px] tracking-wider font-semibold text-[#73766C] border-b border-[#E4E7DC]">Phone & Email</th>
+                    <th className="whitespace-nowrap px-3 py-3 text-left uppercase text-[10px] tracking-wider font-semibold text-[#73766C] border-b border-[#E4E7DC]">Experience</th>
+                    <th className="whitespace-nowrap px-3 py-3 text-left uppercase text-[10px] tracking-wider font-semibold text-[#73766C] border-b border-[#E4E7DC]">Education</th>
+                    <th className="whitespace-nowrap px-3 py-3 text-left uppercase text-[10px] tracking-wider font-semibold text-[#73766C] border-b border-[#E4E7DC]">Status</th>
+                    <th className="whitespace-nowrap px-3 py-3 text-left uppercase text-[10px] tracking-wider font-semibold text-[#73766C] border-b border-[#E4E7DC]">Uploaded</th>
+                    <th className="whitespace-nowrap px-3 py-3 text-right uppercase text-[10px] tracking-wider font-semibold text-[#73766C] border-b border-[#E4E7DC] w-[235px] min-w-[235px]">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#E4E7DC] bg-white">
                 {paginatedCandidates.map((candidate) => (
                   <tr
                     key={candidate.id}
@@ -3270,16 +3270,16 @@ const ResumeDump: React.FC = () => {
 
             {/* Pagination Controls Bar */}
             {totalPages > 1 && (
-              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/[0.11] bg-[#050505] px-4 py-3 sm:px-6">
-                <span className="text-xs text-[#8f8f8f]">
-                  Showing Page <strong className="text-white">{currentPage}</strong> of <strong className="text-white">{totalPages}</strong> ({filteredCandidates.length} matching candidates)
+              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#E4E7DC] bg-[#F8F9F5] px-4 py-3 sm:px-6">
+                <span className="text-xs text-[#575A51]">
+                  Showing Page <strong className="text-[#111215]">{currentPage}</strong> of <strong className="text-[#111215]">{totalPages}</strong> ({filteredCandidates.length} matching candidates)
                 </span>
                 <div className="flex items-center gap-1.5">
                   <button
                     type="button"
                     onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                     disabled={currentPage <= 1}
-                    className="geist-caption h-8 rounded-[6px] border border-white/[0.11] bg-[#111] px-3 font-medium text-white transition-colors hover:bg-white/[0.06] disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="h-8 rounded-full border border-[#E4E7DC] bg-white px-3 font-semibold text-xs text-[#111215] transition-colors hover:bg-[#F8F9F5] disabled:opacity-40 disabled:cursor-not-allowed shadow-2xs cursor-pointer"
                   >
                     Previous
                   </button>
@@ -3290,10 +3290,10 @@ const ResumeDump: React.FC = () => {
                         key={pageNum}
                         type="button"
                         onClick={() => setCurrentPage(pageNum)}
-                        className={`geist-caption h-8 w-8 rounded-[6px] font-semibold text-xs transition-colors ${
+                        className={`h-8 w-8 rounded-full font-semibold text-xs transition-colors cursor-pointer ${
                           currentPage === pageNum
-                            ? 'bg-white text-black font-bold'
-                            : 'border border-white/[0.11] bg-[#111] text-[#8f8f8f] hover:text-white'
+                            ? 'bg-[#111215] text-white shadow-xs'
+                            : 'border border-[#E4E7DC] bg-white text-[#575A51] hover:text-[#111215] hover:bg-[#F8F9F5]'
                         }`}
                       >
                         {pageNum}
@@ -3305,7 +3305,7 @@ const ResumeDump: React.FC = () => {
                     type="button"
                     onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                     disabled={currentPage >= totalPages}
-                    className="geist-caption h-8 rounded-[6px] border border-white/[0.11] bg-[#111] px-3 font-medium text-white transition-colors hover:bg-white/[0.06] disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="h-8 rounded-full border border-[#E4E7DC] bg-white px-3 font-semibold text-xs text-[#111215] transition-colors hover:bg-[#F8F9F5] disabled:opacity-40 disabled:cursor-not-allowed shadow-2xs cursor-pointer"
                   >
                     Next
                   </button>
@@ -3314,6 +3314,7 @@ const ResumeDump: React.FC = () => {
             )}
           </div>
         )}
+        </div>
       </section>
 
       {/* Candidate Profile / Details Drawer / Modal Popup */}

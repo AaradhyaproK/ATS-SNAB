@@ -507,20 +507,28 @@ export const AddCandidate: React.FC = () => {
   };
 
   return (
-    <div className="flex min-h-screen flex-col bg-[#000] text-white font-sans">
-      {/* ── 1. Top Header Section (Matches RecruiterAllJobs / All Jobs style) ── */}
-      <section className="shrink-0 border-b border-white/[0.11] bg-[#000]">
-        <div className="flex flex-col gap-4 px-4 py-5 sm:px-6 lg:px-7 xl:flex-row xl:items-start xl:justify-between">
+    <div className="flex min-h-screen flex-col bg-[#F8F9F5] text-[#111215] font-sans">
+      {/* ── 1. Top Header Section ── */}
+      <section className="shrink-0 border-b border-[#E4E7DC] bg-white">
+        <div className="flex flex-col gap-4 px-4 py-5 sm:px-6 lg:px-8 xl:flex-row xl:items-start xl:justify-between">
           <div>
-            <Link
-              to="/recruiter/jobs"
-              className="geist-caption inline-flex h-8 items-center gap-2 rounded-[6px] border border-white/[0.11] bg-white/[0.03] px-3 font-medium text-[#d4d4d4] transition-colors hover:bg-white/[0.06] hover:text-white"
-            >
-              <ArrowLeft className="w-3.5 h-3.5" />
-              <span>Dashboard</span>
-            </Link>
-            <h1 className="geist-page-title mt-2 text-white">Add Candidate & Resume</h1>
-            <p className="geist-small mt-1 text-[#8f8f8f]">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#D4F82C]/30 text-[#4D6500] text-[11px] font-bold tracking-wider uppercase">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#8FB305] animate-pulse" />
+                04 • Candidate Onboarding
+              </span>
+            </div>
+            <div className="flex items-center gap-3">
+              <Link
+                to="/recruiter/jobs"
+                className="inline-flex h-8 items-center gap-1.5 rounded-full border border-[#E4E7DC] bg-white px-3 text-xs font-semibold text-[#111215] transition-colors hover:bg-[#F8F9F5] shadow-xs"
+              >
+                <ArrowLeft className="w-3.5 h-3.5 text-[#575A51]" />
+                <span>Dashboard</span>
+              </Link>
+              <h1 className="text-xl sm:text-2xl font-black text-[#111215] tracking-tight">Add Candidate & Resume</h1>
+            </div>
+            <p className="mt-1 text-xs text-[#575A51]">
               Register candidate profiles with standardized city, education, department, and experience selectors for automated job matching.
             </p>
           </div>
@@ -533,26 +541,26 @@ export const AddCandidate: React.FC = () => {
                 setCopiedUploadPortalLink(true);
                 setTimeout(() => setCopiedUploadPortalLink(false), 2500);
               }}
-              className="geist-caption inline-flex h-8 items-center justify-center gap-1.5 rounded-[6px] border border-white/[0.11] bg-white/[0.03] px-3 font-medium text-[#d4d4d4] transition-colors hover:bg-white/[0.06] hover:text-white cursor-pointer"
+              className="inline-flex h-8 items-center justify-center gap-1.5 rounded-full border border-[#E4E7DC] bg-white px-3.5 text-xs font-semibold text-[#111215] transition-colors hover:bg-[#F8F9F5] shadow-xs cursor-pointer"
               title="Copy candidate public upload link"
             >
-              {copiedUploadPortalLink ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+              {copiedUploadPortalLink ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5 text-[#575A51]" />}
               <span>{copiedUploadPortalLink ? 'Link Copied!' : 'Copy Portal Link'}</span>
             </button>
 
             <Link
               to="/recruiter/resume-dump"
-              className="geist-caption inline-flex h-8 items-center justify-center gap-1.5 rounded-[6px] border border-white/[0.11] bg-white/[0.03] px-3 font-medium text-[#d4d4d4] transition-colors hover:bg-white/[0.06] hover:text-white"
+              className="inline-flex h-8 items-center justify-center gap-1.5 rounded-full border border-[#E4E7DC] bg-white px-3.5 text-xs font-semibold text-[#111215] transition-colors hover:bg-[#F8F9F5] shadow-xs"
             >
-              <FileText className="w-3.5 h-3.5 text-[#9ca3af]" />
+              <FileText className="w-3.5 h-3.5 text-[#575A51]" />
               <span>Resume Dump</span>
             </Link>
 
             <Link
               to="/recruiter/all-jobs"
-              className="geist-caption inline-flex h-8 items-center justify-center gap-2 rounded-[6px] border border-white bg-white px-3 font-semibold text-black transition-colors hover:bg-[#eaeaea]"
+              className="inline-flex h-8 items-center justify-center gap-2 rounded-full bg-[#111215] px-4 text-xs font-semibold text-white transition-colors hover:bg-[#202227] shadow-xs"
             >
-              <Briefcase className="w-3.5 h-3.5" />
+              <Briefcase className="w-3.5 h-3.5 text-[#D4F82C]" />
               <span>All Jobs</span>
             </Link>
           </div>
@@ -560,71 +568,73 @@ export const AddCandidate: React.FC = () => {
       </section>
 
       {/* ── 2. Mode Selector Toolbar Strip ── */}
-      <section className="shrink-0 border-b border-white/[0.11] px-4 py-3 sm:px-6 lg:px-7">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="flex rounded-[6px] border border-white/[0.11] bg-white/[0.03] p-0.5">
-              <button
-                type="button"
-                onClick={() => setActiveTab('upload')}
-                className={`geist-caption inline-flex h-7 items-center gap-1.5 rounded-[4px] px-3 font-medium transition-colors cursor-pointer ${
-                  activeTab === 'upload'
-                    ? 'bg-white/[0.12] text-white font-semibold'
-                    : 'text-[#6b7280] hover:text-[#d4d4d4]'
-                }`}
-              >
-                <UploadCloud className="w-3.5 h-3.5" />
-                <span>Upload Resume (AI Parse)</span>
-              </button>
+      <section className="shrink-0 px-4 pt-4 sm:px-6 lg:px-8">
+        <div className="rounded-2xl border border-[#E4E7DC] bg-white p-2.5 sm:p-3 shadow-xs">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex rounded-full border border-[#E4E7DC] bg-[#F8F9F5] p-1">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('upload')}
+                  className={`inline-flex h-7 items-center gap-1.5 rounded-full px-3 text-xs font-semibold transition-colors cursor-pointer ${
+                    activeTab === 'upload'
+                      ? 'bg-[#111215] text-white shadow-xs'
+                      : 'text-[#575A51] hover:text-[#111215]'
+                  }`}
+                >
+                  <UploadCloud className="w-3.5 h-3.5" />
+                  <span>Upload Resume (AI Parse)</span>
+                </button>
 
-              <button
-                type="button"
-                onClick={() => setActiveTab('manual')}
-                className={`geist-caption inline-flex h-7 items-center gap-1.5 rounded-[4px] px-3 font-medium transition-colors cursor-pointer ${
-                  activeTab === 'manual'
-                    ? 'bg-white/[0.12] text-white font-semibold'
-                    : 'text-[#6b7280] hover:text-[#d4d4d4]'
-                }`}
-              >
-                <UserPlus className="w-3.5 h-3.5" />
-                <span>Manual Candidate Entry</span>
-              </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('manual')}
+                  className={`inline-flex h-7 items-center gap-1.5 rounded-full px-3 text-xs font-semibold transition-colors cursor-pointer ${
+                    activeTab === 'manual'
+                      ? 'bg-[#111215] text-white shadow-xs'
+                      : 'text-[#575A51] hover:text-[#111215]'
+                  }`}
+                >
+                  <UserPlus className="w-3.5 h-3.5" />
+                  <span>Manual Candidate Entry</span>
+                </button>
 
-              <button
-                type="button"
-                onClick={() => setActiveTab('bulk')}
-                className={`geist-caption inline-flex h-7 items-center gap-1.5 rounded-[4px] px-3 font-medium transition-colors cursor-pointer ${
-                  activeTab === 'bulk'
-                    ? 'bg-white/[0.12] text-white font-semibold'
-                    : 'text-[#6b7280] hover:text-[#d4d4d4]'
-                }`}
-              >
-                <Layers className="w-3.5 h-3.5" />
-                <span>Bulk Upload ({bulkQueue.length})</span>
-              </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('bulk')}
+                  className={`inline-flex h-7 items-center gap-1.5 rounded-full px-3 text-xs font-semibold transition-colors cursor-pointer ${
+                    activeTab === 'bulk'
+                      ? 'bg-[#111215] text-white shadow-xs'
+                      : 'text-[#575A51] hover:text-[#111215]'
+                  }`}
+                >
+                  <Layers className="w-3.5 h-3.5" />
+                  <span>Bulk Upload ({bulkQueue.length})</span>
+                </button>
+              </div>
             </div>
-          </div>
 
-          <div className="flex items-center gap-2 text-xs text-[#8f8f8f]">
-            <span className="inline-flex items-center gap-1.5 rounded-[6px] px-2.5 py-1 border border-white/[0.08] bg-white/[0.02]">
-              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-              <span>Standardized selectors enabled for City, Education, Department & Gender matching</span>
-            </span>
+            <div className="flex items-center gap-2 text-xs text-[#575A51]">
+              <span className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 border border-[#E4E7DC] bg-[#F8F9F5] text-xs font-medium">
+                <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                <span>Standardized selectors enabled for City, Education, Department & Gender</span>
+              </span>
+            </div>
           </div>
         </div>
       </section>
 
       {/* ── 3. Main Body Workspace ── */}
-      <main className="flex-1 p-4 sm:p-6 lg:p-7 space-y-6">
+      <main className="flex-1 p-4 sm:p-6 lg:p-8 space-y-6">
         {/* Success Banner */}
         {lastSavedCandidate && (
-          <div className="rounded-[8px] border border-emerald-500/30 bg-[#071a12] p-4 text-[#83d0a3] flex items-center justify-between gap-4 animate-in fade-in">
+          <div className="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-4 text-emerald-800 flex items-center justify-between gap-4 animate-in fade-in shadow-xs">
             <div className="flex items-center gap-3">
-              <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
-              <div className="geist-caption text-xs sm:text-sm">
-                <strong className="text-white font-semibold">{lastSavedCandidate.name}</strong> added to the hiring database!
+              <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+              <div className="text-xs sm:text-sm">
+                <strong className="text-[#111215] font-bold">{lastSavedCandidate.name}</strong> added to the hiring database!
                 {lastSavedCandidate.email && (
-                  <span className="opacity-80 ml-1.5 text-xs">({lastSavedCandidate.email})</span>
+                  <span className="text-[#575A51] ml-1.5 text-xs">({lastSavedCandidate.email})</span>
                 )}
               </div>
             </div>
@@ -632,7 +642,7 @@ export const AddCandidate: React.FC = () => {
             <div className="flex items-center gap-3">
               <Link
                 to="/recruiter/resume-dump"
-                className="geist-caption inline-flex items-center gap-1 text-xs font-semibold text-emerald-300 hover:text-white underline underline-offset-4"
+                className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 hover:text-emerald-900 underline underline-offset-4"
               >
                 <span>Open in Resume Dump</span>
                 <ArrowRight className="w-3 h-3" />
@@ -640,7 +650,7 @@ export const AddCandidate: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setLastSavedCandidate(null)}
-                className="text-emerald-400 hover:text-white p-1 rounded transition-colors cursor-pointer"
+                className="text-emerald-600 hover:text-emerald-800 p-1 rounded-full hover:bg-emerald-100 transition-colors cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -655,21 +665,21 @@ export const AddCandidate: React.FC = () => {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
             {/* Upload Zone */}
             <div className="lg:col-span-5 space-y-4">
-              <div className="rounded-[8px] border border-white/[0.11] bg-white/[0.02] p-5 sm:p-6 shadow-sm">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="geist-small inline-flex items-center gap-1.5 rounded-[4px] bg-white/[0.04] border border-white/[0.08] px-2.5 py-0.5 text-xs text-[#d4d4d4]">
+              <div className="rounded-3xl border border-[#E4E7DC] bg-white p-5 sm:p-6 shadow-xs">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-[#F8F9F5] border border-[#E4E7DC] px-2.5 py-0.5 text-[11px] font-semibold text-[#575A51]">
                     Single Document
                   </span>
-                  <span className="geist-small inline-flex items-center gap-1.5 rounded-[6px] px-2.5 py-0.5 font-mono text-xs border border-[#0e2f22] bg-[#071a12] text-[#83d0a3]">
-                    <span className="h-1.5 w-1.5 rounded-full bg-[#50e3c2] animate-pulse" />
+                  <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 font-mono text-xs border border-emerald-200 bg-emerald-50 text-emerald-700">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
                     AI Ready
                   </span>
                 </div>
 
-                <h2 className="geist-section-title text-base font-semibold text-white mt-1">
+                <h2 className="text-base font-bold text-[#111215] mt-1">
                   Upload Resume Document
                 </h2>
-                <p className="geist-small text-xs text-[#8f8f8f] mt-1 mb-4 leading-relaxed">
+                <p className="text-xs text-[#575A51] mt-1 mb-4 leading-relaxed">
                   Supports PDF, DOCX, DOC, or TXT. AI will automatically extract details and upload to secure Cloudinary storage.
                 </p>
 
@@ -683,10 +693,10 @@ export const AddCandidate: React.FC = () => {
                       handleSingleFileSelect(e.dataTransfer.files[0]);
                     }
                   }}
-                  className={`border-2 border-dashed rounded-[8px] p-8 text-center cursor-pointer transition-all ${
+                  className={`border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-all ${
                     isProcessing
-                      ? 'border-blue-400 bg-blue-500/5 cursor-wait'
-                      : 'border-white/[0.15] hover:border-white/[0.35] bg-white/[0.02] hover:bg-white/[0.04]'
+                      ? 'border-blue-400 bg-blue-50/50 cursor-wait'
+                      : 'border-[#E4E7DC] hover:border-[#111215] bg-[#F8F9F5]/60 hover:bg-[#F8F9F5]'
                   }`}
                 >
                   <input
@@ -703,33 +713,33 @@ export const AddCandidate: React.FC = () => {
 
                   {isProcessing ? (
                     <div className="flex flex-col items-center justify-center py-5 space-y-3">
-                      <Loader2 className="w-8 h-8 animate-spin text-blue-400" />
-                      <p className="geist-caption text-xs font-medium text-blue-400">{processStep}</p>
+                      <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+                      <p className="text-xs font-semibold text-blue-600">{processStep}</p>
                     </div>
                   ) : selectedFile ? (
                     <div className="flex flex-col items-center justify-center py-2 space-y-2">
-                      <FileText className="w-10 h-10 text-blue-400" />
-                      <p className="geist-caption text-sm font-semibold text-white truncate max-w-[260px]">
+                      <FileText className="w-10 h-10 text-blue-600" />
+                      <p className="text-sm font-bold text-[#111215] truncate max-w-[260px]">
                         {selectedFile.name}
                       </p>
-                      <p className="geist-small text-xs text-[#8f8f8f]">
+                      <p className="text-xs text-[#73766C]">
                         {(selectedFile.size / 1024).toFixed(1)} KB &bull; Click to replace file
                       </p>
                     </div>
                   ) : (
                     <div className="flex flex-col items-center justify-center py-4 space-y-2">
-                      <div className="w-12 h-12 rounded-full bg-white/[0.04] border border-white/[0.08] flex items-center justify-center text-white mb-1">
-                        <UploadCloud className="w-6 h-6" />
+                      <div className="w-12 h-12 rounded-2xl bg-white border border-[#E4E7DC] shadow-2xs flex items-center justify-center text-[#111215] mb-1">
+                        <UploadCloud className="w-6 h-6 text-[#575A51]" />
                       </div>
-                      <p className="geist-caption text-sm font-medium text-white">Click or drag resume here</p>
-                      <p className="geist-small text-xs text-[#8f8f8f]">PDF, DOCX, DOC, or TXT (Max 15MB)</p>
+                      <p className="text-sm font-semibold text-[#111215]">Click or drag resume here</p>
+                      <p className="text-xs text-[#73766C]">PDF, DOCX, DOC, or TXT (Max 15MB)</p>
                     </div>
                   )}
                 </div>
 
                 {/* Optional Recruiter Notes */}
                 <div className="mt-4">
-                  <label className="geist-label text-xs uppercase text-[#8f8f8f] block mb-1.5 font-semibold">
+                  <label className="text-[10px] uppercase font-bold tracking-wider text-[#73766C] block mb-1.5">
                     Optional Recruiter Notes / Initial Comments
                   </label>
                   <textarea
@@ -737,7 +747,7 @@ export const AddCandidate: React.FC = () => {
                     value={additionalNotes}
                     onChange={(e) => setAdditionalNotes(e.target.value)}
                     placeholder="E.g., Referred by John, immediate joiner, target salary 12 LPA..."
-                    className="geist-caption w-full rounded-[6px] border border-white/[0.11] bg-white/[0.03] p-2.5 text-xs text-white placeholder:text-[#6b7280] focus:border-white/[0.28] focus:bg-white/[0.05] outline-none transition-colors"
+                    className="w-full rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] p-3 text-xs text-[#111215] placeholder-[#73766C] focus:border-[#111215] focus:bg-white outline-none transition-colors"
                   />
                 </div>
               </div>
@@ -745,72 +755,72 @@ export const AddCandidate: React.FC = () => {
 
             {/* Extracted Profile Review Panel */}
             <div className="lg:col-span-7">
-              <div className="rounded-[8px] border border-white/[0.11] bg-white/[0.02] p-5 sm:p-6 shadow-sm h-full flex flex-col justify-between">
+              <div className="rounded-3xl border border-[#E4E7DC] bg-white p-5 sm:p-6 shadow-xs h-full flex flex-col justify-between">
                 <div>
-                  <div className="flex items-center justify-between pb-3.5 mb-4 border-b border-white/[0.08]">
+                  <div className="flex items-center justify-between pb-3.5 mb-4 border-b border-[#E4E7DC]">
                     <div className="flex items-center gap-2">
-                      <Sparkles className="w-4 h-4 text-amber-400" />
-                      <h2 className="geist-section-title text-base font-semibold text-white">
+                      <Sparkles className="w-4 h-4 text-amber-500" />
+                      <h2 className="text-base font-bold text-[#111215]">
                         Extracted Candidate Profile
                       </h2>
                     </div>
                     {parsedCandidate && (
-                      <span className="geist-small inline-flex items-center gap-1.5 rounded-[6px] px-2.5 py-0.5 font-mono text-xs border border-[#0e2f22] bg-[#071a12] text-[#83d0a3]">
-                        <span className="h-1.5 w-1.5 rounded-full bg-[#50e3c2]" />
+                      <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 font-mono text-xs border border-emerald-200 bg-emerald-50 text-emerald-700">
+                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
                         Ready to Save
                       </span>
                     )}
                   </div>
 
                   {!parsedCandidate ? (
-                    <div className="py-20 text-center text-[#8f8f8f]">
-                      <div className="w-14 h-14 mx-auto mb-3 rounded-full bg-white/[0.03] border border-white/[0.08] flex items-center justify-center text-[#6b7280]">
+                    <div className="py-20 text-center text-[#73766C]">
+                      <div className="w-14 h-14 mx-auto mb-3 rounded-2xl bg-[#F8F9F5] border border-[#E4E7DC] flex items-center justify-center text-[#575A51]">
                         <FileText className="w-7 h-7" />
                       </div>
-                      <p className="geist-caption text-sm font-medium text-white">
+                      <p className="text-sm font-semibold text-[#111215]">
                         Upload a resume to automatically extract candidate details
                       </p>
-                      <p className="geist-small text-xs mt-1 text-[#6b7280] max-w-sm mx-auto">
+                      <p className="text-xs mt-1 text-[#73766C] max-w-sm mx-auto">
                         AI will automatically extract candidate name, contact info, location, education, and technical skills from the uploaded resume.
                       </p>
                     </div>
                   ) : (
-                    <div className="space-y-4 geist-caption">
+                    <div className="space-y-4">
                       {/* Name */}
                       <div>
-                        <label className="geist-label text-xs uppercase text-[#8f8f8f] block mb-1 font-semibold">
+                        <label className="text-[10px] uppercase font-bold tracking-wider text-[#73766C] block mb-1">
                           Full Name *
                         </label>
                         <input
                           type="text"
                           value={parsedCandidate.name || ''}
                           onChange={(e) => setParsedCandidate({ ...parsedCandidate, name: e.target.value })}
-                          className="geist-caption h-9 w-full rounded-[6px] border border-white/[0.11] bg-white/[0.03] px-3 text-xs text-white placeholder:text-[#6b7280] focus:border-white/[0.28] focus:bg-white/[0.05] outline-none"
+                          className="h-9 w-full rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] px-3 text-xs text-[#111215] placeholder-[#73766C] focus:border-[#111215] focus:bg-white outline-none"
                         />
                       </div>
 
                       {/* Email & Phone */}
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                         <div>
-                          <label className="geist-label text-xs uppercase text-[#8f8f8f] block mb-1 font-semibold">
+                          <label className="text-[10px] uppercase font-bold tracking-wider text-[#73766C] block mb-1">
                             Email Address
                           </label>
                           <input
                             type="email"
                             value={parsedCandidate.email || ''}
                             onChange={(e) => setParsedCandidate({ ...parsedCandidate, email: e.target.value })}
-                            className="geist-caption h-9 w-full rounded-[6px] border border-white/[0.11] bg-white/[0.03] px-3 text-xs text-white placeholder:text-[#6b7280] focus:border-white/[0.28] focus:bg-white/[0.05] outline-none"
+                            className="h-9 w-full rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] px-3 text-xs text-[#111215] placeholder-[#73766C] focus:border-[#111215] focus:bg-white outline-none"
                           />
                         </div>
                         <div>
-                          <label className="geist-label text-xs uppercase text-[#8f8f8f] block mb-1 font-semibold">
+                          <label className="text-[10px] uppercase font-bold tracking-wider text-[#73766C] block mb-1">
                             Phone Number
                           </label>
                           <input
                             type="text"
                             value={parsedCandidate.phone || ''}
                             onChange={(e) => setParsedCandidate({ ...parsedCandidate, phone: e.target.value })}
-                            className="geist-caption h-9 w-full rounded-[6px] border border-white/[0.11] bg-white/[0.03] px-3 text-xs text-white placeholder:text-[#6b7280] focus:border-white/[0.28] focus:bg-white/[0.05] outline-none"
+                            className="h-9 w-full rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] px-3 text-xs text-[#111215] placeholder-[#73766C] focus:border-[#111215] focus:bg-white outline-none"
                           />
                         </div>
                       </div>
@@ -818,26 +828,26 @@ export const AddCandidate: React.FC = () => {
                       {/* Gender & Total Experience (Manual Input) */}
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                         <div>
-                          <label className="geist-label text-xs uppercase text-[#8f8f8f] block mb-1 font-semibold flex items-center justify-between">
+                          <label className="text-[10px] uppercase font-bold tracking-wider text-[#73766C] block mb-1 flex items-center justify-between">
                             <span>Gender (for Requirement Matching)</span>
-                            <span className="text-[10px] text-amber-400 font-normal lowercase tracking-normal">manual input</span>
+                            <span className="text-[10px] text-amber-600 font-semibold lowercase tracking-normal">manual input</span>
                           </label>
                           <select
                             value={parsedCandidate.gender || 'Any'}
                             onChange={(e) => setParsedCandidate({ ...parsedCandidate, gender: e.target.value })}
-                            className="geist-caption h-9 w-full rounded-[6px] border border-white/[0.11] bg-white/[0.03] px-3 text-xs text-white outline-none focus:border-white/[0.28] focus:bg-white/[0.05] cursor-pointer"
+                            className="h-9 w-full rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] px-3 text-xs text-[#111215] outline-none focus:border-[#111215] focus:bg-white cursor-pointer font-medium"
                           >
                             {GENDER_OPTIONS.map((g) => (
-                              <option key={g} value={g} className="bg-[#111] text-white">
+                              <option key={g} value={g}>
                                 {g}
                               </option>
                             ))}
                           </select>
                         </div>
                         <div>
-                          <label className="geist-label text-xs uppercase text-[#8f8f8f] block mb-1 font-semibold flex items-center justify-between">
+                          <label className="text-[10px] uppercase font-bold tracking-wider text-[#73766C] block mb-1 flex items-center justify-between">
                             <span>Total Experience (Years)</span>
-                            <span className="text-[10px] text-amber-400 font-normal lowercase tracking-normal">manual input</span>
+                            <span className="text-[10px] text-amber-600 font-semibold lowercase tracking-normal">manual input</span>
                           </label>
                           <input
                             type="number"
@@ -857,16 +867,16 @@ export const AddCandidate: React.FC = () => {
                               })
                             }
                             placeholder="Enter total experience (e.g. 2.5)"
-                            className="geist-caption h-9 w-full rounded-[6px] border border-white/[0.11] bg-white/[0.03] px-3 text-xs text-white placeholder:text-[#6b7280] focus:border-white/[0.28] focus:bg-white/[0.05] outline-none"
+                            className="h-9 w-full rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] px-3 text-xs text-[#111215] placeholder-[#73766C] focus:border-[#111215] focus:bg-white outline-none"
                           />
                         </div>
                       </div>
 
                       {/* Location (LocationCityInput - Manual Selection) */}
                       <div>
-                        <label className="geist-label text-xs uppercase text-[#8f8f8f] block mb-1 font-semibold flex items-center justify-between">
+                        <label className="text-[10px] uppercase font-bold tracking-wider text-[#73766C] block mb-1 flex items-center justify-between">
                           <span>City / Location (Matches Strict Location)</span>
-                          <span className="text-[10px] text-amber-400 font-normal lowercase tracking-normal">manual input</span>
+                          <span className="text-[10px] text-amber-600 font-semibold lowercase tracking-normal">manual input</span>
                         </label>
                         <LocationCityInput
                           value={parsedCandidate.location || parsedCandidate.city || ''}
@@ -878,13 +888,13 @@ export const AddCandidate: React.FC = () => {
                             })
                           }
                           placeholder="Search and select candidate city (e.g. Nashik, Pune, Mumbai...)"
-                          className="geist-caption h-9 w-full rounded-[6px] border border-white/[0.11] bg-white/[0.03] px-3 text-xs text-white placeholder:text-[#6b7280] focus:border-white/[0.28] focus:bg-white/[0.05] outline-none"
+                          className="h-9 w-full rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] px-3 text-xs text-[#111215] placeholder-[#73766C] focus:border-[#111215] focus:bg-white outline-none"
                         />
                       </div>
 
                       {/* Highest Education Degree (EducationInput) */}
                       <div>
-                        <label className="geist-label text-xs uppercase text-[#8f8f8f] block mb-1 font-semibold">
+                        <label className="text-[10px] uppercase font-bold tracking-wider text-[#73766C] block mb-1">
                           Highest Education (Matches Job Degree)
                         </label>
                         <EducationInput
@@ -907,13 +917,13 @@ export const AddCandidate: React.FC = () => {
                             })
                           }
                           className="w-full"
-                          selectClassName="geist-caption h-9 w-full rounded-[6px] border border-white/[0.11] bg-white/[0.03] px-2.5 text-xs text-white outline-none focus:border-white/[0.28] focus:bg-white/[0.05] cursor-pointer"
+                          selectClassName="h-9 w-full rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] px-3 text-xs text-[#111215] outline-none focus:border-[#111215] focus:bg-white cursor-pointer font-medium"
                         />
                       </div>
 
                       {/* Skills */}
                       <div>
-                        <label className="geist-label text-xs uppercase text-[#8f8f8f] block mb-1 font-semibold">
+                        <label className="text-[10px] uppercase font-bold tracking-wider text-[#73766C] block mb-1">
                           Key Skills (Comma separated)
                         </label>
                         <input
@@ -928,36 +938,36 @@ export const AddCandidate: React.FC = () => {
                                 .filter(Boolean)
                             })
                           }
-                          className="geist-caption h-9 w-full rounded-[6px] border border-white/[0.11] bg-white/[0.03] px-3 text-xs text-white placeholder:text-[#6b7280] focus:border-white/[0.28] focus:bg-white/[0.05] outline-none"
+                          className="h-9 w-full rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] px-3 text-xs text-[#111215] placeholder-[#73766C] focus:border-[#111215] focus:bg-white outline-none"
                         />
                       </div>
 
                       {/* Summary */}
                       <div>
-                        <label className="geist-label text-xs uppercase text-[#8f8f8f] block mb-1 font-semibold">
+                        <label className="text-[10px] uppercase font-bold tracking-wider text-[#73766C] block mb-1">
                           Summary / Highlights
                         </label>
                         <textarea
                           rows={3}
                           value={parsedCandidate.summary || ''}
                           onChange={(e) => setParsedCandidate({ ...parsedCandidate, summary: e.target.value })}
-                          className="geist-caption w-full rounded-[6px] border border-white/[0.11] bg-white/[0.03] p-2.5 text-xs text-white placeholder:text-[#6b7280] focus:border-white/[0.28] focus:bg-white/[0.05] outline-none"
+                          className="w-full rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] p-3 text-xs text-[#111215] placeholder-[#73766C] focus:border-[#111215] focus:bg-white outline-none"
                         />
                       </div>
 
                       {selectedFile && (
-                        <div className="p-3 rounded-[6px] border border-white/[0.08] bg-white/[0.03] flex items-center justify-between">
-                          <span className="geist-small text-xs text-[#8f8f8f] flex items-center gap-1.5">
+                        <div className="p-3 rounded-2xl border border-[#E4E7DC] bg-[#F8F9F5] flex items-center justify-between">
+                          <span className="text-xs text-[#575A51] flex items-center gap-1.5">
                             {uploadedResumeUrl ? (
                               <>
-                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
                                 <span>Uploaded to Cloudinary</span>
                               </>
                             ) : (
                               <>
-                                <FileText className="w-3.5 h-3.5 text-blue-400" />
+                                <FileText className="w-3.5 h-3.5 text-blue-600" />
                                 <span>
-                                  Document attached: <strong className="text-white">{selectedFile.name}</strong> ({(selectedFile.size / 1024).toFixed(0)} KB) — <span className="text-amber-400/90 font-medium">uploads to Cloudinary on Save</span>
+                                  Document attached: <strong className="text-[#111215]">{selectedFile.name}</strong> ({(selectedFile.size / 1024).toFixed(0)} KB) — <span className="text-amber-700 font-medium">uploads on Save</span>
                                 </span>
                               </>
                             )}
@@ -967,7 +977,7 @@ export const AddCandidate: React.FC = () => {
                               href={uploadedResumeUrl}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="geist-caption text-xs font-medium text-blue-400 hover:text-blue-300 flex items-center gap-1"
+                              className="text-xs font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-1"
                             >
                               <span>View Cloud Document</span>
                               <ExternalLink className="w-3 h-3" />
@@ -980,14 +990,14 @@ export const AddCandidate: React.FC = () => {
                 </div>
 
                 {parsedCandidate && (
-                  <div className="pt-4 border-t border-white/[0.08] mt-4 flex items-center justify-end gap-2.5">
+                  <div className="pt-4 border-t border-[#E4E7DC] mt-4 flex items-center justify-end gap-2.5">
                     <button
                       type="button"
                       onClick={() => {
                         setParsedCandidate(null);
                         setSelectedFile(null);
                       }}
-                      className="geist-caption inline-flex h-9 items-center justify-center rounded-[6px] border border-white/[0.11] bg-white/[0.03] px-4 font-medium text-[#d4d4d4] text-xs transition-colors hover:bg-white/[0.06] hover:text-white cursor-pointer"
+                      className="inline-flex h-9 items-center justify-center rounded-full border border-[#E4E7DC] bg-white px-4 font-semibold text-[#111215] text-xs transition-colors hover:bg-[#F8F9F5] cursor-pointer shadow-2xs"
                     >
                       Discard
                     </button>
@@ -995,9 +1005,9 @@ export const AddCandidate: React.FC = () => {
                       type="button"
                       disabled={isProcessing}
                       onClick={handleSaveParsedCandidate}
-                      className="geist-caption inline-flex h-9 items-center justify-center gap-2 rounded-[6px] border border-white bg-white px-5 font-semibold text-black text-xs transition-colors hover:bg-[#eaeaea] shadow-sm disabled:opacity-50 cursor-pointer"
+                      className="inline-flex h-9 items-center justify-center gap-2 rounded-full bg-[#111215] px-5 font-semibold text-white text-xs transition-colors hover:bg-[#202227] shadow-xs disabled:opacity-50 cursor-pointer"
                     >
-                      {isProcessing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
+                      {isProcessing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5 text-[#D4F82C]" />}
                       <span>Save Candidate to Database</span>
                     </button>
                   </div>
@@ -1013,28 +1023,28 @@ export const AddCandidate: React.FC = () => {
         {activeTab === 'manual' && (
           <form
             onSubmit={handleManualSubmit}
-            className="rounded-[8px] border border-white/[0.11] bg-white/[0.02] p-5 sm:p-7 shadow-sm space-y-6 max-w-5xl"
+            className="rounded-3xl border border-[#E4E7DC] bg-white p-6 sm:p-8 shadow-xs space-y-6 max-w-5xl"
           >
             <div>
               <div className="flex items-center gap-2">
-                <UserPlus className="w-4 h-4 text-white" />
-                <h2 className="geist-section-title text-base font-semibold text-white">
+                <UserPlus className="w-5 h-5 text-[#111215]" />
+                <h2 className="text-base sm:text-lg font-bold text-[#111215]">
                   Register Candidate Profile Manually
                 </h2>
               </div>
-              <p className="geist-small text-xs text-[#8f8f8f] mt-0.5">
+              <p className="text-xs text-[#575A51] mt-0.5">
                 Fill in candidate details with matching selectors (City, Education, Department, Gender, Experience, Employment Type) so they automatically match job openings.
               </p>
             </div>
 
             {/* Section 1: Basic Identity */}
-            <div className="space-y-3 pt-1 border-t border-white/[0.08]">
-              <p className="geist-label uppercase text-[11px] text-[#6b7280] font-semibold tracking-wider pt-2">
+            <div className="space-y-3 pt-1 border-t border-[#E4E7DC]">
+              <p className="text-[11px] uppercase text-[#73766C] font-bold tracking-wider pt-2">
                 1. Personal Details & Identity
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
                 <div>
-                  <label className="geist-label text-xs uppercase text-[#8f8f8f] block mb-1 font-semibold">
+                  <label className="text-[10px] uppercase font-bold tracking-wider text-[#73766C] block mb-1">
                     Full Name *
                   </label>
                   <input
@@ -1043,11 +1053,11 @@ export const AddCandidate: React.FC = () => {
                     placeholder="E.g., Priya Sharma"
                     value={manualForm.name}
                     onChange={(e) => setManualForm({ ...manualForm, name: e.target.value })}
-                    className="geist-caption h-9 w-full rounded-[6px] border border-white/[0.11] bg-white/[0.03] px-3 text-xs text-white placeholder:text-[#6b7280] focus:border-white/[0.28] focus:bg-white/[0.05] outline-none"
+                    className="h-9 w-full rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] px-3 text-xs text-[#111215] placeholder-[#73766C] focus:border-[#111215] focus:bg-white outline-none"
                   />
                 </div>
                 <div>
-                  <label className="geist-label text-xs uppercase text-[#8f8f8f] block mb-1 font-semibold">
+                  <label className="text-[10px] uppercase font-bold tracking-wider text-[#73766C] block mb-1">
                     Email Address
                   </label>
                   <input
@@ -1055,11 +1065,11 @@ export const AddCandidate: React.FC = () => {
                     placeholder="candidate@example.com"
                     value={manualForm.email}
                     onChange={(e) => setManualForm({ ...manualForm, email: e.target.value })}
-                    className="geist-caption h-9 w-full rounded-[6px] border border-white/[0.11] bg-white/[0.03] px-3 text-xs text-white placeholder:text-[#6b7280] focus:border-white/[0.28] focus:bg-white/[0.05] outline-none"
+                    className="h-9 w-full rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] px-3 text-xs text-[#111215] placeholder-[#73766C] focus:border-[#111215] focus:bg-white outline-none"
                   />
                 </div>
                 <div>
-                  <label className="geist-label text-xs uppercase text-[#8f8f8f] block mb-1 font-semibold">
+                  <label className="text-[10px] uppercase font-bold tracking-wider text-[#73766C] block mb-1">
                     Phone Number
                   </label>
                   <input
@@ -1067,20 +1077,20 @@ export const AddCandidate: React.FC = () => {
                     placeholder="+91 9876543210"
                     value={manualForm.phone}
                     onChange={(e) => setManualForm({ ...manualForm, phone: e.target.value })}
-                    className="geist-caption h-9 w-full rounded-[6px] border border-white/[0.11] bg-white/[0.03] px-3 text-xs text-white placeholder:text-[#6b7280] focus:border-white/[0.28] focus:bg-white/[0.05] outline-none"
+                    className="h-9 w-full rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] px-3 text-xs text-[#111215] placeholder-[#73766C] focus:border-[#111215] focus:bg-white outline-none"
                   />
                 </div>
                 <div>
-                  <label className="geist-label text-xs uppercase text-[#8f8f8f] block mb-1 font-semibold">
+                  <label className="text-[10px] uppercase font-bold tracking-wider text-[#73766C] block mb-1">
                     Gender (Matching Requirement)
                   </label>
                   <select
                     value={manualForm.gender}
                     onChange={(e) => setManualForm({ ...manualForm, gender: e.target.value })}
-                    className="geist-caption h-9 w-full rounded-[6px] border border-white/[0.11] bg-white/[0.03] px-3 text-xs text-white outline-none focus:border-white/[0.28] focus:bg-white/[0.05] cursor-pointer"
+                    className="h-9 w-full rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] px-3 text-xs text-[#111215] outline-none focus:border-[#111215] focus:bg-white cursor-pointer font-medium"
                   >
                     {GENDER_OPTIONS.map((g) => (
-                      <option key={g} value={g} className="bg-[#111] text-white">
+                      <option key={g} value={g}>
                         {g}
                       </option>
                     ))}
@@ -1090,13 +1100,13 @@ export const AddCandidate: React.FC = () => {
             </div>
 
             {/* Section 2: Professional Profile & Selectors */}
-            <div className="space-y-3 pt-2 border-t border-white/[0.08]">
-              <p className="geist-label uppercase text-[11px] text-[#6b7280] font-semibold tracking-wider">
+            <div className="space-y-3 pt-2 border-t border-[#E4E7DC]">
+              <p className="text-[11px] uppercase text-[#73766C] font-bold tracking-wider">
                 2. Professional Role, Department & Location (Key Matching Criteria)
               </p>
               <div className="grid grid-cols-1 gap-3.5">
                 <div>
-                  <label className="geist-label text-xs uppercase text-[#8f8f8f] block mb-1 font-semibold">
+                  <label className="text-[10px] uppercase font-bold tracking-wider text-[#73766C] block mb-1">
                     Current Designation / Role
                   </label>
                   <input
@@ -1104,7 +1114,7 @@ export const AddCandidate: React.FC = () => {
                     placeholder="E.g., Senior Frontend Engineer"
                     value={manualForm.currentTitle}
                     onChange={(e) => setManualForm({ ...manualForm, currentTitle: e.target.value })}
-                    className="geist-caption h-9 w-full rounded-[6px] border border-white/[0.11] bg-white/[0.03] px-3 text-xs text-white placeholder:text-[#6b7280] focus:border-white/[0.28] focus:bg-white/[0.05] outline-none"
+                    className="h-9 w-full rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] px-3 text-xs text-[#111215] placeholder-[#73766C] focus:border-[#111215] focus:bg-white outline-none"
                   />
                 </div>
               </div>
@@ -1112,7 +1122,7 @@ export const AddCandidate: React.FC = () => {
               {/* LocationCityInput & Employment Type & Experience */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
                 <div className="lg:col-span-2">
-                  <label className="geist-label text-xs uppercase text-[#8f8f8f] block mb-1 font-semibold">
+                  <label className="text-[10px] uppercase font-bold tracking-wider text-[#73766C] block mb-1">
                     City / Location (Typo-Tolerant Auto-Match)
                   </label>
                   <LocationCityInput
@@ -1121,21 +1131,21 @@ export const AddCandidate: React.FC = () => {
                     selectedState={manualForm.state}
                     onStateChange={(st) => setManualForm((prev) => ({ ...prev, state: st }))}
                     placeholder="Search city (e.g. Nashik, Ambad, Pune, Mumbai, Bangalore...)"
-                    className="geist-caption h-9 w-full rounded-[6px] border border-white/[0.11] bg-white/[0.03] px-3 text-xs text-white placeholder:text-[#6b7280] focus:border-white/[0.28] focus:bg-white/[0.05] outline-none"
+                    className="h-9 w-full rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] px-3 text-xs text-[#111215] placeholder-[#73766C] focus:border-[#111215] focus:bg-white outline-none"
                   />
                 </div>
 
                 <div>
-                  <label className="geist-label text-xs uppercase text-[#8f8f8f] block mb-1 font-semibold">
+                  <label className="text-[10px] uppercase font-bold tracking-wider text-[#73766C] block mb-1">
                     Employment Type
                   </label>
                   <select
                     value={manualForm.employmentType}
                     onChange={(e) => setManualForm({ ...manualForm, employmentType: e.target.value })}
-                    className="geist-caption h-9 w-full rounded-[6px] border border-white/[0.11] bg-white/[0.03] px-3 text-xs text-white outline-none focus:border-white/[0.28] focus:bg-white/[0.05] cursor-pointer"
+                    className="h-9 w-full rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] px-3 text-xs text-[#111215] outline-none focus:border-[#111215] focus:bg-white cursor-pointer font-medium"
                   >
                     {EMPLOYMENT_TYPE_OPTIONS.map((et) => (
-                      <option key={et} value={et} className="bg-[#111] text-white">
+                      <option key={et} value={et}>
                         {et}
                       </option>
                     ))}
@@ -1143,7 +1153,7 @@ export const AddCandidate: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="geist-label text-xs uppercase text-[#8f8f8f] block mb-1 font-semibold">
+                  <label className="text-[10px] uppercase font-bold tracking-wider text-[#73766C] block mb-1">
                     Total Experience
                   </label>
                   <div className="grid grid-cols-2 gap-2">
@@ -1154,15 +1164,15 @@ export const AddCandidate: React.FC = () => {
                       placeholder="Years"
                       value={manualForm.totalExperienceYears}
                       onChange={(e) => setManualForm({ ...manualForm, totalExperienceYears: e.target.value })}
-                      className="geist-caption h-9 w-full rounded-[6px] border border-white/[0.11] bg-white/[0.03] px-2 text-xs text-white placeholder:text-[#6b7280] focus:border-white/[0.28] focus:bg-white/[0.05] outline-none"
+                      className="h-9 w-full rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] px-2 text-xs text-[#111215] placeholder-[#73766C] focus:border-[#111215] focus:bg-white outline-none"
                     />
                     <select
                       value={manualForm.experienceMonths}
                       onChange={(e) => setManualForm({ ...manualForm, experienceMonths: e.target.value })}
-                      className="geist-caption h-9 w-full rounded-[6px] border border-white/[0.11] bg-white/[0.03] px-1 text-xs text-white outline-none focus:border-white/[0.28] focus:bg-white/[0.05] cursor-pointer"
+                      className="h-9 w-full rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] px-1 text-xs text-[#111215] outline-none focus:border-[#111215] focus:bg-white cursor-pointer font-medium"
                     >
                       {[...Array(12).keys()].map((m) => (
-                        <option key={m} value={m} className="bg-[#111] text-white">
+                        <option key={m} value={m}>
                           {m} Mos
                         </option>
                       ))}
@@ -1174,23 +1184,23 @@ export const AddCandidate: React.FC = () => {
               {/* Notice Period & CTC */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
                 <div>
-                  <label className="geist-label text-xs uppercase text-[#8f8f8f] block mb-1 font-semibold">
+                  <label className="text-[10px] uppercase font-bold tracking-wider text-[#73766C] block mb-1">
                     Notice Period
                   </label>
                   <select
                     value={manualForm.noticePeriod}
                     onChange={(e) => setManualForm({ ...manualForm, noticePeriod: e.target.value })}
-                    className="geist-caption h-9 w-full rounded-[6px] border border-white/[0.11] bg-white/[0.03] px-3 text-xs text-white outline-none focus:border-white/[0.28] focus:bg-white/[0.05] cursor-pointer"
+                    className="h-9 w-full rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] px-3 text-xs text-[#111215] outline-none focus:border-[#111215] focus:bg-white cursor-pointer font-medium"
                   >
                     {NOTICE_PERIOD_OPTIONS.map((np) => (
-                      <option key={np} value={np} className="bg-[#111] text-white">
+                      <option key={np} value={np}>
                         {np}
                       </option>
                     ))}
                   </select>
                 </div>
                 <div>
-                  <label className="geist-label text-xs uppercase text-[#8f8f8f] block mb-1 font-semibold">
+                  <label className="text-[10px] uppercase font-bold tracking-wider text-[#73766C] block mb-1">
                     Current CTC / Salary
                   </label>
                   <input
@@ -1198,11 +1208,11 @@ export const AddCandidate: React.FC = () => {
                     placeholder="E.g., 6 LPA or ₹50,000 / month"
                     value={manualForm.currentSalary}
                     onChange={(e) => setManualForm({ ...manualForm, currentSalary: e.target.value })}
-                    className="geist-caption h-9 w-full rounded-[6px] border border-white/[0.11] bg-white/[0.03] px-3 text-xs text-white placeholder:text-[#6b7280] focus:border-white/[0.28] focus:bg-white/[0.05] outline-none"
+                    className="h-9 w-full rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] px-3 text-xs text-[#111215] placeholder-[#73766C] focus:border-[#111215] focus:bg-white outline-none"
                   />
                 </div>
                 <div>
-                  <label className="geist-label text-xs uppercase text-[#8f8f8f] block mb-1 font-semibold">
+                  <label className="text-[10px] uppercase font-bold tracking-wider text-[#73766C] block mb-1">
                     Expected CTC / Salary
                   </label>
                   <input
@@ -1210,34 +1220,34 @@ export const AddCandidate: React.FC = () => {
                     placeholder="E.g., 9 LPA or ₹75,000 / month"
                     value={manualForm.expectedSalary}
                     onChange={(e) => setManualForm({ ...manualForm, expectedSalary: e.target.value })}
-                    className="geist-caption h-9 w-full rounded-[6px] border border-white/[0.11] bg-white/[0.03] px-3 text-xs text-white placeholder:text-[#6b7280] focus:border-white/[0.28] focus:bg-white/[0.05] outline-none"
+                    className="h-9 w-full rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] px-3 text-xs text-[#111215] placeholder-[#73766C] focus:border-[#111215] focus:bg-white outline-none"
                   />
                 </div>
               </div>
             </div>
 
             {/* Section 3: Skills, Education & Resume File */}
-            <div className="space-y-3 pt-2 border-t border-white/[0.08]">
-              <p className="geist-label uppercase text-[11px] text-[#6b7280] font-semibold tracking-wider">
+            <div className="space-y-3 pt-2 border-t border-[#E4E7DC]">
+              <p className="text-[11px] uppercase text-[#73766C] font-bold tracking-wider">
                 3. Education, Skills & Document Attachment
               </p>
 
               {/* EducationInput Component */}
               <div>
-                <label className="geist-label text-xs uppercase text-[#8f8f8f] block mb-1 font-semibold">
+                <label className="text-[10px] uppercase font-bold tracking-wider text-[#73766C] block mb-1">
                   Highest Education Qualification & Specialization (Matches Job Education)
                 </label>
                 <EducationInput
                   value={manualForm.educationDegree}
                   onChange={(val) => setManualForm({ ...manualForm, educationDegree: val })}
                   className="w-full"
-                  selectClassName="geist-caption h-9 w-full rounded-[6px] border border-white/[0.11] bg-white/[0.03] px-2.5 text-xs text-white outline-none focus:border-white/[0.28] focus:bg-white/[0.05] cursor-pointer"
+                  selectClassName="h-9 w-full rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] px-3 text-xs text-[#111215] outline-none focus:border-[#111215] focus:bg-white cursor-pointer font-medium"
                 />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 <div>
-                  <label className="geist-label text-xs uppercase text-[#8f8f8f] block mb-1 font-semibold">
+                  <label className="text-[10px] uppercase font-bold tracking-wider text-[#73766C] block mb-1">
                     University / College / Institute
                   </label>
                   <input
@@ -1245,11 +1255,11 @@ export const AddCandidate: React.FC = () => {
                     placeholder="E.g., Savitribai Phule Pune University"
                     value={manualForm.educationInstitution}
                     onChange={(e) => setManualForm({ ...manualForm, educationInstitution: e.target.value })}
-                    className="geist-caption h-9 w-full rounded-[6px] border border-white/[0.11] bg-white/[0.03] px-3 text-xs text-white placeholder:text-[#6b7280] focus:border-white/[0.28] focus:bg-white/[0.05] outline-none"
+                    className="h-9 w-full rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] px-3 text-xs text-[#111215] placeholder-[#73766C] focus:border-[#111215] focus:bg-white outline-none"
                   />
                 </div>
                 <div>
-                  <label className="geist-label text-xs uppercase text-[#8f8f8f] block mb-1 font-semibold">
+                  <label className="text-[10px] uppercase font-bold tracking-wider text-[#73766C] block mb-1">
                     Year of Completion
                   </label>
                   <input
@@ -1257,13 +1267,13 @@ export const AddCandidate: React.FC = () => {
                     placeholder="E.g., 2023"
                     value={manualForm.educationYear}
                     onChange={(e) => setManualForm({ ...manualForm, educationYear: e.target.value })}
-                    className="geist-caption h-9 w-full rounded-[6px] border border-white/[0.11] bg-white/[0.03] px-3 text-xs text-white placeholder:text-[#6b7280] focus:border-white/[0.28] focus:bg-white/[0.05] outline-none"
+                    className="h-9 w-full rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] px-3 text-xs text-[#111215] placeholder-[#73766C] focus:border-[#111215] focus:bg-white outline-none"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="geist-label text-xs uppercase text-[#8f8f8f] block mb-1 font-semibold">
+                <label className="text-[10px] uppercase font-bold tracking-wider text-[#73766C] block mb-1">
                   Key Technical & Professional Skills * (Matches Job Skills)
                 </label>
                 <input
@@ -1271,13 +1281,13 @@ export const AddCandidate: React.FC = () => {
                   placeholder="React, TypeScript, Node.js, AWS, Tailwind CSS (comma separated)"
                   value={manualForm.skills}
                   onChange={(e) => setManualForm({ ...manualForm, skills: e.target.value })}
-                  className="geist-caption h-9 w-full rounded-[6px] border border-white/[0.11] bg-white/[0.03] px-3 text-xs text-white placeholder:text-[#6b7280] focus:border-white/[0.28] focus:bg-white/[0.05] outline-none"
+                  className="h-9 w-full rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] px-3 text-xs text-[#111215] placeholder-[#73766C] focus:border-[#111215] focus:bg-white outline-none"
                 />
               </div>
 
               {/* Resume File Upload */}
               <div>
-                <label className="geist-label text-xs uppercase text-[#8f8f8f] block mb-1.5 font-semibold">
+                <label className="text-[10px] uppercase font-bold tracking-wider text-[#73766C] block mb-1.5">
                   Attach Resume Document (Optional)
                 </label>
                 <div className="flex flex-wrap items-center gap-3">
@@ -1295,14 +1305,14 @@ export const AddCandidate: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => manualFileInputRef.current?.click()}
-                    className="geist-caption inline-flex h-8 items-center gap-2 rounded-[6px] border border-white/[0.11] bg-white/[0.03] px-3 text-xs font-medium text-[#d4d4d4] transition-colors hover:bg-white/[0.06] hover:text-white cursor-pointer"
+                    className="inline-flex h-8 items-center gap-2 rounded-full border border-[#E4E7DC] bg-white px-3.5 text-xs font-semibold text-[#111215] transition-colors hover:bg-[#F8F9F5] cursor-pointer shadow-2xs"
                   >
-                    <UploadCloud className="w-3.5 h-3.5" />
+                    <UploadCloud className="w-3.5 h-3.5 text-[#575A51]" />
                     <span>{manualFile ? 'Change File' : 'Choose Document'}</span>
                   </button>
                   {manualFile && (
-                    <span className="geist-caption text-xs text-white flex items-center gap-1.5">
-                      <FileText className="w-3.5 h-3.5 text-blue-400" />
+                    <span className="text-xs text-[#111215] flex items-center gap-1.5 font-medium">
+                      <FileText className="w-3.5 h-3.5 text-blue-600" />
                       <span>
                         {manualFile.name} ({(manualFile.size / 1024).toFixed(1)} KB)
                       </span>
@@ -1313,7 +1323,7 @@ export const AddCandidate: React.FC = () => {
 
               {/* Notes */}
               <div>
-                <label className="geist-label text-xs uppercase text-[#8f8f8f] block mb-1.5 font-semibold">
+                <label className="text-[10px] uppercase font-bold tracking-wider text-[#73766C] block mb-1.5">
                   Recruiter Remarks / Candidate Summary
                 </label>
                 <textarea
@@ -1321,19 +1331,19 @@ export const AddCandidate: React.FC = () => {
                   placeholder="Summary of background, interview feedback, or initial notes..."
                   value={manualForm.notes}
                   onChange={(e) => setManualForm({ ...manualForm, notes: e.target.value })}
-                  className="geist-caption w-full rounded-[6px] border border-white/[0.11] bg-white/[0.03] p-2.5 text-xs text-white placeholder:text-[#6b7280] focus:border-white/[0.28] focus:bg-white/[0.05] outline-none"
+                  className="w-full rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] p-3 text-xs text-[#111215] placeholder-[#73766C] focus:border-[#111215] focus:bg-white outline-none"
                 />
               </div>
             </div>
 
             {/* Actions */}
-            <div className="pt-4 border-t border-white/[0.08] flex items-center justify-end gap-3">
+            <div className="pt-4 border-t border-[#E4E7DC] flex items-center justify-end gap-3">
               <button
                 type="submit"
                 disabled={isManualSaving}
-                className="geist-caption inline-flex h-9 items-center justify-center gap-2 rounded-[6px] border border-white bg-white px-5 font-semibold text-black text-xs transition-colors hover:bg-[#eaeaea] shadow-sm disabled:opacity-50 cursor-pointer"
+                className="inline-flex h-9 items-center justify-center gap-2 rounded-full bg-[#111215] px-6 font-semibold text-white text-xs transition-colors hover:bg-[#202227] shadow-xs disabled:opacity-50 cursor-pointer"
               >
-                {isManualSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
+                {isManualSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5 text-[#D4F82C]" />}
                 <span>Create Candidate Profile</span>
               </button>
             </div>
@@ -1345,16 +1355,16 @@ export const AddCandidate: React.FC = () => {
         {/* ─────────────────────────────────────────────────────────────────── */}
         {activeTab === 'bulk' && (
           <div className="space-y-6">
-            <div className="rounded-[8px] border border-white/[0.11] bg-white/[0.02] p-5 sm:p-6 shadow-sm space-y-4">
+            <div className="rounded-3xl border border-[#E4E7DC] bg-white p-5 sm:p-7 shadow-xs space-y-5">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
                   <div className="flex items-center gap-2">
-                    <Layers className="w-4 h-4 text-white" />
-                    <h2 className="geist-section-title text-base font-semibold text-white">
+                    <Layers className="w-5 h-5 text-[#111215]" />
+                    <h2 className="text-base sm:text-lg font-bold text-[#111215]">
                       Bulk Resumes Batch Ingestion
                     </h2>
                   </div>
-                  <p className="geist-small text-xs text-[#8f8f8f] mt-0.5">
+                  <p className="text-xs text-[#575A51] mt-0.5">
                     Drop multiple resumes. Each file will be parsed via AI and saved to your candidate pool sequentially.
                   </p>
                 </div>
@@ -1373,9 +1383,9 @@ export const AddCandidate: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => bulkInputRef.current?.click()}
-                    className="geist-caption inline-flex h-8 items-center gap-1.5 rounded-[6px] border border-white/[0.11] bg-white/[0.03] px-3 text-xs font-medium text-[#d4d4d4] transition-colors hover:bg-white/[0.06] hover:text-white cursor-pointer"
+                    className="inline-flex h-8 items-center gap-1.5 rounded-full border border-[#E4E7DC] bg-white px-3.5 text-xs font-semibold text-[#111215] transition-colors hover:bg-[#F8F9F5] cursor-pointer shadow-2xs"
                   >
-                    <Plus className="w-3.5 h-3.5" />
+                    <Plus className="w-3.5 h-3.5 text-[#575A51]" />
                     <span>Add Resumes</span>
                   </button>
 
@@ -1384,12 +1394,12 @@ export const AddCandidate: React.FC = () => {
                       type="button"
                       disabled={isBulkProcessing}
                       onClick={processBulkQueue}
-                      className="geist-caption inline-flex h-8 items-center gap-1.5 rounded-[6px] border border-white bg-white px-4 font-semibold text-black text-xs transition-colors hover:bg-[#eaeaea] shadow-sm disabled:opacity-50 cursor-pointer"
+                      className="inline-flex h-8 items-center gap-1.5 rounded-full bg-[#111215] px-4 font-semibold text-white text-xs transition-colors hover:bg-[#202227] shadow-xs disabled:opacity-50 cursor-pointer"
                     >
                       {isBulkProcessing ? (
                         <Loader2 className="w-3.5 h-3.5 animate-spin" />
                       ) : (
-                        <FolderPlus className="w-3.5 h-3.5" />
+                        <FolderPlus className="w-3.5 h-3.5 text-[#D4F82C]" />
                       )}
                       <span>
                         Start Batch Ingestion ({bulkQueue.filter((b) => b.status === 'pending').length})
@@ -1408,30 +1418,30 @@ export const AddCandidate: React.FC = () => {
                     e.preventDefault();
                     if (e.dataTransfer.files) handleBulkFilesAdded(e.dataTransfer.files);
                   }}
-                  className="border-2 border-dashed border-white/[0.15] hover:border-white/[0.35] bg-white/[0.02] hover:bg-white/[0.04] rounded-[8px] p-12 text-center cursor-pointer transition-all"
+                  className="border-2 border-dashed border-[#E4E7DC] hover:border-[#111215] bg-[#F8F9F5]/60 hover:bg-[#F8F9F5] rounded-2xl p-12 text-center cursor-pointer transition-all"
                 >
-                  <div className="w-12 h-12 rounded-full bg-white/[0.04] border border-white/[0.08] flex items-center justify-center text-white mx-auto mb-2">
-                    <Layers className="w-6 h-6" />
+                  <div className="w-12 h-12 rounded-2xl bg-white border border-[#E4E7DC] shadow-2xs flex items-center justify-center text-[#111215] mx-auto mb-2">
+                    <Layers className="w-6 h-6 text-[#575A51]" />
                   </div>
-                  <p className="geist-caption text-sm font-medium text-white">Click or drag multiple resumes here</p>
-                  <p className="geist-small text-xs text-[#8f8f8f] mt-1">Select 5, 10, or 50 resumes at once</p>
+                  <p className="text-sm font-semibold text-[#111215]">Click or drag multiple resumes here</p>
+                  <p className="text-xs text-[#73766C] mt-1">Select 5, 10, or 50 resumes at once</p>
                 </div>
               ) : (
-                <div className="rounded-[8px] border border-white/[0.11] overflow-hidden">
-                  <div className="max-h-96 overflow-y-auto divide-y divide-white/[0.08]">
+                <div className="rounded-2xl border border-[#E4E7DC] overflow-hidden shadow-2xs">
+                  <div className="max-h-96 overflow-y-auto divide-y divide-[#E4E7DC]">
                     {bulkQueue.map((item, idx) => (
                       <div
                         key={item.id}
-                        className="p-3 sm:px-4 flex items-center justify-between text-xs gap-3 bg-white/[0.01]"
+                        className="p-3.5 sm:px-4 flex items-center justify-between text-xs gap-3 bg-white hover:bg-[#F8F9F5] transition-colors"
                       >
                         <div className="flex items-center gap-2.5 min-w-0">
-                          <span className="text-[#6b7280] font-mono w-5">{idx + 1}.</span>
-                          <FileText className="w-4 h-4 text-blue-400 shrink-0" />
+                          <span className="text-[#73766C] font-mono w-5">{idx + 1}.</span>
+                          <FileText className="w-4 h-4 text-blue-600 shrink-0" />
                           <div className="min-w-0">
-                            <p className="geist-caption font-medium text-white truncate max-w-xs">
+                            <p className="font-semibold text-[#111215] truncate max-w-xs">
                               {item.file.name}
                             </p>
-                            <p className="geist-small text-[10px] text-[#6b7280]">
+                            <p className="text-[10px] text-[#73766C]">
                               {(item.file.size / 1024).toFixed(1)} KB
                             </p>
                           </div>
@@ -1439,23 +1449,23 @@ export const AddCandidate: React.FC = () => {
 
                         <div className="flex items-center gap-3">
                           {item.candidateName && (
-                            <span className="hidden sm:inline-block font-semibold text-white">
+                            <span className="hidden sm:inline-block font-semibold text-[#111215]">
                               {item.candidateName}
                             </span>
                           )}
 
                           <span
-                            className={`geist-small inline-flex items-center gap-1.5 rounded-[6px] px-2.5 py-0.5 font-mono text-[11px] ${
+                            className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 font-mono text-[11px] ${
                               item.status === 'done'
-                                ? 'border border-[#0e2f22] bg-[#071a12] text-[#83d0a3]'
+                                ? 'border border-emerald-200 bg-emerald-50 text-emerald-700'
                                 : item.status === 'error'
-                                ? 'border border-[#3f1d1d] bg-[#180707] text-[#ff8f8f]'
+                                ? 'border border-red-200 bg-red-50 text-red-700'
                                 : item.status === 'uploading' || item.status === 'saving'
-                                ? 'border border-blue-500/30 bg-blue-500/10 text-blue-400'
-                                : 'border border-white/[0.08] bg-white/[0.04] text-[#8f8f8f]'
+                                ? 'border border-blue-200 bg-blue-50 text-blue-700'
+                                : 'border border-[#E4E7DC] bg-[#F8F9F5] text-[#575A51]'
                             }`}
                           >
-                            {item.status === 'done' && <span className="h-1.5 w-1.5 rounded-full bg-[#50e3c2]" />}
+                            {item.status === 'done' && <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />}
                             {item.status === 'uploading' && <Loader2 className="w-2.5 h-2.5 animate-spin" />}
                             <span>{item.progressMsg || item.status}</span>
                           </span>
@@ -1464,7 +1474,7 @@ export const AddCandidate: React.FC = () => {
                             <button
                               type="button"
                               onClick={() => setBulkQueue((prev) => prev.filter((b) => b.id !== item.id))}
-                              className="text-[#8f8f8f] hover:text-red-400 p-1 cursor-pointer transition-colors"
+                              className="text-[#73766C] hover:text-red-600 p-1 cursor-pointer transition-colors"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
@@ -1482,27 +1492,27 @@ export const AddCandidate: React.FC = () => {
 
       {/* ── Existing Candidate Duplicate Alert Popup Modal ── */}
       {existingCandidateAlert && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="relative w-full max-w-lg rounded-xl border border-amber-500/40 bg-[#0d0d0d] p-6 shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="relative w-full max-w-lg rounded-3xl border border-[#E4E7DC] bg-white p-6 sm:p-7 shadow-2xl">
             {/* Close icon button */}
             <button
               type="button"
               onClick={() => setExistingCandidateAlert(null)}
-              className="absolute top-4 right-4 text-[#8f8f8f] hover:text-white transition-colors cursor-pointer"
+              className="absolute top-4 right-4 text-[#73766C] hover:text-[#111215] transition-colors cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>
 
             {/* Icon + Title */}
             <div className="flex items-start gap-3.5 mb-4">
-              <div className="w-11 h-11 rounded-full bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
+              <div className="w-11 h-11 rounded-2xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-600 shrink-0">
                 <AlertCircle className="w-6 h-6" />
               </div>
               <div>
-                <h3 className="geist-page-title text-base text-white">
+                <h3 className="text-base sm:text-lg font-bold text-[#111215]">
                   Candidate Already Exists in Database!
                 </h3>
-                <p className="geist-small text-xs text-[#8f8f8f] mt-0.5">
+                <p className="text-xs text-[#575A51] mt-0.5">
                   A candidate record with matching contact details was found in your resume pool.
                 </p>
               </div>
@@ -1510,8 +1520,8 @@ export const AddCandidate: React.FC = () => {
 
             {/* Match Type Badge */}
             <div className="mb-4">
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-[5px] bg-amber-500/10 border border-amber-500/25 text-amber-300 text-xs font-medium">
-                <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-xs font-semibold">
+                <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
                 <span>
                   {existingCandidateAlert.matchType === 'both'
                     ? 'Duplicate found: Matching both Email Address & Contact Phone'
@@ -1524,8 +1534,8 @@ export const AddCandidate: React.FC = () => {
 
             {/* Ban Status Alert if Candidate is Banned */}
             {(existingCandidateAlert.candidate.isBlocked || existingCandidateAlert.candidate.isBanned) && (
-              <div className="mb-4 p-3 rounded-[6px] border border-red-500/40 bg-red-500/10 text-red-300 text-xs flex items-center gap-2">
-                <Ban className="w-4 h-4 text-red-400 shrink-0" />
+              <div className="mb-4 p-3 rounded-2xl border border-red-200 bg-red-50 text-red-800 text-xs flex items-center gap-2">
+                <Ban className="w-4 h-4 text-red-600 shrink-0" />
                 <span>
                   <strong>Candidate is BANNED:</strong> This candidate's email and phone number are permanently banned on this software. They will NOT receive any job recommendations or interview invites until unbanned.
                 </span>
@@ -1533,48 +1543,48 @@ export const AddCandidate: React.FC = () => {
             )}
 
             {/* Existing Candidate Details Card */}
-            <div className="rounded-[8px] border border-white/[0.08] bg-white/[0.03] p-4 space-y-2.5 mb-5 text-xs">
-              <div className="flex items-center justify-between pb-2 border-b border-white/[0.06]">
-                <span className="text-[#8f8f8f] font-medium">Full Name</span>
-                <span className="text-white font-semibold text-sm">{existingCandidateAlert.candidate.name || 'Candidate'}</span>
+            <div className="rounded-2xl border border-[#E4E7DC] bg-[#F8F9F5] p-4 space-y-2.5 mb-5 text-xs">
+              <div className="flex items-center justify-between pb-2 border-b border-[#E4E7DC]">
+                <span className="text-[#73766C] font-medium">Full Name</span>
+                <span className="text-[#111215] font-bold text-sm">{existingCandidateAlert.candidate.name || 'Candidate'}</span>
               </div>
 
               {existingCandidateAlert.candidate.email && (
                 <div className="flex items-center justify-between">
-                  <span className="text-[#8f8f8f]">Registered Email</span>
-                  <span className="text-[#d4d4d4] font-mono">{existingCandidateAlert.candidate.email}</span>
+                  <span className="text-[#73766C]">Registered Email</span>
+                  <span className="text-[#111215] font-mono">{existingCandidateAlert.candidate.email}</span>
                 </div>
               )}
 
               {existingCandidateAlert.candidate.phone && (
                 <div className="flex items-center justify-between">
-                  <span className="text-[#8f8f8f]">Contact Phone</span>
-                  <span className="text-[#d4d4d4] font-mono">{existingCandidateAlert.candidate.phone}</span>
+                  <span className="text-[#73766C]">Contact Phone</span>
+                  <span className="text-[#111215] font-mono">{existingCandidateAlert.candidate.phone}</span>
                 </div>
               )}
 
               {existingCandidateAlert.candidate.location && (
                 <div className="flex items-center justify-between">
-                  <span className="text-[#8f8f8f]">City / Location</span>
-                  <span className="text-[#d4d4d4]">{existingCandidateAlert.candidate.location}</span>
+                  <span className="text-[#73766C]">City / Location</span>
+                  <span className="text-[#111215]">{existingCandidateAlert.candidate.location}</span>
                 </div>
               )}
 
               {existingCandidateAlert.candidate.currentTitle && (
                 <div className="flex items-center justify-between">
-                  <span className="text-[#8f8f8f]">Current Role / Title</span>
-                  <span className="text-[#d4d4d4]">{existingCandidateAlert.candidate.currentTitle}</span>
+                  <span className="text-[#73766C]">Current Role / Title</span>
+                  <span className="text-[#111215]">{existingCandidateAlert.candidate.currentTitle}</span>
                 </div>
               )}
 
               {existingCandidateAlert.candidate.resumeUrl && (
                 <div className="flex items-center justify-between pt-1">
-                  <span className="text-[#8f8f8f]">Attached Resume</span>
+                  <span className="text-[#73766C]">Attached Resume</span>
                   <a
                     href={existingCandidateAlert.candidate.resumeUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-blue-400 hover:text-blue-300 font-medium inline-flex items-center gap-1"
+                    className="text-blue-600 hover:text-blue-800 font-semibold inline-flex items-center gap-1"
                   >
                     <span>View Existing Document</span>
                     <ExternalLink className="w-3 h-3" />
@@ -1592,7 +1602,7 @@ export const AddCandidate: React.FC = () => {
                   setSelectedFile(null);
                   setParsedCandidate(null);
                 }}
-                className="w-full sm:w-auto geist-caption h-9 px-3.5 rounded-[6px] border border-white/[0.11] bg-white/[0.03] text-xs font-medium text-[#d4d4d4] hover:bg-white/[0.06] hover:text-white transition-colors cursor-pointer"
+                className="w-full sm:w-auto h-9 px-4 rounded-full border border-[#E4E7DC] bg-white text-xs font-semibold text-[#111215] hover:bg-[#F8F9F5] transition-colors cursor-pointer shadow-2xs"
               >
                 Discard Upload
               </button>
@@ -1601,7 +1611,7 @@ export const AddCandidate: React.FC = () => {
                 href={`/recruiter/resume-dump?search=${encodeURIComponent(existingCandidateAlert.candidate.email || existingCandidateAlert.candidate.phone || '')}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-full sm:w-auto geist-caption h-9 px-3.5 rounded-[6px] border border-white/[0.18] bg-white/[0.08] text-xs font-medium text-white hover:bg-white/[0.14] inline-flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                className="w-full sm:w-auto h-9 px-4 rounded-full border border-[#E4E7DC] bg-white text-xs font-semibold text-[#111215] hover:bg-[#F8F9F5] inline-flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
               >
                 <span>View in Resume Dump</span>
                 <ExternalLink className="w-3.5 h-3.5" />
@@ -1610,7 +1620,7 @@ export const AddCandidate: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setExistingCandidateAlert(null)}
-                className="w-full sm:w-auto geist-caption h-9 px-4 rounded-[6px] bg-amber-500 hover:bg-amber-400 text-black text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                className="w-full sm:w-auto h-9 px-5 rounded-full bg-[#111215] hover:bg-[#202227] text-white text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-xs"
               >
                 <span>Continue & Review</span>
               </button>

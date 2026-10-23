@@ -46,7 +46,10 @@ import {
   Minus,
   Edit3,
   TrendingUp,
-  MessageSquare
+  MessageSquare,
+  User,
+  HelpCircle,
+  BadgeCheck
 } from 'lucide-react';
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { db } from '../services/firebase';
@@ -512,8 +515,8 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-8 h-18 flex items-center justify-between">
           
           {/* Logo & Product Badge */}
-          <div className="flex items-center gap-3">
-            <Link to="/" className="group inline-flex items-center">
+          <div className="flex items-center gap-2.5 sm:gap-3">
+            <Link to="/" className="group inline-flex items-center" title="hireX - AI Recruitment Platform">
               <HireXLogo size="md" variant="full" />
             </Link>
             <div className="hidden sm:flex items-center gap-1.5 pl-3 border-l border-[#E4E7DC] text-[11px] font-medium text-[#73766C]">
@@ -529,7 +532,7 @@ export default function LandingPage() {
             </div>
           </div>
 
-          {/* Centered Navigation Links */}
+          {/* Centered Desktop Navigation Links */}
           <nav className="hidden lg:flex items-center gap-8 text-[13px] font-semibold text-[#575A51]">
             <a
               href="#pipeline"
@@ -583,99 +586,195 @@ export default function LandingPage() {
           </nav>
 
           {/* Right Action Buttons */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             {user ? (
               <Link
                 to={dashboardPath}
                 className="inline-flex h-9 items-center gap-2 rounded-full bg-[#111215] px-4 text-xs font-semibold text-white hover:bg-black transition-all shadow-xs"
               >
                 <LayoutDashboard className="size-3.5 text-[#D4F82C]" />
-                <span>Dashboard</span>
+                <span className="hidden sm:inline">Dashboard</span>
               </Link>
             ) : (
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 sm:gap-3">
                 <Link
                   to="/auth"
-                  className="hidden sm:inline-flex text-xs font-bold text-[#111215] hover:text-[#575A51] transition-colors px-2"
+                  className="hidden sm:inline-flex text-xs font-bold text-[#111215] hover:text-[#575A51] transition-colors px-2 py-1"
                 >
                   Sign In
                 </Link>
                 <button
                   type="button"
                   onClick={() => setBookingModalOpen(true)}
-                  className="inline-flex h-9.5 items-center gap-2 px-4.5 rounded-full bg-[#111215] hover:bg-black text-white text-xs font-bold transition-all shadow-xs cursor-pointer group"
+                  className="inline-flex h-9 sm:h-9.5 items-center gap-1.5 sm:gap-2 px-3.5 sm:px-4.5 rounded-full bg-[#111215] hover:bg-black text-white text-xs font-bold transition-all shadow-xs cursor-pointer group"
                 >
-                  <span>Book a Demo</span>
+                  <span>Book Demo</span>
                   <span className="text-[#D4F82C] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform">↗</span>
                 </button>
               </div>
             )}
 
-            {/* Mobile Menu Hamburger */}
+            {/* Mobile Menu Toggle Button */}
             <button
               type="button"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="lg:hidden size-9 rounded-lg border border-[#E4E7DC] bg-white flex items-center justify-center text-[#111215]"
-              aria-label="Toggle menu"
+              className="lg:hidden size-9 rounded-full border border-[#E4E7DC] bg-white flex items-center justify-center text-[#111215] hover:bg-[#F8F9F5] transition-colors cursor-pointer shrink-0 shadow-2xs"
+              aria-label="Toggle mobile menu"
             >
-              {mobileMenuOpen ? <X className="size-5" /> : <Menu className="size-5" />}
+              {mobileMenuOpen ? <X className="size-4.5" /> : <Menu className="size-4.5" />}
             </button>
           </div>
         </div>
 
-        {/* Mobile Dropdown Drawer */}
+        {/* ── State-of-the-Art Mobile Navigation Sheet ── */}
         {mobileMenuOpen && (
-          <div className="lg:hidden border-t border-[#E4E7DC] bg-[#F8F9F5] px-4 py-4 space-y-2">
-            <a
-              href="#pipeline"
-              onClick={(e) => scrollToSection(e, 'pipeline')}
-              className="block px-3 py-2 rounded-lg text-xs font-bold text-[#111215] hover:bg-white"
-            >
-              Pipeline Kanban
-            </a>
-            <a
-              href="#resume-matching"
-              onClick={(e) => scrollToSection(e, 'resume-matching')}
-              className="block px-3 py-2 rounded-lg text-xs font-bold text-[#111215] hover:bg-white"
-            >
-              AI Matching
-            </a>
-            <a
-              href="#client-portal"
-              onClick={(e) => scrollToSection(e, 'client-portal')}
-              className="block px-3 py-2 rounded-lg text-xs font-bold text-[#111215] hover:bg-white"
-            >
-              Client Review Portal
-            </a>
-            <a
-              href="#productivity"
-              onClick={(e) => scrollToSection(e, 'productivity')}
-              className="block px-3 py-2 rounded-lg text-xs font-bold text-[#111215] hover:bg-white"
-            >
-              Why Recruiters Switch
-            </a>
-            <a
-              href="#pricing"
-              onClick={(e) => scrollToSection(e, 'pricing')}
-              className="block px-3 py-2 rounded-lg text-xs font-bold text-[#111215] hover:bg-white"
-            >
-              Pricing Estimator
-            </a>
-            <a
-              href="#faq"
-              onClick={(e) => scrollToSection(e, 'faq')}
-              className="block px-3 py-2 rounded-lg text-xs font-bold text-[#111215] hover:bg-white"
-            >
-              FAQ
-            </a>
-            <Link
-              to="/active-jobs"
-              onClick={() => setMobileMenuOpen(false)}
-              className="block px-3 py-2 rounded-lg text-xs font-bold text-[#111215] hover:bg-white"
-            >
-              Active Job Board
-            </Link>
-            <div className="pt-2">
+          <div className="lg:hidden border-t border-[#E4E7DC] bg-[#F8F9F5]/98 backdrop-blur-xl px-4 py-5 space-y-5 animate-in slide-in-from-top-3 duration-200 shadow-2xl max-h-[calc(100vh-4.5rem)] overflow-y-auto">
+            {/* Quick Portals Strip */}
+            <div className="space-y-1.5">
+              <span className="text-[10px] uppercase font-bold tracking-wider text-[#73766C] px-1 block">
+                Direct Portal Access
+              </span>
+              <div className="grid grid-cols-2 gap-2">
+                <Link
+                  to="/candidate"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="p-3 rounded-2xl bg-white border border-[#E4E7DC] text-[#111215] hover:border-[#111215] transition-all flex flex-col justify-between shadow-2xs"
+                >
+                  <div className="flex items-center justify-between">
+                    <User className="size-4 text-[#8FB305]" />
+                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-[#D4F82C] text-[#111215]">Job Seekers</span>
+                  </div>
+                  <div className="mt-2 font-bold text-xs">Candidate Portal</div>
+                  <div className="text-[10px] text-[#73766C]">1-click matches & CV</div>
+                </Link>
+
+                <Link
+                  to="/auth"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="p-3 rounded-2xl bg-white border border-[#E4E7DC] text-[#111215] hover:border-[#111215] transition-all flex flex-col justify-between shadow-2xs"
+                >
+                  <div className="flex items-center justify-between">
+                    <Briefcase className="size-4 text-[#111215]" />
+                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-[#111215] text-white">Recruiters</span>
+                  </div>
+                  <div className="mt-2 font-bold text-xs">ATS Sign In</div>
+                  <div className="text-[10px] text-[#73766C]">Pipelines & Kanban</div>
+                </Link>
+              </div>
+            </div>
+
+            {/* Jump Navigation Links */}
+            <div className="space-y-1">
+              <span className="text-[10px] uppercase font-bold tracking-wider text-[#73766C] px-1 block">
+                Explore Platform
+              </span>
+              <div className="bg-white rounded-2xl border border-[#E4E7DC] divide-y divide-[#E4E7DC] overflow-hidden">
+                <a
+                  href="#pipeline"
+                  onClick={(e) => {
+                    scrollToSection(e, 'pipeline');
+                    setMobileMenuOpen(false);
+                  }}
+                  className="flex items-center justify-between px-3.5 py-2.5 text-xs font-bold text-[#111215] hover:bg-[#F8F9F5] transition-colors"
+                >
+                  <span className="flex items-center gap-2">
+                    <Kanban className="size-3.5 text-[#8FB305]" />
+                    <span>01 • Visual Pipeline Kanban</span>
+                  </span>
+                  <ChevronRight className="size-3.5 text-[#73766C]" />
+                </a>
+
+                <a
+                  href="#resume-matching"
+                  onClick={(e) => {
+                    scrollToSection(e, 'resume-matching');
+                    setMobileMenuOpen(false);
+                  }}
+                  className="flex items-center justify-between px-3.5 py-2.5 text-xs font-bold text-[#111215] hover:bg-[#F8F9F5] transition-colors"
+                >
+                  <span className="flex items-center gap-2">
+                    <Brain className="size-3.5 text-[#8FB305]" />
+                    <span>02 • AI Resume Match Scoring</span>
+                  </span>
+                  <ChevronRight className="size-3.5 text-[#73766C]" />
+                </a>
+
+                <a
+                  href="#client-portal"
+                  onClick={(e) => {
+                    scrollToSection(e, 'client-portal');
+                    setMobileMenuOpen(false);
+                  }}
+                  className="flex items-center justify-between px-3.5 py-2.5 text-xs font-bold text-[#111215] hover:bg-[#F8F9F5] transition-colors"
+                >
+                  <span className="flex items-center gap-2">
+                    <Share2 className="size-3.5 text-[#8FB305]" />
+                    <span>03 • Live Client Review Portal</span>
+                  </span>
+                  <ChevronRight className="size-3.5 text-[#73766C]" />
+                </a>
+
+                <a
+                  href="#productivity"
+                  onClick={(e) => {
+                    scrollToSection(e, 'productivity');
+                    setMobileMenuOpen(false);
+                  }}
+                  className="flex items-center justify-between px-3.5 py-2.5 text-xs font-bold text-[#111215] hover:bg-[#F8F9F5] transition-colors"
+                >
+                  <span className="flex items-center gap-2">
+                    <TrendingUp className="size-3.5 text-[#8FB305]" />
+                    <span>04 • Why Switch & ROI Estimator</span>
+                  </span>
+                  <ChevronRight className="size-3.5 text-[#73766C]" />
+                </a>
+
+                <a
+                  href="#pricing"
+                  onClick={(e) => {
+                    scrollToSection(e, 'pricing');
+                    setMobileMenuOpen(false);
+                  }}
+                  className="flex items-center justify-between px-3.5 py-2.5 text-xs font-bold text-[#111215] hover:bg-[#F8F9F5] transition-colors"
+                >
+                  <span className="flex items-center gap-2">
+                    <IndianRupee className="size-3.5 text-[#8FB305]" />
+                    <span>05 • Transparent Team Pricing</span>
+                  </span>
+                  <ChevronRight className="size-3.5 text-[#73766C]" />
+                </a>
+
+                <a
+                  href="#faq"
+                  onClick={(e) => {
+                    scrollToSection(e, 'faq');
+                    setMobileMenuOpen(false);
+                  }}
+                  className="flex items-center justify-between px-3.5 py-2.5 text-xs font-bold text-[#111215] hover:bg-[#F8F9F5] transition-colors"
+                >
+                  <span className="flex items-center gap-2">
+                    <HelpCircle className="size-3.5 text-[#8FB305]" />
+                    <span>06 • Frequently Asked Questions</span>
+                  </span>
+                  <ChevronRight className="size-3.5 text-[#73766C]" />
+                </a>
+
+                <Link
+                  to="/active-jobs"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center justify-between px-3.5 py-2.5 text-xs font-bold text-[#111215] hover:bg-[#F8F9F5] transition-colors"
+                >
+                  <span className="flex items-center gap-2">
+                    <Rocket className="size-3.5 text-[#8FB305]" />
+                    <span>Public Job Board</span>
+                  </span>
+                  <ChevronRight className="size-3.5 text-[#73766C]" />
+                </Link>
+              </div>
+            </div>
+
+            {/* Mobile Actions Drawer Bottom */}
+            <div className="space-y-2 pt-1">
               {user ? (
                 <Link
                   to={dashboardPath}
@@ -683,36 +782,54 @@ export default function LandingPage() {
                   className="w-full flex items-center justify-center gap-2 py-3 rounded-full bg-[#111215] text-white text-xs font-bold shadow-xs hover:bg-black transition-all"
                 >
                   <LayoutDashboard className="size-3.5 text-[#D4F82C]" />
-                  <span>Go to Dashboard</span>
+                  <span>Go to Recruiter Dashboard</span>
                 </Link>
               ) : (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMobileMenuOpen(false);
-                    setBookingModalOpen(true);
-                  }}
-                  className="w-full flex items-center justify-center gap-2 py-3 rounded-full bg-[#111215] text-white text-xs font-bold"
-                >
-                  <span>Book a Demo</span>
-                  <span className="text-[#D4F82C]">↗</span>
-                </button>
+                <>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      setBookingModalOpen(true);
+                    }}
+                    className="w-full flex items-center justify-center gap-2 py-3.5 rounded-full bg-[#111215] text-white text-xs font-bold shadow-sm cursor-pointer"
+                  >
+                    <span>Start 30-Day Free Trial</span>
+                    <span className="text-[#D4F82C]">↗</span>
+                  </button>
+
+                  <a
+                    href="https://wa.me/919876543210?text=Hi%20hireX%20team,%20I%20would%20like%20a%20demo%20of%20the%20platform."
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full flex items-center justify-center gap-2 py-2.5 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs transition-colors"
+                  >
+                    <MessageCircle className="size-3.5" />
+                    <span>Chat on WhatsApp</span>
+                  </a>
+                </>
               )}
+            </div>
+
+            {/* Direct Contact strip */}
+            <div className="pt-2 border-t border-[#E4E7DC] flex items-center justify-between text-[11px] text-[#73766C]">
+              <span>Need help? <a href="mailto:hello@snab.co.in" className="font-bold text-[#111215] underline">hello@snab.co.in</a></span>
+              <span>v2.8 Production</span>
             </div>
           </div>
         )}
       </header>
 
       {/* ── SECTION 1: DEDICATED FULL FRAME HERO CARD ── */}
-      <section id="overview" className="relative z-10 min-h-[calc(100vh-4.5rem)] flex flex-col justify-center bg-[#F8F9F5] overflow-hidden scroll-mt-18">
+      <section id="overview" className="relative z-10 min-h-[auto] sm:min-h-[calc(100vh-4.5rem)] flex flex-col justify-center bg-[#F8F9F5] overflow-x-clip scroll-mt-18 py-10 sm:py-16">
         <OrganicSectionCurve index={0} progress={sectionProgresses[0]} />
-        <div className="flex-1 flex items-center max-w-7xl mx-auto px-4 sm:px-8 lg:px-12 w-full py-8 sm:py-12 relative z-10">
+        <div className="flex-1 flex items-center max-w-7xl mx-auto px-4 sm:px-8 lg:px-12 w-full py-6 sm:py-12 relative z-10">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 sm:gap-12 items-center w-full">
             
             {/* Left Hero Content */}
-            <div className="lg:col-span-7 space-y-6 sm:space-y-8">
-              <div className="flex flex-wrap items-center gap-2.5">
-                <div className="inline-flex items-center gap-2 text-[11px] font-bold tracking-wider uppercase text-[#73766C]">
+            <div className="lg:col-span-7 space-y-5 sm:space-y-8">
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="inline-flex items-center gap-2 text-[10px] sm:text-[11px] font-bold tracking-wider uppercase text-[#73766C]">
                   <span className="size-2 rounded-full bg-[#8FB305]"></span>
                   <span>AI-POWERED RECRUITMENT ATS FOR MODERN TEAMS</span>
                 </div>
@@ -722,20 +839,20 @@ export default function LandingPage() {
                 </div>
               </div>
 
-              <h1 className="text-4xl sm:text-6xl lg:text-[72px] font-black tracking-tight text-[#111215] leading-[1.05]">
+              <h1 className="text-3xl xs:text-4xl sm:text-6xl lg:text-[72px] font-black tracking-tight text-[#111215] leading-[1.08] sm:leading-[1.05]">
                 Less busywork.<br />
                 More possibility.
               </h1>
 
-              <p className="text-base sm:text-lg text-[#575A51] max-w-xl leading-relaxed font-normal">
+              <p className="text-sm sm:text-lg text-[#575A51] max-w-xl leading-relaxed font-normal">
                 Hire smarter, faster. The intelligent ATS for lean teams, applicants and hiring managers — a streamlined, transparent process.
               </p>
 
-              <div className="flex flex-wrap items-center gap-4 pt-2">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3 pt-1 sm:pt-2">
                 <button
                   type="button"
                   onClick={() => setBookingModalOpen(true)}
-                  className="inline-flex h-12 items-center gap-2 px-6 rounded-full bg-[#111215] hover:bg-black text-white text-sm font-bold transition-all shadow-sm cursor-pointer group"
+                  className="w-full sm:w-auto inline-flex h-12 items-center justify-center gap-2 px-6 rounded-full bg-[#111215] hover:bg-black text-white text-sm font-bold transition-all shadow-sm cursor-pointer group"
                 >
                   <span>Start free trial</span>
                   <span className="text-[#D4F82C] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform">↗</span>
@@ -744,7 +861,7 @@ export default function LandingPage() {
                 <a
                   href="#pipeline"
                   onClick={(e) => scrollToSection(e, 'pipeline')}
-                  className="inline-flex h-12 items-center gap-2 px-5 text-sm font-bold text-[#111215] hover:text-[#575A51] transition-colors cursor-pointer"
+                  className="w-full sm:w-auto inline-flex h-12 items-center justify-center gap-2 px-5 text-sm font-bold text-[#111215] hover:text-[#575A51] transition-colors cursor-pointer"
                 >
                   <span>Watch interactive demo</span>
                   <span>↗</span>
@@ -825,13 +942,13 @@ export default function LandingPage() {
       </section>
 
       {/* ── SECTION 2: DEDICATED FULL FRAME KANBAN PIPELINE CARD ── */}
-      <section id="pipeline" className="relative z-20 min-h-[calc(100vh-4.5rem)] flex flex-col justify-center bg-[#F8F9F5] scroll-mt-18 transition-all duration-300 overflow-hidden">
+      <section id="pipeline" className="relative z-20 min-h-[auto] sm:min-h-[calc(100vh-4.5rem)] flex flex-col justify-center bg-[#F8F9F5] scroll-mt-18 transition-all duration-300 overflow-x-clip py-10 sm:py-16">
         <OrganicSectionCurve index={1} progress={sectionProgresses[1]} />
         <div className="flex-1 flex flex-col justify-center py-4 sm:py-6 px-4 sm:px-8 lg:px-12 max-w-7xl mx-auto w-full relative z-10">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-end mb-4">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 items-end mb-4">
             <div className="lg:col-span-7">
               <div className="flex items-center gap-2 mb-1">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-[#73766C]">
+                <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-[#73766C]">
                   Intuitive Kanban Pipeline
                 </span>
                 <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-white/90 border border-[#E4E7DC] shadow-2xs text-[10px] font-mono font-bold text-[#111215]">
@@ -860,13 +977,14 @@ export default function LandingPage() {
                   <span className="size-2.5 rounded-full bg-amber-500"></span>
                   <span className="size-2.5 rounded-full bg-emerald-500"></span>
                 </div>
-                <div className="text-xs font-semibold text-slate-300 pl-3 border-l border-white/10">
-                  hireX Recruitment Operating System
+                <div className="text-xs font-semibold text-slate-300 pl-3 border-l border-white/10 truncate max-w-[170px] sm:max-w-none">
+                  hireX Recruitment OS
                 </div>
               </div>
               <div className="flex items-center gap-2 text-xs">
                 <span className="size-2 rounded-full bg-[#D4F82C] animate-pulse"></span>
-                <span className="text-slate-300">Live Recruiter View</span>
+                <span className="text-slate-300 hidden sm:inline">Live Recruiter View</span>
+                <span className="text-slate-300 sm:hidden">Live</span>
               </div>
             </div>
 
@@ -907,16 +1025,16 @@ export default function LandingPage() {
               </div>
 
               {/* Kanban Board Container */}
-              <div className="lg:col-span-10 p-3.5 sm:p-4 bg-[#F8F9F5] flex flex-col">
+              <div className="lg:col-span-10 p-3 sm:p-4 bg-[#F8F9F5] flex flex-col">
                 
                 {/* Job Title Bar */}
                 <div className="flex flex-wrap items-center justify-between gap-2 pb-2.5 mb-3 border-b border-[#E4E7DC]">
-                  <div className="flex items-center gap-2.5">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <h3 className="text-sm sm:text-base font-extrabold text-[#111215]">Product Designer</h3>
                     <span className="px-2 py-0.5 rounded-md bg-[#D4F82C] text-[#111215] text-[10px] font-extrabold uppercase tracking-wider">
                       ACTIVE
                     </span>
-                    <span className="text-xs text-[#73766C]">18 Applicants • 3 Shortlisted</span>
+                    <span className="text-[11px] text-[#73766C]">18 Applicants • 3 Shortlisted</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <button
@@ -926,26 +1044,32 @@ export default function LandingPage() {
                         setDemoDrawerTab('resume');
                         setDemoDrawerOpen(true);
                       }}
-                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-white border border-[#E4E7DC] text-xs font-semibold text-[#111215] hover:bg-slate-50 cursor-pointer shadow-2xs"
+                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white border border-[#E4E7DC] text-xs font-semibold text-[#111215] hover:bg-slate-50 cursor-pointer shadow-2xs"
                     >
                       <Eye className="size-3 text-[#111215]" />
-                      <span>Preview Drawer</span>
+                      <span>Preview</span>
                     </button>
                     <button
                       type="button"
                       onClick={() => setBookingModalOpen(true)}
-                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[#111215] text-white text-xs font-bold hover:bg-black cursor-pointer shadow-2xs"
+                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#111215] text-white text-xs font-bold hover:bg-black cursor-pointer shadow-2xs"
                     >
-                      <span>+ Add Candidate</span>
+                      <span>+ Candidate</span>
                     </button>
                   </div>
                 </div>
 
-                {/* 4 Columns */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-2.5 flex-1">
+                {/* Mobile horizontal swipe hint */}
+                <div className="sm:hidden flex items-center justify-between text-[11px] text-[#73766C] pb-2 font-medium">
+                  <span>Swipe to explore stages</span>
+                  <span className="font-bold text-[#111215]">→</span>
+                </div>
+
+                {/* 4 Columns (Horizontal swipe on mobile, grid on desktop) */}
+                <div className="flex overflow-x-auto pb-3 sm:pb-0 gap-3 snap-x sm:grid sm:grid-cols-2 xl:grid-cols-4 sm:overflow-visible">
                   
                   {/* Column 1: Under Review */}
-                  <div className="rounded-xl border border-[#E4E7DC] bg-[#F1F2EC]/60 p-2.5 flex flex-col">
+                  <div className="min-w-[260px] sm:min-w-0 snap-start rounded-xl border border-[#E4E7DC] bg-[#F1F2EC]/60 p-2.5 flex flex-col flex-1">
                     <div className="flex items-center justify-between pb-1.5 mb-1.5 border-b border-[#E4E7DC]">
                       <span className="text-xs font-bold text-[#111215]">Under Review</span>
                       <span className="size-4.5 rounded-full bg-white text-[#111215] text-[10px] font-bold flex items-center justify-center border border-[#E4E7DC]">
@@ -979,7 +1103,7 @@ export default function LandingPage() {
                   </div>
 
                   {/* Column 2: Shortlisted (With Lime Highlight) */}
-                  <div className="rounded-xl border border-[#D4F82C] bg-[#D4F82C]/10 p-2.5 flex flex-col">
+                  <div className="min-w-[260px] sm:min-w-0 snap-start rounded-xl border border-[#D4F82C] bg-[#D4F82C]/10 p-2.5 flex flex-col flex-1">
                     <div className="flex items-center justify-between pb-1.5 mb-1.5 border-b border-[#D4F82C]/30">
                       <span className="text-xs font-bold text-[#111215]">Shortlisted</span>
                       <span className="size-4.5 rounded-full bg-[#D4F82C] text-[#111215] text-[10px] font-black flex items-center justify-center">
@@ -1036,7 +1160,7 @@ export default function LandingPage() {
                   </div>
 
                   {/* Column 3: Interview */}
-                  <div className="rounded-xl border border-[#E4E7DC] bg-[#F1F2EC]/60 p-2.5 flex flex-col">
+                  <div className="min-w-[260px] sm:min-w-0 snap-start rounded-xl border border-[#E4E7DC] bg-[#F1F2EC]/60 p-2.5 flex flex-col flex-1">
                     <div className="flex items-center justify-between pb-1.5 mb-1.5 border-b border-[#E4E7DC]">
                       <span className="text-xs font-bold text-[#111215]">Interview Scheduled</span>
                       <span className="size-4.5 rounded-full bg-white text-[#111215] text-[10px] font-bold flex items-center justify-center border border-[#E4E7DC]">
@@ -1070,7 +1194,7 @@ export default function LandingPage() {
                   </div>
 
                   {/* Column 4: Hired */}
-                  <div className="rounded-xl border border-[#E4E7DC] bg-[#F1F2EC]/60 p-2.5 flex flex-col">
+                  <div className="min-w-[260px] sm:min-w-0 snap-start rounded-xl border border-[#E4E7DC] bg-[#F1F2EC]/60 p-2.5 flex flex-col flex-1">
                     <div className="flex items-center justify-between pb-1.5 mb-1.5 border-b border-[#E4E7DC]">
                       <span className="text-xs font-bold text-[#111215]">Hired</span>
                       <span className="size-4.5 rounded-full bg-white text-[#111215] text-[10px] font-bold flex items-center justify-center border border-[#E4E7DC]">
@@ -1108,15 +1232,15 @@ export default function LandingPage() {
       </section>
 
       {/* ── SECTION 3: AI RESUME EXTRACTION CARD ── */}
-      <section id="resume-matching" className="relative z-30 min-h-[calc(100vh-4.5rem)] flex flex-col justify-center bg-[#F8F9F5] scroll-mt-18 transition-all duration-300 overflow-hidden">
+      <section id="resume-matching" className="relative z-30 min-h-[auto] sm:min-h-[calc(100vh-4.5rem)] flex flex-col justify-center bg-[#F8F9F5] scroll-mt-18 transition-all duration-300 overflow-x-clip py-10 sm:py-16">
         <OrganicSectionCurve index={2} progress={sectionProgresses[2]} />
         <div className="flex-1 flex flex-col justify-center py-4 sm:py-6 px-4 sm:px-8 lg:px-12 max-w-7xl mx-auto w-full relative z-10">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 sm:gap-12 items-center">
             
             {/* Left Text */}
-            <div className="lg:col-span-6 space-y-6">
+            <div className="lg:col-span-6 space-y-5 sm:space-y-6">
               <div className="flex items-center gap-2">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-[#73766C]">
+                <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-[#73766C]">
                   AI Resume Extraction & Match
                 </span>
                 <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-white/90 border border-[#E4E7DC] shadow-2xs text-[10px] font-mono font-bold text-[#111215]">
@@ -1124,11 +1248,11 @@ export default function LandingPage() {
                   <span>03 • EXTRACTION</span>
                 </span>
               </div>
-              <h2 className="text-3xl sm:text-5xl font-black text-[#111215] tracking-tight leading-[1.1]">
+              <h2 className="text-2xl sm:text-5xl font-black text-[#111215] tracking-tight leading-[1.1]">
                 Read the person.<br />
                 Not the paperwork.
               </h2>
-              <p className="text-base text-[#575A51] leading-relaxed">
+              <p className="text-sm sm:text-base text-[#575A51] leading-relaxed">
                 Our AI extracts actual competencies, verified work experience, and cultural indicators — giving you an actionable profile within 3 seconds of resume upload.
               </p>
 
@@ -1233,7 +1357,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── SECTION 4: DARK CLIENT PORTAL CARD ── */}
-      <section id="client-portal" className="relative z-40 min-h-[calc(100vh-4.5rem)] flex flex-col justify-center bg-[#111215] text-white scroll-mt-18 transition-all duration-300 overflow-hidden">
+      <section id="client-portal" className="relative z-40 min-h-[auto] sm:min-h-[calc(100vh-4.5rem)] flex flex-col justify-center bg-[#111215] text-white scroll-mt-18 transition-all duration-300 overflow-x-clip py-10 sm:py-16">
         <OrganicSectionCurve index={3} progress={sectionProgresses[3]} isDark={true} />
         <div className="flex-1 flex flex-col justify-center py-4 sm:py-6 px-4 sm:px-8 lg:px-12 max-w-7xl mx-auto w-full relative z-10">
           
@@ -1412,7 +1536,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── SECTION 5: WHY RECRUITERS SWITCH (HEAD-TO-HEAD COMPARISON & ROI) ── */}
-      <section id="productivity" className="relative z-50 min-h-[calc(100vh-4.5rem)] flex flex-col justify-center bg-[#F8F9F5] scroll-mt-18 transition-all duration-300 overflow-hidden py-10 sm:py-16">
+      <section id="productivity" className="relative z-50 min-h-[auto] sm:min-h-[calc(100vh-4.5rem)] flex flex-col justify-center bg-[#F8F9F5] scroll-mt-18 transition-all duration-300 overflow-x-clip py-10 sm:py-16">
         <OrganicSectionCurve index={4} progress={sectionProgresses[4]} />
         <div className="flex-1 flex flex-col justify-center px-4 sm:px-8 lg:px-12 max-w-7xl mx-auto w-full relative z-10 space-y-8 sm:space-y-10">
           
@@ -1524,7 +1648,7 @@ export default function LandingPage() {
 
           {/* Interactive Navigation Tabs */}
           <div className="space-y-6">
-            <div className="flex flex-wrap items-center justify-center gap-2 p-1.5 bg-white/80 backdrop-blur-sm rounded-2xl border border-[#E4E7DC] max-w-3xl mx-auto shadow-2xs">
+            <div className="flex overflow-x-auto pb-1.5 scrollbar-none sm:justify-center gap-2 p-1.5 bg-white/80 backdrop-blur-sm rounded-2xl border border-[#E4E7DC] max-w-3xl mx-auto shadow-2xs whitespace-nowrap">
               <button
                 type="button"
                 onClick={() => setActiveComparisonTab('matrix')}
@@ -2024,7 +2148,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── SECTION 6: PRICING ESTIMATOR CARD ── */}
-      <section id="pricing" className="relative z-60 min-h-[calc(100vh-4.5rem)] flex flex-col justify-center bg-[#F8F9F5] scroll-mt-18 transition-all duration-300 overflow-hidden">
+      <section id="pricing" className="relative z-60 min-h-[auto] sm:min-h-[calc(100vh-4.5rem)] flex flex-col justify-center bg-[#F8F9F5] scroll-mt-18 transition-all duration-300 overflow-x-clip py-10 sm:py-16">
         <OrganicSectionCurve index={5} progress={sectionProgresses[5]} />
         <div className="flex-1 flex flex-col justify-center py-6 sm:py-8 px-4 sm:px-8 lg:px-12 max-w-7xl mx-auto w-full relative z-10">
           <div className="text-center max-w-3xl mx-auto mb-4 sm:mb-6">
@@ -2149,7 +2273,7 @@ export default function LandingPage() {
                   <span className="text-xs text-slate-400 font-normal"> / month</span>
                 </div>
                 <div className="text-xs text-slate-400 mt-1">
-                  +18% GST (₹{quoteCalculation.gstMonthly.toLocaleString('en-IN')}) = <strong className="text-white">₹{quoteCalculation.finalMonthlyWithGst.toLocaleString('en-IN')} total</strong>
+                  <span>Transparent flat pricing • Zero hidden charges</span>
                 </div>
               </div>
 
@@ -2184,7 +2308,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── SECTION 7: FAQ ACCORDION CARD ("A little more clarity.") ── */}
-      <section id="faq" className="relative z-70 min-h-[calc(100vh-4.5rem)] flex flex-col justify-center bg-[#F8F9F5] scroll-mt-18 transition-all duration-300 overflow-hidden">
+      <section id="faq" className="relative z-70 min-h-[auto] sm:min-h-[calc(100vh-4.5rem)] flex flex-col justify-center bg-[#F8F9F5] scroll-mt-18 transition-all duration-300 overflow-x-clip py-10 sm:py-16">
         <OrganicSectionCurve index={6} progress={sectionProgresses[6]} />
         <div className="flex-1 flex flex-col justify-center py-6 sm:py-8 px-4 sm:px-8 lg:px-12 max-w-7xl mx-auto w-full relative z-10">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-10 items-start">
@@ -2237,7 +2361,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── SECTION 8: DARK CTA CARD ("Your next great hire. A clearer way forward.") ── */}
-      <section id="start-trial" className="relative z-80 min-h-[calc(100vh-4.5rem)] flex flex-col justify-center bg-[#111215] text-white scroll-mt-18 transition-all duration-300 overflow-hidden">
+      <section id="start-trial" className="relative z-80 min-h-[auto] sm:min-h-[calc(100vh-4.5rem)] flex flex-col justify-center bg-[#111215] text-white scroll-mt-18 transition-all duration-300 overflow-x-clip py-12 sm:py-16">
         <OrganicSectionCurve index={7} progress={sectionProgresses[7]} isDark={true} />
         <div className="flex-1 flex items-center py-8 sm:py-12 px-4 sm:px-8 lg:px-12 max-w-7xl mx-auto w-full relative z-10">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 sm:gap-12 w-full">
@@ -2278,56 +2402,140 @@ export default function LandingPage() {
 
       </section>
 
-      {/* ── SECTION 10: SIGNATURE FOOTER WITH GIANT "hireX ↗" ── */}
-      <footer className="relative z-[95] w-full bg-[#F8F9F5] border-t border-[#E4E7DC]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-8 lg:px-12 pt-12 pb-10">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 pb-12">
-            <div>
-              <div className="mb-3">
-                <HireXLogo size="md" variant="full" />
+      {/* ── SECTION 10: BESTEST SIGNATURE FOOTER WITH GIANT "hireX ↗" ── */}
+      <footer className="relative z-[95] w-full bg-[#F8F9F5] border-t border-[#E4E7DC] text-[#111215]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-8 lg:px-12 pt-14 sm:pt-16 pb-10">
+          
+          {/* Main 6-Column Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8 sm:gap-10 pb-12 sm:pb-16 border-b border-[#E4E7DC]">
+            
+            {/* Col 1: Brand & Enterprise Trust (2 cols on large) */}
+            <div className="sm:col-span-2 lg:col-span-2 space-y-4">
+              <div className="mb-2">
+                <Link to="/" className="inline-block" title="hireX Home">
+                  <HireXLogo size="md" variant="full" />
+                </Link>
               </div>
-              <p className="text-xs text-[#73766C] leading-relaxed">
-                The AI-powered recruitment operating system for agile teams and modern staffing agencies.
+              <p className="text-xs text-[#575A51] leading-relaxed max-w-sm">
+                The modern AI recruitment operating system. Replacing repetitive busywork with intelligent candidate matching, anti-poaching client shortlists, and WhatsApp outreach.
               </p>
+
+              {/* Legally Verified Compliance Badges */}
+              <div className="flex flex-wrap items-center gap-2 pt-1">
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-white border border-[#E4E7DC] text-[#575A51] shadow-2xs">
+                  <Building2 size={12} className="text-[#8FB305]" />
+                  <span>MCA Registered Entity</span>
+                </span>
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-white border border-[#E4E7DC] text-[#575A51] shadow-2xs">
+                  <Lock size={12} className="text-[#8FB305]" />
+                  <span>SSL 256-Bit Encrypted</span>
+                </span>
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-white border border-[#E4E7DC] text-[#575A51] shadow-2xs">
+                  <ShieldCheck size={12} className="text-[#8FB305]" />
+                  <span>DPDP Act Aligned</span>
+                </span>
+              </div>
+
+              {/* Real-time System Status Pill */}
+              <div className="pt-2">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-[#E4E7DC] text-[11px] font-bold text-[#111215] shadow-2xs">
+                  <span className="size-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                  <span>All Platform Systems Operational</span>
+                </div>
+              </div>
             </div>
 
-            <div className="space-y-2 text-xs">
-              <div className="font-bold text-[#111215] uppercase tracking-wider text-[11px]">Product</div>
-              <div><a href="#pipeline" onClick={(e) => scrollToSection(e, 'pipeline')} className="text-[#73766C] hover:text-[#111215]">Pipeline Kanban</a></div>
-              <div><a href="#client-portal" onClick={(e) => scrollToSection(e, 'client-portal')} className="text-[#73766C] hover:text-[#111215]">Client Portal</a></div>
-              <div><a href="#pricing" onClick={(e) => scrollToSection(e, 'pricing')} className="text-[#73766C] hover:text-[#111215]">Pricing Estimator</a></div>
-              <div><Link to="/active-jobs" className="text-[#73766C] hover:text-[#111215]">Job Board</Link></div>
+            {/* Col 2: Product & Core Modules */}
+            <div className="space-y-3 text-xs">
+              <div className="font-bold text-[#111215] uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+                <Kanban size={13} className="text-[#8FB305]" />
+                <span>Product</span>
+              </div>
+              <ul className="space-y-2 text-[#73766C]">
+                <li><a href="#pipeline" onClick={(e) => scrollToSection(e, 'pipeline')} className="hover:text-[#111215] transition-colors">Visual Kanban Pipeline</a></li>
+                <li><a href="#resume-matching" onClick={(e) => scrollToSection(e, 'resume-matching')} className="hover:text-[#111215] transition-colors">AI Resume Match Scoring</a></li>
+                <li><a href="#client-portal" onClick={(e) => scrollToSection(e, 'client-portal')} className="hover:text-[#111215] transition-colors">Client Shortlist Portal</a></li>
+                <li><a href="#productivity" onClick={(e) => scrollToSection(e, 'productivity')} className="hover:text-[#111215] transition-colors">Automated WhatsApp Outreach</a></li>
+                <li><a href="#productivity" onClick={(e) => scrollToSection(e, 'productivity')} className="hover:text-[#111215] transition-colors">AI Voice Phone Screening</a></li>
+                <li><a href="#productivity" onClick={(e) => scrollToSection(e, 'productivity')} className="hover:text-[#111215] transition-colors">Anti-Poaching Data Masking</a></li>
+                <li><a href="#productivity" onClick={(e) => scrollToSection(e, 'productivity')} className="hover:text-[#111215] transition-colors">AI Job Spec & Ads Creator</a></li>
+              </ul>
             </div>
 
-            <div className="space-y-2 text-xs">
-              <div className="font-bold text-[#111215] uppercase tracking-wider text-[11px]">Company</div>
-              <div><a href="https://snab.co.in" target="_blank" rel="noopener noreferrer" className="text-[#73766C] hover:text-[#111215]">About SNAB</a></div>
-              <div><button type="button" onClick={() => setBookingModalOpen(true)} className="text-[#73766C] hover:text-[#111215]">Book Demo</button></div>
-              <div><a href="mailto:hello@snab.co.in" className="text-[#73766C] hover:text-[#111215]">hello@snab.co.in</a></div>
+            {/* Col 3: Direct Portals & Gateways */}
+            <div className="space-y-3 text-xs">
+              <div className="font-bold text-[#111215] uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+                <User size={13} className="text-[#8FB305]" />
+                <span>Portals</span>
+              </div>
+              <ul className="space-y-2 text-[#73766C]">
+                <li><Link to="/candidate" className="hover:text-[#111215] transition-colors font-medium text-[#111215] flex items-center gap-1"><span>Candidate Career Portal</span><span className="text-[9px] px-1.5 py-0.2 rounded-full bg-[#D4F82C] text-[#111215] font-bold">New</span></Link></li>
+                <li><Link to="/auth" className="hover:text-[#111215] transition-colors font-medium">Recruiter & ATS Login</Link></li>
+                <li><a href="#client-portal" onClick={(e) => scrollToSection(e, 'client-portal')} className="hover:text-[#111215] transition-colors">Client Review Gateway</a></li>
+                <li><Link to="/active-jobs" className="hover:text-[#111215] transition-colors">Public Job Board</Link></li>
+                <li><button type="button" onClick={() => setBookingModalOpen(true)} className="hover:text-[#111215] transition-colors text-left font-bold text-[#111215]">Schedule 1-on-1 Demo ↗</button></li>
+                <li><button type="button" onClick={() => setBookingModalOpen(true)} className="hover:text-[#111215] transition-colors text-left text-emerald-700 font-bold">Start 30-Day Free Trial</button></li>
+              </ul>
             </div>
 
-            <div className="space-y-2 text-xs">
-              <div className="font-bold text-[#111215] uppercase tracking-wider text-[11px]">Enterprise</div>
-              <div className="text-[#73766C]">GST Compliant Invoicing</div>
-              <div className="text-[#73766C]">Anti-Poaching Data Masking</div>
-              <div className="text-[#73766C]">Baileys WhatsApp Gateway</div>
+            {/* Col 4: Solutions & Staffing Models */}
+            <div className="space-y-3 text-xs">
+              <div className="font-bold text-[#111215] uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+                <Briefcase size={13} className="text-[#8FB305]" />
+                <span>Solutions</span>
+              </div>
+              <ul className="space-y-2 text-[#73766C]">
+                <li><a href="#pricing" onClick={(e) => scrollToSection(e, 'pricing')} className="hover:text-[#111215] transition-colors">For Recruitment Agencies</a></li>
+                <li><a href="#pricing" onClick={(e) => scrollToSection(e, 'pricing')} className="hover:text-[#111215] transition-colors">For In-House Talent Teams</a></li>
+                <li><a href="#pricing" onClick={(e) => scrollToSection(e, 'pricing')} className="hover:text-[#111215] transition-colors">For Fast-Growing Startups</a></li>
+                <li><a href="#productivity" onClick={(e) => scrollToSection(e, 'productivity')} className="hover:text-[#111215] transition-colors">Hours Returned Calculator</a></li>
+                <li><a href="#pricing" onClick={(e) => scrollToSection(e, 'pricing')} className="hover:text-[#111215] transition-colors">Pricing & ROI Estimator</a></li>
+                <li><a href="#faq" onClick={(e) => scrollToSection(e, 'faq')} className="hover:text-[#111215] transition-colors">Frequently Asked Questions</a></li>
+              </ul>
+            </div>
+
+            {/* Col 5: Governance & Direct Contact */}
+            <div className="space-y-3 text-xs">
+              <div className="font-bold text-[#111215] uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+                <Building2 size={13} className="text-[#8FB305]" />
+                <span>Contact & Trust</span>
+              </div>
+              <ul className="space-y-2 text-[#73766C]">
+                <li><a href="mailto:hello@snab.co.in" className="hover:text-[#111215] transition-colors flex items-center gap-1"><Mail size={11} /><span>hello@snab.co.in</span></a></li>
+                <li><a href="mailto:support@snab.co.in" className="hover:text-[#111215] transition-colors flex items-center gap-1"><Mail size={11} /><span>support@snab.co.in</span></a></li>
+                <li><a href="https://wa.me/919876543210" target="_blank" rel="noopener noreferrer" className="hover:text-[#111215] transition-colors flex items-center gap-1 text-emerald-700 font-bold"><MessageCircle size={11} /><span>WhatsApp Business</span></a></li>
+                <li><a href="https://snab.co.in" target="_blank" rel="noopener noreferrer" className="hover:text-[#111215] transition-colors">About SNAB Technologies</a></li>
+                <li className="pt-1 text-[11px] text-[#575A51]">
+                  <span>Headquarters:</span>
+                  <div className="font-semibold text-[#111215]">Nashik, Maharashtra, India</div>
+                </li>
+              </ul>
+            </div>
+
+          </div>
+
+          {/* Giant Typographic Wordmark with hover glow */}
+          <div className="py-6 sm:py-8 border-b border-[#E4E7DC] select-none overflow-hidden">
+            <div className="text-[12vw] sm:text-[14vw] font-black tracking-tighter leading-none text-[#111215] flex items-center justify-between group cursor-default">
+              <span>hireX</span>
+              <span className="text-[#8FB305] group-hover:translate-x-3 group-hover:-translate-y-3 transition-transform duration-300">↗</span>
             </div>
           </div>
 
-          {/* Giant Typographic Wordmark */}
-          <div className="py-4 border-t border-[#E4E7DC] select-none overflow-hidden">
-            <div className="text-[14vw] font-black tracking-tighter leading-none text-[#111215] flex items-center">
-              hireX<span className="text-[#8FB305]">↗</span>
+          {/* Copyright & Legal Compliance Bar */}
+          <div className="pt-6 sm:pt-8 flex flex-col md:flex-row items-center justify-between text-xs text-[#73766C] gap-4">
+            <div className="flex flex-wrap items-center gap-2 text-center md:text-left">
+              <span>© {new Date().getFullYear()} SNAB Technologies Private Limited. All rights reserved.</span>
             </div>
-          </div>
 
-          {/* Copyright Bar */}
-          <div className="pt-4 border-t border-[#E4E7DC] flex flex-wrap items-center justify-between text-xs text-[#73766C] gap-3">
-            <div>© {new Date().getFullYear()} SNAB Technologies. All rights reserved.</div>
-            <div className="flex items-center gap-4">
-              <span>GST Registered</span>
+            <div className="flex flex-wrap items-center justify-center gap-4 text-xs font-medium">
+              <Link to="/privacy-policy" className="hover:text-[#111215] transition-colors">Privacy Policy</Link>
               <span>•</span>
-              <span>ISO Compliant Hosting</span>
+              <Link to="/terms-of-service" className="hover:text-[#111215] transition-colors">Terms of Service</Link>
+              <span>•</span>
+              <Link to="/candidate-data-charter" className="hover:text-[#111215] transition-colors">Candidate Data Charter</Link>
+              <span>•</span>
+              <Link to="/security-whitepaper" className="hover:text-[#111215] transition-colors">Security Whitepaper</Link>
             </div>
           </div>
         </div>

@@ -12,6 +12,16 @@ import {
   LockKeyhole,
   Mail,
   UserRound,
+  Sparkles,
+  ShieldCheck,
+  Zap,
+  TrendingUp,
+  Brain,
+  Building2,
+  ExternalLink,
+  ChevronRight,
+  Activity,
+  Award,
 } from 'lucide-react';
 import {
   browserLocalPersistence,
@@ -23,12 +33,10 @@ import {
 } from 'firebase/auth';
 import { addDoc, collection, doc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { Link, useNavigate } from 'react-router-dom';
-import Logo from '../components/Logo';
-import DayNightToggle from '../components/DayNightToggle';
+import HireXLogo, { HireXMark } from '../components/HireXLogo';
 import { useTheme } from '../context/ThemeContext';
 import { auth, db } from '../services/firebase';
 import { useAuth } from '../context/AuthContext';
-import '../styles/auth.css';
 
 type AuthMode = 'login' | 'signup' | 'reset';
 
@@ -51,7 +59,11 @@ const AuthPage: React.FC = () => {
 
   React.useEffect(() => {
     if (!authLoading && user) {
-      const role = userProfile?.role || (user.email === 'admin@snab.co.in' || user.email?.includes('admin') ? 'admin' : 'recruiter');
+      const role =
+        userProfile?.role ||
+        (user.email === 'admin@snab.co.in' || user.email?.includes('admin')
+          ? 'admin'
+          : 'recruiter');
       if (role === 'admin') {
         navigate('/admin', { replace: true });
       } else {
@@ -106,7 +118,9 @@ const AuthPage: React.FC = () => {
 
       if (userRole !== 'recruiter' && userRole !== 'admin') {
         await signOut(auth);
-        setError('This SNAB hireX portal is only for recruiters and admins. Candidates should use the interview or assessment link sent to them.');
+        setError(
+          'This SNAB hireX portal is only for recruiters and admins. Candidates should use the interview or assessment link sent to them.'
+        );
         return;
       }
 
@@ -213,184 +227,568 @@ const AuthPage: React.FC = () => {
     }
   };
 
-  const title = mode === 'reset' ? 'Reset password' : mode === 'login' ? 'Sign in' : 'Request access';
-  const description = mode === 'reset'
-    ? 'Enter your email and we’ll send you a secure reset link.'
-    : mode === 'login'
-      ? 'Access the SNAB hireX recruiter and admin portal.'
-      : 'Share your details for recruiter account approval.';
-
   return (
-    <main className={`ix-auth-page ${!isDark ? 'is-light' : ''}`}>
-      <section className="ix-auth-form-panel" aria-label={`${title} form`}>
-        <header className="ix-auth-brand" style={{ justifyContent: 'space-between', width: '100%' }}>
-          <Link to="/" aria-label="SNAB hireX home">
-            <Logo className="h-9 w-auto object-contain" />
+    <div className="min-h-screen bg-[#F8F9F5] dark:bg-[#0D0E11] text-[#111215] dark:text-[#F8F9F5] flex flex-col justify-between selection:bg-[#D4F82C] selection:text-[#111215] relative overflow-hidden transition-colors duration-300 font-sans">
+      {/* ── Background Organic Glow Curve (Landing Page Signature) ── */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden select-none z-0 opacity-40 dark:opacity-20">
+        <svg
+          viewBox="0 0 1440 900"
+          preserveAspectRatio="none"
+          className="w-full h-full"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <defs>
+            <linearGradient id="authCurveGlow" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#D4F82C" stopOpacity="0.8" />
+              <stop offset="50%" stopColor="#8FB305" stopOpacity="0.9" />
+              <stop offset="100%" stopColor="#D4F82C" stopOpacity="0.3" />
+            </linearGradient>
+            <filter id="authBlur" x="-20%" y="-20%" width="140%" height="140%">
+              <feGaussianBlur stdDeviation="35" result="blur" />
+            </filter>
+          </defs>
+          <path
+            d="M 120,0 C 260,200 480,180 720,340 C 960,500 1200,420 1380,720"
+            stroke="url(#authCurveGlow)"
+            strokeWidth="48"
+            strokeLinecap="round"
+            filter="url(#authBlur)"
+          />
+          <path
+            d="M 120,0 C 260,200 480,180 720,340 C 960,500 1200,420 1380,720"
+            stroke="#D4F82C"
+            strokeWidth="3"
+            strokeLinecap="round"
+            strokeDasharray="8 12"
+            opacity="0.45"
+          />
+        </svg>
+      </div>
+
+      {/* ── Top Header Navigation ── */}
+      <header className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 sm:py-4 flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <HireXLogo size="md" withLink to="/" isDark={isDark} />
+          <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[#E4E7DC]/60 dark:bg-white/10 text-[#575A51] dark:text-neutral-300 border border-[#E4E7DC] dark:border-white/10 backdrop-blur-xs">
+            <span className="w-2 h-2 rounded-full bg-[#8FB305] animate-pulse"></span>
+            Recruiter & Admin Gateway
+          </span>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <Link
+            to="/"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold text-[#575A51] dark:text-neutral-300 hover:text-[#111215] dark:hover:text-white bg-white/70 dark:bg-white/5 hover:bg-white dark:hover:bg-white/10 border border-[#E4E7DC] dark:border-white/10 transition-all shadow-xs backdrop-blur-xs"
+          >
+            <ArrowLeft size={14} />
+            <span className="hidden sm:inline">Back to</span> Home
           </Link>
-          <div className="flex items-center">
-            <DayNightToggle />
-          </div>
-        </header>
+        </div>
+      </header>
 
-        <div className="ix-auth-form-wrap">
-          <div className="ix-auth-heading">
-            <p className="ix-auth-section-label">Secure portal</p>
-            <h1>{title}</h1>
-            <p>{description}</p>
-          </div>
-
-          {(error || message) && (
-            <div className={`ix-auth-alert ${error ? 'is-error' : 'is-success'}`} role="status">
-              {error ? <AlertCircle size={17} /> : <CheckCircle2 size={17} />}
-              <span>{error || message}</span>
-            </div>
-          )}
-
-          {mode === 'reset' ? (
-            <form onSubmit={handleResetPassword} className="ix-auth-form">
-              <AuthField
-                id="reset-email"
-                label="Email address"
-                type="email"
-                placeholder="name@company.com"
-                value={email}
-                onChange={setEmail}
-                icon={<Mail size={18} />}
-                autoComplete="email"
-              />
-              <SubmitButton loading={loading} loadingLabel="Sending link…">Send reset link</SubmitButton>
-              <button type="button" className="ix-auth-text-button ix-auth-back-button" onClick={() => switchMode('login')}>
-                <ArrowLeft size={15} /> Back to sign in
-              </button>
-            </form>
-          ) : (
-            <form onSubmit={mode === 'login' ? handleLogin : handleSignup} className="ix-auth-form">
-              {mode === 'signup' && (
-                <>
-                  <AuthField
-                    id="full-name"
-                    label="Full name"
-                    type="text"
-                    placeholder="Your full name"
-                    value={fullname}
-                    onChange={setFullname}
-                    icon={<UserRound size={18} />}
-                    autoComplete="name"
-                  />
-                  <AuthField
-                    id="experience"
-                    label="Experience (years)"
-                    type="number"
-                    value={String(experience)}
-                    onChange={value => setExperience(Number(value))}
-                    icon={<BriefcaseBusiness size={18} />}
-                    min="0"
-                  />
-                </>
-              )}
-
-              <AuthField
-                id="email"
-                label="Email address"
-                type="email"
-                placeholder="name@company.com"
-                value={email}
-                onChange={setEmail}
-                icon={<Mail size={18} />}
-                autoComplete="email"
-              />
-
-              {mode === 'login' && (
-                <>
-                  <AuthField
-                    id="password"
-                    label="Password"
-                    type={showPassword ? 'text' : 'password'}
-                    placeholder="Enter your password"
-                    value={password}
-                    onChange={setPassword}
-                    icon={<LockKeyhole size={18} />}
-                    autoComplete="current-password"
-                    minLength={6}
-                    trailing={(
-                      <button
-                        type="button"
-                        className="ix-auth-password-toggle"
-                        onClick={() => setShowPassword(current => !current)}
-                        aria-label={showPassword ? 'Hide password' : 'Show password'}
-                      >
-                        {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                      </button>
-                    )}
-                  />
-
-                  <div className="ix-auth-options">
-                    <label className="ix-auth-checkbox">
-                      <input type="checkbox" checked={rememberMe} onChange={event => setRememberMe(event.target.checked)} />
-                      <span className="ix-auth-checkbox-mark" aria-hidden="true"><Check size={12} /></span>
-                      <span>Remember me</span>
-                    </label>
-                    <button type="button" className="ix-auth-text-button" onClick={() => switchMode('reset')}>
-                      Forgot password?
-                    </button>
-                  </div>
-                </>
-              )}
-
-              <SubmitButton loading={loading} loadingLabel="Processing…">
-                {mode === 'login' ? 'Sign in' : 'Submit request'}
-              </SubmitButton>
-
-              <p className="ix-auth-switch">
-                {mode === 'login' ? 'Need recruiter access?' : 'Already have portal access?'}
-                <button type="button" onClick={() => switchMode(mode === 'login' ? 'signup' : 'login')}>
-                  {mode === 'login' ? 'Request it' : 'Sign in'}
-                </button>
+      {/* ── Main Dual-Stage Container ── */}
+      <main className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2 sm:py-4 my-auto flex items-center">
+        <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
+          
+          {/* ══════════════════════════════════════════════
+              LEFT SIDE: "Never-Seen-Before" Recruiter Console
+             ══════════════════════════════════════════════ */}
+          <div className="hidden lg:flex lg:col-span-7 flex-col gap-6 pr-4">
+            
+            {/* Editorial Eyebrow & Headline */}
+            <div>
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider bg-[#D4F82C] text-[#111215] shadow-xs mb-4">
+                <Sparkles size={14} className="fill-[#111215]" />
+                Next-Gen Talent Intelligence
+              </div>
+              <h1 className="text-4xl xl:text-5xl font-black tracking-tight text-[#111215] dark:text-white leading-[1.12]">
+                Hire top 1% talent with <span className="underline decoration-[#D4F82C] decoration-4 underline-offset-4">autonomous AI</span>.
+              </h1>
+              <p className="mt-3.5 text-base text-[#575A51] dark:text-neutral-400 max-w-xl leading-relaxed">
+                Log in to calibrate job pipelines, conduct live AI voice interviews, score engineering benchmarks, and export shortlisted portfolios in seconds.
               </p>
+            </div>
 
-              <div className="mt-4 pt-3 border-t border-slate-200 dark:border-white/10 text-center">
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Are you a Job Seeker?{' '}
-                  <Link to="/candidate/login" className="font-bold text-emerald-600 dark:text-emerald-400 hover:underline">
-                    Candidate Login →
-                  </Link>
+            {/* Interactive Bento Showcase Card: AI Candidate Evaluation Radar */}
+            <div className="relative rounded-3xl border border-[#E4E7DC] dark:border-white/10 bg-white/85 dark:bg-[#15161A]/85 p-6 shadow-xl backdrop-blur-md overflow-hidden group hover:border-[#111215]/30 dark:hover:border-white/20 transition-all">
+              {/* Subtle Ambient Radial Glow */}
+              <div className="absolute -top-12 -right-12 w-48 h-48 bg-[#D4F82C]/20 rounded-full blur-3xl pointer-events-none"></div>
+
+              {/* Top Bar of Preview Card */}
+              <div className="flex items-center justify-between pb-4 border-b border-[#E4E7DC] dark:border-white/10">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-[#111215] text-[#D4F82C] flex items-center justify-center font-bold text-sm shadow-xs">
+                    <Brain size={20} />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold uppercase tracking-wider text-[#73766C] dark:text-neutral-400">
+                        Live Match Simulation
+                      </span>
+                      <span className="flex h-2 w-2 relative">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#8FB305] opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-[#8FB305]"></span>
+                      </span>
+                    </div>
+                    <p className="text-sm font-bold text-[#111215] dark:text-white">
+                      Staff Distributed Systems Engineer
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#D4F82C] text-[#111215] text-xs font-black shadow-xs">
+                  <Zap size={13} className="fill-[#111215]" />
+                  98% FIT SCORE
+                </div>
+              </div>
+
+              {/* Candidate Mini Profile Inside Bento */}
+              <div className="mt-4 flex items-start justify-between bg-[#F8F9F5] dark:bg-[#1D1F24] p-4 rounded-2xl border border-[#E4E7DC]/60 dark:border-white/5">
+                <div className="flex items-center gap-3.5">
+                  <div className="w-11 h-11 rounded-full bg-gradient-to-tr from-[#111215] to-[#34373F] text-white flex items-center justify-center font-bold text-sm border-2 border-white dark:border-[#15161A] shadow-xs">
+                    AS
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-[#111215] dark:text-white flex items-center gap-1.5">
+                      Aarav Sharma
+                      <CheckCircle2 size={14} className="text-[#8FB305] dark:text-[#D4F82C]" />
+                    </h4>
+                    <p className="text-xs text-[#575A51] dark:text-neutral-400">
+                      Ex-Stripe • 8 yrs • Distributed Pipelines & Rust
+                    </p>
+                  </div>
+                </div>
+                <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-[#E4E7DC] dark:bg-white/10 text-[#111215] dark:text-white">
+                  Stage 3 / Client Ready
+                </span>
+              </div>
+
+              {/* Evaluation Criteria Checklist */}
+              <div className="mt-3.5 grid grid-cols-2 gap-2 text-xs">
+                <div className="flex items-center gap-2 p-2 rounded-xl bg-white/60 dark:bg-white/5 border border-[#E4E7DC]/60 dark:border-white/5 text-[#575A51] dark:text-neutral-300">
+                  <Check size={14} className="text-[#8FB305] shrink-0 font-bold" />
+                  <span className="truncate font-medium">AWS & Kubernetes Mastery</span>
+                </div>
+                <div className="flex items-center gap-2 p-2 rounded-xl bg-white/60 dark:bg-white/5 border border-[#E4E7DC]/60 dark:border-white/5 text-[#575A51] dark:text-neutral-300">
+                  <Check size={14} className="text-[#8FB305] shrink-0 font-bold" />
+                  <span className="truncate font-medium">Top 2% System Design</span>
+                </div>
+                <div className="flex items-center gap-2 p-2 rounded-xl bg-white/60 dark:bg-white/5 border border-[#E4E7DC]/60 dark:border-white/5 text-[#575A51] dark:text-neutral-300">
+                  <Check size={14} className="text-[#8FB305] shrink-0 font-bold" />
+                  <span className="truncate font-medium">AI Live Voice Verified</span>
+                </div>
+                <div className="flex items-center gap-2 p-2 rounded-xl bg-white/60 dark:bg-white/5 border border-[#E4E7DC]/60 dark:border-white/5 text-[#575A51] dark:text-neutral-300">
+                  <Check size={14} className="text-[#8FB305] shrink-0 font-bold" />
+                  <span className="truncate font-medium">Notice: Immediate (15 Days)</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Recruiter Stats Triplet Pills */}
+            <div className="grid grid-cols-3 gap-3">
+              <div className="p-3.5 rounded-2xl bg-white/70 dark:bg-[#15161A]/70 border border-[#E4E7DC] dark:border-white/10 shadow-xs backdrop-blur-xs">
+                <div className="text-xl xl:text-2xl font-black text-[#111215] dark:text-white tracking-tight">
+                  14.2<span className="text-[#8FB305] dark:text-[#D4F82C]">h</span>
+                </div>
+                <p className="text-[11px] font-medium text-[#73766C] dark:text-neutral-400 mt-0.5">
+                  Saved / Pipeline / Week
                 </p>
               </div>
-            </form>
-          )}
-        </div>
 
-        <footer className="ix-auth-footer">
-          <div>
-            <Link to="/contact"><Mail size={14} /> Support</Link>
-            <Link to="/report-bug"><Bug size={14} /> Report issue</Link>
+              <div className="p-3.5 rounded-2xl bg-white/70 dark:bg-[#15161A]/70 border border-[#E4E7DC] dark:border-white/10 shadow-xs backdrop-blur-xs">
+                <div className="text-xl xl:text-2xl font-black text-[#111215] dark:text-white tracking-tight">
+                  3.8<span className="text-[#8FB305] dark:text-[#D4F82C]">x</span>
+                </div>
+                <p className="text-[11px] font-medium text-[#73766C] dark:text-neutral-400 mt-0.5">
+                  Faster Shortlist Turnaround
+                </p>
+              </div>
+
+              <div className="p-3.5 rounded-2xl bg-white/70 dark:bg-[#15161A]/70 border border-[#E4E7DC] dark:border-white/10 shadow-xs backdrop-blur-xs">
+                <div className="text-xl xl:text-2xl font-black text-[#111215] dark:text-white tracking-tight">
+                  99.4<span className="text-[#8FB305] dark:text-[#D4F82C]">%</span>
+                </div>
+                <p className="text-[11px] font-medium text-[#73766C] dark:text-neutral-400 mt-0.5">
+                  Interview Integrity Rate
+                </p>
+              </div>
+            </div>
+
+            {/* Security Guarantee Pill */}
+            <div className="flex items-center gap-2.5 text-xs text-[#73766C] dark:text-neutral-400">
+              <ShieldCheck size={16} className="text-[#8FB305] dark:text-[#D4F82C]" />
+              <span>SOC2 Type II • End-to-end encrypted session • Powered by SNAB Innovations</span>
+            </div>
           </div>
-          <p>© {new Date().getFullYear()} InterviewXpert</p>
-        </footer>
-      </section>
 
-      <aside className="ix-auth-visual" aria-label="InterviewXpert hiring platform">
-        <img src="/assets/auth-architecture.png" alt="Monochrome modern architecture" />
-        <div className="ix-auth-visual-shade" />
-        <div className="ix-auth-visual-copy">
-          <p>Structured hiring, without the noise.</p>
-          <h2>
-            <span>Better interviews.</span>
-            <span>Clearer decisions.</span>
-          </h2>
-          <span>Manage recruiter access, interviews, assessments, and candidate outcomes from one secure workspace.</span>
-          <a className="ix-auth-maintainer" href="https://snab.co.in" target="_blank" rel="noopener noreferrer">
-            <span>Managed and maintained by</span>
-            <strong>SNAB Innovations</strong>
+          {/* ══════════════════════════════════════════════
+              RIGHT SIDE: Floating Bento Auth Gateway
+             ══════════════════════════════════════════════ */}
+          <div className="lg:col-span-5 w-full">
+            <div className="relative rounded-3xl bg-white dark:bg-[#15161A] border border-[#E4E7DC] dark:border-white/10 p-5 sm:p-7 shadow-2xl backdrop-blur-xl">
+              
+              {/* Top Accent Strip */}
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 h-1.5 w-24 bg-[#D4F82C] rounded-b-full"></div>
+
+              {/* Card Header & Mode Switcher */}
+              <div className="mb-6">
+                <div className="flex items-center justify-between gap-2 mb-3">
+                  <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-[#73766C] dark:text-neutral-400">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#D4F82C]"></span>
+                    Portal Access
+                  </span>
+                  
+                  {mode !== 'reset' && (
+                    <div className="flex items-center p-1 rounded-full bg-[#F8F9F5] dark:bg-[#1D1F24] border border-[#E4E7DC] dark:border-white/10">
+                      <button
+                        type="button"
+                        onClick={() => switchMode('login')}
+                        className={`px-3 py-1 text-xs font-bold rounded-full transition-all cursor-pointer ${
+                          mode === 'login'
+                            ? 'bg-[#111215] text-white dark:bg-[#D4F82C] dark:text-[#111215] shadow-xs'
+                            : 'text-[#73766C] dark:text-neutral-400 hover:text-[#111215] dark:hover:text-white'
+                        }`}
+                      >
+                        Sign In
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => switchMode('signup')}
+                        className={`px-3 py-1 text-xs font-bold rounded-full transition-all cursor-pointer ${
+                          mode === 'signup'
+                            ? 'bg-[#111215] text-white dark:bg-[#D4F82C] dark:text-[#111215] shadow-xs'
+                            : 'text-[#73766C] dark:text-neutral-400 hover:text-[#111215] dark:hover:text-white'
+                        }`}
+                      >
+                        Request
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-[#111215] dark:text-white">
+                  {mode === 'login' && 'Welcome back'}
+                  {mode === 'signup' && 'Request Recruiter Access'}
+                  {mode === 'reset' && 'Reset your password'}
+                </h2>
+                <p className="mt-1.5 text-xs sm:text-sm text-[#575A51] dark:text-neutral-400">
+                  {mode === 'login' && 'Enter your credentials to access candidate pipelines & analytics.'}
+                  {mode === 'signup' && 'Submit your details for verification and workspace allocation.'}
+                  {mode === 'reset' && 'Enter your verified email to receive a secure recovery link.'}
+                </p>
+              </div>
+
+              {/* Feedback Alerts */}
+              {(error || message) && (
+                <div
+                  className={`mb-5 p-3.5 rounded-2xl text-xs sm:text-sm flex items-start gap-2.5 transition-all ${
+                    error
+                      ? 'bg-red-50 dark:bg-red-950/40 text-red-800 dark:text-red-300 border border-red-200 dark:border-red-900/50'
+                      : 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900/50'
+                  }`}
+                  role="status"
+                >
+                  {error ? (
+                    <AlertCircle size={18} className="shrink-0 text-red-600 dark:text-red-400 mt-0.5" />
+                  ) : (
+                    <CheckCircle2 size={18} className="shrink-0 text-emerald-600 dark:text-emerald-400 mt-0.5" />
+                  )}
+                  <span className="leading-snug">{error || message}</span>
+                </div>
+              )}
+
+              {/* ── Forms ── */}
+              {mode === 'reset' ? (
+                /* Reset Password Form */
+                <form onSubmit={handleResetPassword} className="space-y-4">
+                  <div className="space-y-1.5">
+                    <label htmlFor="reset-email" className="block text-xs font-bold text-[#111215] dark:text-neutral-200 uppercase tracking-wider">
+                      Work Email
+                    </label>
+                    <div className="relative flex items-center">
+                      <span className="absolute left-3.5 text-[#73766C] dark:text-neutral-500 pointer-events-none">
+                        <Mail size={17} />
+                      </span>
+                      <input
+                        id="reset-email"
+                        type="email"
+                        required
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="recruiter@company.com"
+                        autoComplete="email"
+                        className="w-full h-11 pl-10 pr-4 rounded-xl bg-[#F8F9F5] dark:bg-[#1D1F24] border border-[#E4E7DC] dark:border-white/10 text-sm text-[#111215] dark:text-white placeholder-[#73766C]/60 dark:placeholder-neutral-500 focus:outline-none focus:border-[#111215] dark:focus:border-[#D4F82C] focus:bg-white dark:focus:bg-[#15161A] transition-all"
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full h-11 rounded-full bg-[#111215] hover:bg-[#202227] text-white dark:bg-[#D4F82C] dark:hover:bg-[#C2E820] dark:text-[#111215] font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 group cursor-pointer disabled:opacity-50"
+                  >
+                    <span>{loading ? 'Sending link…' : 'Send Recovery Link'}</span>
+                    {!loading && <ArrowRight size={16} className="group-hover:translate-x-0.5 transition-transform" />}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => switchMode('login')}
+                    className="w-full py-2 text-xs font-bold text-[#575A51] dark:text-neutral-400 hover:text-[#111215] dark:hover:text-white flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
+                  >
+                    <ArrowLeft size={14} /> Back to Sign In
+                  </button>
+                </form>
+              ) : (
+                /* Login & Recruiter Request Forms */
+                <form onSubmit={mode === 'login' ? handleLogin : handleSignup} className="space-y-4">
+                  
+                  {/* Additional Signup Fields */}
+                  {mode === 'signup' && (
+                    <>
+                      <div className="space-y-1.5">
+                        <label htmlFor="full-name" className="block text-xs font-bold text-[#111215] dark:text-neutral-200 uppercase tracking-wider">
+                          Full Name
+                        </label>
+                        <div className="relative flex items-center">
+                          <span className="absolute left-3.5 text-[#73766C] dark:text-neutral-500 pointer-events-none">
+                            <UserRound size={17} />
+                          </span>
+                          <input
+                            id="full-name"
+                            type="text"
+                            required
+                            value={fullname}
+                            onChange={(e) => setFullname(e.target.value)}
+                            placeholder="e.g. Maya Patel"
+                            autoComplete="name"
+                            className="w-full h-11 pl-10 pr-4 rounded-xl bg-[#F8F9F5] dark:bg-[#1D1F24] border border-[#E4E7DC] dark:border-white/10 text-sm text-[#111215] dark:text-white placeholder-[#73766C]/60 dark:placeholder-neutral-500 focus:outline-none focus:border-[#111215] dark:focus:border-[#D4F82C] focus:bg-white dark:focus:bg-[#15161A] transition-all"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label htmlFor="experience" className="block text-xs font-bold text-[#111215] dark:text-neutral-200 uppercase tracking-wider">
+                          Recruiting Experience (Years)
+                        </label>
+                        <div className="relative flex items-center">
+                          <span className="absolute left-3.5 text-[#73766C] dark:text-neutral-500 pointer-events-none">
+                            <BriefcaseBusiness size={17} />
+                          </span>
+                          <input
+                            id="experience"
+                            type="number"
+                            min="0"
+                            required
+                            value={String(experience)}
+                            onChange={(e) => setExperience(Number(e.target.value))}
+                            placeholder="Years of experience"
+                            className="w-full h-11 pl-10 pr-4 rounded-xl bg-[#F8F9F5] dark:bg-[#1D1F24] border border-[#E4E7DC] dark:border-white/10 text-sm text-[#111215] dark:text-white placeholder-[#73766C]/60 dark:placeholder-neutral-500 focus:outline-none focus:border-[#111215] dark:focus:border-[#D4F82C] focus:bg-white dark:focus:bg-[#15161A] transition-all"
+                          />
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Email Field */}
+                  <div className="space-y-1.5">
+                    <label htmlFor="email" className="block text-xs font-bold text-[#111215] dark:text-neutral-200 uppercase tracking-wider">
+                      Work Email
+                    </label>
+                    <div className="relative flex items-center">
+                      <span className="absolute left-3.5 text-[#73766C] dark:text-neutral-500 pointer-events-none">
+                        <Mail size={17} />
+                      </span>
+                      <input
+                        id="email"
+                        type="email"
+                        required
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="recruiter@company.com"
+                        autoComplete="email"
+                        className="w-full h-11 pl-10 pr-4 rounded-xl bg-[#F8F9F5] dark:bg-[#1D1F24] border border-[#E4E7DC] dark:border-white/10 text-sm text-[#111215] dark:text-white placeholder-[#73766C]/60 dark:placeholder-neutral-500 focus:outline-none focus:border-[#111215] dark:focus:border-[#D4F82C] focus:bg-white dark:focus:bg-[#15161A] transition-all"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Password Field (Login Mode Only) */}
+                  {mode === 'login' && (
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <label htmlFor="password" className="block text-xs font-bold text-[#111215] dark:text-neutral-200 uppercase tracking-wider">
+                          Password
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => switchMode('reset')}
+                          className="text-xs font-semibold text-[#8FB305] dark:text-[#D4F82C] hover:underline cursor-pointer"
+                        >
+                          Forgot?
+                        </button>
+                      </div>
+                      <div className="relative flex items-center">
+                        <span className="absolute left-3.5 text-[#73766C] dark:text-neutral-500 pointer-events-none">
+                          <LockKeyhole size={17} />
+                        </span>
+                        <input
+                          id="password"
+                          type={showPassword ? 'text' : 'password'}
+                          required
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          placeholder="••••••••••••"
+                          autoComplete="current-password"
+                          minLength={6}
+                          className="w-full h-11 pl-10 pr-11 rounded-xl bg-[#F8F9F5] dark:bg-[#1D1F24] border border-[#E4E7DC] dark:border-white/10 text-sm text-[#111215] dark:text-white placeholder-[#73766C]/60 dark:placeholder-neutral-500 focus:outline-none focus:border-[#111215] dark:focus:border-[#D4F82C] focus:bg-white dark:focus:bg-[#15161A] transition-all"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword((prev) => !prev)}
+                          className="absolute right-3 text-[#73766C] dark:text-neutral-400 hover:text-[#111215] dark:hover:text-white p-1 transition-colors cursor-pointer"
+                          aria-label={showPassword ? 'Hide password' : 'Show password'}
+                        >
+                          {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Remember Me Option (Login Mode) */}
+                  {mode === 'login' && (
+                    <div className="flex items-center justify-between pt-1">
+                      <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={rememberMe}
+                          onChange={(e) => setRememberMe(e.target.checked)}
+                          className="sr-only"
+                        />
+                        <span
+                          className={`w-4 h-4 rounded-md flex items-center justify-center transition-all ${
+                            rememberMe
+                              ? 'bg-[#111215] dark:bg-[#D4F82C] text-white dark:text-[#111215]'
+                              : 'border border-[#E4E7DC] dark:border-white/20 bg-[#F8F9F5] dark:bg-[#1D1F24]'
+                          }`}
+                        >
+                          {rememberMe && <Check size={12} strokeWidth={3} />}
+                        </span>
+                        <span className="text-xs font-medium text-[#575A51] dark:text-neutral-300">
+                          Remember this device for 30 days
+                        </span>
+                      </label>
+                    </div>
+                  )}
+
+                  {/* Submit Button */}
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full h-11 sm:h-12 rounded-full bg-[#111215] hover:bg-[#202227] text-white dark:bg-[#D4F82C] dark:hover:bg-[#C2E820] dark:text-[#111215] font-bold text-sm shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 group cursor-pointer disabled:opacity-50 mt-2"
+                  >
+                    <span>
+                      {loading
+                        ? mode === 'login'
+                          ? 'Authenticating…'
+                          : 'Submitting request…'
+                        : mode === 'login'
+                        ? 'Sign In to Workspace'
+                        : 'Submit Recruiter Request'}
+                    </span>
+                    {!loading && <ArrowRight size={17} className="group-hover:translate-x-0.5 transition-transform" />}
+                  </button>
+
+                  {/* Mode Switch Helper */}
+                  <div className="pt-2 text-center text-xs text-[#73766C] dark:text-neutral-400">
+                    {mode === 'login' ? (
+                      <>
+                        Need a recruiter or enterprise seat?{' '}
+                        <button
+                          type="button"
+                          onClick={() => switchMode('signup')}
+                          className="font-bold text-[#111215] dark:text-white hover:underline cursor-pointer ml-1"
+                        >
+                          Request Access
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        Already registered with hireX?{' '}
+                        <button
+                          type="button"
+                          onClick={() => switchMode('login')}
+                          className="font-bold text-[#111215] dark:text-white hover:underline cursor-pointer ml-1"
+                        >
+                          Sign In Instead
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </form>
+              )}
+
+              {/* ── Candidate Portal Bridge Banner ── */}
+              <div className="mt-6 pt-5 border-t border-[#E4E7DC] dark:border-white/10">
+                <Link
+                  to="/candidate/login"
+                  className="group flex items-center justify-between p-3 sm:p-3.5 rounded-2xl bg-[#F8F9F5] hover:bg-[#F0F2EB] dark:bg-[#1D1F24] dark:hover:bg-[#24272E] border border-[#E4E7DC] dark:border-white/10 transition-all text-left"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-xl bg-[#D4F82C] text-[#111215] flex items-center justify-center font-bold shrink-0">
+                      <UserRound size={16} />
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-[#111215] dark:text-white flex items-center gap-1">
+                        Are you a Job Seeker?
+                        <span className="text-[10px] font-semibold px-1.5 py-0.2 rounded-full bg-[#E4E7DC] dark:bg-white/10 text-[#575A51] dark:text-neutral-300">
+                          Candidates
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-[#73766C] dark:text-neutral-400">
+                        Take interviews, assessments & view status
+                      </p>
+                    </div>
+                  </div>
+                  <ChevronRight
+                    size={16}
+                    className="text-[#73766C] dark:text-neutral-400 group-hover:translate-x-1 group-hover:text-[#111215] dark:group-hover:text-white transition-all shrink-0"
+                  />
+                </Link>
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+      </main>
+
+      {/* ── Footer ── */}
+      <footer className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 sm:py-4 border-t border-[#E4E7DC]/60 dark:border-white/5 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-[#73766C] dark:text-neutral-400">
+        <div className="flex items-center gap-4">
+          <Link to="/contact" className="hover:text-[#111215] dark:hover:text-white flex items-center gap-1 transition-colors">
+            <Mail size={13} /> Support
+          </Link>
+          <Link to="/report-bug" className="hover:text-[#111215] dark:hover:text-white flex items-center gap-1 transition-colors">
+            <Bug size={13} /> Report Issue
+          </Link>
+          <a
+            href="https://snab.co.in"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-[#111215] dark:hover:text-white transition-colors"
+          >
+            SNAB Innovations
           </a>
         </div>
-        <div className="ix-auth-visual-index" aria-hidden="true"><span>01</span><i /></div>
-      </aside>
+        <p>© {new Date().getFullYear()} SNAB hireX. All rights reserved.</p>
+      </footer>
 
+      {/* ── Modals for Verification Notices ── */}
       {showVerifyPopup && (
         <AuthModal
           tone="success"
-          title="Account created"
+          title="Account Created"
           description="We sent a verification link to your email. Check your inbox and spam folder, verify your address, and then sign in."
           primaryLabel="Got it, thanks"
           onClose={() => setShowVerifyPopup(false)}
@@ -400,53 +798,16 @@ const AuthPage: React.FC = () => {
       {showVerifyErrorPopup && (
         <AuthModal
           tone="error"
-          title="Email not verified"
-          description="Verify your email before signing in. Check your inbox and spam folder, or contact support to have an admin review your account."
-          primaryLabel="Go to contact form"
+          title="Email Not Verified"
+          description="Please verify your email address before signing in. Check your inbox and spam folder, or contact support for manual activation."
+          primaryLabel="Contact Support"
           primaryTo="/contact"
           onClose={() => setShowVerifyErrorPopup(false)}
         />
       )}
-    </main>
+    </div>
   );
 };
-
-interface AuthFieldProps {
-  id: string;
-  label: string;
-  type: React.HTMLInputTypeAttribute;
-  value: string;
-  onChange: (value: string) => void;
-  icon: React.ReactNode;
-  placeholder?: string;
-  autoComplete?: string;
-  min?: string;
-  minLength?: number;
-  trailing?: React.ReactNode;
-}
-
-const AuthField: React.FC<AuthFieldProps> = ({ id, label, icon, trailing, onChange, ...inputProps }) => (
-  <div className="ix-auth-field">
-    <label htmlFor={id}>{label}</label>
-    <div className="ix-auth-input-wrap">
-      <span className="ix-auth-input-icon" aria-hidden="true">{icon}</span>
-      <input
-        id={id}
-        required
-        onChange={event => onChange(event.target.value)}
-        {...inputProps}
-      />
-      {trailing}
-    </div>
-  </div>
-);
-
-const SubmitButton: React.FC<{ loading: boolean; loadingLabel: string; children: React.ReactNode }> = ({ loading, loadingLabel, children }) => (
-  <button type="submit" className="ix-auth-submit no-saas-gradient" disabled={loading}>
-    <span>{loading ? loadingLabel : children}</span>
-    {!loading && <ArrowRight size={18} />}
-  </button>
-);
 
 interface AuthModalProps {
   tone: 'success' | 'error';
@@ -457,18 +818,63 @@ interface AuthModalProps {
   onClose: () => void;
 }
 
-const AuthModal: React.FC<AuthModalProps> = ({ tone, title, description, primaryLabel, primaryTo, onClose }) => (
-  <div className="ix-auth-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="auth-modal-title">
-    <div className={`ix-auth-modal is-${tone}`}>
-      <div className="ix-auth-modal-icon">
-        {tone === 'success' ? <CheckCircle2 size={26} /> : <AlertCircle size={26} />}
+const AuthModal: React.FC<AuthModalProps> = ({
+  tone,
+  title,
+  description,
+  primaryLabel,
+  primaryTo,
+  onClose,
+}) => (
+  <div
+    className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="auth-modal-title"
+  >
+    <div className="w-full max-w-md rounded-3xl bg-white dark:bg-[#15161A] border border-[#E4E7DC] dark:border-white/10 p-6 sm:p-7 shadow-2xl text-center">
+      <div
+        className={`w-12 h-12 rounded-2xl mx-auto flex items-center justify-center mb-4 ${
+          tone === 'success'
+            ? 'bg-emerald-100 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400'
+            : 'bg-red-100 dark:bg-red-950/50 text-red-600 dark:text-red-400'
+        }`}
+      >
+        {tone === 'success' ? <CheckCircle2 size={24} /> : <AlertCircle size={24} />}
       </div>
-      <h2 id="auth-modal-title">{title}</h2>
-      <p>{description}</p>
-      {primaryTo ? <Link to={primaryTo} className="ix-auth-modal-primary">{primaryLabel}</Link> : (
-        <button type="button" className="ix-auth-modal-primary" onClick={onClose}>{primaryLabel}</button>
-      )}
-      {primaryTo && <button type="button" className="ix-auth-modal-cancel" onClick={onClose}>Cancel</button>}
+      <h3 id="auth-modal-title" className="text-xl font-bold text-[#111215] dark:text-white">
+        {title}
+      </h3>
+      <p className="mt-2 text-xs sm:text-sm text-[#575A51] dark:text-neutral-400 leading-relaxed">
+        {description}
+      </p>
+      <div className="mt-6 flex flex-col gap-2">
+        {primaryTo ? (
+          <Link
+            to={primaryTo}
+            className="w-full h-11 rounded-full bg-[#111215] hover:bg-[#202227] text-white dark:bg-[#D4F82C] dark:hover:bg-[#C2E820] dark:text-[#111215] font-bold text-sm flex items-center justify-center transition-all cursor-pointer"
+          >
+            {primaryLabel}
+          </Link>
+        ) : (
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-full h-11 rounded-full bg-[#111215] hover:bg-[#202227] text-white dark:bg-[#D4F82C] dark:hover:bg-[#C2E820] dark:text-[#111215] font-bold text-sm flex items-center justify-center transition-all cursor-pointer"
+          >
+            {primaryLabel}
+          </button>
+        )}
+        {primaryTo && (
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-full py-2 text-xs font-semibold text-[#73766C] dark:text-neutral-400 hover:text-[#111215] dark:hover:text-white transition-colors cursor-pointer"
+          >
+            Cancel
+          </button>
+        )}
+      </div>
     </div>
   </div>
 );

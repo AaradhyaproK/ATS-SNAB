@@ -1007,140 +1007,165 @@ export default function KanbanPipeline() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col bg-gray-50 dark:bg-[#000] text-gray-900 dark:text-white font-sans transition-colors">
-      {/* ── 1. Top Section Header (Identical to HotLeads Theme) ── */}
-      <section className="shrink-0 border-b border-gray-200 dark:border-white/[0.11] bg-white dark:bg-[#000] transition-colors">
-        <div className="flex flex-col gap-2.5 px-4 py-2.5 sm:px-6 sm:py-3 lg:px-7 xl:flex-row xl:items-start xl:justify-between">
+    <div className="flex min-h-screen flex-col bg-[#F8F9F5] text-[#111215] font-sans transition-colors">
+      {/* ── 1. Top Section Header ── */}
+      <section className="shrink-0 border-b border-[#E4E7DC] bg-[#F8F9F5]">
+        <div className="flex flex-col gap-3 px-4 py-4 sm:px-6 sm:py-5 lg:px-8 xl:flex-row xl:items-center xl:justify-between">
           <div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2.5">
               <Link
                 to="/recruiter/jobs"
-                className="geist-caption inline-flex h-7 items-center gap-1.5 rounded-[5px] border border-gray-300 dark:border-white/[0.14] bg-white dark:bg-white/[0.04] px-2.5 text-xs font-medium text-gray-800 dark:text-[#d4d4d4] shadow-xs dark:shadow-none transition-all hover:bg-gray-50 dark:hover:bg-white/[0.08] hover:border-gray-400 dark:hover:border-white/[0.25] hover:text-gray-900 dark:hover:text-white"
+                className="inline-flex items-center gap-1.5 rounded-full border border-[#E4E7DC] bg-white px-3 py-1 text-xs font-semibold text-[#111215] shadow-xs transition-colors hover:bg-[#F8F9F5]"
               >
-                <ArrowLeft className="w-3 h-3 text-gray-500 dark:text-[#8f8f8f]" />
+                <ArrowLeft className="w-3 h-3 text-[#575A51]" />
                 <span>Dashboard</span>
               </Link>
-              <span className="geist-label uppercase text-gray-500 dark:text-[#6b7280] text-[10px] tracking-wider font-semibold">
-                Candidate Pipeline
-              </span>
+              <div className="inline-flex items-center gap-1.5 rounded-full border border-[#E4E7DC] bg-white px-3 py-1 text-[11px] font-semibold tracking-wider uppercase text-[#575A51] shadow-xs">
+                <span className="h-1.5 w-1.5 rounded-full bg-[#8FB305] animate-pulse" />
+                <span>Candidate Pipeline</span>
+              </div>
             </div>
-            <h1 className="geist-page-title mt-1 text-gray-900 dark:text-white flex items-center gap-2">
-              <Kanban className="w-5 h-5 text-indigo-500" />
+            <h1 className="mt-2 text-2xl sm:text-3xl font-bold tracking-tight text-[#111215] flex items-center gap-2.5 flex-wrap">
+              <Kanban className="w-6 h-6 text-[#111215]" />
               <span>Pipeline Kanban & Funnel Analysis</span>
-              <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border border-indigo-500/20">
+              <span className="text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-[#D4F82C] text-[#111215] border border-[#8FB305]/30">
                 ATS PRO
               </span>
             </h1>
-            <p className="geist-small mt-0.5 text-gray-600 dark:text-[#8f8f8f] max-w-3xl text-xs">
+            <p className="mt-1 text-xs sm:text-sm text-[#575A51] max-w-3xl">
               Visual candidate progression, stage pass-through velocity, drag-and-drop management, and live client review sync.
             </p>
           </div>
 
-          <div className="flex items-center gap-2 pt-0.5 flex-wrap">
+          <div className="flex items-center gap-2 shrink-0 flex-wrap">
             <Link
               to="/recruiter/leads"
-              className="geist-caption inline-flex h-8 items-center gap-1.5 rounded-[6px] border border-gray-300 dark:border-white/[0.14] bg-white dark:bg-white/[0.04] px-3 text-xs font-medium text-gray-800 dark:text-[#d4d4d4] shadow-xs dark:shadow-none transition-all hover:bg-gray-50 dark:hover:bg-white/[0.08] hover:border-gray-400 dark:hover:border-white/[0.25] hover:text-gray-900 dark:hover:text-white"
+              className="inline-flex items-center gap-1.5 rounded-full border border-[#E4E7DC] bg-white px-4 py-2 text-xs font-semibold text-[#111215] shadow-xs transition-colors hover:bg-[#F8F9F5]"
             >
               <span>Table View</span>
-              <ArrowRight className="w-3.5 h-3.5 text-gray-500" />
+              <ArrowRight className="w-3.5 h-3.5 text-[#575A51]" />
             </Link>
 
             <Link
               to="/recruiter/all-jobs"
-              className="geist-caption inline-flex h-8 items-center gap-2 rounded-[6px] border border-gray-300 dark:border-white/[0.14] bg-white dark:bg-white/[0.04] px-3.5 text-xs font-medium text-gray-800 dark:text-[#d4d4d4] shadow-xs dark:shadow-none transition-all hover:bg-gray-50 dark:hover:bg-white/[0.08] hover:border-gray-400 dark:hover:border-white/[0.25] hover:text-gray-900 dark:hover:text-white"
+              className="inline-flex items-center gap-2 rounded-full border border-[#E4E7DC] bg-white px-4 py-2 text-xs font-semibold text-[#111215] shadow-xs transition-colors hover:bg-[#F8F9F5]"
             >
-              <Briefcase className="w-3.5 h-3.5 text-gray-600 dark:text-[#a3a3a3]" />
+              <Briefcase className="w-3.5 h-3.5 text-[#575A51]" />
               <span>All Jobs</span>
             </Link>
           </div>
         </div>
       </section>
 
-      {/* ── 2. KPI Metrics Bar (Matching Geist Theme) ── */}
-      <section className="border-b border-gray-200 dark:border-white/[0.11] bg-white dark:bg-[#000] transition-colors">
-        <div className="grid grid-cols-2 divide-y divide-gray-200 dark:divide-white/[0.11] sm:grid-cols-4 sm:divide-y-0 sm:divide-x">
-          <div className="px-4 py-3.5 sm:px-6 lg:px-7">
-            <p className="geist-label uppercase text-[10px] text-gray-500 dark:text-[#8f8f8f] font-semibold tracking-wider flex items-center gap-1.5">
-              <Users className="size-3 text-gray-400 dark:text-[#8f8f8f]" />
-              <span>Total in Pipeline</span>
-            </p>
-            <div className="geist-page-title mt-1 text-gray-900 dark:text-white font-bold">{stageStats.total}</div>
-            <p className="geist-small mt-0.5 text-[11px] text-gray-500 dark:text-[#6b7280]">
+      {/* ── 2. KPI Metrics Bento Grid ── */}
+      <section className="px-4 pt-5 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5 sm:gap-4">
+          <div className="rounded-2xl border border-[#E4E7DC] bg-white p-4 sm:p-5 shadow-xs transition-all hover:-translate-y-0.5 hover:border-[#111215]/30 hover:shadow-md">
+            <div className="flex items-center justify-between">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-[#73766C]">
+                Total in Pipeline
+              </p>
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg border border-[#E4E7DC] bg-[#F8F9F5] text-[#111215]">
+                <Users className="size-3.5" />
+              </div>
+            </div>
+            <div className="mt-3 text-2xl sm:text-3xl font-extrabold tracking-tight text-[#111215]">
+              {stageStats.total}
+            </div>
+            <p className="mt-1 text-[11px] text-[#575A51]">
               Candidates active in current role
             </p>
           </div>
 
-          <div className="px-4 py-3.5 sm:px-6 lg:px-7">
-            <p className="geist-label uppercase text-[10px] text-blue-600 dark:text-blue-400 font-semibold tracking-wider flex items-center gap-1.5">
-              <Clock className="size-3 text-blue-600 dark:text-blue-400" />
-              <span>Under Review</span>
-            </p>
-            <div className="geist-page-title mt-1 text-gray-900 dark:text-white font-bold">{stageStats.underReview}</div>
-            <p className="geist-small mt-0.5 text-[11px] text-gray-500 dark:text-[#6b7280]">
+          <div className="rounded-2xl border border-[#E4E7DC] bg-white p-4 sm:p-5 shadow-xs transition-all hover:-translate-y-0.5 hover:border-[#111215]/30 hover:shadow-md">
+            <div className="flex items-center justify-between">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-[#73766C]">
+                Under Review
+              </p>
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg border border-[#E4E7DC] bg-[#F8F9F5] text-[#111215]">
+                <Clock className="size-3.5 text-blue-600" />
+              </div>
+            </div>
+            <div className="mt-3 text-2xl sm:text-3xl font-extrabold tracking-tight text-[#111215]">
+              {stageStats.underReview}
+            </div>
+            <p className="mt-1 text-[11px] text-[#575A51]">
               Initial screening & evaluation
             </p>
           </div>
 
-          <div className="px-4 py-3.5 sm:px-6 lg:px-7">
-            <p className="geist-label uppercase text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold tracking-wider flex items-center gap-1.5">
-              <CheckCircle2 className="size-3 text-emerald-600 dark:text-emerald-400" />
-              <span>Shortlisted</span>
-            </p>
-            <div className="geist-page-title mt-1 text-gray-900 dark:text-white font-bold">{stageStats.shortlisted}</div>
-            <p className="geist-small mt-0.5 text-[11px] text-gray-500 dark:text-[#6b7280]">
+          <div className="rounded-2xl border border-[#E4E7DC] bg-white p-4 sm:p-5 shadow-xs transition-all hover:-translate-y-0.5 hover:border-[#111215]/30 hover:shadow-md">
+            <div className="flex items-center justify-between">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-[#73766C]">
+                Shortlisted
+              </p>
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg border border-[#E4E7DC] bg-[#F8F9F5] text-[#111215]">
+                <CheckCircle2 className="size-3.5 text-emerald-600" />
+              </div>
+            </div>
+            <div className="mt-3 text-2xl sm:text-3xl font-extrabold tracking-tight text-[#111215]">
+              {stageStats.shortlisted}
+            </div>
+            <p className="mt-1 text-[11px] text-[#575A51]">
               Synced to client review portal
             </p>
           </div>
 
-          <div className="px-4 py-3.5 sm:px-6 lg:px-7">
-            <p className="geist-label uppercase text-[10px] text-indigo-600 dark:text-indigo-400 font-semibold tracking-wider flex items-center gap-1.5">
-              <Calendar className="size-3 text-indigo-600 dark:text-indigo-400" />
-              <span>Interviews Scheduled</span>
-            </p>
-            <div className="geist-page-title mt-1 text-gray-900 dark:text-white font-bold">{stageStats.scheduled}</div>
-            <p className="geist-small mt-0.5 text-[11px] text-gray-500 dark:text-[#6b7280]">
+          <div className="rounded-2xl border border-[#E4E7DC] bg-white p-4 sm:p-5 shadow-xs transition-all hover:-translate-y-0.5 hover:border-[#111215]/30 hover:shadow-md">
+            <div className="flex items-center justify-between">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-[#73766C]">
+                Interviews Scheduled
+              </p>
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg border border-[#E4E7DC] bg-[#F8F9F5] text-[#111215]">
+                <Calendar className="size-3.5 text-indigo-600" />
+              </div>
+            </div>
+            <div className="mt-3 text-2xl sm:text-3xl font-extrabold tracking-tight text-[#111215]">
+              {stageStats.scheduled}
+            </div>
+            <p className="mt-1 text-[11px] text-[#575A51]">
               Active technical & hiring rounds
             </p>
           </div>
         </div>
       </section>
 
-      {/* ── 3. Controls & Filter Section (Compact, Clean & Accessible) ── */}
-      <section className="border-b border-gray-200/90 dark:border-white/[0.08] bg-white dark:bg-[#070709] px-3.5 py-2.5 sm:px-6 lg:px-7 transition-colors">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5">
+      {/* ── 3. Controls & Filter Section ── */}
+      <section className="px-4 pt-5 sm:px-6 lg:px-8">
+        <div className="rounded-2xl border border-[#E4E7DC] bg-white p-3.5 sm:p-4 shadow-xs flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           {/* Search Box */}
           <div className="relative flex-1 sm:max-w-md">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-gray-400 dark:text-[#8f8f8f] pointer-events-none" />
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 size-3.5 text-[#73766C] pointer-events-none" />
             <input
               type="text"
               placeholder="Search candidates by name, email, or skill..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="geist-caption h-8 w-full rounded-md border border-gray-200 dark:border-white/[0.1] bg-white dark:bg-[#0c0c0e] pl-8 pr-7 text-xs text-gray-900 dark:text-white outline-none placeholder:text-gray-400 dark:placeholder:text-[#6b7280] focus:border-blue-500 dark:focus:border-white/20 focus:ring-1 focus:ring-blue-500/20 transition-all"
+              className="h-9 w-full rounded-full border border-[#E4E7DC] bg-[#F8F9F5] pl-9 pr-8 text-xs text-[#111215] outline-none placeholder:text-[#73766C] focus:bg-white focus:border-[#111215] transition-all"
               aria-label="Search candidates by name, email, or skill"
             />
             {searchTerm && (
               <button
                 type="button"
                 onClick={() => setSearchTerm('')}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-white transition-colors cursor-pointer"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#73766C] hover:text-[#111215] transition-colors cursor-pointer"
               >
-                <X className="size-3" />
+                <X className="size-3.5" />
               </button>
             )}
           </div>
 
           {/* Right Toolbar: Job Dropdown, Match Score */}
           <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-            {/* Searchable Target Job Dropdown (Matching HotLeads) */}
+            {/* Searchable Target Job Dropdown */}
             <div className="relative shrink-0" ref={jobDropdownRef}>
               <button
                 type="button"
                 onClick={() => setIsJobDropdownOpen(!isJobDropdownOpen)}
-                className={`geist-caption h-8 rounded-md border px-2.5 text-xs outline-none transition-all flex items-center justify-between gap-1.5 max-w-[170px] sm:max-w-[210px] xl:max-w-[240px] cursor-pointer focus-visible:ring-2 focus-visible:ring-blue-500 ${
+                className={`h-9 rounded-full border px-3 text-xs outline-none transition-all flex items-center justify-between gap-2 max-w-[200px] sm:max-w-[240px] cursor-pointer shadow-xs ${
                   selectedJobId
-                    ? 'border-indigo-500/40 bg-indigo-50/80 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 font-medium'
-                    : 'border-gray-200 dark:border-white/[0.1] bg-white dark:bg-[#0c0c0e] text-gray-700 dark:text-[#d4d4d4] hover:border-gray-300 dark:hover:border-white/20'
+                    ? 'border-[#111215] bg-[#111215] text-white font-semibold'
+                    : 'border-[#E4E7DC] bg-white text-[#111215] hover:bg-[#F8F9F5]'
                 }`}
                 title={selectedJobTitle}
                 aria-label="Select pipeline target job"
@@ -1148,36 +1173,34 @@ export default function KanbanPipeline() {
                 <div className="flex items-center gap-1.5 min-w-0 flex-1 text-left">
                   <Briefcase
                     className={`size-3 shrink-0 ${
-                      selectedJobId ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-400 dark:text-[#8f8f8f]'
+                      selectedJobId ? 'text-[#D4F82C]' : 'text-[#73766C]'
                     }`}
                   />
                   <span className="truncate">{selectedJobTitle}</span>
                 </div>
                 <ChevronDown
-                  className={`size-3 shrink-0 text-gray-400 dark:text-[#8f8f8f] transition-transform duration-200 ${
-                    isJobDropdownOpen ? 'rotate-180' : ''
-                  }`}
+                  className={`size-3 shrink-0 transition-transform duration-200 ${
+                    selectedJobId ? 'text-white' : 'text-[#73766C]'
+                  } ${isJobDropdownOpen ? 'rotate-180' : ''}`}
                 />
               </button>
 
               {isJobDropdownOpen && (
-                <div className="absolute right-0 top-full mt-1.5 z-50 w-[300px] sm:w-[340px] rounded-lg border border-gray-200 dark:border-white/[0.12] bg-white dark:bg-[#0d0d10] shadow-xl dark:shadow-2xl backdrop-blur-xl overflow-hidden animate-in fade-in zoom-in-95 duration-100">
-                  <div className="p-2 border-b border-gray-100 dark:border-white/[0.08]">
+                <div className="absolute right-0 top-full mt-2 z-50 w-[300px] sm:w-[340px] rounded-2xl border border-[#E4E7DC] bg-white shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-100 p-2">
+                  <div className="p-1 mb-1.5">
                     <div className="relative">
-                      <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3 text-gray-400" />
+                      <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3 text-[#73766C]" />
                       <input
                         ref={jobSearchInputRef}
                         type="text"
                         placeholder="Search roles / job code..."
                         value={jobSearchQuery}
                         onChange={(e) => setJobSearchQuery(e.target.value)}
-                        className="h-7 w-full rounded-md border border-gray-200 dark:border-white/[0.1] bg-gray-50/60 dark:bg-black/60 pl-7 pr-2 text-xs text-gray-900 dark:text-white outline-none focus:border-blue-500"
+                        className="h-8 w-full rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] pl-8 pr-2 text-xs text-[#111215] outline-none focus:bg-white focus:border-[#111215]"
                       />
                     </div>
                   </div>
-                  <div className="max-h-[260px] overflow-y-auto p-1 divide-y divide-gray-100 dark:divide-white/[0.04]">
-
-                    {/* Jobs List */}
+                  <div className="max-h-[260px] overflow-y-auto space-y-1">
                     {jobs
                       .filter((j) => {
                         if (!jobSearchQuery.trim()) return true;
@@ -1199,10 +1222,10 @@ export default function KanbanPipeline() {
                               setSelectedJobId(j.id);
                               setIsJobDropdownOpen(false);
                             }}
-                            className={`w-full text-left px-2.5 py-2 text-xs rounded flex items-center justify-between gap-2 ${
+                            className={`w-full text-left px-3 py-2 text-xs rounded-xl flex items-center justify-between gap-2 transition-colors cursor-pointer ${
                               isSelected
-                                ? 'bg-indigo-50 dark:bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 font-bold'
-                                : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/[0.06]'
+                                ? 'bg-[#111215] text-white font-bold'
+                                : 'text-[#111215] hover:bg-[#F8F9F5]'
                             }`}
                           >
                             <div className="min-w-0 flex-1">
@@ -1210,15 +1233,17 @@ export default function KanbanPipeline() {
                                 {jobCode ? `#${jobCode} • ` : ''}
                                 {j.title || 'Untitled Role'}
                               </p>
-                              <p className="text-[10px] text-gray-400 dark:text-neutral-500 truncate">
+                              <p className={`text-[10px] truncate ${isSelected ? 'text-[#D4F82C]' : 'text-[#73766C]'}`}>
                                 {j.companyName}
                               </p>
                             </div>
                             <div className="flex items-center gap-1.5 shrink-0">
-                              <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300">
+                              <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full ${
+                                isSelected ? 'bg-white/20 text-white' : 'bg-[#F8F9F5] border border-[#E4E7DC] text-[#111215]'
+                              }`}>
                                 {count}
                               </span>
-                              {isSelected && <Check className="size-3 text-indigo-600 dark:text-indigo-400" />}
+                              {isSelected && <Check className="size-3 text-[#D4F82C]" />}
                             </div>
                           </button>
                         );
@@ -1233,10 +1258,10 @@ export default function KanbanPipeline() {
               <select
                 value={minScoreFilter}
                 onChange={(e) => setMinScoreFilter(e.target.value as any)}
-                className={`geist-caption h-8 rounded-md border px-2 text-xs outline-none cursor-pointer max-w-[130px] transition-all focus-visible:ring-2 focus-visible:ring-emerald-500 ${
+                className={`h-9 rounded-full border px-3 text-xs outline-none cursor-pointer max-w-[135px] transition-all shadow-xs ${
                   minScoreFilter !== 'all'
-                    ? 'border-emerald-500/40 bg-emerald-50/90 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 font-bold'
-                    : 'border-gray-200 dark:border-white/[0.1] bg-white dark:bg-[#0c0c0e] text-gray-700 dark:text-[#d4d4d4] hover:border-gray-300 dark:hover:border-white/20'
+                    ? 'border-[#8FB305] bg-[#D4F82C] text-[#111215] font-bold'
+                    : 'border-[#E4E7DC] bg-white text-[#111215] hover:bg-[#F8F9F5]'
                 }`}
                 aria-label="Filter by Match Score"
               >
@@ -1251,7 +1276,7 @@ export default function KanbanPipeline() {
               <button
                 type="button"
                 onClick={handleResetFilters}
-                className="geist-caption h-8 inline-flex items-center gap-1 rounded-md px-2 text-[11px] text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/[0.06] transition-colors shrink-0 cursor-pointer"
+                className="h-9 inline-flex items-center gap-1 rounded-full border border-[#E4E7DC] bg-white px-3 text-xs font-semibold text-[#575A51] hover:text-[#111215] hover:bg-[#F8F9F5] transition-colors shrink-0 cursor-pointer shadow-xs"
                 title="Reset all filters"
               >
                 <RotateCw className="size-3" />
@@ -1262,26 +1287,26 @@ export default function KanbanPipeline() {
         </div>
       </section>
 
-      {/* ── 4. Unique Client Review Link for Selected Job (Matching App UI Theme) ── */}
+      {/* ── 4. Unique Client Review Link for Selected Job ── */}
       {selectedJobId && clientShortlistUrl && (
-        <section className="border-b border-gray-200/90 dark:border-white/[0.08] bg-white dark:bg-[#000] px-4 py-2.5 sm:px-6 lg:px-7 transition-colors">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="size-8 rounded-[6px] border border-indigo-500/25 bg-indigo-50/80 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
-                <Share2 size={15} />
+        <section className="px-4 pt-4 sm:px-6 lg:px-8">
+          <div className="rounded-2xl border border-[#E4E7DC] bg-white p-4 sm:p-5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3.5">
+            <div className="flex items-center gap-3.5 min-w-0">
+              <div className="size-9 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] text-[#111215] flex items-center justify-center shrink-0">
+                <Share2 size={16} />
               </div>
               <div className="min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-xs font-bold text-gray-900 dark:text-white">
+                  <span className="text-xs font-bold text-[#111215]">
                     Client Review Link
                   </span>
-                  <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20">
+                  <span className="inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
                     <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
                     <span>{stageStats.shortlisted} Shortlisted (Live Realtime Sync)</span>
                   </span>
                 </div>
                 <div className="flex items-center gap-1.5 mt-0.5 min-w-0">
-                  <span className="text-[11px] font-mono text-gray-500 dark:text-[#8f8f8f] truncate select-all">
+                  <span className="text-[11px] font-mono text-[#575A51] truncate select-all">
                     {clientShortlistUrl}
                   </span>
                 </div>
@@ -1292,9 +1317,9 @@ export default function KanbanPipeline() {
               <button
                 type="button"
                 onClick={handleCopyClientLink}
-                className="geist-caption inline-flex h-8 items-center gap-1.5 rounded-[6px] border border-gray-300 dark:border-white/[0.14] bg-white dark:bg-white/[0.04] px-3 text-xs font-medium text-gray-800 dark:text-[#d4d4d4] shadow-xs dark:shadow-none hover:bg-gray-50 dark:hover:bg-white/[0.08] hover:border-gray-400 dark:hover:border-white/[0.25] transition-all cursor-pointer"
+                className="inline-flex h-8 items-center gap-1.5 rounded-full border border-[#E4E7DC] bg-white px-3.5 text-xs font-semibold text-[#111215] shadow-xs hover:bg-[#F8F9F5] transition-all cursor-pointer"
               >
-                {copiedLink ? <Check className="size-3.5 text-emerald-500" /> : <Copy className="size-3.5 text-gray-500" />}
+                {copiedLink ? <Check className="size-3.5 text-emerald-500" /> : <Copy className="size-3.5 text-[#575A51]" />}
                 <span>{copiedLink ? 'Copied Link!' : 'Copy Link'}</span>
               </button>
 
@@ -1302,9 +1327,9 @@ export default function KanbanPipeline() {
                 href={clientShortlistUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="geist-caption inline-flex h-8 items-center gap-1.5 rounded-[6px] border border-gray-300 dark:border-white/[0.14] bg-white dark:bg-white/[0.04] px-3 text-xs font-medium text-gray-800 dark:text-[#d4d4d4] shadow-xs dark:shadow-none hover:bg-gray-50 dark:hover:bg-white/[0.08] hover:border-gray-400 dark:hover:border-white/[0.25] transition-all"
+                className="inline-flex h-8 items-center gap-1.5 rounded-full border border-[#E4E7DC] bg-white px-3.5 text-xs font-semibold text-[#111215] shadow-xs hover:bg-[#F8F9F5] transition-all"
               >
-                <ExternalLink className="size-3.5 text-gray-500" />
+                <ExternalLink className="size-3.5 text-[#575A51]" />
                 <span>Open Portal ↗</span>
               </a>
 
@@ -1316,10 +1341,10 @@ export default function KanbanPipeline() {
                   }:\n\n${clientShortlistUrl}\n\nYou can review candidate resumes, give feedback, and approve interview schedules directly on the link.`;
                   openWhatsAppWebInvite('', shareMsg);
                 }}
-                className="geist-caption inline-flex h-8 items-center gap-1.5 rounded-[6px] border border-emerald-500/40 bg-emerald-500/10 px-3 text-xs font-semibold text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/20 transition-all cursor-pointer"
+                className="inline-flex h-8 items-center gap-1.5 rounded-full bg-[#111215] px-3.5 text-xs font-semibold text-white hover:bg-[#202227] transition-all cursor-pointer shadow-xs"
                 title="Share candidate shortlist link on WhatsApp"
               >
-                <MessageCircle className="size-3.5 text-emerald-600 dark:text-emerald-400" />
+                <MessageCircle className="size-3.5 text-[#25D366]" />
                 <span>WhatsApp</span>
               </button>
             </div>
@@ -1328,15 +1353,15 @@ export default function KanbanPipeline() {
       )}
 
       {/* ── 5. Kanban Board Grid with Horizontal Scroll and High-Fidelity Cards ── */}
-      <main className="flex-1 px-4 sm:px-6 lg:px-7 py-4 overflow-hidden flex flex-col">
+      <main className="flex-1 px-4 sm:px-6 lg:px-8 py-5 overflow-hidden flex flex-col">
         {loading ? (
           <div className="flex flex-col items-center justify-center min-h-[400px] text-center">
-            <div className="size-10 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin mb-3" />
-            <p className="text-xs text-gray-500 dark:text-neutral-400">Loading pipeline candidates & sync state...</p>
+            <div className="size-10 border-2 border-[#111215] border-t-transparent rounded-full animate-spin mb-3" />
+            <p className="text-xs text-[#575A51]">Loading pipeline candidates & sync state...</p>
           </div>
         ) : (
           <div className="overflow-x-auto pb-6 scrollbar-thin">
-            <div className="flex items-start gap-3.5 min-w-full w-max">
+            <div className="flex items-start gap-4 min-w-full w-max">
               {STAGES.map((stage) => {
                 const columnCandidates = filteredCandidates.filter((c) => c.status === stage.key);
                 const isDragOver = dragOverColumn === stage.key;
@@ -1351,27 +1376,27 @@ export default function KanbanPipeline() {
                     onDragOver={(e) => handleDragOver(e, stage.key)}
                     onDragLeave={handleDragLeave}
                     onDrop={(e) => handleDrop(e, stage.key)}
-                    className={`rounded-xl border transition-all duration-200 flex flex-col min-h-[640px] w-[310px] min-w-[290px] shrink-0 p-3 bg-gray-100/70 dark:bg-[#0b0b0e] ${
+                    className={`rounded-3xl border transition-all duration-200 flex flex-col min-h-[640px] w-[315px] min-w-[295px] shrink-0 p-3.5 bg-[#F8F9F5] ${
                       isDragOver
-                        ? 'ring-2 ring-indigo-500 border-indigo-500 bg-indigo-50/70 dark:bg-indigo-950/30'
-                        : 'border-gray-200/80 dark:border-white/[0.08]'
+                        ? 'ring-2 ring-[#111215] border-[#111215] bg-white'
+                        : 'border-[#E4E7DC]'
                     }`}
                   >
                     {/* Column Header */}
-                    <div className="flex items-center justify-between pb-2.5 mb-2.5 border-b border-gray-200/80 dark:border-white/[0.08]">
+                    <div className="flex items-center justify-between pb-3 mb-3 border-b border-[#E4E7DC]">
                       <div className="flex items-center gap-2 min-w-0">
                         <span className={`size-2 rounded-full shrink-0 ${stage.dotClass}`} />
                         <stage.icon className={`size-3.5 shrink-0 ${stage.accentColor}`} />
-                        <h3 className="font-semibold text-xs tracking-tight text-gray-900 dark:text-white uppercase truncate">
+                        <h3 className="font-bold text-xs tracking-tight text-[#111215] uppercase truncate">
                           {stage.label}
                         </h3>
                       </div>
                       <div className="flex items-center gap-1.5 shrink-0">
-                        <span className="text-[10px] font-mono text-gray-400 dark:text-[#8f8f8f] font-semibold">
+                        <span className="text-[10px] font-mono text-[#73766C] font-semibold">
                           {percentOfTotal}%
                         </span>
                         <span
-                          className={`text-[11px] font-mono font-bold px-1.5 py-0.2 rounded-full border ${stage.badgeClass}`}
+                          className={`text-[11px] font-mono font-bold px-2 py-0.5 rounded-full border ${stage.badgeClass}`}
                         >
                           {columnCandidates.length}
                         </span>
@@ -1380,16 +1405,16 @@ export default function KanbanPipeline() {
 
                     {/* Shortlist Sync Highlight Callout for 'Shortlisted' Column */}
                     {stage.key === 'Shortlisted' && (
-                      <div className="mb-2.5 p-2 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 text-[11px] text-emerald-800 dark:text-emerald-300 font-medium flex items-center justify-between gap-1">
+                      <div className="mb-3 p-2.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-[11px] text-emerald-800 font-semibold flex items-center justify-between gap-1 shadow-2xs">
                         <span className="flex items-center gap-1.5 truncate">
-                          <Sparkles size={12} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                          <Sparkles size={12} className="text-emerald-600 shrink-0" />
                           <span className="truncate">Live on Client Review Link</span>
                         </span>
                         {clientShortlistUrl && (
                           <button
                             type="button"
                             onClick={handleCopyClientLink}
-                            className="text-[10px] font-bold underline hover:text-emerald-700 dark:hover:text-emerald-200 shrink-0 cursor-pointer"
+                            className="text-[10px] font-bold underline hover:text-emerald-950 shrink-0 cursor-pointer"
                           >
                             Copy
                           </button>
@@ -1398,18 +1423,18 @@ export default function KanbanPipeline() {
                     )}
 
                     {/* Candidate Cards List */}
-                    <div className="flex-1 space-y-2.5 overflow-y-auto max-h-[700px] pr-0.5 scrollbar-thin">
+                    <div className="flex-1 space-y-3 overflow-y-auto max-h-[700px] pr-0.5 scrollbar-thin">
                       {columnCandidates.length === 0 ? (
                         <div
-                          className={`h-32 rounded-lg border-2 border-dashed border-gray-300 dark:border-white/10 flex flex-col items-center justify-center p-3 text-center transition-colors ${
-                            isDragOver ? 'bg-indigo-50/60 dark:bg-white/5 border-indigo-400' : ''
+                          className={`h-32 rounded-2xl border-2 border-dashed border-[#E4E7DC] bg-white/60 flex flex-col items-center justify-center p-3 text-center transition-colors ${
+                            isDragOver ? 'bg-white border-[#111215]' : ''
                           }`}
                         >
-                          <stage.icon size={18} className="text-gray-400 dark:text-neutral-600 mb-1 opacity-60" />
-                          <p className="text-xs font-semibold text-gray-500 dark:text-neutral-400">
+                          <stage.icon size={18} className="text-[#73766C] mb-1 opacity-60" />
+                          <p className="text-xs font-semibold text-[#575A51]">
                             Drop candidate here
                           </p>
-                          <p className="text-[10px] text-gray-400 dark:text-neutral-500 mt-0.5">
+                          <p className="text-[10px] text-[#73766C] mt-0.5">
                             Move to {stage.label}
                           </p>
                         </div>
@@ -1427,7 +1452,7 @@ export default function KanbanPipeline() {
                                 setSelectedDrawerCandidate(cand);
                                 setDrawerActiveTab('profile');
                               }}
-                              className="group rounded-xl border border-gray-200/90 dark:border-white/[0.08] bg-white dark:bg-[#131316] p-3 shadow-xs hover:shadow-md hover:border-indigo-400 dark:hover:border-indigo-500/40 transition-all cursor-pointer active:cursor-grabbing space-y-2.5"
+                              className="group rounded-2xl border border-[#E4E7DC] bg-white p-3.5 shadow-2xs hover:shadow-md hover:border-[#111215]/30 transition-all cursor-pointer active:cursor-grabbing space-y-2.5"
                             >
                               {/* Card Header: Circular Avatar, Name & Dynamic Match Score */}
                               <div className="flex items-start justify-between gap-2">

@@ -44,7 +44,13 @@ import {
   Send,
   XCircle,
   UserCheck,
-  MessageCircle
+  MessageCircle,
+  ArrowLeft,
+  Bug,
+  LockKeyhole,
+  UserRound,
+  Zap,
+  Brain
 } from 'lucide-react';
 import {
   collection,
@@ -60,7 +66,7 @@ import {
 } from 'firebase/firestore';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import Logo from '../components/Logo';
-import DayNightToggle from '../components/DayNightToggle';
+import HireXLogo, { HireXMark } from '../components/HireXLogo';
 import { useTheme } from '../context/ThemeContext';
 import { db } from '../services/firebase';
 import { calculateJobMatchScore, JobMatchResult, CandidateMatchProfile } from '../services/jobMatchService';
@@ -1358,27 +1364,70 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
 
   // If NOT logged in -> Render Dedicated Candidate Login Screen
   if (!candidate) {
+    const hashPart = window.location.hash.includes('?') ? window.location.hash.split('?')[1] : '';
+    const urlParams = new URLSearchParams(location.search || hashPart || window.location.search);
+    const targetJobId = urlParams.get('job') || urlParams.get('jobId');
+
     return (
-      <div className={`min-h-screen flex flex-col justify-between transition-colors ${
-        isDark ? 'bg-[#060608] text-white' : 'bg-slate-50 text-slate-900'
-      }`}>
-        {/* Navigation Bar */}
-        <header className={`border-b px-6 py-4 flex items-center justify-between transition-colors ${
-          isDark ? 'border-white/10 bg-[#0a0a0c]/80 backdrop-blur-md' : 'border-slate-200 bg-white/80 backdrop-blur-md'
-        }`}>
-          <div className="flex items-center gap-3">
-            <Logo className="h-8 w-auto" isDark={isDark} />
-            <span className="hidden sm:inline-block text-[11px] font-bold tracking-wider uppercase px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-              Candidate Portal
+      <div className="min-h-screen bg-[#F8F9F5] dark:bg-[#0D0E11] text-[#111215] dark:text-[#F8F9F5] flex flex-col justify-between selection:bg-[#D4F82C] selection:text-[#111215] relative overflow-hidden transition-colors duration-300 font-sans">
+        {/* ── Background Organic Glow Curve (Landing Page Signature) ── */}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden select-none z-0 opacity-40 dark:opacity-20">
+          <svg
+            viewBox="0 0 1440 900"
+            preserveAspectRatio="none"
+            className="w-full h-full"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <defs>
+              <linearGradient id="candCurveGlow" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#D4F82C" stopOpacity="0.8" />
+                <stop offset="50%" stopColor="#8FB305" stopOpacity="0.9" />
+                <stop offset="100%" stopColor="#D4F82C" stopOpacity="0.3" />
+              </linearGradient>
+              <filter id="candBlur" x="-20%" y="-20%" width="140%" height="140%">
+                <feGaussianBlur stdDeviation="35" result="blur" />
+              </filter>
+            </defs>
+            <path
+              d="M 120,0 C 260,200 480,180 720,340 C 960,500 1200,420 1380,720"
+              stroke="url(#candCurveGlow)"
+              strokeWidth="48"
+              strokeLinecap="round"
+              filter="url(#candBlur)"
+            />
+            <path
+              d="M 120,0 C 260,200 480,180 720,340 C 960,500 1200,420 1380,720"
+              stroke="#D4F82C"
+              strokeWidth="3"
+              strokeLinecap="round"
+              strokeDasharray="8 12"
+              opacity="0.45"
+            />
+          </svg>
+        </div>
+
+        {/* ── Top Header Navigation ── */}
+        <header className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 sm:py-4 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <HireXLogo size="md" withLink to="/" isDark={isDark} />
+            <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[#E4E7DC]/60 dark:bg-white/10 text-[#575A51] dark:text-neutral-300 border border-[#E4E7DC] dark:border-white/10 backdrop-blur-xs">
+              <span className="w-2 h-2 rounded-full bg-[#8FB305] animate-pulse"></span>
+              Candidate Career Portal
             </span>
           </div>
+
           <div className="flex items-center gap-3">
-            <DayNightToggle />
+            <Link
+              to="/"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold text-[#575A51] dark:text-neutral-300 hover:text-[#111215] dark:hover:text-white bg-white/70 dark:bg-white/5 hover:bg-white dark:hover:bg-white/10 border border-[#E4E7DC] dark:border-white/10 transition-all shadow-xs backdrop-blur-xs"
+            >
+              <ArrowLeft size={14} />
+              <span className="hidden sm:inline">Back to</span> Home
+            </Link>
             <Link
               to="/auth"
-              className={`text-xs font-semibold px-3 py-1.5 rounded-lg border transition-colors flex items-center gap-1.5 ${
-                isDark ? 'border-white/15 bg-white/5 hover:bg-white/10 text-slate-300' : 'border-slate-200 bg-white hover:bg-slate-100 text-slate-700'
-              }`}
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold text-[#111215] dark:text-white bg-[#E4E7DC]/70 dark:bg-white/10 hover:bg-[#D4F82C] dark:hover:bg-[#D4F82C] hover:text-[#111215] dark:hover:text-[#111215] border border-[#E4E7DC] dark:border-white/10 transition-all shadow-xs backdrop-blur-xs"
             >
               <span>Recruiter Portal</span>
               <ArrowRight size={13} />
@@ -1386,198 +1435,361 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
           </div>
         </header>
 
-        {/* Login Main Container */}
-        <main className="flex-1 flex items-center justify-center p-4 sm:p-6 my-8">
-          <div className={`w-full max-w-md rounded-2xl border p-6 sm:p-8 shadow-2xl transition-all ${
-            isDark ? 'bg-[#111115] border-white/10 shadow-black/80' : 'bg-white border-slate-200/90 shadow-slate-200/60'
-          }`}>
-            {/* Header Badge & Title */}
-            <div className="text-center space-y-2 mb-7">
-              <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 text-white shadow-lg shadow-emerald-500/25 mb-1">
-                <Sparkles size={22} strokeWidth={2.2} />
-              </div>
-              <h1 className="text-2xl font-black tracking-tight">Candidate Login</h1>
-              <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-                Sign in with your registered <strong>Email</strong> and <strong>Phone Number</strong> (as password) to access your matched jobs and ATS profile.
-              </p>
-            </div>
+        {/* ── Main Dual-Stage Container ── */}
+        <main className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2 sm:py-4 my-auto flex items-center">
+          <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
 
-            {(() => {
-              const hashPart = window.location.hash.includes('?') ? window.location.hash.split('?')[1] : '';
-              const urlParams = new URLSearchParams(location.search || hashPart || window.location.search);
-              const targetJobId = urlParams.get('job') || urlParams.get('jobId');
-              if (!targetJobId) return null;
-              return (
-                <div className="mb-5 p-3.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 text-xs flex items-start gap-2.5 leading-relaxed">
-                  <Sparkles size={16} className="shrink-0 mt-0.5 text-emerald-500" />
-                  <div className="flex-1">
-                    <span className="font-bold block">Applying for Job #{targetJobId}</span>
-                    <span>Sign in with your Email & Phone Number (as password) to submit your 1-click application.</span>
-                    <div className="mt-2">
-                      <Link
-                        to={`/upload-resume`}
-                        className="inline-flex items-center gap-1 font-bold text-emerald-600 dark:text-emerald-400 hover:underline"
-                      >
-                        <span>New here? Upload Resume to register & apply</span>
-                        <ArrowRight size={12} />
-                      </Link>
-                    </div>
-                  </div>
-                </div>
-              );
-            })()}
-
-            {/* Error Banner */}
-            {authError && (
-              <div className="mb-5 p-3.5 rounded-xl border border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-400 text-xs flex items-start gap-2.5 leading-relaxed">
-                <AlertCircle size={16} className="shrink-0 mt-0.5" />
-                <div className="flex-1">
-                  <span>{authError}</span>
-                  {authError.includes('upload your resume') && (
-                    <div className="mt-2">
-                      <Link
-                        to="/upload-resume"
-                        className="inline-flex items-center gap-1 font-bold text-emerald-600 dark:text-emerald-400 hover:underline"
-                      >
-                        <span>Upload Resume Now</span>
-                        <ArrowRight size={12} />
-                      </Link>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Login Form */}
-            <form onSubmit={handleLogin} className="space-y-4">
-              {/* Email Field */}
+            {/* ══════════════════════════════════════════════
+                LEFT SIDE: Candidate Career Launchpad
+               ══════════════════════════════════════════════ */}
+            <div className="hidden lg:flex lg:col-span-7 flex-col gap-6 pr-4">
+              
+              {/* Eyebrow & Headline */}
               <div>
-                <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${
-                  isDark ? 'text-slate-300' : 'text-slate-700'
-                }`}>
-                  Email Address
-                </label>
-                <div className="relative">
-                  <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                    <Mail size={16} />
-                  </span>
-                  <input
-                    type="email"
-                    required
-                    value={emailInput}
-                    onChange={(e) => setEmailInput(e.target.value)}
-                    placeholder="e.g. yourname@example.com"
-                    className={`w-full pl-10 pr-4 py-2.5 rounded-xl text-sm font-medium border transition-all outline-none focus:ring-2 focus:ring-emerald-500/50 ${
-                      isDark
-                        ? 'bg-black/40 border-white/10 text-white placeholder-slate-500 focus:border-emerald-500'
-                        : 'bg-slate-50 border-slate-200 text-slate-900 placeholder-slate-400 focus:border-emerald-600'
-                    }`}
-                  />
+                <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider bg-[#D4F82C] text-[#111215] shadow-xs mb-4">
+                  <Sparkles size={14} className="fill-[#111215]" />
+                  Career Launchpad • AI-Powered
                 </div>
-              </div>
-
-              {/* Password (Phone Number) Field */}
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className={`text-xs font-bold uppercase tracking-wider ${
-                    isDark ? 'text-slate-300' : 'text-slate-700'
-                  }`}>
-                    Password (Phone Number)
-                  </label>
-                  <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
-                    Registered Mobile No.
-                  </span>
-                </div>
-                <div className="relative">
-                  <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                    <Lock size={16} />
-                  </span>
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    required
-                    value={phonePasswordInput}
-                    onChange={(e) => setPhonePasswordInput(e.target.value)}
-                    placeholder="Enter registered phone number"
-                    className={`w-full pl-10 pr-11 py-2.5 rounded-xl text-sm font-medium border transition-all outline-none focus:ring-2 focus:ring-emerald-500/50 ${
-                      isDark
-                        ? 'bg-black/40 border-white/10 text-white placeholder-slate-500 focus:border-emerald-500'
-                        : 'bg-slate-50 border-slate-200 text-slate-900 placeholder-slate-400 focus:border-emerald-600'
-                    }`}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(p => !p)}
-                    className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-200 cursor-pointer"
-                  >
-                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </button>
-                </div>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1.5 flex items-center gap-1">
-                  <ShieldCheck size={12} className="text-emerald-500 shrink-0" />
-                  <span>Use the phone number you provided on your resume.</span>
+                <h1 className="text-4xl xl:text-5xl font-black tracking-tight text-[#111215] dark:text-white leading-[1.12]">
+                  Fast-track your dream role with <span className="underline decoration-[#D4F82C] decoration-4 underline-offset-4">intelligent matching</span>.
+                </h1>
+                <p className="mt-3.5 text-base text-[#575A51] dark:text-neutral-400 max-w-xl leading-relaxed">
+                  Log in to track your hiring stages, take autonomous AI voice interviews, view skill match scores, and 1-click apply to top companies.
                 </p>
               </div>
 
-              {/* Remember Me */}
-              <div className="flex items-center justify-between pt-1">
-                <label className="flex items-center gap-2 cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={rememberMe}
-                    onChange={(e) => setRememberMe(e.target.checked)}
-                    className="rounded border-slate-300 text-emerald-600 focus:ring-0 w-3.5 h-3.5 cursor-pointer accent-emerald-500"
-                  />
-                  <span className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-                    Stay signed in
+              {/* Bento Feature Card: AI Talent Match Simulation */}
+              <div className="relative rounded-3xl border border-[#E4E7DC] dark:border-white/10 bg-white/85 dark:bg-[#15161A]/85 p-6 shadow-xl backdrop-blur-md overflow-hidden group hover:border-[#111215]/30 dark:hover:border-white/20 transition-all">
+                <div className="absolute -top-12 -right-12 w-48 h-48 bg-[#D4F82C]/20 rounded-full blur-3xl pointer-events-none"></div>
+
+                {/* Top bar */}
+                <div className="flex items-center justify-between pb-4 border-b border-[#E4E7DC] dark:border-white/10">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-[#111215] text-[#D4F82C] flex items-center justify-center font-bold text-sm shadow-xs">
+                      <Brain size={20} />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold uppercase tracking-wider text-[#73766C] dark:text-neutral-400">
+                          Automated Candidate Radar
+                        </span>
+                        <span className="flex h-2 w-2 relative">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#8FB305] opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-[#8FB305]"></span>
+                        </span>
+                      </div>
+                      <p className="text-sm font-bold text-[#111215] dark:text-white">
+                        Senior Cloud & Distributed Systems Engineer
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#D4F82C] text-[#111215] text-xs font-black shadow-xs">
+                    <Zap size={13} className="fill-[#111215]" />
+                    96% MATCH
+                  </div>
+                </div>
+
+                {/* Candidate Snapshot */}
+                <div className="mt-4 flex items-start justify-between bg-[#F8F9F5] dark:bg-[#1D1F24] p-4 rounded-2xl border border-[#E4E7DC]/60 dark:border-white/5">
+                  <div className="flex items-center gap-3.5">
+                    <div className="w-11 h-11 rounded-full bg-gradient-to-tr from-[#111215] to-[#34373F] text-white flex items-center justify-center font-bold text-sm border-2 border-white dark:border-[#15161A] shadow-xs">
+                      <UserRound size={20} />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-bold text-[#111215] dark:text-white flex items-center gap-1.5">
+                        Your Verified ATS Profile
+                        <CheckCircle2 size={14} className="text-[#8FB305] dark:text-[#D4F82C]" />
+                      </h4>
+                      <p className="text-xs text-[#575A51] dark:text-neutral-400">
+                        Resume parsed • Ready for 1-click hiring pipeline
+                      </p>
+                    </div>
+                  </div>
+                  <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-[#E4E7DC] dark:bg-white/10 text-[#111215] dark:text-white">
+                    Direct Invite Ready
                   </span>
-                </label>
+                </div>
+
+                {/* Benefits / Checklist */}
+                <div className="mt-3.5 grid grid-cols-2 gap-2 text-xs">
+                  <div className="flex items-center gap-2 p-2 rounded-xl bg-white/60 dark:bg-white/5 border border-[#E4E7DC]/60 dark:border-white/5 text-[#575A51] dark:text-neutral-300">
+                    <Check size={14} className="text-[#8FB305] shrink-0 font-bold" />
+                    <span className="truncate font-medium">Real-Time Application Tracking</span>
+                  </div>
+                  <div className="flex items-center gap-2 p-2 rounded-xl bg-white/60 dark:bg-white/5 border border-[#E4E7DC]/60 dark:border-white/5 text-[#575A51] dark:text-neutral-300">
+                    <Check size={14} className="text-[#8FB305] shrink-0 font-bold" />
+                    <span className="truncate font-medium">Audio AI Job Summaries</span>
+                  </div>
+                  <div className="flex items-center gap-2 p-2 rounded-xl bg-white/60 dark:bg-white/5 border border-[#E4E7DC]/60 dark:border-white/5 text-[#575A51] dark:text-neutral-300">
+                    <Check size={14} className="text-[#8FB305] shrink-0 font-bold" />
+                    <span className="truncate font-medium">Instant 1-Click Applications</span>
+                  </div>
+                  <div className="flex items-center gap-2 p-2 rounded-xl bg-white/60 dark:bg-white/5 border border-[#E4E7DC]/60 dark:border-white/5 text-[#575A51] dark:text-neutral-300">
+                    <Check size={14} className="text-[#8FB305] shrink-0 font-bold" />
+                    <span className="truncate font-medium">Verified Direct Recruiter Access</span>
+                  </div>
+                </div>
               </div>
 
-              {/* Submit Button */}
-              <button
-                type="submit"
-                disabled={authLoading}
-                className="w-full mt-2 py-3 px-4 rounded-xl font-bold text-sm text-white bg-gradient-to-r from-emerald-600 via-teal-600 to-indigo-600 hover:from-emerald-500 hover:to-indigo-500 shadow-lg shadow-emerald-500/25 active:scale-[0.99] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
-              >
-                {authLoading ? (
-                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                ) : (
-                  <>
-                    <span>Sign In to Candidate Dashboard</span>
-                    <ArrowRight size={16} />
-                  </>
-                )}
-              </button>
-            </form>
+              {/* Metrics Row */}
+              <div className="grid grid-cols-3 gap-3">
+                <div className="p-3.5 rounded-2xl bg-white/70 dark:bg-[#15161A]/70 border border-[#E4E7DC] dark:border-white/10 shadow-xs backdrop-blur-xs">
+                  <div className="text-xl xl:text-2xl font-black text-[#111215] dark:text-white tracking-tight">
+                    1<span className="text-[#8FB305] dark:text-[#D4F82C]">-Click</span>
+                  </div>
+                  <p className="text-[11px] font-medium text-[#73766C] dark:text-neutral-400 mt-0.5">
+                    Fast Application Sync
+                  </p>
+                </div>
 
-            {/* Footer Navigation */}
-            <div className={`mt-6 pt-5 border-t text-center space-y-3 ${
-              isDark ? 'border-white/10' : 'border-slate-200'
-            }`}>
-              <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-                Haven't registered or uploaded your resume yet?{' '}
-                <Link
-                  to="/upload-resume"
-                  className="font-bold text-emerald-600 dark:text-emerald-400 hover:underline"
-                >
-                  Upload Resume →
-                </Link>
-              </p>
-              <p className={`text-[11px] ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
-                Are you an Employer or HR?{' '}
-                <Link to="/auth" className="hover:underline font-medium text-slate-400 hover:text-white">
-                  Recruiter Sign In
-                </Link>
-              </p>
+                <div className="p-3.5 rounded-2xl bg-white/70 dark:bg-[#15161A]/70 border border-[#E4E7DC] dark:border-white/10 shadow-xs backdrop-blur-xs">
+                  <div className="text-xl xl:text-2xl font-black text-[#111215] dark:text-white tracking-tight">
+                    &lt; 24<span className="text-[#8FB305] dark:text-[#D4F82C]">h</span>
+                  </div>
+                  <p className="text-[11px] font-medium text-[#73766C] dark:text-neutral-400 mt-0.5">
+                    Review Turnaround
+                  </p>
+                </div>
+
+                <div className="p-3.5 rounded-2xl bg-white/70 dark:bg-[#15161A]/70 border border-[#E4E7DC] dark:border-white/10 shadow-xs backdrop-blur-xs">
+                  <div className="text-xl xl:text-2xl font-black text-[#111215] dark:text-white tracking-tight">
+                    100<span className="text-[#8FB305] dark:text-[#D4F82C]">%</span>
+                  </div>
+                  <p className="text-[11px] font-medium text-[#73766C] dark:text-neutral-400 mt-0.5">
+                    Free for Candidates
+                  </p>
+                </div>
+              </div>
+
+              {/* Security Seal */}
+              <div className="flex items-center gap-2.5 text-xs text-[#73766C] dark:text-neutral-400">
+                <ShieldCheck size={16} className="text-[#8FB305] dark:text-[#D4F82C]" />
+                <span>Protected Candidate Vault • Zero unsolicited spam • Powered by SNAB Innovations</span>
+              </div>
             </div>
+
+            {/* ══════════════════════════════════════════════
+                RIGHT SIDE: Floating Bento Candidate Auth Card
+               ══════════════════════════════════════════════ */}
+            <div className="lg:col-span-5 w-full">
+              <div className="relative rounded-3xl bg-white dark:bg-[#15161A] border border-[#E4E7DC] dark:border-white/10 p-5 sm:p-7 shadow-2xl backdrop-blur-xl">
+                
+                {/* Top Accent Strip */}
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 h-1.5 w-24 bg-[#D4F82C] rounded-b-full"></div>
+
+                {/* Card Header */}
+                <div className="mb-6">
+                  <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-[#73766C] dark:text-neutral-400 mb-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#D4F82C]"></span>
+                    Candidate Portal
+                  </span>
+                  <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-[#111215] dark:text-white">
+                    Candidate Login
+                  </h2>
+                  <p className="mt-1.5 text-xs sm:text-sm text-[#575A51] dark:text-neutral-400">
+                    Sign in with your registered <strong>Email</strong> and <strong>Phone Number</strong> (as password).
+                  </p>
+                </div>
+
+                {/* Target Job Callout (if navigated via job referral/apply link) */}
+                {targetJobId && (
+                  <div className="mb-4 p-3.5 rounded-2xl bg-[#D4F82C]/15 dark:bg-[#D4F82C]/10 border border-[#8FB305]/30 text-[#111215] dark:text-[#F8F9F5] text-xs flex items-start gap-2.5 leading-relaxed">
+                    <Sparkles size={16} className="shrink-0 mt-0.5 text-[#8FB305] dark:text-[#D4F82C]" />
+                    <div className="flex-1">
+                      <span className="font-bold block">Applying for Position #{targetJobId}</span>
+                      <span>Sign in with your Email & Phone Number to submit your 1-click application.</span>
+                      <div className="mt-2">
+                        <Link
+                          to="/upload-resume"
+                          className="inline-flex items-center gap-1 font-bold text-[#8FB305] dark:text-[#D4F82C] hover:underline"
+                        >
+                          <span>New candidate? Upload Resume to register</span>
+                          <ArrowRight size={12} />
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Auth Error Banner */}
+                {authError && (
+                  <div className="mb-4 p-3.5 rounded-2xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/50 text-red-800 dark:text-red-300 text-xs flex items-start gap-2.5 leading-relaxed">
+                    <AlertCircle size={17} className="shrink-0 mt-0.5 text-red-600 dark:text-red-400" />
+                    <div className="flex-1">
+                      <span>{authError}</span>
+                      {authError.includes('upload your resume') && (
+                        <div className="mt-2">
+                          <Link
+                            to="/upload-resume"
+                            className="inline-flex items-center gap-1 font-bold text-[#111215] dark:text-white underline hover:no-underline"
+                          >
+                            <span>Upload Resume to create account</span>
+                            <ArrowRight size={12} />
+                          </Link>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Form */}
+                <form onSubmit={handleLogin} className="space-y-4">
+                  {/* Email Field */}
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-bold text-[#111215] dark:text-neutral-200 uppercase tracking-wider">
+                      Email Address
+                    </label>
+                    <div className="relative flex items-center">
+                      <span className="absolute left-3.5 text-[#73766C] dark:text-neutral-500 pointer-events-none">
+                        <Mail size={17} />
+                      </span>
+                      <input
+                        type="email"
+                        required
+                        value={emailInput}
+                        onChange={(e) => setEmailInput(e.target.value)}
+                        placeholder="e.g. candidate@example.com"
+                        autoComplete="email"
+                        className="w-full h-11 pl-10 pr-4 rounded-xl bg-[#F8F9F5] dark:bg-[#1D1F24] border border-[#E4E7DC] dark:border-white/10 text-sm text-[#111215] dark:text-white placeholder-[#73766C]/60 dark:placeholder-neutral-500 focus:outline-none focus:border-[#111215] dark:focus:border-[#D4F82C] focus:bg-white dark:focus:bg-[#15161A] transition-all"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Password (Phone Number) Field */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <label className="block text-xs font-bold text-[#111215] dark:text-neutral-200 uppercase tracking-wider">
+                        Password (Phone Number)
+                      </label>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#E4E7DC] dark:bg-white/10 text-[#575A51] dark:text-neutral-300">
+                        Registered Mobile No.
+                      </span>
+                    </div>
+                    <div className="relative flex items-center">
+                      <span className="absolute left-3.5 text-[#73766C] dark:text-neutral-500 pointer-events-none">
+                        <LockKeyhole size={17} />
+                      </span>
+                      <input
+                        type={showPassword ? 'text' : 'password'}
+                        required
+                        value={phonePasswordInput}
+                        onChange={(e) => setPhonePasswordInput(e.target.value)}
+                        placeholder="Enter registered mobile number"
+                        autoComplete="current-password"
+                        className="w-full h-11 pl-10 pr-11 rounded-xl bg-[#F8F9F5] dark:bg-[#1D1F24] border border-[#E4E7DC] dark:border-white/10 text-sm text-[#111215] dark:text-white placeholder-[#73766C]/60 dark:placeholder-neutral-500 focus:outline-none focus:border-[#111215] dark:focus:border-[#D4F82C] focus:bg-white dark:focus:bg-[#15161A] transition-all"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword((p) => !p)}
+                        className="absolute right-3 text-[#73766C] dark:text-neutral-400 hover:text-[#111215] dark:hover:text-white p-1 transition-colors cursor-pointer"
+                        aria-label={showPassword ? 'Hide password' : 'Show password'}
+                      >
+                        {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    </div>
+                    <p className="text-[11px] text-[#73766C] dark:text-neutral-400 mt-1 flex items-center gap-1.5">
+                      <ShieldCheck size={13} className="text-[#8FB305] dark:text-[#D4F82C] shrink-0" />
+                      <span>Use the phone number listed on your submitted resume.</span>
+                    </p>
+                  </div>
+
+                  {/* Remember Me */}
+                  <div className="flex items-center justify-between pt-1">
+                    <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={rememberMe}
+                        onChange={(e) => setRememberMe(e.target.checked)}
+                        className="sr-only"
+                      />
+                      <span
+                        className={`w-4 h-4 rounded-md flex items-center justify-center transition-all ${
+                          rememberMe
+                            ? 'bg-[#111215] dark:bg-[#D4F82C] text-white dark:text-[#111215]'
+                            : 'border border-[#E4E7DC] dark:border-white/20 bg-[#F8F9F5] dark:bg-[#1D1F24]'
+                        }`}
+                      >
+                        {rememberMe && <Check size={12} strokeWidth={3} />}
+                      </span>
+                      <span className="text-xs font-medium text-[#575A51] dark:text-neutral-300">
+                        Stay signed in on this device
+                      </span>
+                    </label>
+                  </div>
+
+                  {/* Submit Button */}
+                  <button
+                    type="submit"
+                    disabled={authLoading}
+                    className="w-full h-11 sm:h-12 rounded-full bg-[#111215] hover:bg-[#202227] text-white dark:bg-[#D4F82C] dark:hover:bg-[#C2E820] dark:text-[#111215] font-bold text-sm shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 group cursor-pointer disabled:opacity-50 mt-2"
+                  >
+                    <span>{authLoading ? 'Verifying profile…' : 'Sign In to Candidate Dashboard'}</span>
+                    {!authLoading && <ArrowRight size={17} className="group-hover:translate-x-0.5 transition-transform" />}
+                  </button>
+                </form>
+
+                {/* ── New Candidate Upload Resume Bridge ── */}
+                <div className="mt-5 pt-4 border-t border-[#E4E7DC] dark:border-white/10">
+                  <Link
+                    to="/upload-resume"
+                    className="group flex items-center justify-between p-3 sm:p-3.5 rounded-2xl bg-[#F8F9F5] hover:bg-[#F0F2EB] dark:bg-[#1D1F24] dark:hover:bg-[#24272E] border border-[#E4E7DC] dark:border-white/10 transition-all text-left"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-xl bg-[#D4F82C] text-[#111215] flex items-center justify-center font-bold shrink-0">
+                        <UploadCloud size={16} />
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-[#111215] dark:text-white flex items-center gap-1">
+                          New here? Upload Resume
+                          <span className="text-[10px] font-semibold px-1.5 py-0.2 rounded-full bg-[#E4E7DC] dark:bg-white/10 text-[#575A51] dark:text-neutral-300">
+                            Instant Register
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-[#73766C] dark:text-neutral-400">
+                          Parse skills and get matched to high-paying jobs
+                        </p>
+                      </div>
+                    </div>
+                    <ChevronRight
+                      size={16}
+                      className="text-[#73766C] dark:text-neutral-400 group-hover:translate-x-1 group-hover:text-[#111215] dark:group-hover:text-white transition-all shrink-0"
+                    />
+                  </Link>
+
+                  <div className="mt-3 text-center text-xs text-[#73766C] dark:text-neutral-400">
+                    Are you a Recruiter or Employer?{' '}
+                    <Link to="/auth" className="font-bold text-[#111215] dark:text-white hover:underline cursor-pointer ml-1">
+                      Recruiter Sign In →
+                    </Link>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
           </div>
         </main>
 
-        {/* Simple Footer */}
-        <footer className={`border-t py-4 text-center text-xs ${
-          isDark ? 'border-white/5 text-slate-500' : 'border-slate-200 text-slate-400'
-        }`}>
-          © {new Date().getFullYear()} SNAB hireX • Candidate Portal
+        {/* ── Footer ── */}
+        <footer className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 sm:py-4 border-t border-[#E4E7DC]/60 dark:border-white/5 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-[#73766C] dark:text-neutral-400">
+          <div className="flex items-center gap-4">
+            <Link to="/contact" className="hover:text-[#111215] dark:hover:text-white flex items-center gap-1 transition-colors">
+              <Mail size={13} /> Support
+            </Link>
+            <Link to="/report-bug" className="hover:text-[#111215] dark:hover:text-white flex items-center gap-1 transition-colors">
+              <Bug size={13} /> Report Issue
+            </Link>
+            <a
+              href="https://snab.co.in"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-[#111215] dark:hover:text-white transition-colors"
+            >
+              SNAB Innovations
+            </a>
+          </div>
+          <p>© {new Date().getFullYear()} SNAB hireX • Candidate Portal. All rights reserved.</p>
         </footer>
       </div>
     );
@@ -1587,46 +1799,36 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
   // LOGGED IN: Candidate Dashboard View
   // ==========================================
   return (
-    <div className={`min-h-screen flex flex-col transition-colors ${
-      isDark ? 'bg-[#08080a] text-white' : 'bg-slate-50 text-slate-900'
-    }`}>
-      {/* Top Header Bar */}
-      <header className={`sticky top-0 z-40 border-b px-4 sm:px-8 py-3.5 flex items-center justify-between transition-colors ${
-        isDark ? 'border-white/10 bg-[#0d0d11]/90 backdrop-blur-md' : 'border-slate-200 bg-white/90 backdrop-blur-md'
-      }`}>
+    <div className="min-h-screen bg-[#F8F9F5] dark:bg-[#0D0E11] text-[#111215] dark:text-[#F8F9F5] flex flex-col justify-between selection:bg-[#D4F82C] selection:text-[#111215] transition-colors duration-300 font-sans relative">
+      {/* ── Top Header Bar ── */}
+      <header className="sticky top-0 z-40 border-b border-[#E4E7DC] dark:border-white/10 bg-white/80 dark:bg-[#15161A]/80 backdrop-blur-md px-4 sm:px-8 py-3.5 flex items-center justify-between transition-colors">
         {/* Brand & Badge */}
         <div className="flex items-center gap-3">
-          <Logo className="h-8 w-auto" isDark={isDark} />
-          <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wide uppercase bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            <span>Candidate Portal</span>
-          </div>
+          <HireXLogo size="md" withLink to="/" isDark={isDark} />
+          <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[#E4E7DC]/60 dark:bg-white/10 text-[#575A51] dark:text-neutral-300 border border-[#E4E7DC] dark:border-white/10 backdrop-blur-xs">
+            <span className="w-2 h-2 rounded-full bg-[#8FB305] animate-pulse" />
+            Candidate Portal
+          </span>
         </div>
 
         {/* User Chip & Actions */}
         <div className="flex items-center gap-3 sm:gap-4">
           <div className="hidden sm:flex flex-col text-right">
-            <span className="text-xs font-bold leading-tight truncate max-w-[180px]">
+            <span className="text-xs font-bold leading-tight truncate max-w-[180px] text-[#111215] dark:text-white">
               {editForm.name || candidate.name || 'Candidate'}
             </span>
-            <span className="text-[11px] text-slate-400 truncate max-w-[180px]">
+            <span className="text-[11px] text-[#73766C] dark:text-neutral-400 truncate max-w-[180px]">
               {editForm.email || candidate.email}
             </span>
           </div>
 
-          <DayNightToggle />
-
           <button
             type="button"
             onClick={handleLogout}
-            className={`p-2 sm:px-3 sm:py-1.5 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer ${
-              isDark
-                ? 'border-white/10 bg-white/5 hover:bg-rose-500/20 hover:text-rose-400 hover:border-rose-500/30 text-slate-300'
-                : 'border-slate-200 bg-white hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 text-slate-700'
-            }`}
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-[#E4E7DC] dark:border-white/10 bg-white/80 dark:bg-white/5 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40 dark:hover:text-red-400 text-xs font-bold text-[#575A51] dark:text-neutral-300 transition-all shadow-xs cursor-pointer"
             title="Log out of candidate account"
           >
-            <LogOut size={14} />
+            <LogOut size={13} />
             <span className="hidden sm:inline">Sign Out</span>
           </button>
         </div>
@@ -1638,10 +1840,10 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
         {activeTab === 'matches' && (
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-2">
             <div>
-              <h1 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 dark:text-white">
+              <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-[#111215] dark:text-white">
                 Welcome, {editForm.name || candidate.name || 'Candidate'} 👋
               </h1>
-              <p className={`text-xs sm:text-sm ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+              <p className="text-xs sm:text-sm text-[#575A51] dark:text-neutral-400 mt-1">
                 Explore your personalized AI-matched job opportunities.
               </p>
             </div>
@@ -1650,33 +1852,32 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
 
         {/* Quick App-like Metric Cards Grid - ONLY shown on Home (Matched roles) tab */}
         {activeTab === 'matches' && (
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3.5">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             {/* Card 1: Matched Jobs */}
             <button
               type="button"
               onClick={() => setActiveTab('matches')}
-              className={`p-2.5 sm:p-3.5 rounded-xl sm:rounded-2xl border text-left transition-all cursor-pointer relative overflow-hidden group ${
+              className={`p-4 sm:p-5 rounded-3xl border text-left transition-all cursor-pointer relative overflow-hidden group ${
                 activeTab === 'matches'
-                  ? isDark ? 'bg-emerald-500/10 border-emerald-500/40 ring-1 ring-emerald-500/30' : 'bg-emerald-50 border-emerald-300 ring-1 ring-emerald-500/20'
-                  : isDark ? 'bg-[#101014] border-white/10 hover:border-white/20' : 'bg-white border-slate-200 hover:border-slate-300 shadow-xs'
+                  ? 'bg-white dark:bg-[#15161A] border-[#111215] dark:border-[#D4F82C] ring-2 ring-[#111215] dark:ring-[#D4F82C] shadow-md'
+                  : 'bg-white dark:bg-[#15161A] border-[#E4E7DC] dark:border-white/10 hover:border-[#111215]/30 dark:hover:border-white/20 shadow-xs'
               }`}
             >
-              <div className="flex items-center justify-between mb-1 sm:mb-2">
-                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
-                  <Sparkles size={14} className="sm:hidden" />
-                  <Sparkles size={16} className="hidden sm:block" />
+              <div className="flex items-center justify-between mb-2 sm:mb-3">
+                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-2xl bg-[#D4F82C] text-[#111215] flex items-center justify-center font-bold shadow-xs">
+                  <Sparkles size={16} />
                 </div>
-                <span className="text-[9px] sm:text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded-full">
+                <span className="text-[10px] sm:text-xs font-black uppercase tracking-wider text-[#111215] bg-[#D4F82C] px-2.5 py-0.5 rounded-full shadow-xs">
                   AI Match
                 </span>
               </div>
-              <div className="text-lg sm:text-2xl font-black text-slate-900 dark:text-white leading-tight">
+              <div className="text-2xl sm:text-3xl font-black text-[#111215] dark:text-white leading-tight">
                 {matchedJobs.length}
               </div>
-              <div className="text-[11px] sm:text-xs font-bold text-slate-700 dark:text-slate-300 mt-0.5 truncate">
+              <div className="text-xs font-bold text-[#111215] dark:text-neutral-200 mt-1 truncate">
                 Matched Roles
               </div>
-              <div className="hidden sm:block text-[10px] text-slate-400 mt-0.5 truncate">
+              <div className="hidden sm:block text-[11px] text-[#73766C] dark:text-neutral-400 mt-0.5 truncate">
                 {matchedJobs.length > 0 ? `${matchedJobs[0].overallScore}% top fit score` : 'Open roles matching criteria'}
               </div>
             </button>
@@ -1688,28 +1889,27 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
                 setActiveTab('applied');
                 setAppliedStageFilter('all');
               }}
-              className={`p-2.5 sm:p-3.5 rounded-xl sm:rounded-2xl border text-left transition-all cursor-pointer relative overflow-hidden group ${
+              className={`p-4 sm:p-5 rounded-3xl border text-left transition-all cursor-pointer relative overflow-hidden group ${
                 activeTab === 'applied' && appliedStageFilter === 'all'
-                  ? isDark ? 'bg-blue-500/10 border-blue-500/40 ring-1 ring-blue-500/30' : 'bg-blue-50 border-blue-300 ring-1 ring-blue-500/20'
-                  : isDark ? 'bg-[#101014] border-white/10 hover:border-white/20' : 'bg-white border-slate-200 hover:border-slate-300 shadow-xs'
+                  ? 'bg-white dark:bg-[#15161A] border-[#111215] dark:border-[#D4F82C] ring-2 ring-[#111215] dark:ring-[#D4F82C] shadow-md'
+                  : 'bg-white dark:bg-[#15161A] border-[#E4E7DC] dark:border-white/10 hover:border-[#111215]/30 dark:hover:border-white/20 shadow-xs'
               }`}
             >
-              <div className="flex items-center justify-between mb-1 sm:mb-2">
-                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-blue-500/15 text-blue-600 dark:text-blue-400 flex items-center justify-center">
-                  <Briefcase size={14} className="sm:hidden" />
-                  <Briefcase size={16} className="hidden sm:block" />
+              <div className="flex items-center justify-between mb-2 sm:mb-3">
+                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-2xl bg-[#111215] text-[#D4F82C] dark:bg-white/10 dark:text-[#D4F82C] flex items-center justify-center font-bold shadow-xs">
+                  <Briefcase size={16} />
                 </div>
-                <span className="text-[9px] sm:text-[10px] font-bold text-blue-600 dark:text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded-full">
+                <span className="text-[10px] sm:text-xs font-black uppercase tracking-wider text-[#575A51] dark:text-neutral-300 bg-[#E4E7DC]/60 dark:bg-white/10 px-2.5 py-0.5 rounded-full">
                   Track
                 </span>
               </div>
-              <div className="text-lg sm:text-2xl font-black text-slate-900 dark:text-white leading-tight">
+              <div className="text-2xl sm:text-3xl font-black text-[#111215] dark:text-white leading-tight">
                 {myApplicationsList.length}
               </div>
-              <div className="text-[11px] sm:text-xs font-bold text-slate-700 dark:text-slate-300 mt-0.5 truncate">
+              <div className="text-xs font-bold text-[#111215] dark:text-neutral-200 mt-1 truncate">
                 My Applications
               </div>
-              <div className="hidden sm:block text-[10px] text-slate-400 mt-0.5 truncate">
+              <div className="hidden sm:block text-[11px] text-[#73766C] dark:text-neutral-400 mt-0.5 truncate">
                 {underReviewCount > 0 ? `${underReviewCount} under review` : 'Total submitted jobs'}
               </div>
             </button>
@@ -1721,31 +1921,34 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
                 setActiveTab('applied');
                 setAppliedStageFilter('shortlisted');
               }}
-              className={`p-2.5 sm:p-3.5 rounded-xl sm:rounded-2xl border text-left transition-all cursor-pointer relative overflow-hidden group ${
+              className={`p-4 sm:p-5 rounded-3xl border text-left transition-all cursor-pointer relative overflow-hidden group ${
                 activeTab === 'applied' && appliedStageFilter === 'shortlisted'
-                  ? isDark ? 'bg-indigo-500/10 border-indigo-500/40 ring-1 ring-indigo-500/30' : 'bg-indigo-50 border-indigo-300 ring-1 ring-indigo-500/20'
-                  : isDark ? 'bg-[#101014] border-white/10 hover:border-white/20' : 'bg-white border-slate-200 hover:border-slate-300 shadow-xs'
+                  ? 'bg-white dark:bg-[#15161A] border-[#111215] dark:border-[#D4F82C] ring-2 ring-[#111215] dark:ring-[#D4F82C] shadow-md'
+                  : 'bg-white dark:bg-[#15161A] border-[#E4E7DC] dark:border-white/10 hover:border-[#111215]/30 dark:hover:border-white/20 shadow-xs'
               }`}
             >
-              <div className="flex items-center justify-between mb-1 sm:mb-2">
-                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
-                  <Calendar size={14} className="sm:hidden" />
-                  <Calendar size={16} className="hidden sm:block" />
+              <div className="flex items-center justify-between mb-2 sm:mb-3">
+                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-2xl bg-[#111215] text-[#D4F82C] dark:bg-white/10 dark:text-[#D4F82C] flex items-center justify-center font-bold shadow-xs">
+                  <Calendar size={16} />
                 </div>
-                {shortlistedCount > 0 && (
-                  <span className="flex items-center gap-1 text-[9px] sm:text-[10px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-500/10 px-1.5 py-0.5 rounded-full">
-                    <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
+                {shortlistedCount > 0 ? (
+                  <span className="flex items-center gap-1 text-[10px] sm:text-xs font-black uppercase tracking-wider text-[#111215] bg-[#D4F82C] px-2.5 py-0.5 rounded-full shadow-xs animate-pulse">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#111215]" />
                     Active
+                  </span>
+                ) : (
+                  <span className="text-[10px] sm:text-xs font-black uppercase tracking-wider text-[#73766C] dark:text-neutral-400 bg-[#E4E7DC]/60 dark:bg-white/10 px-2.5 py-0.5 rounded-full">
+                    Rounds
                   </span>
                 )}
               </div>
-              <div className="text-lg sm:text-2xl font-black text-slate-900 dark:text-white leading-tight">
+              <div className="text-2xl sm:text-3xl font-black text-[#111215] dark:text-white leading-tight">
                 {shortlistedCount}
               </div>
-              <div className="text-[11px] sm:text-xs font-bold text-slate-700 dark:text-slate-300 mt-0.5 truncate">
+              <div className="text-xs font-bold text-[#111215] dark:text-neutral-200 mt-1 truncate">
                 Shortlisted
               </div>
-              <div className="hidden sm:block text-[10px] text-slate-400 mt-0.5 truncate">
+              <div className="hidden sm:block text-[11px] text-[#73766C] dark:text-neutral-400 mt-0.5 truncate">
                 {shortlistedCount > 0 ? 'Upcoming interview rounds' : 'No active rounds'}
               </div>
             </button>
@@ -1754,28 +1957,27 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
             <button
               type="button"
               onClick={() => setActiveTab('resume')}
-              className={`p-2.5 sm:p-3.5 rounded-xl sm:rounded-2xl border text-left transition-all cursor-pointer relative overflow-hidden group ${
+              className={`p-4 sm:p-5 rounded-3xl border text-left transition-all cursor-pointer relative overflow-hidden group ${
                 activeTab === 'resume'
-                  ? isDark ? 'bg-purple-500/10 border-purple-500/40 ring-1 ring-purple-500/30' : 'bg-purple-50 border-purple-300 ring-1 ring-purple-500/20'
-                  : isDark ? 'bg-[#101014] border-white/10 hover:border-white/20' : 'bg-white border-slate-200 hover:border-slate-300 shadow-xs'
+                  ? 'bg-white dark:bg-[#15161A] border-[#111215] dark:border-[#D4F82C] ring-2 ring-[#111215] dark:ring-[#D4F82C] shadow-md'
+                  : 'bg-white dark:bg-[#15161A] border-[#E4E7DC] dark:border-white/10 hover:border-[#111215]/30 dark:hover:border-white/20 shadow-xs'
               }`}
             >
-              <div className="flex items-center justify-between mb-1 sm:mb-2">
-                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-purple-500/15 text-purple-600 dark:text-purple-400 flex items-center justify-center">
-                  <FileText size={14} className="sm:hidden" />
-                  <FileText size={16} className="hidden sm:block" />
+              <div className="flex items-center justify-between mb-2 sm:mb-3">
+                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-2xl bg-[#111215] text-[#D4F82C] dark:bg-white/10 dark:text-[#D4F82C] flex items-center justify-center font-bold shadow-xs">
+                  <FileText size={16} />
                 </div>
-                <span className="text-[9px] sm:text-[10px] font-bold text-purple-600 dark:text-purple-400 bg-purple-500/10 px-1.5 py-0.5 rounded-full">
+                <span className="text-[10px] sm:text-xs font-black uppercase tracking-wider text-[#575A51] dark:text-neutral-300 bg-[#E4E7DC]/60 dark:bg-white/10 px-2.5 py-0.5 rounded-full">
                   CV
                 </span>
               </div>
-              <div className="text-xs sm:text-base font-black text-slate-900 dark:text-white leading-tight truncate">
+              <div className="text-base sm:text-xl font-black text-[#111215] dark:text-white leading-tight truncate">
                 {candidate?.resumeUrl ? 'Attached' : 'Upload CV'}
               </div>
-              <div className="text-[11px] sm:text-xs font-bold text-slate-700 dark:text-slate-300 mt-0.5 truncate">
+              <div className="text-xs font-bold text-[#111215] dark:text-neutral-200 mt-1 truncate">
                 Resume CV
               </div>
-              <div className="hidden sm:block text-[10px] text-slate-400 mt-0.5 truncate">
+              <div className="hidden sm:block text-[11px] text-[#73766C] dark:text-neutral-400 mt-0.5 truncate">
                 {candidate?.resumeFileName || 'View, preview & replace'}
               </div>
             </button>
@@ -1808,23 +2010,23 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
         )}
 
         {/* Navigation Tabs (Desktop & Tablet) */}
-        <div className="hidden sm:flex items-center gap-2 border-b border-slate-200 dark:border-white/10 pb-1 overflow-x-auto">
+        <div className="hidden sm:flex items-center gap-2 border-b border-[#E4E7DC] dark:border-white/10 pb-3 overflow-x-auto">
           {/* Tab 1: Matched Jobs */}
           <button
             type="button"
             onClick={() => setActiveTab('matches')}
-            className={`px-4 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 transition-all cursor-pointer shrink-0 ${
+            className={`px-4 py-2 rounded-full font-bold text-xs flex items-center gap-2 transition-all cursor-pointer shrink-0 ${
               activeTab === 'matches'
-                ? 'bg-emerald-600 text-white shadow-sm'
-                : 'text-slate-500 hover:text-slate-800 dark:hover:text-white'
+                ? 'bg-[#111215] text-white dark:bg-[#D4F82C] dark:text-[#111215] shadow-xs'
+                : 'text-[#575A51] dark:text-neutral-400 hover:text-[#111215] dark:hover:text-white hover:bg-white/60 dark:hover:bg-white/5'
             }`}
           >
             <Sparkles size={14} />
             <span>Matched Jobs</span>
-            <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${
+            <span className={`text-[10px] font-black px-1.5 py-0.2 rounded-full ${
               activeTab === 'matches'
-                ? 'bg-white/20 text-white'
-                : isDark ? 'bg-white/10 text-slate-300' : 'bg-slate-200 text-slate-700'
+                ? 'bg-white/20 text-white dark:bg-[#111215]/20 dark:text-[#111215]'
+                : 'bg-[#E4E7DC] dark:bg-white/10 text-[#111215] dark:text-white'
             }`}>
               {matchedJobs.length}
             </span>
@@ -1834,23 +2036,23 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
           <button
             type="button"
             onClick={() => setActiveTab('applied')}
-            className={`px-4 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 transition-all cursor-pointer shrink-0 ${
+            className={`px-4 py-2 rounded-full font-bold text-xs flex items-center gap-2 transition-all cursor-pointer shrink-0 ${
               activeTab === 'applied'
-                ? 'bg-emerald-600 text-white shadow-sm'
-                : 'text-slate-500 hover:text-slate-800 dark:hover:text-white'
+                ? 'bg-[#111215] text-white dark:bg-[#D4F82C] dark:text-[#111215] shadow-xs'
+                : 'text-[#575A51] dark:text-neutral-400 hover:text-[#111215] dark:hover:text-white hover:bg-white/60 dark:hover:bg-white/5'
             }`}
           >
             <Briefcase size={14} />
             <span>My Applications</span>
-            <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${
+            <span className={`text-[10px] font-black px-1.5 py-0.2 rounded-full ${
               activeTab === 'applied'
-                ? 'bg-white/20 text-white'
-                : isDark ? 'bg-white/10 text-slate-300' : 'bg-slate-200 text-slate-700'
+                ? 'bg-white/20 text-white dark:bg-[#111215]/20 dark:text-[#111215]'
+                : 'bg-[#E4E7DC] dark:bg-white/10 text-[#111215] dark:text-white'
             }`}>
               {myApplicationsList.length}
             </span>
             {shortlistedCount > 0 && (
-              <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse ml-0.5" title="Active interview rounds!" />
+              <span className="w-2 h-2 rounded-full bg-[#8FB305] animate-pulse ml-0.5" title="Active interview rounds!" />
             )}
           </button>
 
@@ -1858,10 +2060,10 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
           <button
             type="button"
             onClick={() => setActiveTab('resume')}
-            className={`px-4 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 transition-all cursor-pointer shrink-0 ${
+            className={`px-4 py-2 rounded-full font-bold text-xs flex items-center gap-2 transition-all cursor-pointer shrink-0 ${
               activeTab === 'resume'
-                ? 'bg-emerald-600 text-white shadow-sm'
-                : 'text-slate-500 hover:text-slate-800 dark:hover:text-white'
+                ? 'bg-[#111215] text-white dark:bg-[#D4F82C] dark:text-[#111215] shadow-xs'
+                : 'text-[#575A51] dark:text-neutral-400 hover:text-[#111215] dark:hover:text-white hover:bg-white/60 dark:hover:bg-white/5'
             }`}
           >
             <FileText size={14} />
@@ -1872,10 +2074,10 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
           <button
             type="button"
             onClick={() => setActiveTab('edit-profile')}
-            className={`px-4 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 transition-all cursor-pointer shrink-0 ${
+            className={`px-4 py-2 rounded-full font-bold text-xs flex items-center gap-2 transition-all cursor-pointer shrink-0 ${
               activeTab === 'edit-profile'
-                ? 'bg-emerald-600 text-white shadow-sm'
-                : 'text-slate-500 hover:text-slate-800 dark:hover:text-white'
+                ? 'bg-[#111215] text-white dark:bg-[#D4F82C] dark:text-[#111215] shadow-xs'
+                : 'text-[#575A51] dark:text-neutral-400 hover:text-[#111215] dark:hover:text-white hover:bg-white/60 dark:hover:bg-white/5'
             }`}
           >
             <Edit3 size={14} />
@@ -1887,20 +2089,16 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
         {activeTab === 'matches' && (
           <div className="space-y-6">
             {/* Search and Filters Bar with Segmented Tabs matching Upload Resume */}
-            <div className={`p-3.5 rounded-xl border flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 ${
-              isDark ? 'bg-white/[0.02] border-white/10' : 'bg-white border-slate-200'
-            }`}>
-              {/* Segmented Filter Tabs matching upload resume */}
-              <div className={`flex items-center gap-1 p-1 rounded-xl shadow-xs border overflow-x-auto ${
-                isDark ? 'bg-[#0f0f10] border-white/10' : 'bg-slate-100 border-slate-200'
-              }`}>
+            <div className="p-3 sm:p-3.5 rounded-2xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] shadow-xs flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+              {/* Segmented Filter Tabs matching landing page */}
+              <div className="flex items-center gap-1 p-1 rounded-full border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-[#1D1F24] overflow-x-auto">
                 <button
                   type="button"
                   onClick={() => setMatchFilter('EligibleOnly')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all shrink-0 cursor-pointer ${
+                  className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all shrink-0 cursor-pointer ${
                     matchFilter === 'EligibleOnly'
-                      ? 'bg-emerald-600 text-white shadow-sm'
-                      : isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900 font-semibold'
+                      ? 'bg-[#111215] text-white dark:bg-[#D4F82C] dark:text-[#111215] shadow-xs'
+                      : 'text-[#575A51] dark:text-neutral-400 hover:text-[#111215] dark:hover:text-white'
                   }`}
                 >
                   Eligible
@@ -1908,10 +2106,10 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
                 <button
                   type="button"
                   onClick={() => setMatchFilter('HighMatch')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all shrink-0 cursor-pointer ${
+                  className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all shrink-0 cursor-pointer ${
                     matchFilter === 'HighMatch'
-                      ? 'bg-emerald-600 text-white shadow-sm'
-                      : isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900 font-semibold'
+                      ? 'bg-[#111215] text-white dark:bg-[#D4F82C] dark:text-[#111215] shadow-xs'
+                      : 'text-[#575A51] dark:text-neutral-400 hover:text-[#111215] dark:hover:text-white'
                   }`}
                 >
                   High Match (&ge; 60%)
@@ -1919,10 +2117,10 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
                 <button
                   type="button"
                   onClick={() => setMatchFilter('LocalCity')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all shrink-0 cursor-pointer inline-flex items-center gap-1 ${
+                  className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all shrink-0 cursor-pointer inline-flex items-center gap-1.5 ${
                     matchFilter === 'LocalCity'
-                      ? 'bg-emerald-600 text-white shadow-sm'
-                      : isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900 font-semibold'
+                      ? 'bg-[#111215] text-white dark:bg-[#D4F82C] dark:text-[#111215] shadow-xs'
+                      : 'text-[#575A51] dark:text-neutral-400 hover:text-[#111215] dark:hover:text-white'
                   }`}
                 >
                   <MapPin size={12} />
@@ -1931,10 +2129,10 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
                 <button
                   type="button"
                   onClick={() => setMatchFilter('All')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all shrink-0 cursor-pointer ${
+                  className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all shrink-0 cursor-pointer ${
                     matchFilter === 'All'
-                      ? 'bg-emerald-600 text-white shadow-sm'
-                      : isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900 font-semibold'
+                      ? 'bg-[#111215] text-white dark:bg-[#D4F82C] dark:text-[#111215] shadow-xs'
+                      : 'text-[#575A51] dark:text-neutral-400 hover:text-[#111215] dark:hover:text-white'
                   }`}
                 >
                   All ({matchedJobs.length})
@@ -1944,27 +2142,23 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
               <div className="flex flex-col sm:flex-row items-center gap-2">
                 {/* Search input */}
                 <div className="relative w-full sm:w-64">
-                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#73766C] dark:text-neutral-500 pointer-events-none" />
                   <input
                     type="text"
                     value={searchJobQuery}
                     onChange={(e) => setSearchJobQuery(e.target.value)}
                     placeholder="Filter by title, company, skill..."
-                    className={`w-full pl-9 pr-3 py-1.5 text-xs rounded-lg border outline-none ${
-                      isDark ? 'bg-black/40 border-white/10 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                    }`}
+                    className="w-full pl-9 pr-3.5 py-2 text-xs rounded-full bg-[#F8F9F5] dark:bg-[#1D1F24] border border-[#E4E7DC] dark:border-white/10 text-[#111215] dark:text-white placeholder-[#73766C]/60 focus:bg-white dark:focus:bg-[#15161A] focus:outline-none focus:border-[#111215] dark:focus:border-[#D4F82C] transition-all"
                   />
                 </div>
 
                 {/* Match Score Filter */}
                 <div className="flex items-center gap-1.5 w-full sm:w-auto">
-                  <Filter size={13} className="text-slate-400 shrink-0" />
+                  <Filter size={13} className="text-[#73766C] dark:text-neutral-400 shrink-0" />
                   <select
                     value={minScoreFilter}
                     onChange={(e) => setMinScoreFilter(Number(e.target.value))}
-                    className={`px-2.5 py-1.5 text-xs rounded-lg border outline-none font-semibold cursor-pointer ${
-                      isDark ? 'bg-[#151518] border-white/10 text-white' : 'bg-white border-slate-200 text-slate-800'
-                    }`}
+                    className="px-3 py-2 text-xs rounded-full bg-[#F8F9F5] dark:bg-[#1D1F24] border border-[#E4E7DC] dark:border-white/10 text-[#111215] dark:text-white font-bold outline-none cursor-pointer transition-all"
                   >
                     <option value={0}>All Scores</option>
                     <option value={50}>50% & Above</option>
@@ -2051,38 +2245,34 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
                   return (
                     <div
                       key={job.id}
-                      className={`rounded-2xl border p-5 flex flex-col justify-between transition-all hover:shadow-lg ${
-                        isDark
-                          ? 'bg-[#101014] border-white/10 hover:border-emerald-500/40'
-                          : 'bg-white border-slate-200 hover:border-emerald-500/40 shadow-xs'
-                      }`}
+                      className="rounded-3xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] p-5 sm:p-6 flex flex-col justify-between transition-all hover:shadow-md hover:border-[#111215]/30 dark:hover:border-white/20 shadow-xs group"
                     >
                       {/* Top Badges */}
                       <div className="space-y-3">
                         <div className="flex items-center justify-between gap-2">
-                          <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-extrabold ${
+                          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black shadow-xs ${
                             matchItem.overallScore >= 80
-                              ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
+                              ? 'bg-[#D4F82C] text-[#111215]'
                               : matchItem.overallScore >= 60
-                              ? 'bg-teal-500/15 text-teal-600 dark:text-teal-400 border border-teal-500/30'
-                              : 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30'
+                              ? 'bg-[#8FB305]/20 text-[#8FB305] dark:text-[#D4F82C] border border-[#8FB305]/30'
+                              : 'bg-[#E4E7DC] dark:bg-white/10 text-[#575A51] dark:text-neutral-300'
                           }`}>
-                            <Sparkles size={11} />
+                            <Sparkles size={12} className={matchItem.overallScore >= 80 ? 'fill-[#111215]' : ''} />
                             <span>{matchItem.overallScore}% Match • {matchItem.matchGrade}</span>
                           </span>
 
-                          <span className="text-[10px] font-mono px-2 py-0.5 rounded-md border border-slate-200 dark:border-white/10 text-slate-500">
+                          <span className="text-[10px] font-mono px-2.5 py-0.5 rounded-full border border-[#E4E7DC] dark:border-white/10 text-[#73766C] dark:text-neutral-400 bg-[#F8F9F5] dark:bg-[#1D1F24]">
                             #{job.accessCode}
                           </span>
                         </div>
 
                         {/* Title & Company */}
                         <div>
-                          <h4 className="text-base sm:text-lg font-black tracking-tight hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">
+                          <h4 className="text-base sm:text-lg font-black tracking-tight text-[#111215] dark:text-white hover:text-[#8FB305] dark:hover:text-[#D4F82C] transition-colors">
                             {job.title}
                           </h4>
-                          <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 flex items-center gap-1.5 mt-0.5">
-                            <Building2 size={13} className="text-slate-400" />
+                          <p className="text-xs font-semibold text-[#575A51] dark:text-neutral-400 flex items-center gap-1.5 mt-0.5">
+                            <Building2 size={13} className="text-[#73766C] dark:text-neutral-500" />
                             <span>{job.company}</span>
                             <span>•</span>
                             <span>{job.department}</span>
@@ -2090,42 +2280,36 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
                         </div>
 
                         {/* Details Pills: Location, Exp, Salary */}
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-[11px]">
-                          <div className={`p-2 rounded-xl border flex items-center gap-1.5 ${
-                            isDark ? 'bg-white/[0.02] border-white/5 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-700'
-                          }`}>
-                            <MapPin size={12} className="text-emerald-500 shrink-0" />
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
+                          <div className="p-2.5 rounded-xl border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-[#1D1F24] flex items-center gap-2 text-[#575A51] dark:text-neutral-300 font-medium">
+                            <MapPin size={13} className="text-[#8FB305] dark:text-[#D4F82C] shrink-0" />
                             <span className="truncate">{job.location}</span>
                           </div>
 
-                          <div className={`p-2 rounded-xl border flex items-center gap-1.5 ${
-                            isDark ? 'bg-white/[0.02] border-white/5 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-700'
-                          }`}>
-                            <Briefcase size={12} className="text-emerald-500 shrink-0" />
+                          <div className="p-2.5 rounded-xl border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-[#1D1F24] flex items-center gap-2 text-[#575A51] dark:text-neutral-300 font-medium">
+                            <Briefcase size={13} className="text-[#8FB305] dark:text-[#D4F82C] shrink-0" />
                             <span className="truncate">{job.experience}</span>
                           </div>
 
-                          <div className={`p-2 rounded-xl border col-span-2 sm:col-span-1 flex items-center gap-1.5 ${
-                            isDark ? 'bg-white/[0.02] border-white/5 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-700'
-                          }`}>
-                            <Clock size={12} className="text-emerald-500 shrink-0" />
+                          <div className="p-2.5 rounded-xl border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-[#1D1F24] col-span-2 sm:col-span-1 flex items-center gap-2 text-[#575A51] dark:text-neutral-300 font-medium">
+                            <Clock size={13} className="text-[#8FB305] dark:text-[#D4F82C] shrink-0" />
                             <span className="truncate">{job.salary}</span>
                           </div>
                         </div>
 
                         {/* Matched Skills */}
                         {matchItem.skillMatch?.matchedSkills?.length > 0 && (
-                          <div className="space-y-1 pt-1">
-                            <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block">
+                          <div className="space-y-1.5 pt-1">
+                            <span className="text-[10px] uppercase font-bold tracking-wider text-[#73766C] dark:text-neutral-400 block">
                               Matching Skills ({matchItem.skillMatch.matchedSkills.length})
                             </span>
-                            <div className="flex flex-wrap gap-1">
+                            <div className="flex flex-wrap gap-1.5">
                               {matchItem.skillMatch.matchedSkills.map((sk: string) => (
                                 <span
                                   key={sk}
-                                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30"
+                                  className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-[#E4E7DC]/60 dark:bg-white/10 text-[#111215] dark:text-[#D4F82C] border border-[#E4E7DC] dark:border-white/10"
                                 >
-                                  <Check size={10} strokeWidth={3} />
+                                  <Check size={11} strokeWidth={2.5} className="text-[#8FB305] dark:text-[#D4F82C]" />
                                   <span>{sk}</span>
                                 </span>
                               ))}
@@ -2135,37 +2319,13 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
 
                         {/* Application Status Banner (if candidate already applied) */}
                         {isApplied && (
-                          <div className={`mt-3 p-3 rounded-xl border ${
-                            applicationInfo?.status === 'Interview Scheduled'
-                              ? 'bg-indigo-50/80 dark:bg-indigo-950/20 border-indigo-200 dark:border-indigo-800/40 text-slate-800 dark:text-slate-200'
-                              : applicationInfo?.status === 'Shortlisted'
-                              ? 'bg-emerald-50/80 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800/40 text-slate-800 dark:text-slate-200'
-                              : applicationInfo?.status === 'Hired'
-                              ? 'bg-green-50/80 dark:bg-green-950/20 border-green-200 dark:border-green-800/40 text-slate-800 dark:text-slate-200'
-                              : applicationInfo?.status === 'Offer Extended'
-                              ? 'bg-amber-50/80 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800/40 text-slate-800 dark:text-slate-200'
-                              : applicationInfo?.status === 'Rejected'
-                              ? 'bg-red-50/80 dark:bg-red-950/20 border-red-200 dark:border-red-800/40 text-slate-800 dark:text-slate-200'
-                              : 'bg-blue-50/80 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800/40 text-slate-800 dark:text-slate-200'
-                          }`}>
+                          <div className="mt-3 p-3.5 rounded-2xl border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-[#1D1F24]">
                             <div className="flex items-center justify-between gap-2 flex-wrap">
-                              <div className="flex items-center gap-1.5 flex-wrap">
-                                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="text-[10px] font-bold uppercase tracking-wider text-[#73766C] dark:text-neutral-400">
                                   Application Status:
                                 </span>
-                                <span className={`text-xs font-black px-2.5 py-0.5 rounded-full shadow-xs ${
-                                  applicationInfo?.status === 'Interview Scheduled'
-                                    ? 'bg-indigo-600 text-white'
-                                    : applicationInfo?.status === 'Shortlisted'
-                                    ? 'bg-emerald-600 text-white'
-                                    : applicationInfo?.status === 'Hired'
-                                    ? 'bg-green-600 text-white'
-                                    : applicationInfo?.status === 'Offer Extended'
-                                    ? 'bg-amber-600 text-white'
-                                    : applicationInfo?.status === 'Rejected'
-                                    ? 'bg-red-600 text-white'
-                                    : 'bg-blue-600 text-white'
-                                }`}>
+                                <span className="text-xs font-black px-3 py-0.5 rounded-full shadow-xs bg-[#111215] text-white dark:bg-[#D4F82C] dark:text-[#111215]">
                                   {applicationInfo?.status === 'pending' || applicationInfo?.status === 'interested'
                                     ? 'Applied • Under Review'
                                     : (applicationInfo?.status || 'Applied • Under Review')}
@@ -2173,7 +2333,7 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
                               </div>
 
                               {applicationInfo?.appliedAt && (
-                                <span className="text-[10px] text-slate-400 font-mono">
+                                <span className="text-[10px] text-[#73766C] dark:text-neutral-400 font-mono">
                                   Applied {formatDisplayDate(applicationInfo.appliedAt)}
                                 </span>
                               )}
@@ -2181,12 +2341,12 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
 
                             {/* Confirmed Interview Details (if Interview Scheduled) */}
                             {applicationInfo?.status === 'Interview Scheduled' && applicationInfo.scheduledInterview && (
-                              <div className="mt-2.5 pt-2 border-t border-indigo-200/60 dark:border-indigo-800/40 space-y-1.5 text-xs">
-                                <div className="font-bold text-indigo-700 dark:text-indigo-400 flex items-center gap-1.5">
-                                  <Calendar size={13} />
+                              <div className="mt-2.5 pt-2 border-t border-[#E4E7DC] dark:border-white/10 space-y-1.5 text-xs">
+                                <div className="font-bold text-[#111215] dark:text-white flex items-center gap-1.5">
+                                  <Calendar size={13} className="text-[#8FB305] dark:text-[#D4F82C]" />
                                   <span>Confirmed Interview Session</span>
                                 </div>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-[11px] text-slate-700 dark:text-slate-300">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-[11px] text-[#575A51] dark:text-neutral-300">
                                   {applicationInfo.scheduledInterview.date && (
                                     <div>🗓 <strong>Date:</strong> {applicationInfo.scheduledInterview.date} {applicationInfo.scheduledInterview.time}</div>
                                   )}
@@ -2200,80 +2360,12 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
                                     <div>📍 <strong>Venue:</strong> {applicationInfo.scheduledInterview.location}</div>
                                   )}
                                 </div>
-                                {applicationInfo.scheduledInterview.link && (() => {
-                                  const raw = String(applicationInfo.scheduledInterview.link).trim();
-                                  const cleanDigits = raw.replace(/\D/g, '');
-                                  const isPhone = cleanDigits.length >= 7 && cleanDigits.length <= 15 && !raw.includes('http') && !raw.includes('.com') && !raw.includes('/') && !raw.includes('meet');
-                                  const isWeb = raw.startsWith('http://') || raw.startsWith('https://') || raw.includes('meet.google') || raw.includes('zoom.us') || raw.includes('teams.microsoft') || raw.includes('.com') || raw.includes('.in');
-                                  const targetUrl = isWeb ? (raw.startsWith('http') ? raw : `https://${raw}`) : '';
-                                  const waDigits = cleanDigits.length === 10 ? `91${cleanDigits}` : cleanDigits;
-
-                                  return (
-                                    <div className="p-2.5 rounded-lg border border-indigo-200/50 dark:border-indigo-800/40 bg-white/70 dark:bg-black/20 space-y-1.5 text-xs">
-                                      <div className="flex items-center justify-between text-[11px] font-bold text-slate-500 dark:text-slate-400">
-                                        <span className="flex items-center gap-1">
-                                          {isPhone ? <Phone size={12} className="text-emerald-500" /> : <ExternalLink size={12} className="text-indigo-500" />}
-                                          <span>{isPhone ? 'Contact Phone Number:' : isWeb ? 'Meeting Link:' : 'Details:'}</span>
-                                        </span>
-                                        <button
-                                          type="button"
-                                          onClick={() => handleCopyInterviewLink(raw)}
-                                          className="text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1 font-semibold cursor-pointer text-[10px]"
-                                        >
-                                          {copiedLink === raw ? <Check size={11} /> : <Copy size={11} />}
-                                          <span>{copiedLink === raw ? 'Copied' : 'Copy'}</span>
-                                        </button>
-                                      </div>
-                                      <div className="font-mono text-xs font-bold text-slate-800 dark:text-slate-200 break-all select-all">
-                                        {raw}
-                                      </div>
-                                      <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-                                        {isPhone && (
-                                          <>
-                                            <a
-                                              href={`tel:${cleanDigits}`}
-                                              className="px-2.5 py-1 rounded-lg text-[11px] font-bold text-white bg-emerald-600 hover:bg-emerald-500 flex items-center gap-1"
-                                            >
-                                              <Phone size={11} />
-                                              <span>Call</span>
-                                            </a>
-                                            <a
-                                              href={`https://wa.me/${waDigits}`}
-                                              target="_blank"
-                                              rel="noopener noreferrer"
-                                              className="px-2.5 py-1 rounded-lg text-[11px] font-bold text-white bg-green-600 hover:bg-green-500 flex items-center gap-1"
-                                            >
-                                              <MessageCircle size={11} />
-                                              <span>WhatsApp</span>
-                                            </a>
-                                          </>
-                                        )}
-                                        {isWeb && (
-                                          <a
-                                            href={targetUrl}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="px-2.5 py-1 rounded-lg text-[11px] font-bold text-white bg-indigo-600 hover:bg-indigo-500 flex items-center gap-1"
-                                          >
-                                            <ExternalLink size={11} />
-                                            <span>Join Call</span>
-                                          </a>
-                                        )}
-                                      </div>
-                                    </div>
-                                  );
-                                })()}
-                                {applicationInfo.scheduledInterview.notes && (
-                                  <div className="text-[11px] text-slate-500 dark:text-slate-400">
-                                    📝 <em>{applicationInfo.scheduledInterview.notes}</em>
-                                  </div>
-                                )}
                               </div>
                             )}
 
                             {/* Recruiter feedback notes if available */}
                             {applicationInfo?.recruiterNotes && (
-                              <div className="mt-2 text-[11px] text-slate-600 dark:text-slate-300 italic border-l-2 border-emerald-500 pl-2">
+                              <div className="mt-2 text-[11px] text-[#575A51] dark:text-neutral-300 italic border-l-2 border-[#8FB305] pl-2">
                                 💬 Recruiter note: "{applicationInfo.recruiterNotes}"
                               </div>
                             )}
@@ -2282,14 +2374,12 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
                       </div>
 
                       {/* Card Footer Actions */}
-                      <div className="mt-5 pt-3.5 border-t border-slate-100 dark:border-white/10 flex items-center justify-between gap-2">
+                      <div className="mt-5 pt-4 border-t border-[#E4E7DC] dark:border-white/10 flex items-center justify-between gap-2">
                         {/* View JD Details */}
                         <button
                           type="button"
                           onClick={() => handleOpenJobModal(matchItem)}
-                          className={`px-3.5 py-2 rounded-xl border text-xs font-semibold transition-colors cursor-pointer flex items-center gap-1.5 ${
-                            isDark ? 'border-white/10 hover:bg-white/5 text-slate-300' : 'border-slate-200 hover:bg-slate-100 text-slate-700'
-                          }`}
+                          className="px-4 py-2 rounded-full border border-[#E4E7DC] dark:border-white/10 bg-white/80 dark:bg-white/5 hover:bg-white dark:hover:bg-white/10 text-xs font-bold text-[#111215] dark:text-white transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
                         >
                           <Eye size={13} />
                           <span>View Details</span>
@@ -2298,7 +2388,7 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
                         <div className="flex items-center gap-2">
                           {/* Apply / Status Button */}
                           {isApplied ? (
-                            <div className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400">
+                            <div className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold border border-[#8FB305]/40 bg-[#D4F82C]/15 text-[#111215] dark:text-[#D4F82C]">
                               <CheckCircle2 size={13} />
                               <span>
                                 {applicationInfo?.status === 'pending' || applicationInfo?.status === 'interested'
@@ -2311,7 +2401,7 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
                               type="button"
                               disabled={applyingJobId === job.id}
                               onClick={() => handleApplyToJob(matchItem)}
-                              className="px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-500/25 active:scale-95"
+                              className="px-5 py-2 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer bg-[#111215] hover:bg-[#202227] text-white dark:bg-[#D4F82C] dark:hover:bg-[#C2E820] dark:text-[#111215] shadow-xs active:scale-95 disabled:opacity-50"
                             >
                               {applyingJobId === job.id ? (
                                 <span>Applying...</span>
@@ -2337,24 +2427,22 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
         {activeTab === 'applied' && (
           <div className="space-y-6">
             {/* Header & Stage Filter Chips */}
-            <div className={`p-4 sm:p-5 rounded-2xl border ${
-              isDark ? 'bg-[#101014] border-white/10' : 'bg-white border-slate-200 shadow-xs'
-            }`}>
+            <div className="p-5 rounded-3xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] shadow-xs">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
                 <div>
-                  <h3 className="text-base sm:text-lg font-black tracking-tight flex items-center gap-2">
+                  <h3 className="text-base sm:text-lg font-black tracking-tight text-[#111215] dark:text-white flex items-center gap-2">
                     <span>My Applications & Status Tracker</span>
-                    <span className="text-xs px-2 py-0.5 rounded-full font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                    <span className="text-xs px-2.5 py-0.5 rounded-full font-black bg-[#D4F82C] text-[#111215] shadow-xs">
                       {myApplicationsList.length} Total
                     </span>
                   </h3>
-                  <p className={`text-xs mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                  <p className="text-xs mt-0.5 text-[#575A51] dark:text-neutral-400">
                     Real-time status updates from recruiters, shortlist alerts, and scheduled interview rounds.
                   </p>
                 </div>
 
                 {shortlistedCount > 0 && (
-                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 text-xs font-bold animate-pulse">
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#D4F82C]/25 border border-[#8FB305]/40 text-[#111215] dark:text-[#D4F82C] text-xs font-black shadow-xs animate-pulse">
                     <Award size={15} />
                     <span>{shortlistedCount} Actionable Shortlist / Interview{shortlistedCount > 1 ? 's' : ''}!</span>
                   </div>
@@ -2366,10 +2454,10 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
                 <button
                   type="button"
                   onClick={() => setAppliedStageFilter('all')}
-                  className={`px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition-all cursor-pointer ${
+                  className={`px-4 py-1.5 rounded-full font-bold whitespace-nowrap transition-all cursor-pointer ${
                     appliedStageFilter === 'all'
-                      ? 'bg-emerald-600 text-white shadow-xs'
-                      : isDark ? 'bg-white/5 text-slate-300 hover:bg-white/10' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                      ? 'bg-[#111215] text-white dark:bg-[#D4F82C] dark:text-[#111215] shadow-xs'
+                      : 'text-[#575A51] dark:text-neutral-400 bg-[#F8F9F5] dark:bg-[#1D1F24] border border-[#E4E7DC] dark:border-white/10 hover:border-[#111215]/30'
                   }`}
                 >
                   All Applications ({myApplicationsList.length})
@@ -2377,22 +2465,22 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
                 <button
                   type="button"
                   onClick={() => setAppliedStageFilter('shortlisted')}
-                  className={`px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 ${
+                  className={`px-4 py-1.5 rounded-full font-bold whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 ${
                     appliedStageFilter === 'shortlisted'
-                      ? 'bg-amber-600 text-white shadow-xs'
-                      : isDark ? 'bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 border border-amber-500/20' : 'bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200'
+                      ? 'bg-[#111215] text-white dark:bg-[#D4F82C] dark:text-[#111215] shadow-xs'
+                      : 'text-[#575A51] dark:text-neutral-400 bg-[#F8F9F5] dark:bg-[#1D1F24] border border-[#E4E7DC] dark:border-white/10 hover:border-[#111215]/30'
                   }`}
                 >
-                  <Award size={13} />
+                  <Award size={13} className="text-[#8FB305] dark:text-[#D4F82C]" />
                   <span>Shortlisted & Rounds ({shortlistedCount})</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setAppliedStageFilter('under-review')}
-                  className={`px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition-all cursor-pointer ${
+                  className={`px-4 py-1.5 rounded-full font-bold whitespace-nowrap transition-all cursor-pointer ${
                     appliedStageFilter === 'under-review'
-                      ? 'bg-blue-600 text-white shadow-xs'
-                      : isDark ? 'bg-white/5 text-slate-300 hover:bg-white/10' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                      ? 'bg-[#111215] text-white dark:bg-[#D4F82C] dark:text-[#111215] shadow-xs'
+                      : 'text-[#575A51] dark:text-neutral-400 bg-[#F8F9F5] dark:bg-[#1D1F24] border border-[#E4E7DC] dark:border-white/10 hover:border-[#111215]/30'
                   }`}
                 >
                   Under Review ({underReviewCount})
@@ -2400,10 +2488,10 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
                 <button
                   type="button"
                   onClick={() => setAppliedStageFilter('selected')}
-                  className={`px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition-all cursor-pointer ${
+                  className={`px-4 py-1.5 rounded-full font-bold whitespace-nowrap transition-all cursor-pointer ${
                     appliedStageFilter === 'selected'
-                      ? 'bg-emerald-600 text-white shadow-xs'
-                      : isDark ? 'bg-white/5 text-slate-300 hover:bg-white/10' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                      ? 'bg-[#111215] text-white dark:bg-[#D4F82C] dark:text-[#111215] shadow-xs'
+                      : 'text-[#575A51] dark:text-neutral-400 bg-[#F8F9F5] dark:bg-[#1D1F24] border border-[#E4E7DC] dark:border-white/10 hover:border-[#111215]/30'
                   }`}
                 >
                   Selected / Offer ({selectedCount})
@@ -2411,10 +2499,10 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
                 <button
                   type="button"
                   onClick={() => setAppliedStageFilter('rejected')}
-                  className={`px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition-all cursor-pointer ${
+                  className={`px-4 py-1.5 rounded-full font-bold whitespace-nowrap transition-all cursor-pointer ${
                     appliedStageFilter === 'rejected'
-                      ? 'bg-rose-600 text-white shadow-xs'
-                      : isDark ? 'bg-white/5 text-slate-300 hover:bg-white/10' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                      ? 'bg-[#111215] text-white dark:bg-[#D4F82C] dark:text-[#111215] shadow-xs'
+                      : 'text-[#575A51] dark:text-neutral-400 bg-[#F8F9F5] dark:bg-[#1D1F24] border border-[#E4E7DC] dark:border-white/10 hover:border-[#111215]/30'
                   }`}
                 >
                   Archived / Declined
@@ -2465,47 +2553,41 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
                   return (
                     <div
                       key={job.id}
-                      className={`p-5 sm:p-6 rounded-2xl border transition-all ${
-                        isShortlisted
-                          ? isDark ? 'bg-gradient-to-br from-[#12141c] to-[#0e1017] border-amber-500/40 shadow-lg shadow-amber-500/5' : 'bg-gradient-to-br from-amber-50/50 to-white border-amber-300 shadow-sm'
-                          : isSelected
-                          ? isDark ? 'bg-[#101814] border-emerald-500/40 shadow-lg' : 'bg-emerald-50/40 border-emerald-300 shadow-sm'
-                          : isDark ? 'bg-[#101014] border-white/10 hover:border-white/20' : 'bg-white border-slate-200 hover:border-slate-300 shadow-xs'
-                      }`}
+                      className="rounded-3xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] p-5 sm:p-6 shadow-xs hover:shadow-md transition-all"
                     >
                       {/* Top Header Row */}
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 dark:border-white/10 pb-4">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#E4E7DC] dark:border-white/10 pb-4">
                         <div className="space-y-1">
                           <div className="flex flex-wrap items-center gap-2">
-                            <h4 className="text-base sm:text-lg font-black tracking-tight">
+                            <h4 className="text-base sm:text-lg font-black tracking-tight text-[#111215] dark:text-white">
                               {job.title}
                             </h4>
                             {job.jobNo && (
-                              <span className="text-[10px] font-mono text-slate-400 border border-slate-300 dark:border-white/10 px-1.5 py-0.5 rounded-md">
+                              <span className="text-[10px] font-mono text-[#73766C] dark:text-neutral-400 border border-[#E4E7DC] dark:border-white/10 px-2 py-0.5 rounded-full bg-[#F8F9F5] dark:bg-[#1D1F24]">
                                 #{job.jobNo}
                               </span>
                             )}
                           </div>
-                          <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400">
+                          <div className="flex flex-wrap items-center gap-2 text-xs text-[#575A51] dark:text-neutral-400">
                             {job.department && (
                               <span className="flex items-center gap-1">
-                                <Building2 size={12} />
+                                <Building2 size={12} className="text-[#73766C] dark:text-neutral-500" />
                                 <span>{job.department}</span>
                               </span>
                             )}
                             {job.location && (
                               <span className="flex items-center gap-1">
-                                <MapPin size={12} />
+                                <MapPin size={12} className="text-[#8FB305] dark:text-[#D4F82C]" />
                                 <span>{job.location}</span>
                               </span>
                             )}
                             {job.jobType && (
-                              <span className="px-2 py-0.5 rounded-md text-[10px] font-medium bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300">
+                              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#E4E7DC]/60 dark:bg-white/10 text-[#111215] dark:text-white">
                                 {job.jobType}
                               </span>
                             )}
                             {appInfo.appliedAt && (
-                              <span className="text-[11px] text-slate-500">
+                              <span className="text-[11px] text-[#73766C] dark:text-neutral-400">
                                 Applied: {new Date(appInfo.appliedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                               </span>
                             )}
@@ -2515,20 +2597,20 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
                         {/* Status Badge */}
                         <div className="flex items-center gap-2 self-start sm:self-auto">
                           {matchItem && (
-                            <span className="px-2.5 py-1 rounded-xl text-xs font-black bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
-                              <Sparkles size={12} />
+                            <span className="px-3 py-1 rounded-full text-xs font-black bg-[#D4F82C] text-[#111215] shadow-xs flex items-center gap-1">
+                              <Sparkles size={12} className="fill-[#111215]" />
                               <span>{matchItem.score}% Match</span>
                             </span>
                           )}
 
-                          <span className={`px-3 py-1 rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-1.5 ${
+                          <span className={`px-3.5 py-1 rounded-full text-xs font-black uppercase tracking-wider flex items-center gap-1.5 shadow-xs ${
                             isSelected
-                              ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/40 shadow-xs'
+                              ? 'bg-[#111215] text-[#D4F82C] dark:bg-[#D4F82C] dark:text-[#111215]'
                               : isShortlisted
-                              ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/40 shadow-xs animate-pulse'
+                              ? 'bg-[#D4F82C] text-[#111215] border border-[#8FB305]/40 animate-pulse'
                               : isRejected
                               ? 'bg-rose-500/15 text-rose-500 border border-rose-500/30'
-                              : 'bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30'
+                              : 'bg-[#111215] text-white dark:bg-white/10 dark:text-white'
                           }`}>
                             {isSelected ? (
                               <Award size={13} />
@@ -2546,21 +2628,21 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
 
                       {/* 4-Step Pipeline Visual Tracker */}
                       <div className="py-5">
-                        <div className="text-[11px] font-bold text-slate-400 mb-2 uppercase tracking-wider">
+                        <div className="text-[11px] font-bold text-[#73766C] dark:text-neutral-400 mb-2 uppercase tracking-wider">
                           Application Journey Tracker
                         </div>
 
                         {isRejected ? (
-                          <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-500 text-xs flex items-center gap-2.5">
+                          <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 text-xs flex items-center gap-2.5">
                             <XCircle size={16} className="shrink-0" />
                             <span>This application was not selected to proceed further. Your profile remains active for other exciting matching opportunities!</span>
                           </div>
                         ) : (
                           <div className="relative">
                             {/* Track line */}
-                            <div className="absolute top-4 left-6 right-6 h-0.5 bg-slate-200 dark:bg-white/10 -z-0" />
+                            <div className="absolute top-4 left-6 right-6 h-0.5 bg-[#E4E7DC] dark:bg-white/10 -z-0" />
                             <div
-                              className="absolute top-4 left-6 h-0.5 bg-emerald-500 transition-all duration-500 -z-0"
+                              className="absolute top-4 left-6 h-0.5 bg-[#111215] dark:bg-[#D4F82C] transition-all duration-500 -z-0"
                               style={{
                                 width: step >= 5 ? '92%' : step >= 3 ? '66%' : step >= 2 ? '33%' : '0%'
                               }}
@@ -2571,34 +2653,34 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
                               <div className="flex flex-col items-center">
                                 <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all shadow-xs ${
                                   step >= 1
-                                    ? 'bg-emerald-500 text-white shadow-emerald-500/30 ring-4 ring-emerald-500/15'
-                                    : 'bg-slate-200 dark:bg-white/10 text-slate-400'
+                                    ? 'bg-[#111215] text-[#D4F82C] dark:bg-[#D4F82C] dark:text-[#111215] ring-4 ring-[#D4F82C]/30'
+                                    : 'bg-[#E4E7DC] dark:bg-white/10 text-[#73766C]'
                                 }`}>
                                   <Check size={14} />
                                 </div>
                                 <span className={`text-[11px] font-bold mt-2 leading-tight ${
-                                  step >= 1 ? 'text-emerald-500' : 'text-slate-400'
+                                  step >= 1 ? 'text-[#111215] dark:text-white' : 'text-[#73766C] dark:text-neutral-400'
                                 }`}>
                                   1. Applied
                                 </span>
-                                <span className="text-[9px] text-slate-400 hidden sm:inline">Resume Submitted</span>
+                                <span className="text-[9px] text-[#73766C] dark:text-neutral-400 hidden sm:inline">Resume Submitted</span>
                               </div>
 
                               {/* Step 2: Under Review */}
                               <div className="flex flex-col items-center">
                                 <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all shadow-xs ${
                                   step >= 2
-                                    ? 'bg-emerald-500 text-white shadow-emerald-500/30 ring-4 ring-emerald-500/15'
-                                    : 'bg-slate-200 dark:bg-white/10 text-slate-400'
+                                    ? 'bg-[#111215] text-[#D4F82C] dark:bg-[#D4F82C] dark:text-[#111215] ring-4 ring-[#D4F82C]/30'
+                                    : 'bg-[#E4E7DC] dark:bg-white/10 text-[#73766C]'
                                 }`}>
                                   {step > 2 ? <Check size={14} /> : <Eye size={13} />}
                                 </div>
                                 <span className={`text-[11px] font-bold mt-2 leading-tight ${
-                                  step >= 2 ? 'text-emerald-500' : 'text-slate-400'
+                                  step >= 2 ? 'text-[#111215] dark:text-white' : 'text-[#73766C] dark:text-neutral-400'
                                 }`}>
                                   2. In Review
                                 </span>
-                                <span className="text-[9px] text-slate-400 hidden sm:inline">Recruiter Screening</span>
+                                <span className="text-[9px] text-[#73766C] dark:text-neutral-400 hidden sm:inline">Recruiter Screening</span>
                               </div>
 
                               {/* Step 3: Shortlisted / Interview */}
@@ -2606,35 +2688,35 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
                                 <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all shadow-xs ${
                                   step >= 3
                                     ? isShortlisted
-                                      ? 'bg-amber-500 text-white shadow-amber-500/30 ring-4 ring-amber-500/20 animate-bounce'
-                                      : 'bg-emerald-500 text-white'
-                                    : 'bg-slate-200 dark:bg-white/10 text-slate-400'
+                                      ? 'bg-[#D4F82C] text-[#111215] ring-4 ring-[#8FB305]/40 animate-bounce'
+                                      : 'bg-[#111215] text-white dark:bg-[#D4F82C] dark:text-[#111215]'
+                                    : 'bg-[#E4E7DC] dark:bg-white/10 text-[#73766C]'
                                 }`}>
                                   {step >= 4 ? <Check size={14} /> : <Award size={13} />}
                                 </div>
                                 <span className={`text-[11px] font-bold mt-2 leading-tight ${
-                                  step >= 3 ? 'text-amber-500 dark:text-amber-400' : 'text-slate-400'
+                                  step >= 3 ? 'text-[#111215] dark:text-white font-black' : 'text-[#73766C] dark:text-neutral-400'
                                 }`}>
                                   3. Shortlisted
                                 </span>
-                                <span className="text-[9px] text-slate-400 hidden sm:inline">Rounds / Interview</span>
+                                <span className="text-[9px] text-[#73766C] dark:text-neutral-400 hidden sm:inline">Rounds / Interview</span>
                               </div>
 
                               {/* Step 4: Decision */}
                               <div className="flex flex-col items-center">
                                 <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all shadow-xs ${
                                   step >= 5
-                                    ? 'bg-emerald-600 text-white shadow-emerald-500/30 ring-4 ring-emerald-500/20'
-                                    : 'bg-slate-200 dark:bg-white/10 text-slate-400'
+                                    ? 'bg-[#111215] text-[#D4F82C] dark:bg-[#D4F82C] dark:text-[#111215] ring-4 ring-[#D4F82C]/30'
+                                    : 'bg-[#E4E7DC] dark:bg-white/10 text-[#73766C]'
                                 }`}>
                                   <Sparkles size={13} />
                                 </div>
                                 <span className={`text-[11px] font-bold mt-2 leading-tight ${
-                                  step >= 5 ? 'text-emerald-500 font-extrabold' : 'text-slate-400'
+                                  step >= 5 ? 'text-[#111215] dark:text-white font-extrabold' : 'text-[#73766C] dark:text-neutral-400'
                                 }`}>
                                   4. Offer / Hired
                                 </span>
-                                <span className="text-[9px] text-slate-400 hidden sm:inline">Final Decision</span>
+                                <span className="text-[9px] text-[#73766C] dark:text-neutral-400 hidden sm:inline">Final Decision</span>
                               </div>
                             </div>
                           </div>
@@ -2842,26 +2924,24 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
         {activeTab === 'resume' && (
           <div className="space-y-6">
             {/* Resume Hero & Quick Actions */}
-            <div className={`p-5 sm:p-7 rounded-2xl border transition-all ${
-              isDark ? 'bg-[#101014] border-white/10' : 'bg-white border-slate-200 shadow-xs'
-            }`}>
+            <div className="p-6 sm:p-8 rounded-3xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] shadow-xs">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-5">
                 <div className="flex items-start gap-4">
-                  <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center shrink-0 border border-emerald-500/20">
-                    <FileText size={28} />
+                  <div className="w-14 h-14 rounded-2xl bg-[#D4F82C] text-[#111215] flex items-center justify-center shrink-0 font-bold shadow-xs">
+                    <FileText size={26} />
                   </div>
                   <div className="space-y-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="text-lg font-black tracking-tight">Active Candidate Resume</h3>
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                      <h3 className="text-xl font-black tracking-tight text-[#111215] dark:text-white">Active Candidate Resume</h3>
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-[#D4F82C] text-[#111215] shadow-xs">
                         {candidate?.resumeUrl ? 'Document Connected' : 'No Resume'}
                       </span>
                     </div>
-                    <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                    <p className="text-xs text-[#575A51] dark:text-neutral-400">
                       {candidate?.resumeOriginalName || 'Candidate_Resume.pdf'} • Used for AI match parsing, recruiter review, and live applications.
                     </p>
                     {candidate?.resumeUpdatedAt && (
-                      <span className="text-[10px] text-slate-500 block">
+                      <span className="text-[10px] text-[#73766C] dark:text-neutral-500 block">
                         Last updated: {new Date(candidate.resumeUpdatedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                       </span>
                     )}
@@ -2875,9 +2955,7 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
                       <button
                         type="button"
                         onClick={() => setPreviewResumeModalUrl(candidate.resumeUrl)}
-                        className={`px-4 py-2 rounded-xl text-xs font-bold border flex items-center gap-1.5 transition-all cursor-pointer ${
-                          isDark ? 'border-white/10 text-slate-200 hover:bg-white/5' : 'border-slate-200 text-slate-700 hover:bg-slate-100'
-                        }`}
+                        className="px-4 py-2 rounded-full text-xs font-bold border border-[#E4E7DC] dark:border-white/10 bg-white/80 dark:bg-white/5 hover:bg-white dark:hover:bg-white/10 text-[#111215] dark:text-white flex items-center gap-1.5 transition-all cursor-pointer shadow-xs"
                       >
                         <Eye size={14} />
                         <span>Fullscreen Preview</span>
@@ -2888,7 +2966,7 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
                         download={candidate.resumeOriginalName || `${candidate.name || 'Candidate'}_Resume.pdf`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 shadow-md shadow-emerald-500/20 flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
+                        className="px-5 py-2 rounded-full text-xs font-bold text-white dark:text-[#111215] bg-[#111215] hover:bg-[#202227] dark:bg-[#D4F82C] dark:hover:bg-[#C2E820] shadow-xs flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
                       >
                         <Download size={14} />
                         <span>Download Resume</span>
@@ -2899,13 +2977,11 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
               </div>
 
               {/* Upload or Replace Resume Zone */}
-              <div className="mt-6 pt-6 border-t border-slate-200 dark:border-white/10">
-                <label className={`relative block border-2 border-dashed rounded-2xl p-6 text-center transition-all cursor-pointer ${
+              <div className="mt-6 pt-6 border-t border-[#E4E7DC] dark:border-white/10">
+                <label className={`relative block border-2 border-dashed rounded-3xl p-6 text-center transition-all cursor-pointer ${
                   isUploadingResume
-                    ? 'border-emerald-500/50 bg-emerald-500/5'
-                    : isDark
-                    ? 'border-white/15 hover:border-emerald-500/40 hover:bg-white/5'
-                    : 'border-slate-300 hover:border-emerald-500 hover:bg-emerald-50/30'
+                    ? 'border-[#8FB305] bg-[#D4F82C]/10'
+                    : 'border-[#E4E7DC] dark:border-white/15 hover:border-[#111215] dark:hover:border-[#D4F82C] bg-[#F8F9F5] dark:bg-[#1D1F24]'
                 }`}>
                   <input
                     type="file"
@@ -2915,18 +2991,18 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
                     className="sr-only"
                   />
                   <div className="flex flex-col items-center justify-center space-y-2">
-                    <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center">
+                    <div className="w-12 h-12 rounded-2xl bg-[#D4F82C] text-[#111215] flex items-center justify-center font-bold shadow-xs">
                       {isUploadingResume ? (
-                        <RefreshCw size={24} className="animate-spin text-emerald-500" />
+                        <RefreshCw size={24} className="animate-spin text-[#111215]" />
                       ) : (
                         <UploadCloud size={24} />
                       )}
                     </div>
                     <div>
-                      <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                      <span className="text-xs font-bold text-[#111215] dark:text-white">
                         {isUploadingResume ? 'Uploading resume to secure S3 storage...' : 'Click to Upload or Replace Resume'}
                       </span>
-                      <p className={`text-[11px] mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                      <p className="text-[11px] mt-0.5 text-[#73766C] dark:text-neutral-400">
                         Supports PDF, DOC, DOCX up to 15MB. Updating automatically syncs with all active job applications.
                       </p>
                     </div>
@@ -2934,14 +3010,14 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
                 </label>
 
                 {resumeUploadSuccess && (
-                  <div className="mt-3 p-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs flex items-center gap-2">
+                  <div className="mt-3 p-3 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs flex items-center gap-2">
                     <CheckCircle2 size={16} className="shrink-0" />
                     <span>{resumeUploadSuccess}</span>
                   </div>
                 )}
 
                 {resumeUploadError && (
-                  <div className="mt-3 p-3 rounded-xl border border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-400 text-xs flex items-center gap-2">
+                  <div className="mt-3 p-3 rounded-2xl border border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-400 text-xs flex items-center gap-2">
                     <AlertCircle size={16} className="shrink-0" />
                     <span>{resumeUploadError}</span>
                   </div>
@@ -2950,20 +3026,20 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
             </div>
 
             {/* Embedded Interactive Document Viewer */}
-            <div className={`p-4 sm:p-6 rounded-2xl border ${
-              isDark ? 'bg-[#101014] border-white/10' : 'bg-white border-slate-200 shadow-xs'
-            }`}>
-              <div className="flex items-center justify-between pb-4 border-b border-slate-200 dark:border-white/10 mb-4">
-                <div className="flex items-center gap-2">
-                  <FileText size={18} className="text-emerald-500" />
-                  <h4 className="text-sm font-bold">Interactive Resume Document Preview</h4>
+            <div className="p-5 sm:p-7 rounded-3xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] shadow-xs">
+              <div className="flex items-center justify-between pb-4 border-b border-[#E4E7DC] dark:border-white/10 mb-4">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-[#111215] text-[#D4F82C] dark:bg-white/10 dark:text-[#D4F82C] flex items-center justify-center font-bold">
+                    <FileText size={16} />
+                  </div>
+                  <h4 className="text-sm font-black text-[#111215] dark:text-white">Interactive Resume Document Preview</h4>
                 </div>
                 {candidate?.resumeUrl && (
                   <a
                     href={candidate.resumeUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1"
+                    className="text-xs font-bold text-[#111215] dark:text-white hover:underline flex items-center gap-1"
                   >
                     <span>Open in New Tab</span>
                     <ExternalLink size={12} />
@@ -2972,7 +3048,7 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
               </div>
 
               {candidate?.resumeUrl ? (
-                <div className="w-full h-[650px] rounded-xl overflow-hidden border border-slate-200 dark:border-white/10 bg-slate-900/40 relative">
+                <div className="w-full h-[650px] rounded-2xl overflow-hidden border border-[#E4E7DC] dark:border-white/10 bg-slate-900/40 relative">
                   <iframe
                     src={
                       candidate.resumeUrl.toLowerCase().includes('.doc')
@@ -2985,10 +3061,10 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
                 </div>
               ) : (
                 <div className="py-16 text-center space-y-3">
-                  <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-white/5 text-slate-400 mx-auto flex items-center justify-center">
+                  <div className="w-12 h-12 rounded-2xl bg-[#F8F9F5] dark:bg-white/5 text-[#73766C] mx-auto flex items-center justify-center">
                     <FileText size={24} />
                   </div>
-                  <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                  <p className="text-xs text-[#73766C] dark:text-neutral-400">
                     No resume document uploaded yet. Upload a PDF or Word document above to enable preview!
                   </p>
                 </div>
@@ -3001,36 +3077,34 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
         {activeTab === 'edit-profile' && (
           <div className="space-y-6">
             {/* Full Profile Overview Card */}
-            <div className={`p-5 sm:p-7 rounded-2xl border relative overflow-hidden transition-all ${
-              isDark ? 'bg-gradient-to-br from-[#121218] to-[#0c0c10] border-white/10' : 'bg-gradient-to-br from-white to-slate-50 border-slate-200 shadow-sm'
-            }`}>
+            <div className="p-6 sm:p-8 rounded-3xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] shadow-xs">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="space-y-1.5">
                   <div className="flex items-center gap-2">
-                    <h2 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 dark:text-white">
+                    <h2 className="text-xl sm:text-2xl font-black tracking-tight text-[#111215] dark:text-white">
                       {editForm.name || candidate.name || 'Candidate Profile'}
                     </h2>
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-[#D4F82C] text-[#111215] shadow-xs">
                       Active Job Seeker
                     </span>
                   </div>
-                  <p className={`text-xs sm:text-sm ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                  <p className="text-xs sm:text-sm text-[#575A51] dark:text-neutral-400">
                     {editForm.currentTitle || 'Professional'} • {editForm.totalExperienceYears ? `${editForm.totalExperienceYears} Yrs Experience` : 'Fresh Graduate'} • 📍 {editForm.location || 'Maharashtra, India'}
                   </p>
                   <div className="flex flex-wrap items-center gap-2 pt-1 text-xs">
-                    <span className="inline-flex items-center gap-1 text-slate-400 font-medium">
-                      <Mail size={12} className="text-slate-400" />
+                    <span className="inline-flex items-center gap-1 text-[#73766C] dark:text-neutral-400 font-medium">
+                      <Mail size={12} className="text-[#8FB305] dark:text-[#D4F82C]" />
                       <span>{editForm.email || candidate.email}</span>
                     </span>
-                    <span className="text-slate-400 select-none">•</span>
-                    <span className="inline-flex items-center gap-1 text-slate-400 font-medium">
-                      <Phone size={12} className="text-slate-400" />
+                    <span className="text-[#E4E7DC] select-none">•</span>
+                    <span className="inline-flex items-center gap-1 text-[#73766C] dark:text-neutral-400 font-medium">
+                      <Phone size={12} className="text-[#8FB305] dark:text-[#D4F82C]" />
                       <span>{editForm.phone || candidate.phone || 'Phone not set'}</span>
                     </span>
                     {candidate.resumeFileName && (
                       <>
-                        <span className="text-slate-400 select-none">•</span>
-                        <span className="inline-flex items-center gap-1 text-purple-600 dark:text-purple-400 font-semibold text-[11px]">
+                        <span className="text-[#E4E7DC] select-none">•</span>
+                        <span className="inline-flex items-center gap-1 text-[#111215] dark:text-[#D4F82C] font-semibold text-[11px]">
                           <FileText size={12} />
                           <span className="truncate max-w-[160px]">{candidate.resumeFileName}</span>
                         </span>
@@ -3044,11 +3118,9 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
                   <button
                     type="button"
                     onClick={() => setActiveTab('resume')}
-                    className={`px-3.5 py-2 rounded-xl text-xs font-bold border transition-colors flex items-center gap-1.5 cursor-pointer ${
-                      isDark ? 'border-white/10 bg-white/5 hover:bg-white/10 text-slate-200' : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700 shadow-xs'
-                    }`}
+                    className="px-4 py-2 rounded-full text-xs font-bold border border-[#E4E7DC] dark:border-white/10 bg-white/80 dark:bg-white/5 hover:bg-white dark:hover:bg-white/10 text-[#111215] dark:text-white transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
                   >
-                    <FileText size={14} className="text-purple-500" />
+                    <FileText size={14} className="text-[#8FB305] dark:text-[#D4F82C]" />
                     <span>View Resume</span>
                   </button>
                 </div>
@@ -3056,390 +3128,353 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
             </div>
 
             {/* Edit Candidate Profile & Skills Form */}
-            <div className={`p-5 sm:p-8 rounded-2xl border transition-all ${
-              isDark ? 'bg-[#101014] border-white/10' : 'bg-white border-slate-200 shadow-sm'
-            }`}>
-            <div className="flex items-center justify-between border-b border-slate-200 dark:border-white/10 pb-4 mb-6">
-              <div>
-                <h3 className="text-lg font-black tracking-tight">Edit Candidate Profile & Skills</h3>
-                <p className={`text-xs mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-                  Update your contact info, role headline, skills, and experience. Job matching automatically updates in real time!
-                </p>
-              </div>
-            </div>
-
-            <form onSubmit={handleSaveProfile} className="space-y-6">
-              {profileErrorMsg && (
-                <div className="p-3.5 rounded-xl border border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-400 text-xs flex items-center gap-2">
-                  <AlertCircle size={15} className="shrink-0" />
-                  <span>{profileErrorMsg}</span>
-                </div>
-              )}
-
-              {/* Section 1: Personal & Contact */}
-              <div>
-                <h4 className="text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 mb-3 flex items-center gap-1.5">
-                  <User size={14} />
-                  <span>Personal & Contact Info</span>
-                </h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {/* Name */}
-                  <div>
-                    <label className={`block text-xs font-semibold mb-1 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-                      Full Name *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={editForm.name}
-                      onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                      className={`w-full px-3 py-2 text-xs rounded-xl border outline-none ${
-                        isDark ? 'bg-black/30 border-white/10 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                      }`}
-                    />
-                  </div>
-
-                  {/* Email */}
-                  <div>
-                    <label className={`block text-xs font-semibold mb-1 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-                      Email Address *
-                    </label>
-                    <input
-                      type="email"
-                      required
-                      value={editForm.email}
-                      onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
-                      className={`w-full px-3 py-2 text-xs rounded-xl border outline-none ${
-                        isDark ? 'bg-black/30 border-white/10 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                      }`}
-                    />
-                  </div>
-
-                  {/* Phone (Password reminder) */}
-                  <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <label className={`text-xs font-semibold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-                        Phone Number *
-                      </label>
-                      <span className="text-[10px] text-purple-600 dark:text-purple-400 font-bold">
-                        🔑 Login Password
-                      </span>
-                    </div>
-                    <input
-                      type="text"
-                      required
-                      value={editForm.phone}
-                      onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
-                      className={`w-full px-3 py-2 text-xs rounded-xl border outline-none ${
-                        isDark ? 'bg-black/30 border-white/10 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                      }`}
-                    />
-                  </div>
-
-                  {/* Location */}
-                  <div>
-                    <label className={`block text-xs font-semibold mb-1 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-                      Current Location / City
-                    </label>
-                    <input
-                      type="text"
-                      value={editForm.location}
-                      onChange={(e) => setEditForm({ ...editForm, location: e.target.value })}
-                      placeholder="e.g. Nashik, Pune, Mumbai"
-                      className={`w-full px-3 py-2 text-xs rounded-xl border outline-none ${
-                        isDark ? 'bg-black/30 border-white/10 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                      }`}
-                    />
-                  </div>
-
-                  {/* Preferred Locations */}
-                  <div className="sm:col-span-2">
-                    <label className={`block text-xs font-semibold mb-1 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-                      Preferred Job Locations (comma-separated)
-                    </label>
-                    <input
-                      type="text"
-                      value={editForm.preferredLocations}
-                      onChange={(e) => setEditForm({ ...editForm, preferredLocations: e.target.value })}
-                      placeholder="e.g. Nashik, Pune, Remote, Mumbai"
-                      className={`w-full px-3 py-2 text-xs rounded-xl border outline-none ${
-                        isDark ? 'bg-black/30 border-white/10 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                      }`}
-                    />
-                  </div>
+            <div className="p-6 sm:p-8 rounded-3xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] shadow-xs">
+              <div className="flex items-center justify-between border-b border-[#E4E7DC] dark:border-white/10 pb-4 mb-6">
+                <div>
+                  <h3 className="text-lg font-black tracking-tight text-[#111215] dark:text-white">Edit Candidate Profile & Skills</h3>
+                  <p className="text-xs mt-0.5 text-[#575A51] dark:text-neutral-400">
+                    Update your contact info, role headline, skills, and experience. Job matching automatically updates in real time!
+                  </p>
                 </div>
               </div>
 
-              {/* Section 2: Professional & Experience */}
-              <div className="pt-3 border-t border-slate-100 dark:border-white/5">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 mb-3 flex items-center gap-1.5">
-                  <Briefcase size={14} />
-                  <span>Role & Experience Details</span>
-                </h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {/* Headline / Current Title */}
-                  <div className="sm:col-span-2">
-                    <label className={`block text-xs font-semibold mb-1 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-                      Current Job Title / Professional Headline
-                    </label>
-                    <input
-                      type="text"
-                      value={editForm.currentTitle}
-                      onChange={(e) => setEditForm({ ...editForm, currentTitle: e.target.value })}
-                      placeholder="e.g. Full Stack Developer, Computer Engineering Graduate"
-                      className={`w-full px-3 py-2 text-xs rounded-xl border outline-none ${
-                        isDark ? 'bg-black/30 border-white/10 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                      }`}
-                    />
+              <form onSubmit={handleSaveProfile} className="space-y-6">
+                {profileErrorMsg && (
+                  <div className="p-3.5 rounded-2xl border border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-400 text-xs flex items-center gap-2">
+                    <AlertCircle size={15} className="shrink-0" />
+                    <span>{profileErrorMsg}</span>
                   </div>
+                )}
 
-                  {/* Total Experience Years */}
-                  <div>
-                    <label className={`block text-xs font-semibold mb-1 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-                      Total Experience (Years)
-                    </label>
-                    <input
-                      type="number"
-                      step="0.5"
-                      min="0"
-                      value={editForm.totalExperienceYears}
-                      onChange={(e) => setEditForm({ ...editForm, totalExperienceYears: e.target.value })}
-                      placeholder="0 for Fresher"
-                      className={`w-full px-3 py-2 text-xs rounded-xl border outline-none ${
-                        isDark ? 'bg-black/30 border-white/10 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                      }`}
-                    />
-                  </div>
-
-                  {/* Notice Period */}
-                  <div>
-                    <label className={`block text-xs font-semibold mb-1 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-                      Notice Period
-                    </label>
-                    <select
-                      value={editForm.noticePeriod}
-                      onChange={(e) => setEditForm({ ...editForm, noticePeriod: e.target.value })}
-                      className={`w-full px-3 py-2 text-xs rounded-xl border outline-none font-medium ${
-                        isDark ? 'bg-[#151518] border-white/10 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                      }`}
-                    >
-                      <option value="Immediate">Immediate Joiner</option>
-                      <option value="15 Days">15 Days</option>
-                      <option value="30 Days">30 Days (1 Month)</option>
-                      <option value="60 Days">60 Days (2 Months)</option>
-                      <option value="90 Days">90 Days (3 Months)</option>
-                    </select>
-                  </div>
-
-                  {/* Current CTC */}
-                  <div>
-                    <label className={`block text-xs font-semibold mb-1 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-                      Current CTC / Salary
-                    </label>
-                    <input
-                      type="text"
-                      value={editForm.currentSalary}
-                      onChange={(e) => setEditForm({ ...editForm, currentSalary: e.target.value })}
-                      placeholder="e.g. ₹3.5 LPA or ₹25,000 / month"
-                      className={`w-full px-3 py-2 text-xs rounded-xl border outline-none ${
-                        isDark ? 'bg-black/30 border-white/10 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                      }`}
-                    />
-                  </div>
-
-                  {/* Expected CTC */}
-                  <div>
-                    <label className={`block text-xs font-semibold mb-1 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-                      Expected CTC / Salary
-                    </label>
-                    <input
-                      type="text"
-                      value={editForm.expectedSalary}
-                      onChange={(e) => setEditForm({ ...editForm, expectedSalary: e.target.value })}
-                      placeholder="e.g. ₹5 LPA or ₹40,000 / month"
-                      className={`w-full px-3 py-2 text-xs rounded-xl border outline-none ${
-                        isDark ? 'bg-black/30 border-white/10 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                      }`}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Section 3: Key Skills (Interactive Tag Editor) */}
-              <div className="pt-3 border-t border-slate-100 dark:border-white/5 space-y-3">
-                <div className="flex items-center justify-between">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
-                    <Tag size={14} />
-                    <span>Key Skills ({editForm.skills.length})</span>
+                {/* Section 1: Personal & Contact */}
+                <div>
+                  <h4 className="text-xs font-black uppercase tracking-wider text-[#111215] dark:text-[#D4F82C] mb-3 flex items-center gap-1.5">
+                    <User size={14} />
+                    <span>Personal & Contact Info</span>
                   </h4>
-                  <span className="text-[11px] text-slate-400">
-                    Press Enter or click "Add" to add a skill
-                  </span>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {/* Name */}
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider mb-1.5 text-[#111215] dark:text-neutral-200">
+                        Full Name *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={editForm.name}
+                        onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                        className="w-full px-3.5 py-2 text-xs rounded-xl bg-[#F8F9F5] dark:bg-[#1D1F24] border border-[#E4E7DC] dark:border-white/10 text-[#111215] dark:text-white focus:bg-white dark:focus:bg-[#15161A] focus:outline-none focus:border-[#111215] dark:focus:border-[#D4F82C] transition-all"
+                      />
+                    </div>
+
+                    {/* Email */}
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider mb-1.5 text-[#111215] dark:text-neutral-200">
+                        Email Address *
+                      </label>
+                      <input
+                        type="email"
+                        required
+                        value={editForm.email}
+                        onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                        className="w-full px-3.5 py-2 text-xs rounded-xl bg-[#F8F9F5] dark:bg-[#1D1F24] border border-[#E4E7DC] dark:border-white/10 text-[#111215] dark:text-white focus:bg-white dark:focus:bg-[#15161A] focus:outline-none focus:border-[#111215] dark:focus:border-[#D4F82C] transition-all"
+                      />
+                    </div>
+
+                    {/* Phone (Password reminder) */}
+                    <div>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <label className="text-xs font-bold uppercase tracking-wider text-[#111215] dark:text-neutral-200">
+                          Phone Number *
+                        </label>
+                        <span className="text-[10px] text-[#8FB305] dark:text-[#D4F82C] font-bold">
+                          🔑 Login Password
+                        </span>
+                      </div>
+                      <input
+                        type="text"
+                        required
+                        value={editForm.phone}
+                        onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                        className="w-full px-3.5 py-2 text-xs rounded-xl bg-[#F8F9F5] dark:bg-[#1D1F24] border border-[#E4E7DC] dark:border-white/10 text-[#111215] dark:text-white focus:bg-white dark:focus:bg-[#15161A] focus:outline-none focus:border-[#111215] dark:focus:border-[#D4F82C] transition-all"
+                      />
+                    </div>
+
+                    {/* Location */}
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider mb-1.5 text-[#111215] dark:text-neutral-200">
+                        Current Location / City
+                      </label>
+                      <input
+                        type="text"
+                        value={editForm.location}
+                        onChange={(e) => setEditForm({ ...editForm, location: e.target.value })}
+                        placeholder="e.g. Nashik, Pune, Mumbai"
+                        className="w-full px-3.5 py-2 text-xs rounded-xl bg-[#F8F9F5] dark:bg-[#1D1F24] border border-[#E4E7DC] dark:border-white/10 text-[#111215] dark:text-white placeholder-[#73766C]/60 focus:bg-white dark:focus:bg-[#15161A] focus:outline-none focus:border-[#111215] dark:focus:border-[#D4F82C] transition-all"
+                      />
+                    </div>
+
+                    {/* Preferred Locations */}
+                    <div className="sm:col-span-2">
+                      <label className="block text-xs font-bold uppercase tracking-wider mb-1.5 text-[#111215] dark:text-neutral-200">
+                        Preferred Job Locations (comma-separated)
+                      </label>
+                      <input
+                        type="text"
+                        value={editForm.preferredLocations}
+                        onChange={(e) => setEditForm({ ...editForm, preferredLocations: e.target.value })}
+                        placeholder="e.g. Nashik, Pune, Remote, Mumbai"
+                        className="w-full px-3.5 py-2 text-xs rounded-xl bg-[#F8F9F5] dark:bg-[#1D1F24] border border-[#E4E7DC] dark:border-white/10 text-[#111215] dark:text-white placeholder-[#73766C]/60 focus:bg-white dark:focus:bg-[#15161A] focus:outline-none focus:border-[#111215] dark:focus:border-[#D4F82C] transition-all"
+                      />
+                    </div>
+                  </div>
                 </div>
 
-                {/* Add Skill Input Bar */}
-                <div className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    value={newSkillInput}
-                    onChange={(e) => setNewSkillInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        handleAddSkill();
-                      }
-                    }}
-                    placeholder="Type skill name (e.g. React, Python, SQL, Excel, UI/UX)..."
-                    className={`flex-1 px-3 py-2 text-xs rounded-xl border outline-none ${
-                      isDark ? 'bg-black/30 border-white/10 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                    }`}
+                {/* Section 2: Professional & Experience */}
+                <div className="pt-4 border-t border-[#E4E7DC] dark:border-white/10">
+                  <h4 className="text-xs font-black uppercase tracking-wider text-[#111215] dark:text-[#D4F82C] mb-3 flex items-center gap-1.5">
+                    <Briefcase size={14} />
+                    <span>Role & Experience Details</span>
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {/* Headline / Current Title */}
+                    <div className="sm:col-span-2">
+                      <label className="block text-xs font-bold uppercase tracking-wider mb-1.5 text-[#111215] dark:text-neutral-200">
+                        Current Job Title / Professional Headline
+                      </label>
+                      <input
+                        type="text"
+                        value={editForm.currentTitle}
+                        onChange={(e) => setEditForm({ ...editForm, currentTitle: e.target.value })}
+                        placeholder="e.g. Full Stack Developer, Computer Engineering Graduate"
+                        className="w-full px-3.5 py-2 text-xs rounded-xl bg-[#F8F9F5] dark:bg-[#1D1F24] border border-[#E4E7DC] dark:border-white/10 text-[#111215] dark:text-white placeholder-[#73766C]/60 focus:bg-white dark:focus:bg-[#15161A] focus:outline-none focus:border-[#111215] dark:focus:border-[#D4F82C] transition-all"
+                      />
+                    </div>
+
+                    {/* Total Experience Years */}
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider mb-1.5 text-[#111215] dark:text-neutral-200">
+                        Total Experience (Years)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.5"
+                        min="0"
+                        value={editForm.totalExperienceYears}
+                        onChange={(e) => setEditForm({ ...editForm, totalExperienceYears: e.target.value })}
+                        placeholder="0 for Fresher"
+                        className="w-full px-3.5 py-2 text-xs rounded-xl bg-[#F8F9F5] dark:bg-[#1D1F24] border border-[#E4E7DC] dark:border-white/10 text-[#111215] dark:text-white placeholder-[#73766C]/60 focus:bg-white dark:focus:bg-[#15161A] focus:outline-none focus:border-[#111215] dark:focus:border-[#D4F82C] transition-all"
+                      />
+                    </div>
+
+                    {/* Notice Period */}
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider mb-1.5 text-[#111215] dark:text-neutral-200">
+                        Notice Period
+                      </label>
+                      <select
+                        value={editForm.noticePeriod}
+                        onChange={(e) => setEditForm({ ...editForm, noticePeriod: e.target.value })}
+                        className="w-full px-3.5 py-2 text-xs rounded-xl bg-[#F8F9F5] dark:bg-[#1D1F24] border border-[#E4E7DC] dark:border-white/10 text-[#111215] dark:text-white font-bold outline-none cursor-pointer transition-all"
+                      >
+                        <option value="Immediate">Immediate Joiner</option>
+                        <option value="15 Days">15 Days</option>
+                        <option value="30 Days">30 Days (1 Month)</option>
+                        <option value="60 Days">60 Days (2 Months)</option>
+                        <option value="90 Days">90 Days (3 Months)</option>
+                      </select>
+                    </div>
+
+                    {/* Current CTC */}
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider mb-1.5 text-[#111215] dark:text-neutral-200">
+                        Current CTC / Salary
+                      </label>
+                      <input
+                        type="text"
+                        value={editForm.currentSalary}
+                        onChange={(e) => setEditForm({ ...editForm, currentSalary: e.target.value })}
+                        placeholder="e.g. ₹3.5 LPA or ₹25,000 / month"
+                        className="w-full px-3.5 py-2 text-xs rounded-xl bg-[#F8F9F5] dark:bg-[#1D1F24] border border-[#E4E7DC] dark:border-white/10 text-[#111215] dark:text-white placeholder-[#73766C]/60 focus:bg-white dark:focus:bg-[#15161A] focus:outline-none focus:border-[#111215] dark:focus:border-[#D4F82C] transition-all"
+                      />
+                    </div>
+
+                    {/* Expected CTC */}
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider mb-1.5 text-[#111215] dark:text-neutral-200">
+                        Expected CTC / Salary
+                      </label>
+                      <input
+                        type="text"
+                        value={editForm.expectedSalary}
+                        onChange={(e) => setEditForm({ ...editForm, expectedSalary: e.target.value })}
+                        placeholder="e.g. ₹5 LPA or ₹40,000 / month"
+                        className="w-full px-3.5 py-2 text-xs rounded-xl bg-[#F8F9F5] dark:bg-[#1D1F24] border border-[#E4E7DC] dark:border-white/10 text-[#111215] dark:text-white placeholder-[#73766C]/60 focus:bg-white dark:focus:bg-[#15161A] focus:outline-none focus:border-[#111215] dark:focus:border-[#D4F82C] transition-all"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Section 3: Key Skills (Interactive Tag Editor) */}
+                <div className="pt-4 border-t border-[#E4E7DC] dark:border-white/10 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-black uppercase tracking-wider text-[#111215] dark:text-[#D4F82C] flex items-center gap-1.5">
+                      <Tag size={14} />
+                      <span>Key Skills ({editForm.skills.length})</span>
+                    </h4>
+                    <span className="text-[11px] text-[#73766C] dark:text-neutral-400">
+                      Press Enter or click "Add" to add a skill
+                    </span>
+                  </div>
+
+                  {/* Add Skill Input Bar */}
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={newSkillInput}
+                      onChange={(e) => setNewSkillInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddSkill();
+                        }
+                      }}
+                      placeholder="Type skill name (e.g. React, Python, SQL, Excel, UI/UX)..."
+                      className="flex-1 px-4 py-2.5 text-xs rounded-full bg-[#F8F9F5] dark:bg-[#1D1F24] border border-[#E4E7DC] dark:border-white/10 text-[#111215] dark:text-white placeholder-[#73766C]/60 focus:bg-white dark:focus:bg-[#15161A] focus:outline-none focus:border-[#111215] dark:focus:border-[#D4F82C] transition-all"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddSkill}
+                      className="px-5 py-2.5 rounded-full text-xs font-bold text-white dark:text-[#111215] bg-[#111215] hover:bg-[#202227] dark:bg-[#D4F82C] dark:hover:bg-[#C2E820] shadow-xs flex items-center gap-1 cursor-pointer transition-all"
+                    >
+                      <Plus size={14} />
+                      <span>Add</span>
+                    </button>
+                  </div>
+
+                  {/* Existing Skills Tags Container */}
+                  <div className="p-4 rounded-2xl border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-[#1D1F24] min-h-[90px] flex flex-wrap items-center gap-2">
+                    {editForm.skills.length === 0 ? (
+                      <span className="text-xs text-[#73766C] dark:text-neutral-400 italic">No skills listed yet. Add your key skills above.</span>
+                    ) : (
+                      editForm.skills.map((skill) => (
+                        <span
+                          key={skill}
+                          className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-[#E4E7DC]/70 dark:bg-white/10 text-[#111215] dark:text-white border border-[#E4E7DC] dark:border-white/10 group shadow-2xs"
+                        >
+                          <span>{skill}</span>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveSkill(skill)}
+                            className="hover:text-rose-500 cursor-pointer transition-colors"
+                            title={`Remove ${skill}`}
+                          >
+                            <X size={12} />
+                          </button>
+                        </span>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+                {/* Section 4: Education */}
+                <div className="pt-4 border-t border-[#E4E7DC] dark:border-white/10">
+                  <h4 className="text-xs font-black uppercase tracking-wider text-[#111215] dark:text-[#D4F82C] mb-3 flex items-center gap-1.5">
+                    <GraduationCap size={14} />
+                    <span>Education Qualification</span>
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider mb-1.5 text-[#111215] dark:text-neutral-200">
+                        Highest Degree / Diploma
+                      </label>
+                      <input
+                        type="text"
+                        value={editForm.highestEducation}
+                        onChange={(e) => setEditForm({ ...editForm, highestEducation: e.target.value })}
+                        placeholder="e.g. BE Computers, B.Sc, Diploma IT"
+                        className="w-full px-3.5 py-2 text-xs rounded-xl bg-[#F8F9F5] dark:bg-[#1D1F24] border border-[#E4E7DC] dark:border-white/10 text-[#111215] dark:text-white placeholder-[#73766C]/60 focus:bg-white dark:focus:bg-[#15161A] focus:outline-none focus:border-[#111215] dark:focus:border-[#D4F82C] transition-all"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider mb-1.5 text-[#111215] dark:text-neutral-200">
+                        College / University
+                      </label>
+                      <input
+                        type="text"
+                        value={editForm.institution}
+                        onChange={(e) => setEditForm({ ...editForm, institution: e.target.value })}
+                        placeholder="e.g. Savitribai Phule Pune University"
+                        className="w-full px-3.5 py-2 text-xs rounded-xl bg-[#F8F9F5] dark:bg-[#1D1F24] border border-[#E4E7DC] dark:border-white/10 text-[#111215] dark:text-white placeholder-[#73766C]/60 focus:bg-white dark:focus:bg-[#15161A] focus:outline-none focus:border-[#111215] dark:focus:border-[#D4F82C] transition-all"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider mb-1.5 text-[#111215] dark:text-neutral-200">
+                        Passing Year
+                      </label>
+                      <input
+                        type="text"
+                        value={editForm.graduationYear}
+                        onChange={(e) => setEditForm({ ...editForm, graduationYear: e.target.value })}
+                        placeholder="e.g. 2024"
+                        className="w-full px-3.5 py-2 text-xs rounded-xl bg-[#F8F9F5] dark:bg-[#1D1F24] border border-[#E4E7DC] dark:border-white/10 text-[#111215] dark:text-white placeholder-[#73766C]/60 focus:bg-white dark:focus:bg-[#15161A] focus:outline-none focus:border-[#111215] dark:focus:border-[#D4F82C] transition-all"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Section 5: Professional Summary */}
+                <div className="pt-4 border-t border-[#E4E7DC] dark:border-white/10">
+                  <label className="block text-xs font-bold uppercase tracking-wider mb-2 text-[#111215] dark:text-neutral-200">
+                    Professional Summary / Bio
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={editForm.summary}
+                    onChange={(e) => setEditForm({ ...editForm, summary: e.target.value })}
+                    placeholder="Briefly describe your career objectives, main technical strengths, and preferred roles..."
+                    className="w-full p-3.5 text-xs rounded-2xl bg-[#F8F9F5] dark:bg-[#1D1F24] border border-[#E4E7DC] dark:border-white/10 text-[#111215] dark:text-white placeholder-[#73766C]/60 focus:bg-white dark:focus:bg-[#15161A] focus:outline-none focus:border-[#111215] dark:focus:border-[#D4F82C] transition-all"
                   />
+                </div>
+
+                {/* Action Buttons */}
+                <div className="pt-5 border-t border-[#E4E7DC] dark:border-white/10 flex items-center justify-end gap-3">
                   <button
                     type="button"
-                    onClick={handleAddSkill}
-                    className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 transition-colors flex items-center gap-1 cursor-pointer"
+                    onClick={() => setActiveTab('matches')}
+                    className="px-5 py-2.5 rounded-full text-xs font-bold border border-[#E4E7DC] dark:border-white/10 bg-white/80 dark:bg-white/5 text-[#575A51] dark:text-neutral-400 hover:text-[#111215] dark:hover:text-white transition-all cursor-pointer shadow-xs"
                   >
-                    <Plus size={14} />
-                    <span>Add</span>
+                    Cancel
+                  </button>
+
+                  <button
+                    type="submit"
+                    disabled={isSavingProfile}
+                    className="px-6 py-2.5 rounded-full text-xs font-black text-white dark:text-[#111215] bg-[#111215] hover:bg-[#202227] dark:bg-[#D4F82C] dark:hover:bg-[#C2E820] shadow-md active:scale-95 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-60"
+                  >
+                    {isSavingProfile ? (
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    ) : (
+                      <>
+                        <Save size={14} />
+                        <span>Save Profile Changes</span>
+                      </>
+                    )}
                   </button>
                 </div>
-
-                {/* Existing Skills Tags Container */}
-                <div className={`p-4 rounded-xl border min-h-[90px] flex flex-wrap items-center gap-2 ${
-                  isDark ? 'bg-black/20 border-white/5' : 'bg-slate-50 border-slate-200'
-                }`}>
-                  {editForm.skills.length === 0 ? (
-                    <span className="text-xs text-slate-400 italic">No skills listed yet. Add your key skills above.</span>
-                  ) : (
-                    editForm.skills.map((skill) => (
-                      <span
-                        key={skill}
-                        className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 group"
-                      >
-                        <span>{skill}</span>
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveSkill(skill)}
-                          className="hover:text-rose-500 cursor-pointer transition-colors"
-                          title={`Remove ${skill}`}
-                        >
-                          <X size={12} />
-                        </button>
-                      </span>
-                    ))
-                  )}
-                </div>
-              </div>
-
-              {/* Section 4: Education */}
-              <div className="pt-3 border-t border-slate-100 dark:border-white/5">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 mb-3 flex items-center gap-1.5">
-                  <GraduationCap size={14} />
-                  <span>Education Qualification</span>
-                </h4>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div>
-                    <label className={`block text-xs font-semibold mb-1 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-                      Highest Degree / Diploma
-                    </label>
-                    <input
-                      type="text"
-                      value={editForm.highestEducation}
-                      onChange={(e) => setEditForm({ ...editForm, highestEducation: e.target.value })}
-                      placeholder="e.g. BE Computers, B.Sc, Diploma IT"
-                      className={`w-full px-3 py-2 text-xs rounded-xl border outline-none ${
-                        isDark ? 'bg-black/30 border-white/10 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                      }`}
-                    />
-                  </div>
-
-                  <div>
-                    <label className={`block text-xs font-semibold mb-1 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-                      College / University
-                    </label>
-                    <input
-                      type="text"
-                      value={editForm.institution}
-                      onChange={(e) => setEditForm({ ...editForm, institution: e.target.value })}
-                      placeholder="e.g. Savitribai Phule Pune University"
-                      className={`w-full px-3 py-2 text-xs rounded-xl border outline-none ${
-                        isDark ? 'bg-black/30 border-white/10 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                      }`}
-                    />
-                  </div>
-
-                  <div>
-                    <label className={`block text-xs font-semibold mb-1 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-                      Passing Year
-                    </label>
-                    <input
-                      type="text"
-                      value={editForm.graduationYear}
-                      onChange={(e) => setEditForm({ ...editForm, graduationYear: e.target.value })}
-                      placeholder="e.g. 2024"
-                      className={`w-full px-3 py-2 text-xs rounded-xl border outline-none ${
-                        isDark ? 'bg-black/30 border-white/10 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                      }`}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Section 5: Professional Summary */}
-              <div className="pt-3 border-t border-slate-100 dark:border-white/5">
-                <label className={`block text-xs font-bold uppercase tracking-wider mb-2 ${
-                  isDark ? 'text-slate-300' : 'text-slate-700'
-                }`}>
-                  Professional Summary / Bio
-                </label>
-                <textarea
-                  rows={3}
-                  value={editForm.summary}
-                  onChange={(e) => setEditForm({ ...editForm, summary: e.target.value })}
-                  placeholder="Briefly describe your career objectives, main technical strengths, and preferred roles..."
-                  className={`w-full p-3 text-xs rounded-xl border outline-none ${
-                    isDark ? 'bg-black/30 border-white/10 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                  }`}
-                />
-              </div>
-
-              {/* Action Buttons */}
-              <div className="pt-4 border-t border-slate-200 dark:border-white/10 flex items-center justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('matches')}
-                  className={`px-4 py-2.5 rounded-xl text-xs font-bold border transition-colors cursor-pointer ${
-                    isDark ? 'border-white/10 text-slate-300 hover:bg-white/5' : 'border-slate-200 text-slate-700 hover:bg-slate-100'
-                  }`}
-                >
-                  Cancel
-                </button>
-
-                <button
-                  type="submit"
-                  disabled={isSavingProfile}
-                  className="px-6 py-2.5 rounded-xl text-xs font-black text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 shadow-md shadow-emerald-500/25 active:scale-95 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-60"
-                >
-                  {isSavingProfile ? (
-                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  ) : (
-                    <>
-                      <Save size={14} />
-                      <span>Save Profile Changes</span>
-                    </>
-                  )}
-                </button>
-              </div>
-            </form>
-          </div>
+              </form>
+            </div>
         </div>
       )}
       </div>
 
       {/* Full Job Details Modal */}
+      {/* Full Job Details Modal */}
       {selectedJobModal && (
         <div
-          className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-5 bg-black/80 backdrop-blur-sm overflow-hidden animate-in fade-in"
+          className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-6 bg-black/60 backdrop-blur-md overflow-hidden animate-in fade-in"
           onClick={() => {
             setSelectedJobModal(null);
             hasDismissedJobModalRef.current = true;
@@ -3448,9 +3483,7 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
           aria-modal="true"
         >
           <div
-            className={`relative flex flex-col w-full max-w-2xl max-h-[calc(100dvh-2rem)] sm:max-h-[calc(100vh-4rem)] rounded-2xl border shadow-2xl overflow-hidden my-auto ${
-              isDark ? 'bg-[#121217] border-white/10 text-white' : 'bg-white border-slate-200 text-slate-900'
-            }`}
+            className="relative flex flex-col w-full max-w-2xl max-h-[calc(100dvh-2rem)] sm:max-h-[calc(100vh-4rem)] rounded-3xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] text-[#111215] dark:text-[#F8F9F5] shadow-2xl overflow-hidden my-auto"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
@@ -3508,21 +3541,33 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
 
               return (
                 <>
-                  <div className={`flex items-start justify-between gap-3 px-5 sm:px-6 py-4 border-b shrink-0 ${
-                    isDark ? 'border-white/10 bg-[#121217]' : 'border-slate-200 bg-white'
-                  }`}>
+                  <div className="flex items-start justify-between gap-3 px-6 py-5 border-b border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] shrink-0">
                     <div className="space-y-1.5 pr-2">
-                      <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-extrabold ${
-                        overallScore >= 80
-                          ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
-                          : 'bg-teal-500/15 text-teal-600 dark:text-teal-400 border border-teal-500/30'
-                      }`}>
-                        <Sparkles size={11} />
-                        <span>{overallScore}% Match • {matchGrade}</span>
-                      </span>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-[#D4F82C] text-[#111215] border border-[#8FB305]/30">
+                          <Sparkles size={12} className="text-[#8FB305]" />
+                          <span>{overallScore}% Match • {matchGrade}</span>
+                        </span>
 
-                      <h3 className="text-lg sm:text-xl font-black leading-snug">{modalJob.title || 'Job Opening'}</h3>
-                      <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                        <button
+                          type="button"
+                          onClick={() => togglePlayAudio(modalJob)}
+                          className={`px-3 py-1 rounded-full text-xs font-bold border transition-colors inline-flex items-center gap-1.5 cursor-pointer ${
+                            playingJobId === modalJob.id
+                              ? 'bg-[#111215] text-[#D4F82C] border-[#111215] dark:bg-[#D4F82C] dark:text-[#111215]'
+                              : 'bg-white dark:bg-white/5 border-[#E4E7DC] dark:border-white/10 text-[#575A51] dark:text-neutral-300 hover:border-[#111215] dark:hover:border-white/30'
+                          }`}
+                          title="Listen to job summary"
+                        >
+                          {playingJobId === modalJob.id ? <VolumeX size={12} /> : <Volume2 size={12} />}
+                          <span>{playingJobId === modalJob.id ? 'Listening...' : 'Listen to Role'}</span>
+                        </button>
+                      </div>
+
+                      <h3 className="text-xl sm:text-2xl font-bold tracking-tight text-[#111215] dark:text-[#F8F9F5] leading-snug pt-1">
+                        {modalJob.title || 'Job Opening'}
+                      </h3>
+                      <p className="text-xs font-medium text-[#575A51] dark:text-neutral-400">
                         {modalJob.company || 'Company'} • {modalJob.location || 'Location'} • Job Code #{modalJob.accessCode || modalJob.jobNo || 'N/A'}
                       </p>
                     </div>
@@ -3533,9 +3578,7 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
                         setSelectedJobModal(null);
                         hasDismissedJobModalRef.current = true;
                       }}
-                      className={`p-2 rounded-xl border transition-colors cursor-pointer shrink-0 ${
-                        isDark ? 'border-white/10 text-slate-400 hover:text-white hover:bg-white/5' : 'border-slate-200 text-slate-500 hover:text-slate-900 hover:bg-slate-100'
-                      }`}
+                      className="p-2.5 rounded-full border border-[#E4E7DC] dark:border-white/10 text-[#575A51] dark:text-neutral-400 hover:text-[#111215] dark:hover:text-white hover:bg-[#F8F9F5] dark:hover:bg-white/5 transition-colors cursor-pointer shrink-0"
                       aria-label="Close modal"
                     >
                       <X size={18} />
@@ -3543,203 +3586,195 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
                   </div>
 
                   {/* Scrollable Body Wrapper */}
-                  <div className="flex-1 overflow-y-auto px-5 sm:px-6 py-4 space-y-4 overscroll-contain">
-
-                  {/* Modal Info Grid */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 my-5 text-xs">
-                    <div className={`p-2.5 rounded-xl border ${isDark ? 'bg-white/[0.03] border-white/10' : 'bg-slate-50 border-slate-200'}`}>
-                      <span className="text-[10px] uppercase font-bold text-slate-400 block">Experience</span>
-                      <span className="font-bold">{modalJob.experience || 'Not Specified'}</span>
-                    </div>
-                    <div className={`p-2.5 rounded-xl border ${isDark ? 'bg-white/[0.03] border-white/10' : 'bg-slate-50 border-slate-200'}`}>
-                      <span className="text-[10px] uppercase font-bold text-slate-400 block">Salary / CTC</span>
-                      <span className="font-bold">{modalJob.salary || 'Competitive'}</span>
-                    </div>
-                    <div className={`p-2.5 rounded-xl border ${isDark ? 'bg-white/[0.03] border-white/10' : 'bg-slate-50 border-slate-200'}`}>
-                      <span className="text-[10px] uppercase font-bold text-slate-400 block">Department</span>
-                      <span className="font-bold">{modalJob.department || 'General'}</span>
-                    </div>
-                    <div className={`p-2.5 rounded-xl border ${isDark ? 'bg-white/[0.03] border-white/10' : 'bg-slate-50 border-slate-200'}`}>
-                      <span className="text-[10px] uppercase font-bold text-slate-400 block">Type</span>
-                      <span className="font-bold">{modalJob.employmentType || modalJob.jobType || 'Full-time'}</span>
-                    </div>
-                  </div>
-
-                  {/* Required Skills */}
-                  {(() => {
-                    const rawSkills = modalJob.skills;
-                    const modalSkills = Array.isArray(rawSkills)
-                      ? rawSkills
-                      : typeof rawSkills === 'string'
-                      ? rawSkills.split(/[,;\n]/).map((s: string) => s.trim()).filter(Boolean)
-                      : [];
-
-                    if (modalSkills.length === 0) return null;
-
-                    return (
-                      <div className="space-y-1.5 mb-4">
-                        <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Required Skills</span>
-                        <div className="flex flex-wrap gap-1.5">
-                          {modalSkills.map((s: string) => {
-                            const isMatched = Array.isArray(selectedJobModal.skillMatch?.matchedSkills) && selectedJobModal.skillMatch.matchedSkills.includes(s);
-                            return (
-                              <span
-                                key={s}
-                                className={`px-2.5 py-1 rounded-lg text-xs font-semibold border flex items-center gap-1 ${
-                                  isMatched
-                                    ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/40 font-bold'
-                                    : isDark
-                                    ? 'bg-white/5 border-white/10 text-slate-400'
-                                    : 'bg-slate-100 border-slate-200 text-slate-600'
-                                }`}
-                              >
-                                {isMatched && <Check size={12} strokeWidth={3} />}
-                                <span>{s}</span>
-                              </span>
-                            );
-                          })}
-                        </div>
+                  <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5 overscroll-contain">
+                    {/* Modal Info Bento Grid */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
+                      <div className="p-3 rounded-2xl border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-[#1D1F24]/60">
+                        <span className="text-[10px] uppercase font-bold tracking-wider text-[#73766C] dark:text-neutral-400 block mb-0.5">Experience</span>
+                        <span className="font-bold text-sm text-[#111215] dark:text-[#F8F9F5] truncate block">{modalJob.experience || 'Not Specified'}</span>
                       </div>
-                    );
-                  })()}
-
-                  {/* Full Description */}
-                  <div className="space-y-1.5">
-                    <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Job Description</span>
-                    <div className={`p-4 rounded-xl border text-xs leading-relaxed max-h-56 overflow-y-auto whitespace-pre-line ${
-                      isDark ? 'bg-black/30 border-white/5 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-800'
-                    }`}>
-                      {modalJob.description || 'No detailed description provided.'}
-                    </div>
-                  </div>
-
-                  {/* Confirmed Interview or Application Status in Modal */}
-                  {isModalApplied && (
-                    <div className="mt-4 p-3.5 rounded-xl border border-emerald-500/30 bg-emerald-50/70 dark:bg-emerald-950/20 text-slate-800 dark:text-slate-200">
-                      <div className="flex items-center justify-between gap-2 flex-wrap">
-                        <div className="flex items-center gap-2">
-                          <CheckCircle2 size={16} className="text-emerald-500 shrink-0" />
-                          <span className="text-xs font-bold text-slate-600 dark:text-slate-400">Current Status:</span>
-                          <span className="text-xs font-black px-2.5 py-0.5 rounded-full bg-emerald-600 text-white">
-                            {modalStatus === 'pending' || modalStatus === 'interested' ? 'Applied • Under Review' : modalStatus}
-                          </span>
-                        </div>
-                        {modalAppInfo?.appliedAt && (
-                          <span className="text-[10px] text-slate-400 font-mono">
-                            Applied {formatDisplayDate(modalAppInfo.appliedAt)}
-                          </span>
-                        )}
+                      <div className="p-3 rounded-2xl border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-[#1D1F24]/60">
+                        <span className="text-[10px] uppercase font-bold tracking-wider text-[#73766C] dark:text-neutral-400 block mb-0.5">Salary / CTC</span>
+                        <span className="font-bold text-sm text-[#111215] dark:text-[#F8F9F5] truncate block">{modalJob.salary || 'Competitive'}</span>
                       </div>
+                      <div className="p-3 rounded-2xl border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-[#1D1F24]/60">
+                        <span className="text-[10px] uppercase font-bold tracking-wider text-[#73766C] dark:text-neutral-400 block mb-0.5">Department</span>
+                        <span className="font-bold text-sm text-[#111215] dark:text-[#F8F9F5] truncate block">{modalJob.department || 'General'}</span>
+                      </div>
+                      <div className="p-3 rounded-2xl border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-[#1D1F24]/60">
+                        <span className="text-[10px] uppercase font-bold tracking-wider text-[#73766C] dark:text-neutral-400 block mb-0.5">Type</span>
+                        <span className="font-bold text-sm text-[#111215] dark:text-[#F8F9F5] truncate block">{modalJob.employmentType || modalJob.jobType || 'Full-time'}</span>
+                      </div>
+                    </div>
 
-                      {modalAppInfo?.scheduledInterview && (
-                        <div className="mt-3 pt-2.5 border-t border-emerald-500/20 text-xs space-y-1.5">
-                          <div className="font-bold text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5">
-                            <Calendar size={13} />
-                            <span>Confirmed Interview Session</span>
-                          </div>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-[11px] text-slate-700 dark:text-slate-300">
-                            {modalAppInfo.scheduledInterview.date && (
-                              <div>🗓 <strong>Date:</strong> {modalAppInfo.scheduledInterview.date} {modalAppInfo.scheduledInterview.time}</div>
-                            )}
-                            {modalAppInfo.scheduledInterview.contactPerson && (
-                              <div>👤 <strong>Contact:</strong> {modalAppInfo.scheduledInterview.contactPerson}</div>
-                            )}
-                            {modalAppInfo.scheduledInterview.mode && (
-                              <div>💼 <strong>Mode:</strong> {modalAppInfo.scheduledInterview.mode}</div>
-                            )}
-                            {modalAppInfo.scheduledInterview.location && (
-                              <div>📍 <strong>Venue:</strong> {modalAppInfo.scheduledInterview.location}</div>
-                            )}
-                          </div>
-                          {modalAppInfo.scheduledInterview.link && (() => {
-                            const raw = String(modalAppInfo.scheduledInterview.link).trim();
-                            const cleanDigits = raw.replace(/\D/g, '');
-                            const isPhone = cleanDigits.length >= 7 && cleanDigits.length <= 15 && !raw.includes('http') && !raw.includes('.com') && !raw.includes('/') && !raw.includes('meet');
-                            const isWeb = raw.startsWith('http://') || raw.startsWith('https://') || raw.includes('meet.google') || raw.includes('zoom.us') || raw.includes('teams.microsoft') || raw.includes('.com') || raw.includes('.in');
-                            const targetUrl = isWeb ? (raw.startsWith('http') ? raw : `https://${raw}`) : '';
-                            const waDigits = cleanDigits.length === 10 ? `91${cleanDigits}` : cleanDigits;
+                    {/* Required Skills */}
+                    {(() => {
+                      const rawSkills = modalJob.skills;
+                      const modalSkills = Array.isArray(rawSkills)
+                        ? rawSkills
+                        : typeof rawSkills === 'string'
+                        ? rawSkills.split(/[,;\n]/).map((s: string) => s.trim()).filter(Boolean)
+                        : [];
 
-                            return (
-                              <div className="mt-2 p-3 rounded-xl border border-emerald-500/30 bg-white/70 dark:bg-black/30 space-y-2 text-xs">
-                                <div className="flex items-center justify-between">
-                                  <span className="font-bold text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5">
-                                    {isPhone ? <Phone size={13} /> : <ExternalLink size={13} />}
-                                    <span>{isPhone ? 'Interviewer Phone / Direct Contact' : isWeb ? 'Meeting Link / Platform' : 'Meeting Details'}</span>
-                                  </span>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleCopyInterviewLink(raw)}
-                                    className="text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1 font-semibold cursor-pointer text-[11px]"
-                                  >
-                                    {copiedLink === raw ? <Check size={12} /> : <Copy size={12} />}
-                                    <span>{copiedLink === raw ? 'Copied' : 'Copy'}</span>
-                                  </button>
-                                </div>
-                                <div className="font-mono text-xs font-bold text-slate-800 dark:text-slate-200 break-all select-all p-2 rounded-lg bg-black/5 dark:bg-white/5">
-                                  {raw}
-                                </div>
-                                <div className="flex flex-wrap items-center gap-2 pt-0.5">
-                                  {isPhone && (
-                                    <>
-                                      <a
-                                        href={`tel:${cleanDigits}`}
-                                        className="px-3 py-1.5 rounded-lg text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 flex items-center gap-1 shadow-xs"
-                                      >
-                                        <Phone size={12} />
-                                        <span>Call {cleanDigits}</span>
-                                      </a>
-                                      <a
-                                        href={`https://wa.me/${waDigits}`}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="px-3 py-1.5 rounded-lg text-xs font-bold text-white bg-green-600 hover:bg-green-500 flex items-center gap-1 shadow-xs"
-                                      >
-                                        <MessageCircle size={12} />
-                                        <span>WhatsApp</span>
-                                      </a>
-                                    </>
-                                  )}
-                                  {isWeb && (
-                                    <a
-                                      href={targetUrl}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="px-3.5 py-1.5 rounded-lg text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 flex items-center gap-1 shadow-xs"
-                                    >
-                                      <ExternalLink size={12} />
-                                      <span>Join Meeting</span>
-                                    </a>
-                                  )}
-                                </div>
-                              </div>
-                            );
-                          })()}
-                          {modalAppInfo.scheduledInterview.notes && (
-                            <div className="text-[11px] text-slate-500 dark:text-slate-400 italic">
-                              📝 {modalAppInfo.scheduledInterview.notes}
-                            </div>
+                      if (modalSkills.length === 0) return null;
+
+                      return (
+                        <div className="space-y-2">
+                          <span className="text-xs font-bold uppercase tracking-wider text-[#575A51] dark:text-neutral-400 block">Required Skills</span>
+                          <div className="flex flex-wrap gap-2">
+                            {modalSkills.map((s: string) => {
+                              const isMatched = Array.isArray(selectedJobModal.skillMatch?.matchedSkills) && selectedJobModal.skillMatch.matchedSkills.includes(s);
+                              return (
+                                <span
+                                  key={s}
+                                  className={`px-3 py-1 rounded-full text-xs font-medium border flex items-center gap-1.5 transition-all ${
+                                    isMatched
+                                      ? 'bg-[#D4F82C]/25 text-[#111215] dark:text-[#D4F82C] border-[#8FB305]/40 font-bold'
+                                      : 'bg-white dark:bg-white/5 border-[#E4E7DC] dark:border-white/10 text-[#575A51] dark:text-neutral-300'
+                                  }`}
+                                >
+                                  {isMatched && <Check size={12} strokeWidth={3} className="text-[#8FB305]" />}
+                                  <span>{s}</span>
+                                </span>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })()}
+
+                    {/* Full Description */}
+                    <div className="space-y-2">
+                      <span className="text-xs font-bold uppercase tracking-wider text-[#575A51] dark:text-neutral-400 block">Job Description</span>
+                      <div className="p-4 sm:p-5 rounded-2xl border border-[#E4E7DC] dark:border-white/10 text-xs sm:text-sm leading-relaxed max-h-60 overflow-y-auto whitespace-pre-line bg-[#F8F9F5] dark:bg-[#101114] text-[#111215] dark:text-[#E4E7DC]">
+                        {modalJob.description || 'No detailed description provided.'}
+                      </div>
+                    </div>
+
+                    {/* Confirmed Interview or Application Status in Modal */}
+                    {isModalApplied && (
+                      <div className="mt-4 p-4 rounded-2xl border border-[#8FB305]/40 bg-[#D4F82C]/10 dark:bg-[#D4F82C]/5 text-[#111215] dark:text-[#F8F9F5]">
+                        <div className="flex items-center justify-between gap-2 flex-wrap">
+                          <div className="flex items-center gap-2">
+                            <CheckCircle2 size={16} className="text-[#8FB305] shrink-0" />
+                            <span className="text-xs font-bold text-[#575A51] dark:text-neutral-400">Application Status:</span>
+                            <span className="text-xs font-black px-3 py-1 rounded-full bg-[#111215] text-[#D4F82C] dark:bg-[#D4F82C] dark:text-[#111215]">
+                              {modalStatus === 'pending' || modalStatus === 'interested' ? 'Applied • Under Review' : modalStatus}
+                            </span>
+                          </div>
+                          {modalAppInfo?.appliedAt && (
+                            <span className="text-[11px] text-[#73766C] dark:text-neutral-400 font-mono">
+                              Applied {formatDisplayDate(modalAppInfo.appliedAt)}
+                            </span>
                           )}
                         </div>
-                      )}
-                    </div>
-                  )}
 
+                        {modalAppInfo?.scheduledInterview && (
+                          <div className="mt-3 pt-3 border-t border-[#8FB305]/20 text-xs space-y-2">
+                            <div className="font-bold text-[#111215] dark:text-[#F8F9F5] flex items-center gap-1.5">
+                              <Calendar size={14} className="text-[#8FB305]" />
+                              <span>Confirmed Interview Session</span>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-[#575A51] dark:text-neutral-300">
+                              {modalAppInfo.scheduledInterview.date && (
+                                <div>🗓 <strong>Date:</strong> {modalAppInfo.scheduledInterview.date} {modalAppInfo.scheduledInterview.time}</div>
+                              )}
+                              {modalAppInfo.scheduledInterview.contactPerson && (
+                                <div>👤 <strong>Contact:</strong> {modalAppInfo.scheduledInterview.contactPerson}</div>
+                              )}
+                              {modalAppInfo.scheduledInterview.mode && (
+                                <div>💼 <strong>Mode:</strong> {modalAppInfo.scheduledInterview.mode}</div>
+                              )}
+                              {modalAppInfo.scheduledInterview.location && (
+                                <div>📍 <strong>Venue:</strong> {modalAppInfo.scheduledInterview.location}</div>
+                              )}
+                            </div>
+                            {modalAppInfo.scheduledInterview.link && (() => {
+                              const raw = String(modalAppInfo.scheduledInterview.link).trim();
+                              const cleanDigits = raw.replace(/\D/g, '');
+                              const isPhone = cleanDigits.length >= 7 && cleanDigits.length <= 15 && !raw.includes('http') && !raw.includes('.com') && !raw.includes('/') && !raw.includes('meet');
+                              const isWeb = raw.startsWith('http://') || raw.startsWith('https://') || raw.includes('meet.google') || raw.includes('zoom.us') || raw.includes('teams.microsoft') || raw.includes('.com') || raw.includes('.in');
+                              const targetUrl = isWeb ? (raw.startsWith('http') ? raw : `https://${raw}`) : '';
+                              const waDigits = cleanDigits.length === 10 ? `91${cleanDigits}` : cleanDigits;
+
+                              return (
+                                <div className="mt-2.5 p-3.5 rounded-2xl border border-[#8FB305]/30 bg-white/90 dark:bg-black/40 space-y-2 text-xs">
+                                  <div className="flex items-center justify-between">
+                                    <span className="font-bold text-[#111215] dark:text-[#D4F82C] flex items-center gap-1.5">
+                                      {isPhone ? <Phone size={13} /> : <ExternalLink size={13} />}
+                                      <span>{isPhone ? 'Interviewer Phone / Direct Contact' : isWeb ? 'Meeting Link / Platform' : 'Meeting Details'}</span>
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleCopyInterviewLink(raw)}
+                                      className="text-[#8FB305] dark:text-[#D4F82C] hover:underline flex items-center gap-1 font-semibold cursor-pointer text-xs"
+                                    >
+                                      {copiedLink === raw ? <Check size={12} /> : <Copy size={12} />}
+                                      <span>{copiedLink === raw ? 'Copied' : 'Copy'}</span>
+                                    </button>
+                                  </div>
+                                  <div className="font-mono text-xs font-bold text-[#111215] dark:text-[#F8F9F5] break-all select-all p-2 rounded-xl bg-[#F8F9F5] dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10">
+                                    {raw}
+                                  </div>
+                                  <div className="flex flex-wrap items-center gap-2 pt-1">
+                                    {isPhone && (
+                                      <>
+                                        <a
+                                          href={`tel:${cleanDigits}`}
+                                          className="px-4 py-2 rounded-full text-xs font-bold text-white bg-[#111215] hover:bg-[#202227] flex items-center gap-1.5 shadow-sm"
+                                        >
+                                          <Phone size={12} />
+                                          <span>Call {cleanDigits}</span>
+                                        </a>
+                                        <a
+                                          href={`https://wa.me/${waDigits}`}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="px-4 py-2 rounded-full text-xs font-bold text-white bg-[#25D366] hover:bg-[#20ba5a] flex items-center gap-1.5 shadow-sm"
+                                        >
+                                          <MessageCircle size={12} />
+                                          <span>WhatsApp</span>
+                                        </a>
+                                      </>
+                                    )}
+                                    {isWeb && (
+                                      <a
+                                        href={targetUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="px-4 py-2 rounded-full text-xs font-bold bg-[#111215] text-white hover:bg-[#202227] dark:bg-[#D4F82C] dark:text-[#111215] flex items-center gap-1.5 shadow-sm"
+                                      >
+                                        <ExternalLink size={12} />
+                                        <span>Join Meeting</span>
+                                      </a>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })()}
+                            {modalAppInfo.scheduledInterview.notes && (
+                              <div className="text-xs text-[#73766C] dark:text-neutral-400 italic pt-1">
+                                📝 {modalAppInfo.scheduledInterview.notes}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   {/* Sticky Fixed Bottom Actions Footer */}
-                  <div className={`px-5 sm:px-6 py-3.5 border-t shrink-0 flex flex-wrap items-center justify-between gap-3 ${
-                    isDark ? 'border-white/10 bg-[#0e0e13]' : 'border-slate-200 bg-slate-50'
-                  }`}>
+                  <div className="px-6 py-4 border-t border-[#E4E7DC] dark:border-white/10 shrink-0 flex flex-wrap items-center justify-between gap-3 bg-white dark:bg-[#15161A]">
                     <div className="flex items-center gap-2">
                       {isModalApplied ? (
                         <div className="flex items-center gap-2">
-                          <span className="text-xs font-bold text-slate-500">Status:</span>
-                          <span className="text-xs font-black px-2.5 py-0.5 rounded-full bg-emerald-600 text-white">
+                          <span className="text-xs font-semibold text-[#575A51] dark:text-neutral-400">Status:</span>
+                          <span className="text-xs font-black px-3 py-1 rounded-full bg-[#111215] text-[#D4F82C] dark:bg-[#D4F82C] dark:text-[#111215]">
                             {modalStatus === 'pending' || modalStatus === 'interested' ? 'Applied • Under Review' : modalStatus}
                           </span>
                         </div>
                       ) : (
-                        <span className="text-xs text-slate-500 dark:text-slate-400">
+                        <span className="text-xs text-[#575A51] dark:text-neutral-400">
                           Submit your 1-click application now.
                         </span>
                       )}
@@ -3752,9 +3787,7 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
                           setSelectedJobModal(null);
                           hasDismissedJobModalRef.current = true;
                         }}
-                        className={`px-4 py-2 rounded-xl text-xs font-bold border transition-colors cursor-pointer ${
-                          isDark ? 'border-white/10 text-slate-300 hover:bg-white/5' : 'border-slate-200 text-slate-700 hover:bg-slate-100'
-                        }`}
+                        className="px-5 py-2.5 rounded-full text-xs font-bold border border-[#E4E7DC] dark:border-white/10 text-[#575A51] dark:text-neutral-300 hover:bg-[#F8F9F5] dark:hover:bg-white/5 transition-colors cursor-pointer"
                       >
                         Close
                       </button>
@@ -3767,10 +3800,10 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
                           setSelectedJobModal(null);
                           hasDismissedJobModalRef.current = true;
                         }}
-                        className={`px-5 py-2 rounded-xl text-xs font-bold text-white transition-all ${
+                        className={`px-6 py-2.5 rounded-full text-xs font-bold transition-all shadow-sm ${
                           isModalApplied
-                            ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 cursor-default'
-                            : 'bg-emerald-600 hover:bg-emerald-500 shadow-md shadow-emerald-500/25 active:scale-95 cursor-pointer'
+                            ? 'bg-[#D4F82C]/20 text-[#111215] dark:text-[#D4F82C] border border-[#8FB305]/30 cursor-default'
+                            : 'bg-[#111215] text-white hover:bg-[#202227] dark:bg-[#D4F82C] dark:text-[#111215] dark:hover:bg-[#c7eb22] active:scale-95 cursor-pointer'
                         }`}
                       >
                         {isModalApplied
