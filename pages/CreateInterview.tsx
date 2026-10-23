@@ -5,7 +5,33 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { SKILL_OPTIONS } from './Profile';
 import * as pdfjsLib from 'pdfjs-dist';
-import { ExternalLink, Sparkles, Building2, Check } from 'lucide-react';
+import {
+  ExternalLink,
+  Sparkles,
+  Building2,
+  Check,
+  FileUp,
+  FileText,
+  Globe,
+  UploadCloud,
+  Briefcase,
+  MapPin,
+  IndianRupee,
+  Layers,
+  GraduationCap,
+  Users,
+  Plus,
+  Trash2,
+  X,
+  AlertCircle,
+  HelpCircle,
+  CheckCircle2,
+  Wand2,
+  ArrowRight,
+  ShieldCheck,
+  Clock,
+  ChevronDown
+} from 'lucide-react';
 import { LocationCityInput } from '../components/LocationCityInput';
 import { EDUCATION_QUALIFICATIONS, EDUCATION_SPECIALIZATIONS, EducationQualification } from '../data/allEducationDegrees';
 import { resolveStrictListedCity } from '../data/maharashtraCities';
@@ -1130,454 +1156,762 @@ const CreateInterview: React.FC = () => {
     }
   };
 
-  const inputClass = "geist-caption h-9 w-full rounded-[6px] border border-gray-300 dark:border-white/[0.14] bg-white dark:bg-[#050505] px-3 text-gray-900 dark:text-white outline-none transition-colors placeholder:text-gray-400 dark:placeholder:text-[#6b7280] focus:border-indigo-500 dark:focus:border-white/[0.28] disabled:cursor-not-allowed disabled:opacity-50";
-  const textareaClass = "geist-caption min-h-[132px] w-full resize-y rounded-[6px] border border-gray-300 dark:border-white/[0.14] bg-white dark:bg-[#050505] px-3 py-2.5 text-gray-900 dark:text-white outline-none transition-colors placeholder:text-gray-400 dark:placeholder:text-[#6b7280] focus:border-indigo-500 dark:focus:border-white/[0.28]";
-  const selectClass = `${inputClass} appearance-none`;
-  const labelClass = "geist-label mb-1.5 block text-gray-700 dark:text-[#a1a1aa]";
-  const secondaryButtonClass = "geist-caption inline-flex h-9 shrink-0 items-center justify-center rounded-[6px] border border-gray-300 dark:border-white/[0.14] bg-white dark:bg-white/[0.03] px-3.5 font-semibold text-gray-800 dark:text-[#d4d4d4] transition-colors hover:bg-gray-100 dark:hover:bg-white/[0.06] hover:text-gray-900 dark:hover:text-white disabled:cursor-not-allowed disabled:opacity-40 shadow-sm dark:shadow-none cursor-pointer";
-  const primaryButtonClass = "geist-caption inline-flex h-10 items-center justify-center rounded-[6px] bg-black text-white hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 px-5 font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 shadow-md dark:shadow-none cursor-pointer";
-  const panelHeaderClass = "geist-label uppercase text-gray-500 dark:text-[#6b7280]";
-  const panelTitleClass = "geist-section-title mt-1 text-gray-900 dark:text-white";
-  const helperTextClass = "geist-small mt-1 max-w-2xl text-gray-600 dark:text-[#8f8f8f]";
+  const inputClass = "w-full h-11 px-4 rounded-2xl border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-[#101114] text-xs sm:text-sm text-[#111215] dark:text-[#F8F9F5] placeholder:text-[#73766C] dark:placeholder:text-neutral-500 outline-none transition-all focus:border-[#111215] dark:focus:border-[#D4F82C] focus:bg-white dark:focus:bg-[#15161A] disabled:cursor-not-allowed disabled:opacity-50";
+  const textareaClass = "w-full min-h-[110px] p-4 rounded-2xl border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-[#101114] text-xs sm:text-sm text-[#111215] dark:text-[#F8F9F5] placeholder:text-[#73766C] dark:placeholder:text-neutral-500 outline-none transition-all focus:border-[#111215] dark:focus:border-[#D4F82C] focus:bg-white dark:focus:bg-[#15161A] leading-relaxed resize-y";
+  const selectClass = `${inputClass} cursor-pointer`;
+  const labelClass = "text-xs font-bold text-[#111215] dark:text-[#F8F9F5] mb-1.5 block flex items-center gap-1.5";
+  const secondaryButtonClass = "inline-flex h-11 items-center justify-center rounded-full border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-white/5 px-5 font-bold text-xs text-[#111215] dark:text-white transition-all hover:bg-[#F1F3EB] dark:hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer shadow-2xs";
+  const primaryButtonClass = "inline-flex h-12 items-center justify-center rounded-full bg-[#111215] text-white hover:bg-[#202227] dark:bg-[#D4F82C] dark:text-[#111215] dark:hover:bg-[#c5ea24] px-8 font-black text-xs sm:text-sm transition-all shadow-md cursor-pointer disabled:cursor-not-allowed disabled:opacity-50";
 
   return (
-    <div className="w-full min-h-[calc(100dvh-3.5rem)] bg-white dark:bg-[#000] text-gray-900 dark:text-white">
+    <div className="w-full min-h-screen bg-[#F8F9F5] dark:bg-[#0D0E11] text-[#111215] dark:text-[#F8F9F5] font-sans antialiased selection:bg-[#D4F82C] selection:text-[#111215]">
 
-      <header className="border-b border-gray-200 dark:border-white/[0.11] bg-white dark:bg-[#000]">
-        <div className="px-4 py-5 sm:px-6 lg:px-7">
-          <p className="geist-label uppercase text-gray-500 dark:text-[#6b7280]">Job setup</p>
-          <h1 className="geist-page-title mt-2 text-gray-900 dark:text-white">Create Job</h1>
-          <p className="geist-small mt-1 max-w-2xl text-gray-600 dark:text-[#8f8f8f]">
-            Post a new job opening, define role requirements, and prepare candidate invitations from one focused ATS workspace.
-          </p>
+      {/* Header Banner */}
+      <header className="border-b border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-[#0D0E11] px-4 py-6 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 text-[11px] font-bold text-[#111215] dark:text-[#F8F9F5] shadow-2xs mb-2">
+              <span className="size-2 rounded-full bg-[#8FB305] dark:bg-[#D4F82C] animate-pulse"></span>
+              <span className="font-mono uppercase text-[10px] text-[#73766C] dark:text-neutral-400">RECRUITER WORKSPACE</span>
+              <span className="text-[#E4E7DC] dark:text-white/20">|</span>
+              <span>Job Setup & Publishing</span>
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-black text-[#111215] dark:text-[#F8F9F5] tracking-tight">
+              Create Job Opening
+            </h1>
+            <p className="text-xs sm:text-sm text-[#575A51] dark:text-neutral-400 mt-1 max-w-2xl leading-relaxed">
+              Post a new job opening, define role requirements, auto-extract capabilities with AI, and prepare candidate invitations.
+            </p>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-white dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 text-[#575A51] dark:text-neutral-300 shadow-2xs">
+              <Sparkles size={13} className="text-[#8FB305] dark:text-[#D4F82C]" />
+              <span>AI Extraction Enabled</span>
+            </span>
+          </div>
         </div>
+
         {interviewLimitReached && (
-          <div className="border-t border-red-500/20 bg-red-500/10 px-4 py-3 text-sm font-medium text-red-400 sm:px-6 lg:px-7">
-            {getRateLimitReachedMessage('interviews')}
+          <div className="max-w-7xl mx-auto mt-4 rounded-2xl border border-red-500/20 bg-red-500/10 p-4 text-xs sm:text-sm font-semibold text-red-600 dark:text-red-400 flex items-center gap-2.5">
+            <AlertCircle size={18} className="shrink-0" />
+            <span>{getRateLimitReachedMessage('interviews')}</span>
           </div>
         )}
       </header>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[minmax(280px,0.42fr)_1px_minmax(0,1fr)]">
-        <aside className="border-b border-gray-200 dark:border-white/[0.11] bg-gray-50 dark:bg-[#020202] px-4 py-5 sm:px-6 lg:border-b-0 lg:px-7">
-          <div className="lg:sticky lg:top-[5.25rem] space-y-4">
-            <div>
-              <p className={panelHeaderClass}>Source</p>
-              <h2 className={panelTitleClass}>Start from a job description</h2>
-              <p className={helperTextClass}>
-                Upload a PDF/TXT or paste raw JD text below to auto-fill details & create dynamic custom fields.
-              </p>
-            </div>
+      {/* Main 2-Column Bento Workspace */}
+      <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
 
-            {/* Mode Switcher Tabs */}
-            <div className="flex rounded-[6px] border border-gray-200 dark:border-white/[0.11] bg-gray-100/80 dark:bg-white/[0.03] p-1 shadow-inner dark:shadow-none">
-              <button
-                type="button"
-                onClick={() => setJdImportMode('upload')}
-                className={`flex-1 py-1.5 text-[11px] font-semibold rounded-[4px] transition-all flex items-center justify-center gap-1 cursor-pointer ${jdImportMode === 'upload' ? 'bg-black text-white dark:bg-white dark:text-black shadow-sm' : 'text-gray-600 dark:text-[#8f8f8f] hover:text-gray-900 dark:hover:text-white'}`}
-              >
-                <i className="fas fa-file-pdf"></i> Upload File
-              </button>
-              <button
-                type="button"
-                onClick={() => setJdImportMode('paste')}
-                className={`flex-1 py-1.5 text-[11px] font-semibold rounded-[4px] transition-all flex items-center justify-center gap-1 cursor-pointer ${jdImportMode === 'paste' ? 'bg-black text-white dark:bg-white dark:text-black shadow-sm' : 'text-gray-600 dark:text-[#8f8f8f] hover:text-gray-900 dark:hover:text-white'}`}
-              >
-                <i className="fas fa-paste"></i> Paste Text
-              </button>
-              <button
-                type="button"
-                onClick={() => setJdImportMode('url')}
-                className={`flex-1 py-1.5 text-[11px] font-semibold rounded-[4px] transition-all flex items-center justify-center gap-1 cursor-pointer ${jdImportMode === 'url' ? 'bg-black text-white dark:bg-white dark:text-black shadow-sm' : 'text-gray-600 dark:text-[#8f8f8f] hover:text-gray-900 dark:hover:text-white'}`}
-              >
-                <i className="fas fa-link"></i> Web Link
-              </button>
-            </div>
+          {/* Left Column: AI Source & Extraction Assistant (5 cols) */}
+          <aside className="lg:col-span-5 space-y-6 lg:sticky lg:top-6">
+            <div className="rounded-3xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] p-5 sm:p-6 shadow-xs space-y-5">
+              
+              {/* Card Header */}
+              <div className="flex items-center justify-between pb-3 border-b border-[#E4E7DC] dark:border-white/10">
+                <div className="flex items-center gap-2.5">
+                  <div className="size-9 rounded-2xl bg-[#D4F82C] text-[#111215] flex items-center justify-center font-black shadow-2xs">
+                    <Wand2 size={16} />
+                  </div>
+                  <div>
+                    <h2 className="text-sm font-black text-[#111215] dark:text-[#F8F9F5]">AI JD Ingestion</h2>
+                    <p className="text-[11px] text-[#73766C] dark:text-neutral-400">Auto-fill role details from any source</p>
+                  </div>
+                </div>
+                <span className="px-2.5 py-1 rounded-full bg-[#F1F3EB] dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 text-[10px] font-mono font-bold text-[#8FB305] dark:text-[#D4F82C]">
+                  Smart Parse
+                </span>
+              </div>
 
-            {jdImportMode === 'upload' ? (
-              <>
-                <label
-                  htmlFor="jd-upload"
-                  className={`geist-caption flex min-h-28 cursor-pointer flex-col justify-center rounded-[6px] border border-dashed bg-white dark:bg-white/[0.025] px-4 py-4 text-gray-800 dark:text-[#d4d4d4] transition-colors hover:border-gray-400 dark:hover:border-white/[0.3] ${parsingJd ? 'cursor-not-allowed border-gray-300 dark:border-white/[0.12]' : 'border-gray-300 dark:border-white/[0.18]'}`}
-                >
-                  {parsingJd ? (
-                    <span className="flex flex-col gap-2" role="status" aria-label="Parsing job description">
-                      <SkeletonBlock className="h-4 w-44" />
-                      <SkeletonBlock className="h-3 w-64 max-w-full bg-gray-200 dark:bg-white/[0.08]" />
-                      <SkeletonBlock className="h-3 w-36 bg-gray-200 dark:bg-white/[0.08]" />
-                    </span>
-                  ) : (
-                    <>
-                      <span className="font-medium text-gray-900 dark:text-white flex items-center gap-2">
-                        <i className="fas fa-file-upload text-black dark:text-white"></i> Upload job description file
-                      </span>
-                      <span className="geist-small mt-1 text-gray-500 dark:text-[#8f8f8f]">PDF or TXT document with job requirements.</span>
-                    </>
-                  )}
-                </label>
-                <input id="jd-upload" type="file" accept=".pdf,.txt" className="hidden" onChange={handleJDUpload} disabled={parsingJd} />
-              </>
-            ) : jdImportMode === 'paste' ? (
-              <div className="space-y-3">
-                <textarea
-                  rows={8}
-                  value={pastedJdText}
-                  onChange={(e) => setPastedJdText(e.target.value)}
-                  placeholder="Paste complete Job Description text here (e.g. 23632 | Production Engineer, Location: Ambad, Experience: 1-2 yrs, Facilities, Bond, Salary, etc.)..."
-                  className="w-full rounded-[6px] border border-gray-300 dark:border-white/[0.18] bg-white dark:bg-white/[0.03] p-3 text-xs text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 outline-none focus:border-indigo-500 dark:focus:border-white leading-relaxed resize-none font-sans"
-                />
+              {/* Mode Switcher Tabs */}
+              <div className="flex p-1 rounded-full border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-[#101114]">
                 <button
                   type="button"
-                  onClick={handleParsePastedJDText}
-                  disabled={parsingJd || !pastedJdText.trim()}
-                  className="w-full h-9 rounded-[6px] bg-black hover:bg-neutral-800 dark:bg-white dark:hover:bg-neutral-200 text-white dark:text-black font-semibold text-xs transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer shadow-sm"
+                  onClick={() => setJdImportMode('upload')}
+                  className={`flex-1 py-2 text-xs font-bold rounded-full transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                    jdImportMode === 'upload'
+                      ? 'bg-[#111215] text-[#D4F82C] dark:bg-[#D4F82C] dark:text-[#111215] shadow-xs'
+                      : 'text-[#575A51] dark:text-neutral-400 hover:text-[#111215] dark:hover:text-white'
+                  }`}
                 >
-                  {parsingJd ? (
-                    <>
-                      <i className="fas fa-spinner fa-spin"></i> Parsing & Auto-Filling JD...
-                    </>
-                  ) : (
-                    <>
-                      <i className="fas fa-wand-magic-sparkles"></i> Auto-Fill JD Details & Custom Fields
-                    </>
-                  )}
+                  <FileUp size={13} />
+                  <span>File</span>
                 </button>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                <input
-                  type="url"
-                  value={jdUrlInput}
-                  onChange={(e) => setJdUrlInput(e.target.value)}
-                  placeholder="Paste Job URL (e.g. https://company.com/job/101)..."
-                  className="w-full rounded-[6px] border border-gray-300 dark:border-white/[0.18] bg-white dark:bg-white/[0.03] p-3 text-xs text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 outline-none focus:border-indigo-500 dark:focus:border-white font-sans"
-                />
                 <button
                   type="button"
-                  onClick={handleFetchAndParseJdFromUrl}
-                  disabled={parsingJd || !jdUrlInput.trim()}
-                  className="w-full h-9 rounded-[6px] bg-black hover:bg-neutral-800 dark:bg-white dark:hover:bg-neutral-200 text-white dark:text-black font-semibold text-xs transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer shadow-sm"
+                  onClick={() => setJdImportMode('paste')}
+                  className={`flex-1 py-2 text-xs font-bold rounded-full transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                    jdImportMode === 'paste'
+                      ? 'bg-[#111215] text-[#D4F82C] dark:bg-[#D4F82C] dark:text-[#111215] shadow-xs'
+                      : 'text-[#575A51] dark:text-neutral-400 hover:text-[#111215] dark:hover:text-white'
+                  }`}
                 >
-                  {parsingJd ? (
-                    <>
-                      <i className="fas fa-spinner fa-spin"></i> Fetching Webpage & Parsing...
-                    </>
-                  ) : (
-                    <>
-                      <i className="fas fa-globe"></i> Fetch & Auto-Fill JD from URL
-                    </>
-                  )}
+                  <FileText size={13} />
+                  <span>Paste Text</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setJdImportMode('url')}
+                  className={`flex-1 py-2 text-xs font-bold rounded-full transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                    jdImportMode === 'url'
+                      ? 'bg-[#111215] text-[#D4F82C] dark:bg-[#D4F82C] dark:text-[#111215] shadow-xs'
+                      : 'text-[#575A51] dark:text-neutral-400 hover:text-[#111215] dark:hover:text-white'
+                  }`}
+                >
+                  <Globe size={13} />
+                  <span>Web Link</span>
                 </button>
               </div>
-            )}
 
-            <div className="mt-7 border-t border-gray-200 dark:border-white/[0.11] pt-5">
-              <p className={panelHeaderClass}>Flow</p>
-              <div className="mt-3 divide-y divide-gray-200 dark:divide-white/[0.11] border border-gray-200 dark:border-white/[0.11] rounded-[6px] bg-white dark:bg-transparent">
-                {[
-                  ['Brief', 'Role details and requirements'],
-                  ['Skills', 'Capabilities and requirements'],
-                  ['Additional', 'Dynamic custom fields and perks'],
-                ].map(([title, copy]) => (
-                  <div key={title} className="px-3 py-3">
-                    <p className="geist-caption font-medium text-gray-900 dark:text-white">{title}</p>
-                    <p className="geist-small mt-0.5 text-gray-500 dark:text-[#8f8f8f]">{copy}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </aside>
-
-        <div className="hidden bg-gray-200 dark:bg-white/[0.11] lg:block" />
-
-        <form onSubmit={handleSubmit} className="min-w-0 bg-white dark:bg-[#000]">
-          <section className="border-b border-gray-200 dark:border-white/[0.11] px-4 py-5 sm:px-6 lg:px-7">
-            <p className={panelHeaderClass}>Brief</p>
-            <h2 className={panelTitleClass}>Role details</h2>
-            <p className={helperTextClass}>Keep the requirements specific so the generated interview stays relevant.</p>
-
-            <div className="mt-5 grid grid-cols-1 gap-4 xl:grid-cols-2">
-              <div>
-                <label className={labelClass}>Job Number / Code (Optional)</label>
-                <input
-                  name="jobNo"
-                  type="text"
-                  className={inputClass}
-                  value={formData.jobNo}
-                  onChange={handleFormChange}
-                  placeholder="e.g. Job No: 1042 or REQ-901 (Auto-filled by AI if in JD)"
-                />
-              </div>
-
-              <div>
-                <label className={labelClass}>Job title / role <span className="text-red-500 dark:text-red-400">*</span></label>
-                <input name="title" type="text" required className={inputClass} value={formData.title} onChange={handleFormChange} placeholder="Senior Frontend Engineer" />
-              </div>
-
-              <div>
-                <label className={labelClass}>Company Name</label>
-                <input
-                  name="companyName"
-                  type="text"
-                  className={inputClass}
-                  value={formData.companyName}
-                  onChange={handleFormChange}
-                  placeholder="e.g. Mukta Group / TechCorp"
-                />
-              </div>
-
-              <div className="xl:col-span-2">
-                <label className={labelClass}>Job description</label>
-                <textarea name="description" required rows={5} className={textareaClass} value={formData.description} onChange={handleFormChange} placeholder="Describe the role, responsibilities, and what you are looking for." />
-              </div>
-
-              <div className="xl:col-span-2">
-                <label className={labelClass}>Company Details & Overview (Optional)</label>
-                <textarea name="companyDetails" rows={3} className={textareaClass} value={formData.companyDetails} onChange={handleFormChange} placeholder="Enter company profile, background, product overview, or recruiter company details..." />
-              </div>
-
-              <div className="xl:col-span-2">
-                <label className={labelClass}>Job Link / External URL (Added by Job Creator)</label>
-                <input
-                  name="jobLink"
-                  type="url"
-                  className={inputClass}
-                  value={formData.jobLink}
-                  onChange={handleFormChange}
-                  placeholder="e.g. https://careers.company.com/job-101 (Added manually by job creator, not AI)"
-                />
-              </div>
-
-              <div>
-                <label className={labelClass}>Employment type</label>
-                <select name="employmentType" required className={selectClass} value={formData.employmentType} onChange={handleFormChange}>
-                  <option value="Full-time">Full-time</option>
-                  <option value="Part-time">Part-time</option>
-                  <option value="Contract">Contract</option>
-                  <option value="Internship">Internship</option>
-                </select>
-              </div>
-
-              <div>
-                <label className={labelClass}>Required experience</label>
-                <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2">
-                  <input name="minExperience" type="number" min="0" required placeholder="Min" className={inputClass} value={formData.minExperience} onChange={handleFormChange} />
-                  <span className="geist-small text-gray-500 dark:text-[#6b7280]">to</span>
-                  <input name="maxExperience" type="number" min="0" required placeholder="Max" className={inputClass} value={formData.maxExperience} onChange={handleFormChange} />
+              {/* Mode: Upload */}
+              {jdImportMode === 'upload' ? (
+                <>
+                  <label
+                    htmlFor="jd-upload"
+                    className={`flex min-h-36 cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed p-6 text-center transition-all ${
+                      parsingJd
+                        ? 'border-[#8FB305] bg-[#D4F82C]/5 cursor-not-allowed'
+                        : 'border-[#E4E7DC] dark:border-white/15 bg-[#F8F9F5] dark:bg-white/5 hover:border-[#111215] dark:hover:border-[#D4F82C] hover:bg-white dark:hover:bg-white/[0.08]'
+                    }`}
+                  >
+                    {parsingJd ? (
+                      <div className="flex flex-col items-center gap-2" role="status">
+                        <div className="size-8 rounded-full border-2 border-[#111215] dark:border-[#D4F82C] border-t-transparent animate-spin" />
+                        <span className="text-xs font-bold text-[#111215] dark:text-white">Parsing Job Description...</span>
+                        <span className="text-[11px] text-[#73766C] dark:text-neutral-400">Extracting requirements & custom fields</span>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="size-11 rounded-2xl bg-white dark:bg-white/10 border border-[#E4E7DC] dark:border-white/10 flex items-center justify-center mb-2 shadow-2xs">
+                          <UploadCloud size={22} className="text-[#8FB305] dark:text-[#D4F82C]" />
+                        </div>
+                        <span className="text-xs font-bold text-[#111215] dark:text-white">Upload JD File (.pdf, .txt)</span>
+                        <span className="text-[11px] text-[#73766C] dark:text-neutral-400 mt-0.5">Drag & drop or browse document</span>
+                      </>
+                    )}
+                  </label>
+                  <input id="jd-upload" type="file" accept=".pdf,.txt" className="hidden" onChange={handleJDUpload} disabled={parsingJd} />
+                </>
+              ) : jdImportMode === 'paste' ? (
+                <div className="space-y-3">
+                  <textarea
+                    rows={7}
+                    value={pastedJdText}
+                    onChange={(e) => setPastedJdText(e.target.value)}
+                    placeholder="Paste complete Job Description text here (e.g. Production Engineer, Location: Ambad, Experience: 1-2 yrs, Facilities, Salary, etc.)..."
+                    className={textareaClass}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleParsePastedJDText}
+                    disabled={parsingJd || !pastedJdText.trim()}
+                    className="w-full h-11 rounded-full bg-[#111215] hover:bg-[#202227] dark:bg-[#D4F82C] dark:text-[#111215] text-white font-bold text-xs transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer shadow-xs"
+                  >
+                    {parsingJd ? (
+                      <>
+                        <div className="size-4 rounded-full border-2 border-white dark:border-[#111215] border-t-transparent animate-spin" />
+                        <span>Parsing & Auto-Filling JD...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles size={14} className="text-[#D4F82C] dark:text-[#111215]" />
+                        <span>Auto-Fill Details with AI</span>
+                      </>
+                    )}
+                  </button>
                 </div>
-              </div>
+              ) : (
+                <div className="space-y-3">
+                  <input
+                    type="url"
+                    value={jdUrlInput}
+                    onChange={(e) => setJdUrlInput(e.target.value)}
+                    placeholder="Paste Job URL (e.g. https://company.com/job/101)..."
+                    className={inputClass}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleFetchAndParseJdFromUrl}
+                    disabled={parsingJd || !jdUrlInput.trim()}
+                    className="w-full h-11 rounded-full bg-[#111215] hover:bg-[#202227] dark:bg-[#D4F82C] dark:text-[#111215] text-white font-bold text-xs transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer shadow-xs"
+                  >
+                    {parsingJd ? (
+                      <>
+                        <div className="size-4 rounded-full border-2 border-white dark:border-[#111215] border-t-transparent animate-spin" />
+                        <span>Fetching Webpage & Parsing...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Globe size={14} className="text-[#D4F82C] dark:text-[#111215]" />
+                        <span>Fetch & Auto-Fill from URL</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
 
-              <div>
-                <label className={labelClass}>Job City / Location <span className="text-red-500 dark:text-red-400">*</span></label>
-                <LocationCityInput
-                  value={formData.city || formData.location}
-                  onChange={(val) => setFormData({ ...formData, city: val, location: val })}
-                  placeholder="Search city (e.g. Ambad, Nashik / Pune / Mumbai)..."
-                  className={inputClass}
-                />
-              </div>
-
-
-              <div>
-                <label className={labelClass}>Salary / Compensation <span className="text-red-500 dark:text-red-400">*</span></label>
-                <input name="salaryRange" type="text" required className={inputClass} value={formData.salaryRange} onChange={handleFormChange} placeholder="e.g. 20,000 - 22,000 / per month or 4 - 6 LPA" />
-              </div>
-
-              <div>
-                <label className={labelClass}>Gender requirement</label>
-                <select name="genderRequirement" className={selectClass} value={formData.genderRequirement} onChange={handleFormChange}>
-                  <option value="Any">Any</option>
-                  <option value="Male">Male</option>
-                  <option value="Female">Female</option>
-                </select>
-              </div>
-
-              <div className="xl:col-span-2">
-                <label className={labelClass}>Minimum education level</label>
-                <div className="min-h-10 rounded-[6px] border border-gray-300 dark:border-white/[0.11] bg-gray-50 dark:bg-white/[0.025] p-2">
-                  <div className="flex flex-wrap gap-2">
-                    {splitCommaList(formData.education).length > 0 ? splitCommaList(formData.education).map(edu => (
-                      <span key={edu} className="geist-small inline-flex h-7 items-center gap-2 rounded-[6px] border border-gray-300 dark:border-white/[0.11] bg-white dark:bg-white/[0.05] px-2.5 text-gray-900 dark:text-[#d4d4d4] font-medium shadow-sm dark:shadow-none">
-                        {edu}
-                        <button type="button" onClick={() => toggleEducation(edu)} className="text-gray-400 dark:text-[#8f8f8f] transition-colors hover:text-red-500 dark:hover:text-white">&times;</button>
+              {/* Stepper Pipeline Overview */}
+              <div className="pt-4 border-t border-[#E4E7DC] dark:border-white/10 space-y-2">
+                <div className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#73766C] dark:text-neutral-400">
+                  Job Creation Pipeline
+                </div>
+                <div className="space-y-2">
+                  {[
+                    { step: '01', title: 'Role Brief', desc: 'Title, compensation, location & description' },
+                    { step: '02', title: 'Skills Taxonomy', desc: 'Required tech stack & AI recommended capabilities' },
+                    { step: '03', title: 'Custom Fields', desc: 'Perks, shifts, bond terms & client specifications' },
+                  ].map((item) => (
+                    <div key={item.step} className="p-3 rounded-2xl bg-[#F8F9F5] dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 flex items-start gap-3">
+                      <span className="font-mono text-xs font-black text-[#8FB305] dark:text-[#D4F82C] px-2 py-0.5 rounded-lg bg-white dark:bg-white/10 border border-[#E4E7DC] dark:border-white/10">
+                        {item.step}
                       </span>
-                    )) : <span className="geist-caption text-gray-400 dark:text-[#6b7280]">No education level selected</span>}
-                  </div>
-                </div>
-
-                <div className="mt-2.5 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
-                  {/* 1. Select Qualification Category */}
-                  <div>
-                    <label className="geist-caption mb-1 block text-gray-500 dark:text-[#8f8f8f]">1. Qualification Category</label>
-                    <select
-                      className={selectClass}
-                      value={selectedQualForEdu}
-                      onChange={(e) => setSelectedQualForEdu(e.target.value)}
-                    >
-                      <option value="">-- Select Qualification Category --</option>
-                      {EDUCATION_QUALIFICATIONS.map(qual => (
-                        <option key={qual} value={qual}>{qual}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* 2. Select Specialization based on Qualification */}
-                  <div>
-                    <label className="geist-caption mb-1 block text-gray-500 dark:text-[#8f8f8f]">2. Degree / Specialization</label>
-                    <select
-                      className={`${selectClass} ${!selectedQualForEdu ? 'opacity-60 cursor-not-allowed' : ''}`}
-                      value=""
-                      disabled={!selectedQualForEdu}
-                      onChange={(e) => {
-                        if (e.target.value) {
-                          toggleEducation(e.target.value);
-                          e.target.value = "";
-                        }
-                      }}
-                    >
-                      <option value="">
-                        {selectedQualForEdu ? `-- Select ${selectedQualForEdu} Degree --` : '-- Choose Category First --'}
-                      </option>
-                      {selectedQualForEdu && (
-                        <option value={`Any ${selectedQualForEdu}`}>Any {selectedQualForEdu} (All)</option>
-                      )}
-                      {(selectedQualForEdu && EDUCATION_SPECIALIZATIONS[selectedQualForEdu as EducationQualification]
-                        ? EDUCATION_SPECIALIZATIONS[selectedQualForEdu as EducationQualification]
-                        : []
-                      ).map(spec => (
-                        <option key={spec} value={spec}>{spec}</option>
-                      ))}
-                    </select>
-                  </div>
+                      <div>
+                        <div className="text-xs font-bold text-[#111215] dark:text-[#F8F9F5]">{item.title}</div>
+                        <div className="text-[11px] text-[#73766C] dark:text-neutral-400">{item.desc}</div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
+
             </div>
-          </section>
+          </aside>
 
-          <section className="border-b border-gray-200 dark:border-white/[0.11] px-4 py-5 sm:px-6 lg:px-7">
-            <p className={panelHeaderClass}>Skills</p>
-            <h2 className={panelTitleClass}>Required capabilities</h2>
-            <p className={helperTextClass}>Select existing skills or add a custom requirement.</p>
+          {/* Right Column: Main Form (7 cols) */}
+          <form onSubmit={handleSubmit} className="lg:col-span-7 space-y-6">
 
-            <div className="mt-5 min-h-10 rounded-[6px] border border-gray-300 dark:border-white/[0.11] bg-gray-50 dark:bg-white/[0.025] p-2">
-              <div className="flex flex-wrap gap-2">
-                {splitCommaList(formData.skills).length > 0 ? splitCommaList(formData.skills).map(skill => (
-                  <span key={skill} className="geist-small inline-flex h-7 items-center gap-2 rounded-[6px] border border-purple-200 dark:border-white/[0.11] bg-purple-50 dark:bg-white/[0.05] px-2.5 text-purple-700 dark:text-[#d4d4d4] font-medium">
-                    {skill}
-                    <button type="button" onClick={() => toggleSkill(skill)} className="text-purple-400 dark:text-[#8f8f8f] transition-colors hover:text-red-500 dark:hover:text-white">&times;</button>
+            {/* Section 1: Role Brief Bento Card */}
+            <section className="rounded-3xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] p-6 sm:p-8 shadow-xs space-y-6">
+              
+              <div className="flex items-center justify-between pb-4 border-b border-[#E4E7DC] dark:border-white/10">
+                <div className="flex items-center gap-2.5">
+                  <span className="px-2.5 py-1 rounded-full bg-[#111215] text-[#D4F82C] dark:bg-[#D4F82C] dark:text-[#111215] text-[10px] font-mono font-black">
+                    01
                   </span>
-                )) : <span className="geist-caption text-gray-400 dark:text-[#6b7280]">No skills selected</span>}
+                  <div>
+                    <h2 className="text-base font-black text-[#111215] dark:text-[#F8F9F5]">Role Brief & Details</h2>
+                    <p className="text-xs text-[#73766C] dark:text-neutral-400">Specify core role responsibilities and criteria</p>
+                  </div>
+                </div>
+                <Briefcase size={16} className="text-[#8FB305] dark:text-[#D4F82C]" />
               </div>
-            </div>
 
-            <div className="mt-2 flex flex-col gap-2 sm:flex-row">
-              <input
-                type="text"
-                className={inputClass}
-                placeholder="Search or add custom skill"
-                value={skillSearch}
-                onChange={e => setSkillSearch(e.target.value)}
-                onKeyDown={e => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                
+                {/* Job Number / Code */}
+                <div>
+                  <label className={labelClass}>
+                    <span>Job Code / Number</span>
+                    <span className="text-[10px] text-[#73766C] font-normal">(Optional)</span>
+                  </label>
+                  <input
+                    name="jobNo"
+                    type="text"
+                    className={inputClass}
+                    value={formData.jobNo}
+                    onChange={handleFormChange}
+                    placeholder="e.g. REQ-901 / JOB-1042"
+                  />
+                </div>
+
+                {/* Job Title */}
+                <div>
+                  <label className={labelClass}>
+                    <span>Job Title / Role</span>
+                    <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    name="title"
+                    type="text"
+                    required
+                    className={inputClass}
+                    value={formData.title}
+                    onChange={handleFormChange}
+                    placeholder="e.g. Senior Frontend Engineer"
+                  />
+                </div>
+
+                {/* Company Name */}
+                <div className="sm:col-span-2">
+                  <label className={labelClass}>
+                    <Building2 size={13} className="text-[#8FB305]" />
+                    <span>Company / Client Name</span>
+                  </label>
+                  <input
+                    name="companyName"
+                    type="text"
+                    className={inputClass}
+                    value={formData.companyName}
+                    onChange={handleFormChange}
+                    placeholder="e.g. Acme Technologies / Mukta Group"
+                  />
+                </div>
+
+                {/* Job Description */}
+                <div className="sm:col-span-2">
+                  <label className={labelClass}>
+                    <span>Job Description & Scope</span>
+                    <span className="text-red-500">*</span>
+                  </label>
+                  <textarea
+                    name="description"
+                    required
+                    rows={5}
+                    className={textareaClass}
+                    value={formData.description}
+                    onChange={handleFormChange}
+                    placeholder="Describe key responsibilities, day-to-day requirements, and deliverables..."
+                  />
+                </div>
+
+                {/* Company Details */}
+                <div className="sm:col-span-2">
+                  <label className={labelClass}>
+                    <span>Company Background & Overview</span>
+                    <span className="text-[10px] text-[#73766C] font-normal">(Optional)</span>
+                  </label>
+                  <textarea
+                    name="companyDetails"
+                    rows={3}
+                    className={textareaClass}
+                    value={formData.companyDetails}
+                    onChange={handleFormChange}
+                    placeholder="Enter company profile, background, or recruiter overview..."
+                  />
+                </div>
+
+                {/* External Job Link */}
+                <div className="sm:col-span-2">
+                  <label className={labelClass}>
+                    <ExternalLink size={13} className="text-[#8FB305]" />
+                    <span>External Job / Career Link</span>
+                    <span className="text-[10px] text-[#73766C] font-normal">(Optional)</span>
+                  </label>
+                  <input
+                    name="jobLink"
+                    type="url"
+                    className={inputClass}
+                    value={formData.jobLink}
+                    onChange={handleFormChange}
+                    placeholder="e.g. https://careers.company.com/job/101"
+                  />
+                </div>
+
+                {/* Employment Type */}
+                <div>
+                  <label className={labelClass}>
+                    <span>Employment Type</span>
+                  </label>
+                  <select
+                    name="employmentType"
+                    required
+                    className={selectClass}
+                    value={formData.employmentType}
+                    onChange={handleFormChange}
+                  >
+                    <option value="Full-time">Full-time</option>
+                    <option value="Part-time">Part-time</option>
+                    <option value="Contract">Contract</option>
+                    <option value="Internship">Internship</option>
+                  </select>
+                </div>
+
+                {/* Experience Range */}
+                <div>
+                  <label className={labelClass}>
+                    <Clock size={13} className="text-[#8FB305]" />
+                    <span>Experience Range (Years)</span>
+                  </label>
+                  <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+                    <input
+                      name="minExperience"
+                      type="number"
+                      min="0"
+                      required
+                      placeholder="Min"
+                      className={inputClass}
+                      value={formData.minExperience}
+                      onChange={handleFormChange}
+                    />
+                    <span className="text-xs font-bold text-[#73766C] px-1">to</span>
+                    <input
+                      name="maxExperience"
+                      type="number"
+                      min="0"
+                      required
+                      placeholder="Max"
+                      className={inputClass}
+                      value={formData.maxExperience}
+                      onChange={handleFormChange}
+                    />
+                  </div>
+                </div>
+
+                {/* Location / City */}
+                <div>
+                  <label className={labelClass}>
+                    <MapPin size={13} className="text-[#8FB305]" />
+                    <span>Job City / Location</span>
+                    <span className="text-red-500">*</span>
+                  </label>
+                  <LocationCityInput
+                    value={formData.city || formData.location}
+                    onChange={(val) => setFormData({ ...formData, city: val, location: val })}
+                    placeholder="Search city (e.g. Nashik, Pune, Mumbai)..."
+                    className={inputClass}
+                  />
+                </div>
+
+                {/* Salary / Compensation */}
+                <div>
+                  <label className={labelClass}>
+                    <IndianRupee size={13} className="text-[#8FB305]" />
+                    <span>Compensation / CTC</span>
+                    <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    name="salaryRange"
+                    type="text"
+                    required
+                    className={inputClass}
+                    value={formData.salaryRange}
+                    onChange={handleFormChange}
+                    placeholder="e.g. ₹20,000 - ₹25,000 / mo or 5 - 8 LPA"
+                  />
+                </div>
+
+                {/* Gender Requirement */}
+                <div>
+                  <label className={labelClass}>
+                    <Users size={13} className="text-[#8FB305]" />
+                    <span>Gender Preference</span>
+                  </label>
+                  <select
+                    name="genderRequirement"
+                    className={selectClass}
+                    value={formData.genderRequirement}
+                    onChange={handleFormChange}
+                  >
+                    <option value="Any">Any Gender</option>
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                  </select>
+                </div>
+
+                {/* Education Qualification */}
+                <div className="sm:col-span-2">
+                  <label className={labelClass}>
+                    <GraduationCap size={13} className="text-[#8FB305]" />
+                    <span>Minimum Education Criteria</span>
+                  </label>
+                  
+                  {/* Selected Qualifications Chips */}
+                  <div className="min-h-12 rounded-2xl border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-[#101114] p-2.5 mb-3 flex flex-wrap gap-2">
+                    {splitCommaList(formData.education).length > 0 ? (
+                      splitCommaList(formData.education).map((edu) => (
+                        <span
+                          key={edu}
+                          className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-white dark:bg-white/10 border border-[#E4E7DC] dark:border-white/10 text-[#111215] dark:text-[#F8F9F5] shadow-2xs"
+                        >
+                          <span>{edu}</span>
+                          <button
+                            type="button"
+                            onClick={() => toggleEducation(edu)}
+                            className="size-4 rounded-full flex items-center justify-center text-[#73766C] hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
+                          >
+                            <X size={11} />
+                          </button>
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-xs text-[#73766C] dark:text-neutral-500 italic p-1">
+                        No education requirements selected yet
+                      </span>
+                    )}
+                  </div>
+
+                  {/* 2-Step Degree Picker */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[11px] font-bold text-[#73766C] dark:text-neutral-400 mb-1 block">
+                        Step 1: Category
+                      </label>
+                      <select
+                        className={selectClass}
+                        value={selectedQualForEdu}
+                        onChange={(e) => setSelectedQualForEdu(e.target.value)}
+                      >
+                        <option value="">-- Select Qualification Category --</option>
+                        {EDUCATION_QUALIFICATIONS.map((qual) => (
+                          <option key={qual} value={qual}>{qual}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="text-[11px] font-bold text-[#73766C] dark:text-neutral-400 mb-1 block">
+                        Step 2: Degree / Stream
+                      </label>
+                      <select
+                        className={`${selectClass} ${!selectedQualForEdu ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        value=""
+                        disabled={!selectedQualForEdu}
+                        onChange={(e) => {
+                          if (e.target.value) {
+                            toggleEducation(e.target.value);
+                            e.target.value = "";
+                          }
+                        }}
+                      >
+                        <option value="">
+                          {selectedQualForEdu ? `-- Select ${selectedQualForEdu} Stream --` : '-- Choose Category First --'}
+                        </option>
+                        {selectedQualForEdu && (
+                          <option value={`Any ${selectedQualForEdu}`}>Any {selectedQualForEdu} (All)</option>
+                        )}
+                        {(selectedQualForEdu && EDUCATION_SPECIALIZATIONS[selectedQualForEdu as EducationQualification]
+                          ? EDUCATION_SPECIALIZATIONS[selectedQualForEdu as EducationQualification]
+                          : []
+                        ).map((spec) => (
+                          <option key={spec} value={spec}>{spec}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </section>
+
+            {/* Section 2: Skills Taxonomy Bento Card */}
+            <section className="rounded-3xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] p-6 sm:p-8 shadow-xs space-y-6">
+              
+              <div className="flex items-center justify-between pb-4 border-b border-[#E4E7DC] dark:border-white/10">
+                <div className="flex items-center gap-2.5">
+                  <span className="px-2.5 py-1 rounded-full bg-[#111215] text-[#D4F82C] dark:bg-[#D4F82C] dark:text-[#111215] text-[10px] font-mono font-black">
+                    02
+                  </span>
+                  <div>
+                    <h2 className="text-base font-black text-[#111215] dark:text-[#F8F9F5]">Required Capabilities & Skills</h2>
+                    <p className="text-xs text-[#73766C] dark:text-neutral-400">Core technologies, proficiencies & AI recommendations</p>
+                  </div>
+                </div>
+                <Layers size={16} className="text-[#8FB305] dark:text-[#D4F82C]" />
+              </div>
+
+              {/* Active Selected Skills */}
+              <div className="min-h-14 rounded-2xl border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-[#101114] p-3 flex flex-wrap gap-2">
+                {splitCommaList(formData.skills).length > 0 ? (
+                  splitCommaList(formData.skills).map((skill) => (
+                    <span
+                      key={skill}
+                      className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold bg-[#111215] text-[#D4F82C] dark:bg-[#D4F82C] dark:text-[#111215] shadow-2xs"
+                    >
+                      <span>{skill}</span>
+                      <button
+                        type="button"
+                        onClick={() => toggleSkill(skill)}
+                        className="size-4 rounded-full flex items-center justify-center text-white/70 dark:text-black/70 hover:text-white dark:hover:text-black transition-colors"
+                      >
+                        <X size={11} />
+                      </button>
+                    </span>
+                  ))
+                ) : (
+                  <span className="text-xs text-[#73766C] dark:text-neutral-500 italic p-1">
+                    No required skills selected yet. Add custom skills or pick from AI recommendations below.
+                  </span>
+                )}
+              </div>
+
+              {/* Search or Add Custom Skill Bar */}
+              <div className="flex flex-col sm:flex-row gap-2">
+                <input
+                  type="text"
+                  className={inputClass}
+                  placeholder="Type a skill and press Enter or click Add (e.g. React, Python, AutoCAD)..."
+                  value={skillSearch}
+                  onChange={(e) => setSkillSearch(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      if (skillSearch.trim()) {
+                        toggleSkill(skillSearch.trim());
+                        setSkillSearch('');
+                      }
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => {
                     if (skillSearch.trim()) {
                       toggleSkill(skillSearch.trim());
                       setSkillSearch('');
                     }
-                  }
-                }}
-              />
-              <button
-                type="button"
-                onClick={() => {
-                  if (skillSearch.trim()) {
-                    toggleSkill(skillSearch.trim());
-                    setSkillSearch('');
-                  }
-                }}
-                className={secondaryButtonClass}
-              >
-                Add
-              </button>
-            </div>
-
-            <div className="mt-3 rounded-[6px] border border-purple-200 dark:border-white/[0.11] bg-purple-50/50 dark:bg-[#08080c] p-3">
-              <div className="flex items-center gap-2 mb-1.5">
-                <Sparkles className="w-4 h-4 text-purple-600 dark:text-purple-400 animate-pulse" />
-                <span className="geist-caption text-xs font-bold uppercase tracking-wider text-purple-700 dark:text-purple-300">
-                  AI Recommended Contextual Skills ({aiRecommendedSkills.length})
-                </span>
+                  }}
+                  className={secondaryButtonClass}
+                >
+                  <Plus size={13} className="mr-1" />
+                  <span>Add Skill</span>
+                </button>
               </div>
-              <p className="text-[11px] text-gray-500 dark:text-gray-400 mb-2">
-                Contextually recommended skills based on your job title & description. Click to toggle.
-              </p>
-              <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto custom-scrollbar">
-                {aiRecommendedSkills.map((skill) => {
-                  const isSelected = splitCommaList(formData.skills).includes(skill);
-                  return (
-                    <button
-                      key={skill}
-                      type="button"
-                      onClick={() => toggleSkill(skill)}
-                      className={`geist-small inline-flex h-7 items-center rounded-[6px] border px-2.5 transition-colors cursor-pointer ${
-                        isSelected
-                          ? 'border-purple-400 bg-purple-600 dark:bg-white text-white dark:text-black font-bold shadow-sm'
-                          : 'border-gray-300 dark:border-white/10 bg-white dark:bg-white/[0.04] text-gray-800 dark:text-gray-200 hover:bg-purple-100 dark:hover:bg-white/10'
-                      }`}
-                    >
-                      {skill} {isSelected ? '✓' : '+'}
-                    </button>
-                  );
-                })}
-                {aiRecommendedSkills.length === 0 && (
-                  <span className="text-xs text-gray-400 dark:text-gray-500 italic">
-                    Paste or upload a Job Description to auto-recommend skills, or add custom skills above.
+
+              {/* AI Recommended Skills Container */}
+              <div className="rounded-2xl border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-[#101114] p-4 sm:p-5 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Sparkles size={15} className="text-[#8FB305] dark:text-[#D4F82C] animate-pulse" />
+                    <span className="text-xs font-black uppercase tracking-wider text-[#111215] dark:text-[#F8F9F5]">
+                      AI Recommended Contextual Skills ({aiRecommendedSkills.length})
+                    </span>
+                  </div>
+                  <span className="text-[10px] font-mono text-[#73766C] dark:text-neutral-400">
+                    Click to Toggle
                   </span>
+                </div>
+                
+                <p className="text-[11px] text-[#575A51] dark:text-neutral-400 leading-relaxed">
+                  Auto-recommended based on your job title, industry sector, and job description text.
+                </p>
+
+                <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto pr-1">
+                  {aiRecommendedSkills.map((skill) => {
+                    const isSelected = splitCommaList(formData.skills).includes(skill);
+                    return (
+                      <button
+                        key={skill}
+                        type="button"
+                        onClick={() => toggleSkill(skill)}
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                          isSelected
+                            ? 'bg-[#D4F82C] text-[#111215] border border-[#8FB305] font-black shadow-2xs'
+                            : 'bg-white dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 text-[#575A51] dark:text-neutral-300 hover:border-[#111215] dark:hover:border-white/30 hover:bg-[#F1F3EB]'
+                        }`}
+                      >
+                        <span>{skill}</span>
+                        <span>{isSelected ? '✓' : '+'}</span>
+                      </button>
+                    );
+                  })}
+                  {aiRecommendedSkills.length === 0 && (
+                    <span className="text-xs text-[#73766C] dark:text-neutral-500 italic">
+                      Paste or upload a Job Description to trigger AI skill recommendations, or add custom skills manually.
+                    </span>
+                  )}
+                </div>
+              </div>
+
+            </section>
+
+            {/* Section 3: Custom Fields & Perks Bento Card */}
+            <section className="rounded-3xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] p-6 sm:p-8 shadow-xs space-y-6">
+              
+              <div className="flex items-center justify-between pb-4 border-b border-[#E4E7DC] dark:border-white/10">
+                <div className="flex items-center gap-2.5">
+                  <span className="px-2.5 py-1 rounded-full bg-[#111215] text-[#D4F82C] dark:bg-[#D4F82C] dark:text-[#111215] text-[10px] font-mono font-black">
+                    03
+                  </span>
+                  <div>
+                    <h2 className="text-base font-black text-[#111215] dark:text-[#F8F9F5]">Custom Fields & Perks</h2>
+                    <p className="text-xs text-[#73766C] dark:text-neutral-400">Attach perks, work hours, bond terms, or client specifications</p>
+                  </div>
+                </div>
+                <Plus size={16} className="text-[#8FB305] dark:text-[#D4F82C]" />
+              </div>
+
+              {/* Add Custom Field Inputs */}
+              <div className="rounded-2xl border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-[#101114] p-4 space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-[1fr_1.5fr_auto] gap-2.5">
+                  <input
+                    type="text"
+                    className={inputClass}
+                    placeholder="Field name (e.g. Perks, Shift)"
+                    value={tempCustomField.key}
+                    onChange={(e) => setTempCustomField({ ...tempCustomField, key: e.target.value })}
+                  />
+                  <input
+                    type="text"
+                    className={inputClass}
+                    placeholder="Value (e.g. Cab facility, Day shift, 1 Year bond)"
+                    value={tempCustomField.value}
+                    onChange={(e) => setTempCustomField({ ...tempCustomField, value: e.target.value })}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddCustomField}
+                    className={secondaryButtonClass}
+                  >
+                    <span>Add</span>
+                  </button>
+                </div>
+
+                {/* List of Custom Fields */}
+                {customFields.length > 0 && (
+                  <div className="mt-3 space-y-2 max-h-48 overflow-y-auto pr-1">
+                    {customFields.map((field) => (
+                      <div
+                        key={field.id}
+                        className="flex items-center justify-between gap-3 p-3 rounded-xl bg-white dark:bg-[#15161A] border border-[#E4E7DC] dark:border-white/10"
+                      >
+                        <div className="text-xs truncate">
+                          <span className="font-bold text-[#111215] dark:text-white mr-1.5">{field.key}:</span>
+                          <span className="text-[#575A51] dark:text-neutral-300">{field.value}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveCustomField(field.id)}
+                          className="text-xs font-bold text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 transition-colors p-1"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
-            </div>
-          </section>
 
-          <section className="border-b border-gray-200 dark:border-white/[0.11] px-4 py-5 sm:px-6 lg:px-7">
-            <p className={panelHeaderClass}>Additional Info</p>
-            <h2 className={panelTitleClass}>Custom fields</h2>
-            <p className={helperTextClass}>Attach optional custom fields to this job post (e.g. Perks, Working Hours, Client Code).</p>
+            </section>
 
-            <div className="mt-4 rounded-[6px] border border-gray-200 dark:border-white/[0.11] bg-gray-50 dark:bg-white/[0.025] p-3">
-              <div className="grid grid-cols-1 gap-2 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
-                <input type="text" className={inputClass} placeholder="Field name, e.g. Perks" value={tempCustomField.key} onChange={e => setTempCustomField({ ...tempCustomField, key: e.target.value })} />
-                <input type="text" className={inputClass} placeholder="Field value, e.g. Flexible shifts, Cab facility" value={tempCustomField.value} onChange={e => setTempCustomField({ ...tempCustomField, value: e.target.value })} />
-                <button type="button" onClick={handleAddCustomField} className={secondaryButtonClass}>Add</button>
+            {/* Sticky Submission Bar */}
+            <div className="sticky bottom-6 z-20 rounded-3xl border border-[#E4E7DC] dark:border-white/10 bg-white/95 dark:bg-[#15161A]/95 p-5 backdrop-blur-md shadow-xl flex flex-col sm:flex-row items-center justify-between gap-4 mt-8">
+              <div className="flex items-center gap-3">
+                <div className="size-8 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                  <CheckCircle2 size={18} />
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-[#111215] dark:text-[#F8F9F5]">Ready to Publish</div>
+                  <div className="text-[11px] text-[#73766C] dark:text-neutral-400">
+                    Access codes, AI screening criteria & public job listing generated immediately.
+                  </div>
+                </div>
               </div>
 
-              {customFields.length > 0 && (
-                <div className="mt-3 max-h-44 space-y-2 overflow-y-auto pr-1 custom-scrollbar">
-                  {customFields.map((field) => (
-                    <div key={field.id} className="flex items-center justify-between gap-3 rounded-[6px] border border-gray-200 dark:border-white/[0.11] bg-white dark:bg-[#050505] px-3 py-2.5">
-                      <p className="geist-caption min-w-0 truncate text-gray-800 dark:text-[#d4d4d4]"><span className="font-medium text-gray-900 dark:text-white">{field.key}:</span> {field.value}</p>
-                      <button type="button" onClick={() => handleRemoveCustomField(field.id)} className="geist-small shrink-0 text-red-500 dark:text-[#8f8f8f] transition-colors hover:text-red-700 dark:hover:text-white font-semibold">Remove</button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </section>
-
-          <div className="sticky bottom-0 border-t border-gray-200 dark:border-white/[0.11] bg-white/95 dark:bg-[#000]/95 px-4 py-4 backdrop-blur sm:px-6 lg:px-7 shadow-lg dark:shadow-none">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <p className="geist-small text-gray-500 dark:text-[#8f8f8f]">Access codes and listings are generated upon submission.</p>
-              <button type="submit" disabled={loading || rateLimitLoading || interviewLimitReached} className={primaryButtonClass}>
+              <button
+                type="submit"
+                disabled={loading || rateLimitLoading || interviewLimitReached}
+                className={primaryButtonClass}
+              >
                 {loading ? (
-                  <span className="flex w-44 max-w-full flex-col items-center gap-1.5" role="status" aria-label="Saving job">
-                    <SkeletonBlock className="h-3.5 w-32 bg-gray-300 dark:bg-black/[0.18]" />
-                    <SkeletonBlock className="h-2.5 w-20 bg-gray-200 dark:bg-black/[0.12]" />
+                  <span className="flex items-center gap-2">
+                    <div className="size-4 rounded-full border-2 border-white dark:border-[#111215] border-t-transparent animate-spin" />
+                    <span>Publishing Job Opening...</span>
                   </span>
-                ) : interviewLimitReached ? 'Job limit reached' : 'Create Job Opening'}
+                ) : interviewLimitReached ? (
+                  'Job Limit Reached'
+                ) : (
+                  <span className="flex items-center gap-2">
+                    <span>Create Job Opening</span>
+                    <ArrowRight size={16} />
+                  </span>
+                )}
               </button>
             </div>
-          </div>
-        </form>
+
+          </form>
+
+        </div>
       </div>
     </div>
   );
