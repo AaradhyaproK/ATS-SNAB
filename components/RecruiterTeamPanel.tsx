@@ -209,25 +209,27 @@ export const RecruiterTeamPanel: React.FC = () => {
   };
 
   return (
-    <div className="border-t border-white/[0.11] bg-black px-4 py-4 sm:px-6 lg:px-7 space-y-4">
-      
+    <div className="bg-white p-5 sm:p-6 space-y-5">
       {/* Header & Controls */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-white/[0.11] pb-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-[#E4E7DC] pb-5">
         <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <h2 className="geist-section-title text-white flex items-center gap-2 whitespace-nowrap">
-              <Users className="h-5 w-5 text-[#9ca3af] shrink-0" /> Team & Audit Logs
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#111215] text-[#D4F82C]">
+              <Users size={16} />
+            </div>
+            <h2 className="text-base font-bold tracking-tight text-[#111215]">
+              Team & Audit Logs
             </h2>
-            <span className="shrink-0 geist-small rounded-full bg-white/[0.08] px-2 py-0.5 text-[#9ca3af]">
+            <span className="inline-flex items-center rounded-full bg-[#D4F82C] px-2.5 py-0.5 text-[11px] font-bold text-[#111215]">
               {teamMembers.length} {teamMembers.length === 1 ? 'Member' : 'Members'}
             </span>
           </div>
-          <p className="geist-caption mt-1 text-[#6b7280]">
-            Manage secondary recruiters, share candidate responses, and view real-time audit logs of all job and candidate activities.
+          <p className="mt-1 text-xs text-[#575A51]">
+            Manage secondary recruiters, coordinate candidate responses, and inspect real-time audit trails of all team activities.
           </p>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex flex-wrap items-center gap-2.5 shrink-0">
           {/* SEARCH BAR */}
           <div className="relative">
             <input
@@ -235,36 +237,36 @@ export const RecruiterTeamPanel: React.FC = () => {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder={activeTab === 'audit' ? 'Search audit logs...' : 'Search members...'}
-              className="geist-copy w-[180px] h-8 rounded-md border border-white/[0.12] bg-[#0c0c0c] pl-8 pr-7 text-white placeholder-[#6b7280] outline-none focus:border-white/[0.25] transition-colors"
+              className="h-9 w-[190px] rounded-full border border-[#E4E7DC] bg-[#F8F9F5] pl-8 pr-7 text-xs text-[#111215] placeholder-[#73766C] outline-none transition-colors focus:border-[#111215] focus:bg-white"
             />
-            <Activity className="absolute left-2.5 top-[9px] h-[14px] w-[14px] text-[#6b7280]" />
+            <Activity className="absolute left-3 top-2.5 h-3.5 w-3.5 text-[#73766C]" />
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery('')}
-                className="absolute right-2 top-[8px] text-[#6b7280] hover:text-white transition-colors"
+                className="absolute right-2.5 top-2.5 text-[#73766C] hover:text-[#111215] transition-colors"
               >
-                <X size={14} />
+                <X size={13} />
               </button>
             )}
           </div>
 
           {/* SEGMENTED CONTROL */}
-          <div className="flex h-8 rounded-full border border-white/[0.12] bg-[#0c0c0c] p-[3px]">
+          <div className="flex h-9 rounded-full border border-[#E4E7DC] bg-[#F8F9F5] p-1">
             <button
               onClick={() => setActiveTab('members')}
-              className={`geist-caption flex items-center gap-1.5 px-3 h-full rounded-full font-medium whitespace-nowrap transition-colors ${
-                activeTab === 'members' ? 'bg-white/[0.12] text-white' : 'text-[#9ca3af] hover:text-white'
+              className={`flex items-center gap-1.5 px-3 h-full rounded-full text-xs font-semibold whitespace-nowrap transition-all ${
+                activeTab === 'members' ? 'bg-[#111215] text-white shadow-xs' : 'text-[#575A51] hover:text-[#111215]'
               }`}
             >
-              <Users size={14} className="shrink-0" /> Team Members ({filteredMembers.length})
+              <Users size={13} className="shrink-0" /> Team ({filteredMembers.length})
             </button>
             <button
               onClick={() => setActiveTab('audit')}
-              className={`geist-caption flex items-center gap-1.5 px-3 h-full rounded-full font-medium whitespace-nowrap transition-colors ${
-                activeTab === 'audit' ? 'bg-white/[0.12] text-white' : 'text-[#9ca3af] hover:text-white'
+              className={`flex items-center gap-1.5 px-3 h-full rounded-full text-xs font-semibold whitespace-nowrap transition-all ${
+                activeTab === 'audit' ? 'bg-[#111215] text-white shadow-xs' : 'text-[#575A51] hover:text-[#111215]'
               }`}
             >
-              <Activity size={14} className="shrink-0" /> Audit Trail
+              <Activity size={13} className="shrink-0" /> Audit Trail
             </button>
           </div>
 
@@ -272,9 +274,10 @@ export const RecruiterTeamPanel: React.FC = () => {
           {isPrimary && (
             <button
               onClick={() => setShowAddModal(true)}
-              className="geist-caption flex items-center gap-1.5 h-8 whitespace-nowrap rounded-md bg-white text-black hover:bg-white/90 px-3 font-medium transition-all cursor-pointer"
+              className="flex items-center gap-1.5 h-9 whitespace-nowrap rounded-full bg-[#111215] text-white hover:bg-[#202227] px-4 text-xs font-semibold shadow-xs transition-all cursor-pointer"
             >
-              <UserPlus size={14} className="shrink-0" /> Add Sub-Recruiter
+              <UserPlus size={13} className="shrink-0 text-[#D4F82C]" />
+              <span>Add Sub-Recruiter</span>
             </button>
           )}
         </div>
@@ -282,312 +285,309 @@ export const RecruiterTeamPanel: React.FC = () => {
 
       {/* TAB 1: TEAM MEMBERS LIST */}
       {activeTab === 'members' && (
-        <div className="-mx-4 sm:-mx-6 lg:-mx-7">
-          <div className="overflow-x-auto border-t border-white/[0.11]">
-            <table className="w-full divide-y divide-white/[0.11]">
-              <thead className="bg-[#080808]">
+        <div className="overflow-x-auto rounded-2xl border border-[#E4E7DC]">
+          <table className="w-full divide-y divide-[#E4E7DC]">
+            <thead className="bg-[#F8F9F5]">
+              <tr>
+                <th className="px-5 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-[#73766C]">Member Name</th>
+                <th className="px-5 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-[#73766C]">Email Address</th>
+                <th className="px-5 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-[#73766C]">Designation / Role</th>
+                <th className="px-5 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-[#73766C]">Account Access</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#E4E7DC] bg-white">
+              {filteredMembers.length === 0 ? (
                 <tr>
-                  <th className="geist-label px-4 sm:px-6 lg:px-7 py-2.5 text-left uppercase text-[#6b7280]">Member Name</th>
-                  <th className="geist-label px-4 sm:px-6 lg:px-7 py-2.5 text-left uppercase text-[#6b7280]">Email Address</th>
-                  <th className="geist-label px-4 sm:px-6 lg:px-7 py-2.5 text-left uppercase text-[#6b7280]">Designation / Role</th>
-                  <th className="geist-label px-4 sm:px-6 lg:px-7 py-2.5 text-left uppercase text-[#6b7280]">Account Access</th>
+                  <td colSpan={4} className="px-5 py-10 text-center text-xs text-[#73766C]">
+                    No team members found matching "{searchQuery}".
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-white/[0.08]">
-                {filteredMembers.length === 0 ? (
-                  <tr>
-                    <td colSpan={4} className="px-4 sm:px-6 lg:px-7 py-8 text-center geist-caption text-[#6b7280]">
-                      No team members found matching "{searchQuery}".
-                    </td>
-                  </tr>
-                ) : (
-                  filteredMembers.map((member) => {
-                    const isOwner = !member.parentRecruiterId;
-                    return (
-                      <tr key={member.uid} className="group hover:bg-white/[0.025] transition-colors">
-                        <td className="px-4 sm:px-6 lg:px-7 py-3 whitespace-nowrap">
-                          <div className="flex items-center gap-3">
-                            <div className={`h-8 w-8 rounded-full flex items-center justify-center geist-caption font-medium ${
-                              isOwner ? 'bg-white/[0.1] text-white' : 'bg-white/[0.06] text-[#9ca3af]'
-                            }`}>
-                              {member.name ? member.name.charAt(0).toUpperCase() : 'R'}
-                            </div>
-                            <div>
-                              <div className="geist-caption font-medium text-white flex items-center gap-1.5">
-                                {member.name || 'Recruiter'}
-                                {isOwner && <Shield size={13} className="text-[#9ca3af]" />}
-                              </div>
-                              <div className="geist-small mt-0.5 text-[#6b7280]">UID: {member.uid.slice(0, 10)}...</div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-4 sm:px-6 lg:px-7 py-3 whitespace-nowrap geist-caption text-[#9ca3af]">
-                          {member.email}
-                        </td>
-                        <td className="px-4 sm:px-6 lg:px-7 py-3 whitespace-nowrap">
-                          <span className={`geist-small inline-flex items-center gap-1.5 px-2 py-0.5 rounded-[6px] font-medium ${
-                            isOwner 
-                              ? 'bg-white/[0.08] text-white'
-                              : 'bg-white/[0.05] text-[#9ca3af]'
+              ) : (
+                filteredMembers.map((member) => {
+                  const isOwner = !member.parentRecruiterId;
+                  return (
+                    <tr key={member.uid} className="group hover:bg-[#F8F9F5]/70 transition-colors">
+                      <td className="px-5 py-3.5 whitespace-nowrap">
+                        <div className="flex items-center gap-3">
+                          <div className={`h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold ${
+                            isOwner ? 'bg-[#111215] text-[#D4F82C]' : 'bg-[#F8F9F5] border border-[#E4E7DC] text-[#111215]'
                           }`}>
-                            <Briefcase size={12} className="text-[#6b7280]" /> {member.designation || (isOwner ? 'Primary Owner' : 'Sub-Recruiter')}
-                          </span>
-                        </td>
-                        <td className="px-4 sm:px-6 lg:px-7 py-3 whitespace-nowrap">
-                          <span className="geist-small inline-flex items-center gap-1.5 text-[#9ca3af]">
-                            <CheckCircle2 size={13} className="text-[#6b7280]" /> Shared Jobs & Responses
-                          </span>
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
+                            {member.name ? member.name.charAt(0).toUpperCase() : 'R'}
+                          </div>
+                          <div>
+                            <div className="font-semibold text-xs text-[#111215] flex items-center gap-1.5">
+                              {member.name || 'Recruiter'}
+                              {isOwner && <Shield size={12} className="text-[#8FB305]" />}
+                            </div>
+                            <div className="text-[10px] text-[#73766C]">UID: {member.uid.slice(0, 10)}...</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-5 py-3.5 whitespace-nowrap text-xs text-[#575A51]">
+                        {member.email}
+                      </td>
+                      <td className="px-5 py-3.5 whitespace-nowrap">
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${
+                          isOwner 
+                            ? 'bg-[#111215] text-white'
+                            : 'bg-[#F8F9F5] border border-[#E4E7DC] text-[#575A51]'
+                        }`}>
+                          <Briefcase size={11} className={isOwner ? 'text-[#D4F82C]' : 'text-[#73766C]'} />
+                          {member.designation || (isOwner ? 'Primary Owner' : 'Sub-Recruiter')}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3.5 whitespace-nowrap">
+                        <span className="inline-flex items-center gap-1.5 text-xs text-[#575A51]">
+                          <CheckCircle2 size={13} className="text-[#8FB305]" /> Shared Pipeline Access
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
         </div>
       )}
 
       {/* TAB 2: REAL-TIME AUDIT LOGS */}
       {activeTab === 'audit' && (
-        <div className="-mx-4 sm:-mx-6 lg:-mx-7">
-          <div className="border-t border-white/[0.11]">
-            {loadingAuditLogs ? (
-              <div className="text-center py-10 flex items-center justify-center gap-3">
-                <Activity className="animate-spin h-5 w-5 text-[#9ca3af]" />
-                <span className="geist-caption text-[#9ca3af]">Loading real-time audit logs...</span>
-              </div>
-            ) : filteredLogs.length === 0 ? (
-              <div className="text-center py-10 border-b border-dashed border-white/[0.08]">
-                <Activity className="mx-auto h-8 w-8 text-[#6b7280] mb-2" />
-                <p className="geist-caption text-[#6b7280]">
-                  {searchQuery ? `No audit events found matching "${searchQuery}".` : 'No audit events recorded yet. Activity like inviting candidates or creating jobs will appear here live.'}
-                </p>
-              </div>
-            ) : (
-              <div>
-                {filteredLogs.map((log, idx) => (
-                  <div key={log.id} className={`px-4 sm:px-6 lg:px-7 py-3 ${idx < filteredLogs.length - 1 ? 'border-b border-white/[0.08]' : ''} hover:bg-white/[0.025] transition-colors`}>
-                    {/* Account Header */}
-                    <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-                      <div className="flex items-center gap-2">
-                        <div className="h-7 w-7 rounded-full bg-white/[0.08] text-[#9ca3af] flex items-center justify-center geist-caption font-medium shrink-0">
-                          {(log.performedBy?.name || log.performedBy?.email || 'R').charAt(0).toUpperCase()}
-                        </div>
-                        <div>
-                          <div className="geist-caption font-medium text-white flex items-center gap-1.5">
-                            <span>{log.performedBy?.name || 'Recruiter Account'}</span>
-                            {log.performedBy?.email && (
-                              <span className="geist-small text-[#6b7280]">({log.performedBy.email})</span>
-                            )}
-                          </div>
-                          <div className="geist-small mt-0.5 text-[#6b7280]">
-                            {log.performedBy?.designation || 'Recruiter'}
-                          </div>
-                        </div>
+        <div className="space-y-3">
+          {loadingAuditLogs ? (
+            <div className="text-center py-10 flex items-center justify-center gap-3">
+              <Activity className="animate-spin h-5 w-5 text-[#8FB305]" />
+              <span className="text-xs text-[#575A51]">Loading real-time audit logs...</span>
+            </div>
+          ) : filteredLogs.length === 0 ? (
+            <div className="text-center py-10 rounded-2xl border border-dashed border-[#E4E7DC] bg-[#F8F9F5]">
+              <Activity className="mx-auto h-8 w-8 text-[#73766C] mb-2" />
+              <p className="text-xs text-[#73766C]">
+                {searchQuery ? `No audit events found matching "${searchQuery}".` : 'No audit events recorded yet. Activity like inviting candidates or creating jobs will appear here live.'}
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-2.5">
+              {filteredLogs.map((log) => (
+                <div key={log.id} className="rounded-2xl border border-[#E4E7DC] bg-[#F8F9F5]/50 p-4 transition-all hover:bg-white hover:border-[#111215]/30 hover:shadow-xs">
+                  {/* Account Header */}
+                  <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                    <div className="flex items-center gap-2.5">
+                      <div className="h-7 w-7 rounded-full bg-[#111215] text-[#D4F82C] flex items-center justify-center text-xs font-bold shrink-0">
+                        {(log.performedBy?.name || log.performedBy?.email || 'R').charAt(0).toUpperCase()}
                       </div>
-
-                      <div className="flex items-center gap-2">
-                        <span className="geist-small inline-flex items-center px-2 py-0.5 rounded-[6px] font-medium text-[#9ca3af] bg-white/[0.06]">
-                          {log.action.replace(/_/g, ' ')}
-                        </span>
-                        <span className="geist-small text-[#6b7280]">
-                          {log.createdAt ? new Date(log.createdAt).toLocaleString() : 'Just now'}
-                        </span>
+                      <div>
+                        <div className="font-semibold text-xs text-[#111215] flex items-center gap-1.5">
+                          <span>{log.performedBy?.name || 'Recruiter Account'}</span>
+                          {log.performedBy?.email && (
+                            <span className="text-[11px] text-[#73766C]">({log.performedBy.email})</span>
+                          )}
+                        </div>
+                        <div className="text-[10px] text-[#73766C]">
+                          {log.performedBy?.designation || 'Recruiter'}
+                        </div>
                       </div>
                     </div>
 
-                    {/* Activity Details */}
-                    <div className="flex items-start gap-2.5">
-                      <div className="p-1.5 rounded bg-white/[0.05] text-[#9ca3af] shrink-0 mt-0.5">
-                        {getLogIcon(log.action || '')}
-                      </div>
-                      <div className="flex-1 min-w-0 space-y-1.5">
-                        <p className="geist-caption text-[#9ca3af] leading-relaxed">
-                          {log.details}
-                        </p>
+                    <div className="flex items-center gap-2">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider text-[#111215] bg-[#D4F82C]">
+                        {log.action.replace(/_/g, ' ')}
+                      </span>
+                      <span className="text-[11px] text-[#73766C]">
+                        {log.createdAt ? new Date(log.createdAt).toLocaleString() : 'Just now'}
+                      </span>
+                    </div>
+                  </div>
 
-                        <div className="flex flex-wrap items-center gap-1.5">
-                          <span className="geist-small inline-flex items-center gap-1 px-2 py-0.5 rounded-[6px] bg-white/[0.05] font-medium text-[#9ca3af]">
-                            <Mail size={11} className="text-[#6b7280]" />
-                            <span>By: <strong className="text-white">{log.performedBy?.name || 'Recruiter'} ({log.performedBy?.email || 'N/A'})</strong></span>
-                          </span>
+                  {/* Activity Details */}
+                  <div className="flex items-start gap-2.5 mt-2">
+                    <div className="p-1.5 rounded-lg bg-white border border-[#E4E7DC] text-[#111215] shrink-0 mt-0.5">
+                      {getLogIcon(log.action || '')}
+                    </div>
+                    <div className="flex-1 min-w-0 space-y-1.5">
+                      <p className="text-xs text-[#575A51] leading-relaxed">
+                        {log.details}
+                      </p>
 
-                          {(() => {
-                            const text = log.details || '';
-                            const emailMatches = text.match(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/g) || [];
-                            const phoneMatches = text.match(/(\b[6-9]\d{9}\b|\(\d{10}\))/g) || [];
-                            
-                            const candEmails = Array.from(new Set(emailMatches.filter(
-                              (e) => e.toLowerCase() !== log.performedBy?.email?.toLowerCase() && e.toLowerCase() !== 'invites@snab.co.in'
-                            )));
-                            const candPhones = Array.from(new Set(phoneMatches));
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-white border border-[#E4E7DC] text-[11px] font-medium text-[#575A51]">
+                          <Mail size={11} className="text-[#73766C]" />
+                          <span>By: <strong className="text-[#111215]">{log.performedBy?.name || 'Recruiter'} ({log.performedBy?.email || 'N/A'})</strong></span>
+                        </span>
 
-                            return (
-                              <>
-                                {candEmails.map((candEmail, idx) => (
-                                  <span key={`email-${idx}`} className="geist-small inline-flex items-center gap-1 px-2 py-0.5 rounded-[6px] bg-white/[0.05] font-medium text-[#9ca3af]">
-                                    <Mail size={11} className="text-[#6b7280]" />
-                                    <span>To: <strong className="text-white">{candEmail}</strong></span>
-                                  </span>
-                                ))}
-                                {candPhones.map((phone, idx) => (
-                                  <span key={`phone-${idx}`} className="geist-small inline-flex items-center gap-1 px-2 py-0.5 rounded-[6px] bg-white/[0.05] font-medium text-[#9ca3af]">
-                                    <Phone size={11} className="text-[#6b7280]" />
-                                    <span>Mobile: <strong className="text-white">{phone}</strong></span>
-                                  </span>
-                                ))}
-                              </>
-                            );
-                          })()}
-                        </div>
+                        {(() => {
+                          const text = log.details || '';
+                          const emailMatches = text.match(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/g) || [];
+                          const phoneMatches = text.match(/(\b[6-9]\d{9}\b|\(\d{10}\))/g) || [];
+                          
+                          const candEmails = Array.from(new Set(emailMatches.filter(
+                            (e) => e.toLowerCase() !== log.performedBy?.email?.toLowerCase() && e.toLowerCase() !== 'invites@snab.co.in'
+                          )));
+                          const candPhones = Array.from(new Set(phoneMatches));
+
+                          return (
+                            <>
+                              {candEmails.map((candEmail, idx) => (
+                                <span key={`email-${idx}`} className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-white border border-[#E4E7DC] text-[11px] font-medium text-[#575A51]">
+                                  <Mail size={11} className="text-[#73766C]" />
+                                  <span>To: <strong className="text-[#111215]">{candEmail}</strong></span>
+                                </span>
+                              ))}
+                              {candPhones.map((phone, idx) => (
+                                <span key={`phone-${idx}`} className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-white border border-[#E4E7DC] text-[11px] font-medium text-[#575A51]">
+                                  <Phone size={11} className="text-[#73766C]" />
+                                  <span>Mobile: <strong className="text-[#111215]">{phone}</strong></span>
+                                </span>
+                              ))}
+                            </>
+                          );
+                        })()}
                       </div>
                     </div>
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
       {/* MODAL: ADD SECONDARY RECRUITER */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="max-w-md w-full rounded-xl border border-white/[0.15] bg-[#0d0d0d] p-5 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-white/[0.11] pb-3">
-              <h3 className="geist-section-title text-white flex items-center gap-2">
-                <UserPlus className="text-[#9ca3af]" size={18} /> Add Secondary Recruiter
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="max-w-md w-full rounded-3xl border border-[#E4E7DC] bg-white p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-[#E4E7DC] pb-4">
+              <h3 className="text-base font-bold text-[#111215] flex items-center gap-2">
+                <UserPlus className="text-[#8FB305]" size={18} /> Add Secondary Recruiter
               </h3>
               <button 
                 onClick={() => setShowAddModal(false)}
-                className="text-[#9ca3af] hover:text-white transition-colors p-1"
+                className="text-[#73766C] hover:text-[#111215] transition-colors p-1 rounded-full hover:bg-[#F8F9F5]"
               >
                 <X size={18} />
               </button>
             </div>
 
             {error && (
-              <div className="p-2.5 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 geist-small flex items-center gap-2">
-                <AlertCircle size={14} />
+              <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2">
+                <AlertCircle size={15} />
                 <span>{error}</span>
               </div>
             )}
 
-            <form onSubmit={handleAddSubRecruiter} className="space-y-3">
+            <form onSubmit={handleAddSubRecruiter} className="space-y-3.5">
               <div>
-                <label className="geist-caption block font-medium text-[#9ca3af] mb-1">Full Name</label>
+                <label className="block text-xs font-semibold text-[#111215] mb-1">Full Name</label>
                 <input
                   type="text"
                   placeholder="e.g. Sarah Jenkins"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
-                  className="geist-copy w-full rounded-md border border-white/[0.12] bg-[#141414] px-3 py-2 text-white placeholder-[#6b7280] focus:border-white/[0.3] focus:outline-none transition-colors"
+                  className="w-full rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] px-3.5 py-2.5 text-xs text-[#111215] placeholder-[#73766C] focus:border-[#111215] focus:bg-white focus:outline-none transition-colors"
                   required
                 />
               </div>
 
               <div>
-                <label className="geist-caption block font-medium text-[#9ca3af] mb-1">Designation / Role Title</label>
+                <label className="block text-xs font-semibold text-[#111215] mb-1">Designation / Role Title</label>
                 <input
                   type="text"
                   placeholder="e.g. Technical Hiring Lead, Sub-Recruiter"
                   value={designation}
                   onChange={(e) => setDesignation(e.target.value)}
-                  className="geist-copy w-full rounded-md border border-white/[0.12] bg-[#141414] px-3 py-2 text-white placeholder-[#6b7280] focus:border-white/[0.3] focus:outline-none transition-colors"
+                  className="w-full rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] px-3.5 py-2.5 text-xs text-[#111215] placeholder-[#73766C] focus:border-[#111215] focus:bg-white focus:outline-none transition-colors"
                 />
               </div>
 
               <div>
-                <label className="geist-caption block font-medium text-[#9ca3af] mb-1">Login Email</label>
+                <label className="block text-xs font-semibold text-[#111215] mb-1">Login Email</label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-2.5 h-4 w-4 text-[#6b7280]" />
+                  <Mail className="absolute left-3.5 top-3 h-4 w-4 text-[#73766C]" />
                   <input
                     type="email"
                     placeholder="sarah@company.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="geist-copy w-full rounded-md border border-white/[0.12] bg-[#141414] pl-9 pr-3 py-2 text-white placeholder-[#6b7280] focus:border-white/[0.3] focus:outline-none transition-colors"
+                    className="w-full rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] pl-10 pr-3.5 py-2.5 text-xs text-[#111215] placeholder-[#73766C] focus:border-[#111215] focus:bg-white focus:outline-none transition-colors"
                     required
                   />
                 </div>
               </div>
 
               <div>
-                <label className="geist-caption block font-medium text-[#9ca3af] mb-1">Password</label>
+                <label className="block text-xs font-semibold text-[#111215] mb-1">Password</label>
                 <div className="relative">
-                  <Key className="absolute left-3 top-2.5 h-4 w-4 text-[#6b7280]" />
+                  <Key className="absolute left-3.5 top-3 h-4 w-4 text-[#73766C]" />
                   <input
                     type="password"
                     placeholder="At least 6 characters"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="geist-copy w-full rounded-md border border-white/[0.12] bg-[#141414] pl-9 pr-3 py-2 text-white placeholder-[#6b7280] focus:border-white/[0.3] focus:outline-none transition-colors"
+                    className="w-full rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] pl-10 pr-3.5 py-2.5 text-xs text-[#111215] placeholder-[#73766C] focus:border-[#111215] focus:bg-white focus:outline-none transition-colors"
                     required
                   />
                 </div>
               </div>
 
-              <div className="border-t border-white/[0.11] pt-3 space-y-2.5">
+              <div className="border-t border-[#E4E7DC] pt-3.5 space-y-2.5">
                 <div className="flex items-center justify-between">
-                  <div className="geist-caption font-medium text-[#9ca3af] flex items-center gap-1.5">
-                    <Phone size={14} /> WhatsApp Credentials (Optional)
+                  <div className="text-xs font-semibold text-[#111215] flex items-center gap-1.5">
+                    <Phone size={14} className="text-[#8FB305]" /> WhatsApp Credentials (Optional)
                   </div>
                   <a
                     href="https://whatsapp-serverless.vercel.app/"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="geist-small text-[#9ca3af] hover:text-white underline flex items-center gap-1 font-medium transition-colors"
+                    className="text-xs text-[#575A51] hover:text-[#111215] underline font-medium transition-colors"
                   >
                     Open API Site ↗
                   </a>
                 </div>
 
-                <div className="p-2.5 rounded-lg bg-white/[0.03] border border-white/[0.08] geist-small text-[#9ca3af] space-y-1.5 leading-relaxed">
-                  <div className="font-medium text-white">
+                <div className="p-3 rounded-xl bg-[#F8F9F5] border border-[#E4E7DC] text-xs text-[#575A51] space-y-1">
+                  <div className="font-semibold text-[#111215]">
                     Steps to connect WhatsApp:
                   </div>
-                  <ol className="list-decimal list-inside space-y-0.5 text-[#6b7280]">
+                  <ol className="list-decimal list-inside space-y-0.5 text-[#73766C]">
                     <li>Open WhatsApp integration in your profile or layout modal</li>
                     <li>Scan the QR code with WhatsApp on your phone (Linked Devices)</li>
                   </ol>
                 </div>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-2 gap-2.5">
                   <div>
-                    <label className="geist-small block font-medium text-[#6b7280] mb-0.5">WhatsApp Session ID</label>
+                    <label className="block text-[11px] font-medium text-[#73766C] mb-1">WhatsApp Session ID</label>
                     <input
                       type="text"
                       placeholder="e.g. aa"
                       value={subWaSessionId}
                       onChange={(e) => setSubWaSessionId(e.target.value)}
-                      className="geist-copy w-full rounded-md border border-white/[0.12] bg-[#141414] px-3 py-1.5 text-white placeholder-[#6b7280] focus:border-white/[0.3] focus:outline-none transition-colors"
+                      className="w-full rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] px-3 py-2 text-xs text-[#111215] placeholder-[#73766C] focus:border-[#111215] focus:bg-white focus:outline-none transition-colors"
                     />
                   </div>
                   <div>
-                    <label className="geist-small block font-medium text-[#6b7280] mb-0.5">Passcode</label>
+                    <label className="block text-[11px] font-medium text-[#73766C] mb-1">Passcode</label>
                     <input
                       type="password"
                       placeholder="e.g. ."
                       value={subWaPasscode}
                       onChange={(e) => setSubWaPasscode(e.target.value)}
-                      className="geist-copy w-full rounded-md border border-white/[0.12] bg-[#141414] px-3 py-1.5 text-white placeholder-[#6b7280] focus:border-white/[0.3] focus:outline-none transition-colors"
+                      className="w-full rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] px-3 py-2 text-xs text-[#111215] placeholder-[#73766C] focus:border-[#111215] focus:bg-white focus:outline-none transition-colors"
                     />
                   </div>
                 </div>
               </div>
 
-              <div className="flex items-center justify-end gap-2.5 pt-1">
+              <div className="flex items-center justify-end gap-2.5 pt-2">
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="geist-caption h-8 rounded-md border border-white/[0.12] px-3 font-medium text-[#9ca3af] hover:text-white transition-colors"
+                  className="h-9 rounded-full border border-[#E4E7DC] px-4 text-xs font-semibold text-[#575A51] hover:bg-[#F8F9F5] hover:text-[#111215] transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={creating}
-                  className="geist-caption h-8 rounded-md bg-white text-black hover:bg-white/90 px-3 font-medium transition-all flex items-center gap-1.5 disabled:opacity-50"
+                  className="h-9 rounded-full bg-[#111215] text-white hover:bg-[#202227] px-5 text-xs font-semibold shadow-xs transition-all flex items-center gap-1.5 disabled:opacity-50"
                 >
                   {creating ? 'Creating Account...' : 'Create Sub-Recruiter'}
                 </button>

@@ -9,7 +9,19 @@ import { db } from '../services/firebase';
 import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
 import { Interview } from '../types';
-import { ArrowRight, ClipboardList, ListChecks, Video } from 'lucide-react';
+import {
+  ArrowRight,
+  ArrowUpRight,
+  BriefcaseBusiness,
+  ClipboardList,
+  ListChecks,
+  Video,
+  Clock,
+  Users,
+  Activity,
+  Plus,
+  TrendingUp,
+} from 'lucide-react';
 import { useCompanyRateLimits } from '../hooks/useRecruiterRateLimits';
 import { getRateLimitReachedMessage, isRateLimitReached, RateLimitResource } from '../services/rateLimitService';
 import { useMessageBox } from '../components/MessageBox';
@@ -130,89 +142,60 @@ const SkeletonBlock = ({
   className = '',
   ...props
 }: React.HTMLAttributes<HTMLDivElement>) => (
-  <div className={`animate-pulse rounded-[6px] bg-white/[0.07] ${className}`} {...props} />
+  <div className={`animate-pulse rounded-xl bg-[#E4E7DC]/70 ${className}`} {...props} />
 );
 
 export const RecruiterDashboardSkeleton = () => (
-  <div className="w-full bg-[#000] text-white">
-    <section className="border-b border-white/[0.11]">
-      <div className="px-4 py-5 sm:px-6 lg:px-7">
-        <SkeletonBlock className="h-4 w-32" />
-        <SkeletonBlock className="mt-2 h-8 w-64 max-w-full" />
+  <div className="w-full min-h-screen bg-[#F8F9F5] p-4 sm:p-6 lg:p-8 space-y-6">
+    {/* Header Skeleton */}
+    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-[#E4E7DC] pb-6">
+      <div>
+        <SkeletonBlock className="h-5 w-40 rounded-full" />
+        <SkeletonBlock className="mt-3 h-8 w-72" />
+        <SkeletonBlock className="mt-2 h-4 w-96 max-w-full" />
       </div>
+      <div className="flex gap-2">
+        <SkeletonBlock className="h-9 w-28 rounded-full" />
+        <SkeletonBlock className="h-9 w-36 rounded-full" />
+      </div>
+    </div>
 
-      <div className="border-t border-white/[0.11]">
-        <div className="grid grid-cols-1 divide-y divide-white/[0.11] sm:grid-cols-2 xl:grid-cols-5 xl:divide-x xl:divide-y-0">
-          {Array.from({ length: 5 }).map((_, index) => (
-            <div key={index} className="min-h-[76px] px-4 py-4 sm:px-6 lg:px-7">
-              <SkeletonBlock className="h-4 w-20" />
-              <div className="mt-2 flex items-baseline gap-2.5">
-                <SkeletonBlock className="h-7 w-10" />
-                <SkeletonBlock className="h-4 w-24" />
-              </div>
-            </div>
+    {/* Metric Cards Skeleton */}
+    <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3.5 sm:gap-4">
+      {Array.from({ length: 5 }).map((_, index) => (
+        <div key={index} className="rounded-2xl border border-[#E4E7DC] bg-white p-5 space-y-3">
+          <div className="flex justify-between items-center">
+            <SkeletonBlock className="h-3 w-20" />
+            <SkeletonBlock className="h-7 w-7 rounded-lg" />
+          </div>
+          <SkeletonBlock className="h-7 w-12" />
+          <SkeletonBlock className="h-4 w-20 rounded-full" />
+        </div>
+      ))}
+    </div>
+
+    {/* Middle Section Skeleton */}
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6">
+      <div className="lg:col-span-8 rounded-3xl border border-[#E4E7DC] bg-white p-6 space-y-4">
+        <SkeletonBlock className="h-5 w-48" />
+        <SkeletonBlock className="h-48 w-full rounded-2xl" />
+      </div>
+      <div className="lg:col-span-4 rounded-3xl border border-[#E4E7DC] bg-white p-6 space-y-4">
+        <SkeletonBlock className="h-5 w-32" />
+        <div className="space-y-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <SkeletonBlock key={i} className="h-14 w-full rounded-2xl" />
           ))}
         </div>
       </div>
-    </section>
+    </div>
 
-    <section className="grid grid-cols-1 border-b border-white/[0.11] lg:grid-cols-[minmax(0,2fr)_1px_minmax(260px,0.84fr)]">
-      <div className="px-4 py-5 sm:px-6 lg:pl-7 lg:pr-8">
-        <div className="flex h-full min-h-[276px] flex-col">
-          <SkeletonBlock className="h-5 w-40" />
-          <SkeletonBlock className="mt-1 h-4 w-64 max-w-full" />
-          <div className="mt-5 grid h-[174px] grid-cols-7 items-end gap-3">
-            {[42, 58, 35, 70, 46, 62, 82].map((height, index) => (
-              <SkeletonBlock key={index} className="w-full" style={{ height: `${height}%` } as React.CSSProperties} />
-            ))}
-          </div>
-          <div className="mt-3 flex gap-4">
-            <SkeletonBlock className="h-4 w-16" />
-            <SkeletonBlock className="h-4 w-24" />
-            <SkeletonBlock className="h-4 w-20" />
-          </div>
-        </div>
-      </div>
-
-      <div className="h-px bg-white/[0.11] lg:h-auto lg:w-px" />
-
-      <div className="px-4 py-5 sm:px-6 lg:pl-7 lg:pr-7">
-        <div className="flex h-full min-h-[276px] flex-col justify-center">
-          <SkeletonBlock className="h-5 w-28" />
-          <SkeletonBlock className="mt-1 h-4 w-64 max-w-full" />
-          <div className="mt-3 border border-white/[0.11]">
-            {Array.from({ length: 3 }).map((_, index) => (
-              <div key={index} className="flex items-center gap-3 border-b border-white/[0.11] px-3.5 py-3 last:border-b-0">
-                <SkeletonBlock className="h-8 w-8 shrink-0" />
-                <div className="min-w-0 flex-1">
-                  <SkeletonBlock className="h-4 w-32" />
-                  <SkeletonBlock className="mt-1 h-3 w-40" />
-                </div>
-                <SkeletonBlock className="h-3.5 w-3.5" />
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <div className="border-b border-white/[0.11]">
-      <div className="px-4 py-5 sm:px-6 lg:px-7">
-        <SkeletonBlock className="h-5 w-36" />
-        <SkeletonBlock className="mt-1 h-4 w-80 max-w-full" />
-      </div>
-      <div className="border-t border-white/[0.11]">
-        {Array.from({ length: 4 }).map((_, index) => (
-          <div key={index} className="grid grid-cols-[minmax(180px,1.4fr)_0.7fr_0.7fr_0.7fr_0.5fr] gap-4 border-b border-white/[0.11] px-4 py-3 last:border-b-0 sm:px-6 lg:px-7">
-            <div>
-              <SkeletonBlock className="h-4 w-40" />
-              <SkeletonBlock className="mt-1 h-3 w-24" />
-            </div>
-            <SkeletonBlock className="h-5 w-20" />
-            <SkeletonBlock className="h-4 w-24" />
-            <SkeletonBlock className="h-4 w-20" />
-            <SkeletonBlock className="h-5 w-16" />
-          </div>
+    {/* Table Skeleton */}
+    <div className="rounded-3xl border border-[#E4E7DC] bg-white p-6 space-y-4">
+      <SkeletonBlock className="h-6 w-44" />
+      <div className="space-y-3">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <SkeletonBlock key={i} className="h-12 w-full rounded-xl" />
         ))}
       </div>
     </div>
@@ -815,108 +798,221 @@ const RecruiterDashboard: React.FC = () => {
   }
 
   return (
-    <div className="w-full bg-[#000] text-white">
-      <section className="border-b border-white/[0.11]">
-        <div className="px-4 py-5 sm:px-6 lg:px-7">
-          <p className="geist-label uppercase text-[#6b7280]">
-            Recruiter Overview
-          </p>
-          <h2 className="geist-page-title mt-2 text-white">
+    <div className="w-full min-h-screen bg-[#F8F9F5] text-[#111215] p-4 sm:p-6 lg:p-8 space-y-6">
+      {/* Editorial Header */}
+      <section className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-[#E4E7DC] pb-6">
+        <div>
+          <div className="inline-flex items-center gap-2 rounded-full border border-[#E4E7DC] bg-white px-3 py-1 text-[11px] font-semibold tracking-wider uppercase text-[#575A51] shadow-xs">
+            <span className="h-1.5 w-1.5 rounded-full bg-[#8FB305] animate-pulse" />
+            01 • RECRUITER DESK • OVERVIEW
+          </div>
+          <h1 className="mt-2 text-2xl sm:text-3xl font-bold tracking-tight text-[#111215]">
             Welcome back, {recruiterName}
-          </h2>
+          </h1>
+          <p className="mt-1 text-sm text-[#575A51]">
+            Track candidate pipeline flow, interview schedules, and active job requisitions in real time.
+          </p>
         </div>
 
-        <div className="border-t border-white/[0.11]">
-          <div className="grid grid-cols-1 divide-y divide-white/[0.11] sm:grid-cols-2 xl:grid-cols-5 xl:divide-x xl:divide-y-0">
-            <Link to="/recruiter/all-jobs" className="min-h-[76px] px-4 py-4 transition-colors hover:bg-white/[0.025] sm:px-6 lg:px-7">
-              <p className="geist-label text-[#6b7280]">All Job Postings</p>
-              <div className="mt-2 flex items-baseline gap-2.5">
-                <span className="geist-metric text-white">{dashboardRoles.length}</span>
-                <span className="geist-caption text-[#83d0a3]">{activeJobPosts.length} active</span>
-              </div>
-            </Link>
-
-            <Link to="/recruiter/hot-leads" className="min-h-[76px] px-4 py-4 transition-colors hover:bg-white/[0.025] sm:px-6 lg:px-7">
-              <p className="geist-label text-[#6b7280]">Responses</p>
-              <div className="mt-2 flex items-baseline gap-2.5">
-                <span className="geist-metric text-white">{attempts.length}</span>
-                <span className="geist-caption text-[#6b7280]">{attempts.length === 1 ? '1 report' : `${attempts.length} reports`}</span>
-              </div>
-            </Link>
-
-            <div className="min-h-[76px] px-4 py-4 sm:px-6 lg:px-7">
-              <p className="geist-label text-[#6b7280]">Pending</p>
-              <div className="mt-2 flex items-baseline gap-2.5">
-                <span className="geist-metric text-white">{pendingReviewCount}</span>
-                <span className="geist-caption text-[#6b7280]">awaiting review</span>
-              </div>
-            </div>
-
-            <Link to="/recruiter/tests" className="min-h-[76px] px-4 py-4 transition-colors hover:bg-white/[0.025] sm:px-6 lg:px-7">
-              <p className="geist-label text-[#6b7280]">Assessments</p>
-              <div className="mt-2 flex items-baseline gap-2.5">
-                <span className="geist-metric text-white">{tests.length}</span>
-                <span className="geist-caption text-[#6b7280]">screening tests</span>
-              </div>
-            </Link>
-
-            <Link to="/recruiter/hot-leads" className="min-h-[76px] px-4 py-4 transition-colors hover:bg-white/[0.025] sm:px-6 lg:px-7">
-              <p className="geist-label text-[#6b7280]">Candidates</p>
-              <div className="mt-2 flex items-baseline gap-2.5">
-                <span className="geist-metric text-white">{totalInvitedCandidates}</span>
-                <span className="geist-caption text-[#6b7280]">invited</span>
-              </div>
-            </Link>
-          </div>
+        <div className="flex items-center gap-2.5 shrink-0">
+          <Link
+            to="/recruiter/interview/create"
+            className="inline-flex items-center gap-1.5 rounded-full bg-[#111215] px-4 py-2.5 text-xs font-semibold text-white shadow-xs transition-colors hover:bg-[#202227]"
+          >
+            <Plus size={14} className="text-[#D4F82C]" />
+            <span>Create Job</span>
+          </Link>
+          <Link
+            to="/recruiter/tests/create?type=aptitude"
+            className="inline-flex items-center gap-1.5 rounded-full border border-[#E4E7DC] bg-white px-4 py-2.5 text-xs font-semibold text-[#111215] shadow-xs transition-colors hover:bg-[#F8F9F5]"
+          >
+            <span>Create Assessment</span>
+            <ArrowUpRight size={14} className="text-[#73766C]" />
+          </Link>
         </div>
       </section>
 
-      <section className="grid grid-cols-1 border-b border-white/[0.11] lg:grid-cols-[minmax(0,2fr)_1px_minmax(260px,0.84fr)]">
-        <div className="px-4 py-5 sm:px-6 lg:pl-7 lg:pr-8">
-          <div className="flex h-full min-h-[276px] flex-col">
-            <div className="min-h-[210px] flex-1 w-full">
-              {hasActivity ? (
-                <StackedTileChart
-                  data={tileChartData}
-                  timeRange={tileTimeRange}
-                  onTimeRangeChange={setTileTimeRange}
-                />
-              ) : (
-                <div className="h-full flex flex-col items-center justify-center text-center px-6">
-                  <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-[6px] border border-white/[0.11] bg-white/[0.03] text-[#9ca3af]">
-                    <i className="fas fa-chart-area text-xl"></i>
-                  </div>
-                  <p className="geist-caption font-medium text-white">No live activity yet</p>
-                  <p className="geist-caption mt-2 max-w-md text-[#9ca3af]">
-                    New recruiter activity will appear here automatically as roles, assessments, and candidate responses come in.
-                  </p>
-                </div>
-              )}
+      {/* 5 High-Impact Metric Cards */}
+      <section className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3.5 sm:gap-4">
+        {/* Card 1: All Job Postings */}
+        <Link
+          to="/recruiter/all-jobs"
+          className="group relative flex flex-col justify-between rounded-2xl border border-[#E4E7DC] bg-white p-4 sm:p-5 shadow-xs transition-all hover:-translate-y-0.5 hover:border-[#111215]/30 hover:shadow-md"
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-[#73766C]">
+              All Job Postings
+            </span>
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg border border-[#E4E7DC] bg-[#F8F9F5] text-[#111215] transition-colors group-hover:bg-[#111215] group-hover:text-[#D4F82C]">
+              <BriefcaseBusiness size={13} />
             </div>
+          </div>
+          <div className="mt-3 flex items-baseline justify-between gap-2">
+            <span className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#111215]">
+              {dashboardRoles.length}
+            </span>
+            <span className="inline-flex items-center gap-1 rounded-full bg-[#D4F82C] px-2.5 py-0.5 text-[11px] font-bold text-[#111215]">
+              <span className="h-1 w-1 rounded-full bg-[#8FB305]" />
+              {activeJobPosts.length} active
+            </span>
+          </div>
+        </Link>
+
+        {/* Card 2: Responses */}
+        <Link
+          to="/recruiter/hot-leads"
+          className="group relative flex flex-col justify-between rounded-2xl border border-[#E4E7DC] bg-white p-4 sm:p-5 shadow-xs transition-all hover:-translate-y-0.5 hover:border-[#111215]/30 hover:shadow-md"
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-[#73766C]">
+              Responses
+            </span>
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg border border-[#E4E7DC] bg-[#F8F9F5] text-[#111215] transition-colors group-hover:bg-[#111215] group-hover:text-[#D4F82C]">
+              <TrendingUp size={13} />
+            </div>
+          </div>
+          <div className="mt-3 flex items-baseline justify-between gap-2">
+            <span className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#111215]">
+              {attempts.length}
+            </span>
+            <span className="inline-flex items-center rounded-full border border-[#E4E7DC] bg-[#F8F9F5] px-2.5 py-0.5 text-[11px] font-medium text-[#575A51]">
+              {attempts.length === 1 ? '1 report' : `${attempts.length} reports`}
+            </span>
+          </div>
+        </Link>
+
+        {/* Card 3: Pending Review */}
+        <div className="relative flex flex-col justify-between rounded-2xl border border-[#E4E7DC] bg-white p-4 sm:p-5 shadow-xs">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-[#73766C]">
+              Pending
+            </span>
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg border border-[#FEF3C7] bg-[#FFFBEB] text-[#D97706]">
+              <Clock size={13} />
+            </div>
+          </div>
+          <div className="mt-3 flex items-baseline justify-between gap-2">
+            <span className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#111215]">
+              {pendingReviewCount}
+            </span>
+            <span className="inline-flex items-center rounded-full border border-[#FDE68A] bg-[#FEF3C7] px-2.5 py-0.5 text-[11px] font-semibold text-[#92400E]">
+              awaiting review
+            </span>
           </div>
         </div>
 
-        <div className="h-px bg-white/[0.11] lg:h-auto lg:w-px" />
+        {/* Card 4: Assessments */}
+        <Link
+          to="/recruiter/tests"
+          className="group relative flex flex-col justify-between rounded-2xl border border-[#E4E7DC] bg-white p-4 sm:p-5 shadow-xs transition-all hover:-translate-y-0.5 hover:border-[#111215]/30 hover:shadow-md"
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-[#73766C]">
+              Assessments
+            </span>
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg border border-[#E4E7DC] bg-[#F8F9F5] text-[#111215] transition-colors group-hover:bg-[#111215] group-hover:text-[#D4F82C]">
+              <ClipboardList size={13} />
+            </div>
+          </div>
+          <div className="mt-3 flex items-baseline justify-between gap-2">
+            <span className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#111215]">
+              {tests.length}
+            </span>
+            <span className="inline-flex items-center rounded-full border border-[#E4E7DC] bg-[#F8F9F5] px-2.5 py-0.5 text-[11px] font-medium text-[#575A51]">
+              screening tests
+            </span>
+          </div>
+        </Link>
 
-        <div className="px-4 py-5 text-white sm:px-6 lg:pl-7 lg:pr-7">
-          <div className="flex h-full min-h-[276px] flex-col justify-center">
-            <div className="mb-3 text-left">
-              <h3 className="geist-section-title text-white">Quick Action</h3>
-              <p className="geist-small mt-0.5 text-[#8f8f8f]">
-                Start a new hiring workflow from one place.
+        {/* Card 5: Candidates */}
+        <Link
+          to="/recruiter/hot-leads"
+          className="group relative flex flex-col justify-between rounded-2xl border border-[#E4E7DC] bg-white p-4 sm:p-5 shadow-xs transition-all hover:-translate-y-0.5 hover:border-[#111215]/30 hover:shadow-md col-span-2 sm:col-span-1"
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-[#73766C]">
+              Candidates
+            </span>
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg border border-[#E4E7DC] bg-[#F8F9F5] text-[#111215] transition-colors group-hover:bg-[#111215] group-hover:text-[#D4F82C]">
+              <Users size={13} />
+            </div>
+          </div>
+          <div className="mt-3 flex items-baseline justify-between gap-2">
+            <span className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#111215]">
+              {totalInvitedCandidates}
+            </span>
+            <span className="inline-flex items-center rounded-full border border-[#C7D2FE] bg-[#E0E7FF] px-2.5 py-0.5 text-[11px] font-semibold text-[#3730A3]">
+              invited
+            </span>
+          </div>
+        </Link>
+      </section>
+
+      {/* Analytics Chart + Quick Action Bento Grid */}
+      <section className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6">
+        {/* Left: Chart Container */}
+        <div className="lg:col-span-8 rounded-3xl border border-[#E4E7DC] bg-white p-5 sm:p-6 shadow-xs flex flex-col justify-between">
+          <div className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-[#8FB305]" />
+                <h3 className="text-base font-bold tracking-tight text-[#111215]">
+                  Pipeline Activity
+                </h3>
+              </div>
+              <p className="mt-0.5 text-xs text-[#575A51]">
+                Real-time volume breakdown across jobs, video interviews, and candidate responses.
               </p>
             </div>
+          </div>
 
-            <div className="border border-white/[0.11]">
+          <div className="min-h-[260px] flex-1 w-full">
+            {hasActivity ? (
+              <StackedTileChart
+                data={tileChartData}
+                timeRange={tileTimeRange}
+                onTimeRangeChange={setTileTimeRange}
+              />
+            ) : (
+              <div className="h-full flex flex-col items-center justify-center text-center p-8">
+                <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl border border-[#E4E7DC] bg-[#F8F9F5] text-[#73766C]">
+                  <Activity size={20} />
+                </div>
+                <p className="text-sm font-semibold text-[#111215]">No live activity yet</p>
+                <p className="mt-1 max-w-sm text-xs text-[#575A51]">
+                  New recruiter activity will appear here automatically as jobs are published, assessments completed, and candidates respond.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Right: Quick Actions Card */}
+        <div className="lg:col-span-4 rounded-3xl border border-[#E4E7DC] bg-white p-5 sm:p-6 shadow-xs flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-base font-bold tracking-tight text-[#111215]">
+                  Quick Actions
+                </h3>
+                <p className="mt-0.5 text-xs text-[#575A51]">
+                  Start a new recruitment workflow in one tap.
+                </p>
+              </div>
+              <div className="h-2 w-2 rounded-full bg-[#D4F82C]" />
+            </div>
+
+            <div className="mt-5 space-y-3">
               {quickActions.map((action, index) => {
                 const ActionIcon = action.icon;
                 const limitReached = action.resource ? isRateLimitReached(rateLimitStatus, action.resource) : false;
-                const iconClassName =
+
+                const iconStyles =
                   index === 0
-                    ? 'border-white bg-white text-black'
+                    ? 'border-[#111215] bg-[#111215] text-[#D4F82C]'
                     : index === 1
-                      ? 'border-[#2f6f4f] bg-[#092016] text-[#83d0a3]'
-                      : 'border-[#24415e] bg-[#071625] text-[#8bbde8]';
+                      ? 'border-[#E4E7DC] bg-[#F8F9F5] text-[#8FB305]'
+                      : 'border-[#E4E7DC] bg-[#F8F9F5] text-[#111215]';
 
                 return (
                   <Link
@@ -928,109 +1024,172 @@ const RecruiterDashboard: React.FC = () => {
                       messageBox.showWarning(getRateLimitReachedMessage(action.resource));
                     }}
                     aria-disabled={limitReached}
-                    className={`group flex items-center gap-3 border-b border-white/[0.11] px-3.5 py-3 text-left transition-colors last:border-b-0 ${limitReached ? 'cursor-not-allowed opacity-55' : 'hover:bg-white/[0.025]'}`}
+                    className={`group flex items-center gap-3.5 rounded-2xl border border-[#E4E7DC] bg-[#F8F9F5]/50 p-3.5 text-left transition-all hover:border-[#111215] hover:bg-white hover:shadow-sm ${
+                      limitReached ? 'cursor-not-allowed opacity-55' : ''
+                    }`}
                   >
-                    <span className={`flex h-8 w-8 shrink-0 items-center justify-center border ${iconClassName}`}>
-                      <ActionIcon size={14} strokeWidth={1.8} />
+                    <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border ${iconStyles}`}>
+                      <ActionIcon size={16} strokeWidth={2} />
                     </span>
                     <span className="min-w-0 flex-1">
-                      <span className="geist-caption block font-semibold text-white">{action.label}</span>
-                      <span className={`geist-small block ${limitReached ? 'text-red-400' : 'text-[#6b7280]'}`}>
+                      <span className="block text-xs font-bold text-[#111215]">
+                        {action.label}
+                      </span>
+                      <span className={`block text-[11px] ${limitReached ? 'text-red-500 font-semibold' : 'text-[#73766C]'}`}>
                         {limitReached ? 'Rate limit reached.' : action.description}
                       </span>
                     </span>
-                    <ArrowRight className="h-3.5 w-3.5 text-[#6b7280] transition-transform group-hover:translate-x-0.5 group-hover:text-white" strokeWidth={1.6} />
+                    <ArrowUpRight
+                      className="h-4 w-4 text-[#73766C] transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-[#111215]"
+                      strokeWidth={2}
+                    />
                   </Link>
                 );
               })}
             </div>
           </div>
+
+          <div className="mt-6 rounded-2xl border border-[#E4E7DC] bg-[#F8F9F5] p-3.5 text-center">
+            <span className="text-[11px] font-medium text-[#575A51]">
+              Need help streamlining hiring? Check our{' '}
+              <Link to="/active-jobs" className="font-bold text-[#111215] underline hover:text-[#8FB305]">
+                Public Jobs Board
+              </Link>
+            </span>
+          </div>
         </div>
       </section>
 
-      <div className="border-b border-white/[0.11]">
-        <div className="flex flex-col gap-1.5 px-4 py-5 sm:px-6 lg:px-7 md:flex-row md:items-center md:justify-between">
+      {/* Existing Job Posts Table Card */}
+      <section className="rounded-3xl border border-[#E4E7DC] bg-white overflow-hidden shadow-xs">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-6 py-5 border-b border-[#E4E7DC]">
           <div>
-            <h2 className="geist-section-title text-white">Existing Job Posts</h2>
-            <p className="geist-caption mt-0.5 text-[#9ca3af]">
+            <div className="flex items-center gap-2">
+              <h2 className="text-base font-bold tracking-tight text-[#111215]">
+                Existing Job Posts
+              </h2>
+              <span className="inline-flex items-center rounded-full bg-[#F8F9F5] border border-[#E4E7DC] px-2.5 py-0.5 text-[11px] font-semibold text-[#575A51]">
+                {visibleJobPosts.length} shown
+              </span>
+            </div>
+            <p className="mt-0.5 text-xs text-[#575A51]">
               Interview-created roles and synced job posts appear here automatically.
             </p>
           </div>
+
+          <Link
+            to="/recruiter/all-jobs"
+            className="text-xs font-semibold text-[#111215] hover:text-[#8FB305] inline-flex items-center gap-1 transition-colors self-start sm:self-center"
+          >
+            <span>View All Jobs</span>
+            <ArrowRight size={13} />
+          </Link>
         </div>
 
         {visibleJobPosts.length === 0 ? (
-          <div className="border-t border-dashed border-white/[0.11] py-10 text-center">
-            <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-[6px] border border-white/[0.11] bg-white/[0.03] text-[#6b7280]">
-              <i className="fas fa-clipboard-list text-base"></i>
+          <div className="py-12 text-center">
+            <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-2xl border border-[#E4E7DC] bg-[#F8F9F5] text-[#73766C]">
+              <BriefcaseBusiness size={18} />
             </div>
-            <p className="geist-caption mb-4 text-[#9ca3af]">
-              No active recruiter-owned roles are live yet.
+            <p className="text-sm font-semibold text-[#111215]">
+              No active recruiter-owned roles are live yet
             </p>
+            <p className="mt-1 text-xs text-[#73766C]">
+              Create an interview role or import openings to start receiving candidates.
+            </p>
+            <div className="mt-4">
+              <Link
+                to="/recruiter/interview/create"
+                className="inline-flex items-center gap-1.5 rounded-full bg-[#111215] px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-[#202227]"
+              >
+                <Plus size={13} className="text-[#D4F82C]" />
+                <span>Create First Role</span>
+              </Link>
+            </div>
           </div>
         ) : (
-          <div className="overflow-hidden border-t border-white/[0.11] bg-black">
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-white/[0.11]">
-                <thead className="bg-[#080808]">
-                  <tr>
-                    <th className="geist-label px-4 py-2.5 text-left uppercase text-[#6b7280] sm:px-6 lg:px-7">
-                      Job title
-                    </th>
-                    <th className="geist-label px-4 py-2.5 text-left uppercase text-[#6b7280]">
-                      Source
-                    </th>
-                    <th className="geist-label px-4 py-2.5 text-left uppercase text-[#6b7280]">
-                      Posted date
-                    </th>
-                    <th className="geist-label px-4 py-2.5 text-left uppercase text-[#6b7280]">
-                      Status
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-white/[0.11]">
-                  {visibleJobPosts.map((role) => {
-                    const roleStatus = getRoleStatus(role);
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-[#E4E7DC]">
+              <thead className="bg-[#F8F9F5]">
+                <tr>
+                  <th className="px-6 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-[#73766C]">
+                    Job Title
+                  </th>
+                  <th className="px-6 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-[#73766C]">
+                    Source
+                  </th>
+                  <th className="px-6 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-[#73766C]">
+                    Posted Date
+                  </th>
+                  <th className="px-6 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-[#73766C]">
+                    Status
+                  </th>
+                  <th className="px-6 py-3 text-right text-[11px] font-bold uppercase tracking-wider text-[#73766C]">
+                    Action
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#E4E7DC] bg-white">
+                {visibleJobPosts.map((role) => {
+                  const roleStatus = getRoleStatus(role);
+                  const isActive = roleStatus.label === 'Active';
 
-                    return (
-                      <tr
-                        key={role.id}
-                        className="group hover:bg-white/[0.025]"
-                      >
-                        <td className="px-4 py-3 sm:px-6 lg:px-7">
-                          <div className="geist-caption font-medium text-white">
-                            {role.title}
-                          </div>
-                          <div className="geist-small mt-0.5 text-[#6b7280]">
-                            {role.category || role.companyName || role.location}
-                          </div>
-                        </td>
-                        <td className="whitespace-nowrap px-4 py-3">
-                          <span className="geist-small inline-flex rounded-[6px] border border-[#24364c] bg-[#06111f] px-2 py-0.5 font-medium text-[#8bbde8]">
-                            {role.sourceLabel}
-                          </span>
-                        </td>
-                        <td className="geist-label whitespace-nowrap px-4 py-3 text-[#9ca3af]">
-                          {formatDate(role.createdAt)}
-                        </td>
-                        <td className="whitespace-nowrap px-4 py-3">
+                  return (
+                    <tr key={role.id} className="group hover:bg-[#F8F9F5]/70 transition-colors">
+                      <td className="px-6 py-4">
+                        <div className="font-semibold text-sm text-[#111215] group-hover:text-[#8FB305] transition-colors">
+                          {role.title}
+                        </div>
+                        <div className="mt-0.5 text-xs text-[#73766C]">
+                          {role.category || role.companyName || role.location || 'General'}
+                        </div>
+                      </td>
+                      <td className="whitespace-nowrap px-6 py-4">
+                        <span className="inline-flex items-center rounded-full border border-[#E4E7DC] bg-[#F8F9F5] px-2.5 py-0.5 text-[11px] font-semibold text-[#575A51]">
+                          {role.sourceLabel}
+                        </span>
+                      </td>
+                      <td className="whitespace-nowrap px-6 py-4 text-xs font-medium text-[#73766C]">
+                        {formatDate(role.createdAt)}
+                      </td>
+                      <td className="whitespace-nowrap px-6 py-4">
+                        <span
+                          className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-bold ${
+                            isActive
+                              ? 'bg-[#D4F82C] text-[#111215]'
+                              : 'bg-red-100 text-red-700'
+                          }`}
+                        >
                           <span
-                            className={`geist-small inline-flex rounded-[6px] px-2 py-0.5 font-medium ${roleStatus.className}`}
-                          >
-                            {roleStatus.label}
-                          </span>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                            className={`h-1.5 w-1.5 rounded-full ${
+                              isActive ? 'bg-[#8FB305]' : 'bg-red-500'
+                            }`}
+                          />
+                          {roleStatus.label}
+                        </span>
+                      </td>
+                      <td className="whitespace-nowrap px-6 py-4 text-right">
+                        <Link
+                          to={role.hasInterviewDoc ? `/recruiter/interviews` : `/recruiter/all-jobs`}
+                          className="inline-flex items-center gap-1 text-xs font-semibold text-[#111215] hover:text-[#8FB305] transition-colors"
+                        >
+                          <span>Manage</span>
+                          <ArrowRight size={12} />
+                        </Link>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         )}
-      </div>
+      </section>
 
       {/* Recruiter Team & Audit Logs Section */}
-      <RecruiterTeamPanel />
+      <div className="rounded-3xl border border-[#E4E7DC] bg-white overflow-hidden shadow-xs">
+        <RecruiterTeamPanel />
+      </div>
 
     </div>
   );

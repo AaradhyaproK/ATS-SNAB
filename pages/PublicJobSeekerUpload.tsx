@@ -4,7 +4,7 @@ import {
   Briefcase, GraduationCap, ArrowRight, RefreshCw, Plus, X, Tag, IndianRupee, 
   Clock, UserCheck, Search, Filter, Check, ChevronRight, AlertCircle, 
   ExternalLink, Eye, ShieldCheck, SlidersHorizontal, RotateCcw, Edit3, ChevronDown, ChevronUp, Ban, Sun, Moon,
-  Layers, Menu, Save
+  Layers, Menu, Save, ArrowUpRight
 } from 'lucide-react';
 import { collection, query, where, getDocs, onSnapshot, doc, updateDoc, arrayUnion, addDoc, serverTimestamp, limit } from 'firebase/firestore';
 import { db } from '../services/firebase';
@@ -19,7 +19,7 @@ import { ALL_JOB_DOMAINS, detectDomainFromText, detectDomainsFromText, detectSec
 import { useMessageBox } from '../components/MessageBox';
 import { useTheme } from '../context/ThemeContext';
 import { Link, useNavigate } from 'react-router-dom';
-import Logo from '../components/Logo';
+import HireXLogo from '../components/HireXLogo';
 import { calculateJobMatchScore, JobMatchResult, CandidateMatchProfile } from '../services/jobMatchService';
 import { FormattedJobDescription } from '../utils/jobDescriptionFormatter';
 import { splitEducationRequirements, checkSingleRequirementMatch, normalizeEducationToString } from '../utils/educationMatcher';
@@ -1286,155 +1286,120 @@ export default function PublicJobSeekerUpload() {
   };
 
   return (
-    <div className={`min-h-screen font-sans transition-colors duration-300 ${
-      isDark ? 'bg-[#0a0a0a] text-white' : 'bg-slate-50 text-slate-900'
-    }`}>
+    <div className="min-h-screen bg-[#F8F9F5] text-[#111215] font-sans selection:bg-[#D4F82C] selection:text-[#111215] flex flex-col justify-between">
       {/* Sleek Responsive Top Navbar */}
-      <header className={`sticky top-0 z-40 backdrop-blur-md border-b transition-colors ${
-        isDark ? 'bg-[#0d0d0d]/95 border-white/[0.08]' : 'bg-white/95 border-slate-200 shadow-sm'
-      }`}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-2.5 sm:gap-3">
-            <Logo className="h-8 sm:h-9 w-auto object-contain" isDark={isDark} />
-            <div className="border-l pl-2.5 sm:pl-3 border-slate-200 dark:border-white/10">
-              <span className="font-extrabold text-sm sm:text-base tracking-tight block text-slate-900 dark:text-white">SNAB hireX</span>
-              <span className="text-[10px] sm:text-[11px] font-mono text-emerald-500 font-bold block -mt-0.5 uppercase tracking-wider">Candidate Match Portal</span>
+      <header className="sticky top-0 z-40 border-b border-[#E4E7DC] bg-[#F8F9F5]/95 backdrop-blur-xl transition-all">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Link to="/" className="flex items-center group">
+              <HireXLogo size="md" variant="full" />
+            </Link>
+            <div className="hidden sm:block border-l border-[#E4E7DC] pl-3">
+              <span className="text-[11px] font-mono text-[#8FB305] font-bold block uppercase tracking-wider">Candidate Match Portal</span>
             </div>
           </div>
 
           {/* Desktop Right Nav Items */}
           <div className="hidden md:flex items-center gap-2.5">
             <button
-              onClick={toggleTheme}
-              className={`p-2.5 rounded-xl border transition-all cursor-pointer shadow-sm ${
-                isDark ? 'bg-white/10 border-white/15 text-amber-400 hover:bg-white/15' : 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'
-              }`}
-              title={isDark ? "Switch to Light Theme" : "Switch to Dark Theme"}
-            >
-              {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4 text-indigo-600" />}
-            </button>
-
-            <Link
-              to="/candidate/login"
-              className={`inline-flex items-center gap-1.5 text-xs font-bold px-3.5 py-2 rounded-xl transition-all shadow-sm border ${
-                isDark 
-                  ? 'bg-purple-500/15 border-purple-500/30 text-purple-300 hover:bg-purple-500/25' 
-                  : 'bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100'
-              }`}
-            >
-              <User className="w-4 h-4 text-purple-500" />
-              <span>Candidate Login</span>
-            </Link>
-
-            <button
+              type="button"
               onClick={() => setShowEmailLookup(!showEmailLookup)}
-              className={`inline-flex items-center gap-1.5 text-xs font-bold px-3.5 py-2 rounded-xl transition-all shadow-sm cursor-pointer border ${
-                isDark 
-                  ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20' 
-                  : 'bg-emerald-50 border-emerald-300 text-emerald-700 hover:bg-emerald-100'
-              }`}
+              className="inline-flex items-center gap-1.5 rounded-full border border-[#E4E7DC] bg-white px-3.5 py-1.5 text-xs font-semibold text-[#111215] shadow-xs hover:bg-[#F8F9F5] transition-colors cursor-pointer"
             >
-              <Mail className="w-4 h-4" />
+              <Search className="w-3.5 h-3.5 text-[#73766C]" />
               <span>Lookup Profile</span>
             </button>
 
             <Link
-              to="/jobs"
-              className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3.5 py-2 rounded-xl border transition-all shadow-sm ${
-                isDark 
-                  ? 'bg-white/10 border-white/15 text-white hover:bg-white/15' 
-                  : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'
-              }`}
+              to="/candidate/login"
+              className="inline-flex items-center gap-1.5 rounded-full border border-[#E4E7DC] bg-white px-3.5 py-1.5 text-xs font-semibold text-[#111215] shadow-xs hover:bg-[#F8F9F5] transition-colors"
             >
-              <Briefcase className="w-4 h-4 text-emerald-500" />
+              <User className="w-3.5 h-3.5 text-[#73766C]" />
+              <span>Candidate Login</span>
+            </Link>
+
+            <Link
+              to="/active-jobs"
+              className="inline-flex items-center gap-1.5 rounded-full bg-[#111215] px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-[#202227] transition-colors"
+            >
               <span>View Openings</span>
+              <span className="text-[#D4F82C]">↗</span>
             </Link>
           </div>
 
-          {/* Mobile Right Controls: Theme Toggle & Hamburger Menu */}
+          {/* Mobile Right Controls: Hamburger Menu */}
           <div className="flex md:hidden items-center gap-2">
             <button
-              onClick={toggleTheme}
-              className={`p-2 rounded-xl border transition-all ${
-                isDark ? 'bg-white/10 border-white/15 text-amber-400' : 'bg-slate-100 border-slate-200 text-slate-700'
-              }`}
-            >
-              {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4 text-indigo-600" />}
-            </button>
-
-            <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className={`p-2 rounded-xl border transition-all ${
-                isDark ? 'bg-white/10 border-white/15 text-white' : 'bg-slate-100 border-slate-200 text-slate-800'
-              }`}
+              className="p-2 rounded-full border border-[#E4E7DC] bg-white text-[#111215]"
             >
-              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              {mobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
             </button>
           </div>
         </div>
 
         {/* Mobile Collapsible Navigation Menu Drawer */}
         {mobileMenuOpen && (
-          <div className={`md:hidden border-t px-4 py-3 space-y-2.5 animate-in slide-in-from-top-2 duration-200 ${
-            isDark ? 'bg-[#0d0d0d] border-white/10' : 'bg-white border-slate-200'
-          }`}>
+          <div className="md:hidden border-t border-[#E4E7DC] bg-white px-4 py-3 space-y-2 animate-in slide-in-from-top-2 duration-200">
             <button
               onClick={() => {
                 setShowEmailLookup(!showEmailLookup);
                 setMobileMenuOpen(false);
               }}
-              className={`w-full flex items-center justify-between text-xs font-bold px-3.5 py-2.5 rounded-xl border transition-all ${
-                isDark 
-                  ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' 
-                  : 'bg-emerald-50 border-emerald-300 text-emerald-800'
-              }`}
+              className="w-full flex items-center justify-between text-xs font-semibold px-4 py-2.5 rounded-2xl border border-[#E4E7DC] bg-[#F8F9F5] text-[#111215]"
             >
               <span className="flex items-center gap-2">
-                <Mail className="w-4 h-4" />
-                <span>Already Submitted Resume? (Lookup)</span>
+                <Search className="w-4 h-4 text-[#73766C]" />
+                <span>Already Submitted Resume? (Lookup Profile)</span>
               </span>
               <ChevronRight className="w-4 h-4" />
             </button>
 
             <Link
-              to="/jobs"
+              to="/candidate/login"
               onClick={() => setMobileMenuOpen(false)}
-              className={`w-full flex items-center justify-between text-xs font-semibold px-3.5 py-2.5 rounded-xl border transition-all ${
-                isDark 
-                  ? 'bg-white/10 border-white/15 text-white' 
-                  : 'bg-slate-100 border-slate-200 text-slate-800'
-              }`}
+              className="w-full flex items-center justify-between text-xs font-semibold px-4 py-2.5 rounded-2xl border border-[#E4E7DC] bg-[#F8F9F5] text-[#111215]"
             >
               <span className="flex items-center gap-2">
-                <Briefcase className="w-4 h-4 text-emerald-500" />
-                <span>Browse All Active Job Openings</span>
+                <User className="w-4 h-4 text-[#73766C]" />
+                <span>Candidate Login</span>
               </span>
               <ChevronRight className="w-4 h-4" />
+            </Link>
+
+            <Link
+              to="/active-jobs"
+              onClick={() => setMobileMenuOpen(false)}
+              className="w-full flex items-center justify-between text-xs font-semibold px-4 py-2.5 rounded-2xl bg-[#111215] text-white"
+            >
+              <span className="flex items-center gap-2">
+                <Briefcase className="w-4 h-4 text-[#D4F82C]" />
+                <span>Browse All Active Job Openings</span>
+              </span>
+              <span className="text-[#D4F82C]">↗</span>
             </Link>
           </div>
         )}
       </header>
 
       {/* Main Single-Page Responsive Container */}
-      <main className="max-w-5xl mx-auto px-3 sm:px-6 py-5 sm:py-10">
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 w-full flex-1">
 
         {/* Existing Submitted Candidate Email Lookup Modal Popup */}
         {showEmailLookup && (
-          <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-md flex items-center justify-center p-3 sm:p-5 overflow-y-auto animate-in fade-in duration-200">
-            <div className={`border rounded-3xl max-w-lg w-full p-5 sm:p-7 shadow-2xl space-y-5 relative transition-colors ${
-              isDark ? 'bg-[#0d0d0f] border-white/15 text-white' : 'bg-white border-slate-200 text-slate-900'
-            }`}>
+          <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-200">
+            <div className="border border-[#E4E7DC] rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl space-y-5 relative bg-white text-[#111215]">
               {/* Modal Header */}
-              <div className="flex items-start justify-between border-b border-slate-200 dark:border-white/10 pb-4 relative">
+              <div className="flex items-start justify-between border-b border-[#E4E7DC] pb-4">
                 <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-500 flex items-center justify-center shrink-0 shadow-inner">
-                    <Mail className="w-5 h-5" />
+                  <div className="h-10 w-10 rounded-2xl bg-[#111215] text-[#D4F82C] flex items-center justify-center shrink-0 shadow-xs">
+                    <Search className="w-5 h-5" />
                   </div>
                   <div>
-                    <h3 className="text-lg sm:text-xl font-black tracking-tight">
+                    <h3 className="text-lg font-bold tracking-tight text-[#111215]">
                       Find Submitted Profile
                     </h3>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                    <p className="text-xs text-[#575A51]">
                       Retrieve your saved candidate details and job recommendations.
                     </p>
                   </div>
@@ -1443,7 +1408,7 @@ export default function PublicJobSeekerUpload() {
                 <button
                   type="button"
                   onClick={() => setShowEmailLookup(false)}
-                  className="text-slate-400 hover:text-slate-900 dark:hover:text-white p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-white/10 transition-colors cursor-pointer"
+                  className="text-[#73766C] hover:text-[#111215] p-2 rounded-full hover:bg-[#F8F9F5] transition-colors cursor-pointer"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -1452,11 +1417,11 @@ export default function PublicJobSeekerUpload() {
               {/* Modal Body & Form */}
               <form onSubmit={handleLookupEmailSubmit} className="space-y-4">
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider mb-2">
+                  <label className="block text-xs font-bold uppercase tracking-wider mb-2 text-[#111215]">
                     Registered Name, Email Address, or Phone <span className="text-red-500">*</span>
                   </label>
                   <div className="relative">
-                    <Search className="w-4 h-4 absolute left-3.5 top-3.5 text-slate-400" />
+                    <Search className="w-4 h-4 absolute left-3.5 top-3.5 text-[#73766C]" />
                     <input
                       type="text"
                       required
@@ -1464,28 +1429,20 @@ export default function PublicJobSeekerUpload() {
                       value={lookupEmailInput}
                       onChange={(e) => setLookupEmailInput(e.target.value)}
                       placeholder="e.g. Chinmay Upasani or yourname@gmail.com"
-                      className={`w-full pl-10 pr-4 py-3 rounded-xl border text-xs sm:text-sm outline-none focus:border-emerald-500 font-medium transition-all ${
-                        isDark 
-                          ? 'bg-[#141414] border-white/10 text-white placeholder-slate-500' 
-                          : 'bg-slate-50 border-slate-300 text-slate-900 placeholder-slate-400'
-                      }`}
+                      className="w-full pl-10 pr-4 py-3 rounded-2xl border border-[#E4E7DC] bg-[#F8F9F5] text-xs sm:text-sm text-[#111215] placeholder-[#73766C] outline-none focus:border-[#111215] focus:bg-white font-medium transition-all"
                     />
                   </div>
-                  <p className="text-[11px] text-slate-400 mt-1.5">
+                  <p className="text-[11px] text-[#73766C] mt-1.5">
                     Enter the name, email address, or phone number you previously used to upload your resume.
                   </p>
                 </div>
 
                 {/* Modal Footer Actions */}
-                <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-200 dark:border-white/10">
+                <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-[#E4E7DC]">
                   <button
                     type="button"
                     onClick={() => setShowEmailLookup(false)}
-                    className={`px-4 py-2.5 rounded-xl font-bold text-xs border transition-all cursor-pointer ${
-                      isDark 
-                        ? 'bg-white/10 hover:bg-white/15 text-white border-white/10' 
-                        : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200'
-                    }`}
+                    className="px-4 py-2.5 rounded-full font-semibold text-xs border border-[#E4E7DC] bg-white text-[#575A51] hover:bg-[#F8F9F5] hover:text-[#111215] transition-colors cursor-pointer"
                   >
                     Cancel
                   </button>
@@ -1493,7 +1450,7 @@ export default function PublicJobSeekerUpload() {
                   <button
                     type="submit"
                     disabled={isSearchingEmail || !lookupEmailInput.trim()}
-                    className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold text-xs flex items-center justify-center gap-2 transition-all shadow-lg shadow-emerald-600/30 cursor-pointer disabled:opacity-50 active:scale-[0.98]"
+                    className="px-5 py-2.5 rounded-full bg-[#111215] hover:bg-[#202227] text-white font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-xs cursor-pointer disabled:opacity-50"
                   >
                     {isSearchingEmail ? (
                       <>
@@ -1504,6 +1461,7 @@ export default function PublicJobSeekerUpload() {
                       <>
                         <Search className="w-3.5 h-3.5" />
                         <span>Find My Profile</span>
+                        <span className="text-[#D4F82C]">↗</span>
                       </>
                     )}
                   </button>
@@ -1516,33 +1474,30 @@ export default function PublicJobSeekerUpload() {
         {!isSubmittedSuccess ? (
           <div className="space-y-6 sm:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-300">
             {/* Header Title */}
-            <div className="text-center space-y-2.5">
-              <div className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider border ${
-                isDark ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' : 'bg-emerald-50 border-emerald-200 text-emerald-700'
-              }`}>
-                <Sparkles className="w-3.5 h-3.5 text-emerald-500" />
-                <span>SNAB hireX Candidate Match Portal</span>
+            <div className="text-center space-y-3 pt-2 sm:pt-4">
+              <div className="inline-flex items-center gap-2 rounded-full border border-[#E4E7DC] bg-white px-3.5 py-1 text-xs font-semibold tracking-wider uppercase text-[#575A51] shadow-2xs">
+                <span className="h-1.5 w-1.5 rounded-full bg-[#8FB305] animate-pulse" />
+                <span>AI CANDIDATE MATCH • FAST-TRACK PROFILE</span>
               </div>
-              <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight">
-                Upload Resume & Get Best-Matched Jobs
+              <h1 className="text-3xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-[#111215] leading-[1.08]">
+                Upload Resume. <br className="hidden sm:inline" />
+                <span className="italic font-serif font-normal text-[#575A51]">Instant Matches.</span> Zero Friction.
               </h1>
-              <p className={`text-xs sm:text-base max-w-2xl mx-auto leading-relaxed ${
-                isDark ? 'text-slate-400' : 'text-slate-600'
-              }`}>
-                Our AI resume parser extracts your skills, location, experience, and education, pre-fills your profile, and matches you against active openings based on skills, location, gender, experience, and qualification fit!
+              <p className="text-xs sm:text-base max-w-2xl mx-auto text-[#575A51] leading-relaxed">
+                Our AI resume parser extracts your skills, experience, location, and qualification fit, pre-fills your profile, and matches you against live hiring requisitions.
               </p>
             </div>
 
             {/* Existing Email Live Alert Banner inside Form */}
             {existingEmailCandidate && (
-              <div className="p-4 sm:p-5 rounded-3xl bg-gradient-to-r from-emerald-950 via-teal-950 to-slate-950 text-white border border-emerald-400/50 shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 animate-in fade-in duration-300">
+              <div className="p-4 sm:p-5 rounded-3xl bg-[#111215] text-white border border-[#E4E7DC] shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 animate-in fade-in duration-300">
                 <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-400/30">
-                    <CheckCircle2 className="w-6 h-6" />
+                  <div className="h-10 w-10 rounded-2xl bg-[#D4F82C]/20 text-[#D4F82C] flex items-center justify-center shrink-0 border border-[#D4F82C]/30">
+                    <CheckCircle2 className="w-5 h-5" />
                   </div>
                   <div>
-                    <span className="text-xs sm:text-sm font-extrabold text-emerald-300 block">Registered Candidate Profile Found!</span>
-                    <span className="text-xs text-slate-200 block">
+                    <span className="text-xs sm:text-sm font-bold text-white block">Registered Candidate Profile Found</span>
+                    <span className="text-xs text-[#E4E7DC]/80 block">
                       Welcome back, <strong>{existingEmailCandidate.name || existingEmailCandidate.email}</strong>
                     </span>
                   </div>
@@ -1551,10 +1506,11 @@ export default function PublicJobSeekerUpload() {
                 <button
                   type="button"
                   onClick={() => handleLoadExistingProfile(existingEmailCandidate)}
-                  className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-xs flex items-center justify-center gap-2 transition-all shadow-md cursor-pointer shrink-0"
+                  className="w-full sm:w-auto px-5 py-2.5 rounded-full bg-[#D4F82C] hover:bg-[#c2e424] text-[#111215] font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shrink-0"
                 >
-                  <Sparkles className="w-4 h-4" />
+                  <Sparkles className="w-3.5 h-3.5" />
                   <span>Load Profile & Show Matched Jobs</span>
+                  <span>↗</span>
                 </button>
               </div>
             )}
@@ -1565,16 +1521,14 @@ export default function PublicJobSeekerUpload() {
               className="space-y-4 sm:space-y-6"
             >
               {/* CARD BLOCK 1: RESUME FILE UPLOAD & SKILLS EXTRACTION */}
-              <div className={`rounded-3xl p-4 sm:p-6 border shadow-lg space-y-3.5 ${
-                isDark ? 'bg-[#0d0d0d] border-white/[0.1]' : 'bg-white border-slate-200'
-              }`}>
-                <div className="flex items-center justify-between border-b border-slate-200 dark:border-white/10 pb-2.5">
-                  <label className="block text-xs sm:text-sm font-extrabold uppercase tracking-wider flex items-center gap-2">
-                    <Upload className="w-4 h-4 text-emerald-500" />
-                    <span>1. Resume File & AI Skills Extraction <span className="text-red-500">*</span></span>
+              <div className="rounded-3xl p-5 sm:p-7 border border-[#E4E7DC] bg-white shadow-2xs space-y-4">
+                <div className="flex items-center justify-between border-b border-[#E4E7DC] pb-3">
+                  <label className="text-xs sm:text-sm font-bold uppercase tracking-wider flex items-center gap-2 text-[#111215]">
+                    <Upload className="w-4 h-4 text-[#8FB305]" />
+                    <span>1. Resume File & AI Skills Extraction <span className="text-rose-500">*</span></span>
                   </label>
                   {isParsingResume && (
-                    <span className="text-xs text-emerald-500 font-semibold flex items-center gap-1.5 animate-pulse">
+                    <span className="text-xs text-[#8FB305] font-semibold flex items-center gap-1.5 animate-pulse">
                       <RefreshCw className="w-3.5 h-3.5 animate-spin" />
                       <span>AI Parsing...</span>
                     </span>
@@ -1584,10 +1538,8 @@ export default function PublicJobSeekerUpload() {
                 <div
                   className={`relative flex flex-col items-center justify-center p-6 sm:p-8 border-2 border-dashed rounded-2xl transition-all cursor-pointer text-center ${
                     selectedFile
-                      ? isDark ? 'border-emerald-500 bg-emerald-500/10' : 'border-emerald-500 bg-emerald-50/80'
-                      : isDark 
-                      ? 'border-white/20 hover:border-emerald-500 bg-white/[0.02] hover:bg-white/[0.05]' 
-                      : 'border-slate-300 hover:border-emerald-500 hover:bg-slate-50'
+                      ? 'border-[#8FB305] bg-[#D4F82C]/10'
+                      : 'border-[#E4E7DC] hover:border-[#111215] bg-[#F8F9F5] hover:bg-white'
                   }`}
                   onClick={() => document.getElementById('public-resume-input')?.click()}
                 >
@@ -1601,27 +1553,25 @@ export default function PublicJobSeekerUpload() {
                       if (file) handleFileSelection(file);
                     }}
                   />
-                  <div className={`h-12 w-12 rounded-full flex items-center justify-center mb-2 shadow-inner ${
-                    isDark ? 'bg-emerald-500/20 text-emerald-400' : 'bg-emerald-100 text-emerald-700'
-                  }`}>
-                    {isParsingResume ? <RefreshCw className="w-6 h-6 animate-spin text-emerald-500" /> : <Upload className="w-6 h-6" />}
+                  <div className="h-12 w-12 rounded-full flex items-center justify-center mb-2 bg-white text-[#111215] border border-[#E4E7DC] shadow-2xs">
+                    {isParsingResume ? <RefreshCw className="w-5 h-5 animate-spin text-[#8FB305]" /> : <Upload className="w-5 h-5" />}
                   </div>
 
                   {selectedFile ? (
                     <div className="space-y-1">
-                      <span className="font-bold text-xs sm:text-sm text-emerald-500 block">
+                      <span className="font-bold text-xs sm:text-sm text-[#111215] block">
                         ✓ File Attached: {selectedFile.name}
                       </span>
-                      <span className="text-xs text-slate-400 block">
+                      <span className="text-xs text-[#73766C] block">
                         Size: {(selectedFile.size / 1024).toFixed(1)} KB (Skills auto-parsed below)
                       </span>
                     </div>
                   ) : (
                     <div className="space-y-1">
-                      <span className="font-bold text-xs sm:text-sm block">
+                      <span className="font-bold text-xs sm:text-sm text-[#111215] block">
                         Click or tap to upload resume file (PDF, DOCX, TXT)
                       </span>
-                      <span className="text-xs text-slate-400 block">
+                      <span className="text-xs text-[#73766C] block">
                         Auto-extracts skills, location, experience & qualification fit!
                       </span>
                     </div>
@@ -1630,17 +1580,15 @@ export default function PublicJobSeekerUpload() {
 
                 {/* Auto-Fetched Skills Tags Roster */}
                 {(extractedSkills.length > 0 || selectedFile) && (
-                  <div className={`p-4 rounded-2xl border space-y-3 ${
-                    isDark ? 'bg-white/[0.03] border-white/10' : 'bg-slate-50 border-slate-200'
-                  }`}>
+                  <div className="p-4 rounded-2xl border border-[#E4E7DC] bg-[#F8F9F5] space-y-3">
                     <div className="flex items-center justify-between flex-wrap gap-2">
                       <div className="flex items-center gap-1.5">
-                        <Tag className="w-4 h-4 text-emerald-500" />
-                        <span className="font-extrabold text-xs uppercase tracking-wider">
+                        <Tag className="w-3.5 h-3.5 text-[#8FB305]" />
+                        <span className="font-bold text-xs uppercase tracking-wider text-[#111215]">
                           Extracted Technical Skills ({extractedSkills.length})
                         </span>
                       </div>
-                      <span className="text-[11px] text-slate-400">
+                      <span className="text-[11px] text-[#73766C]">
                         * Auto-extracted from your resume. Add or remove skills below.
                       </span>
                     </div>
@@ -1649,20 +1597,16 @@ export default function PublicJobSeekerUpload() {
                       {extractedSkills.map((skill) => (
                         <span
                           key={skill}
-                          className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold border ${
-                            isDark 
-                              ? 'bg-emerald-500/20 border-emerald-500/30 text-emerald-300' 
-                              : 'bg-emerald-100 border-emerald-300 text-emerald-900'
-                          }`}
+                          className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border border-[#E4E7DC] bg-white text-[#111215] shadow-2xs"
                         >
                           <span>{skill}</span>
                           <button
                             type="button"
                             onClick={() => handleRemoveSkill(skill)}
-                            className="hover:text-red-500 transition-colors ml-0.5 p-0.5 cursor-pointer"
+                            className="hover:text-rose-600 transition-colors ml-0.5 p-0.5 cursor-pointer text-[#73766C]"
                             title="Remove Skill"
                           >
-                            <X className="w-3.5 h-3.5" />
+                            <X className="w-3 h-3" />
                           </button>
                         </span>
                       ))}
@@ -1680,14 +1624,12 @@ export default function PublicJobSeekerUpload() {
                           }
                         }}
                         placeholder="Add key skill (e.g. React, Java, AutoCAD)..."
-                        className={`flex-1 px-3.5 py-2 rounded-xl text-xs outline-none focus:border-emerald-500 border ${
-                          isDark ? 'bg-[#141414] border-white/10 text-white placeholder-slate-500' : 'bg-white border-slate-300 text-slate-900 placeholder-slate-400'
-                        }`}
+                        className="flex-1 px-3.5 py-2 rounded-full text-xs outline-none focus:border-[#111215] border border-[#E4E7DC] bg-white text-[#111215] placeholder-[#73766C]"
                       />
                       <button
                         type="button"
                         onClick={handleAddSkill}
-                        className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1 shrink-0 cursor-pointer shadow-sm"
+                        className="px-4 py-2 rounded-full bg-[#111215] hover:bg-[#202227] text-white font-bold text-xs flex items-center gap-1 shrink-0 cursor-pointer shadow-2xs"
                       >
                         <Plus className="w-3.5 h-3.5" />
                         <span>Add</span>
@@ -1698,43 +1640,39 @@ export default function PublicJobSeekerUpload() {
               </div>
 
               {/* CARD BLOCK 2: PERSONAL INFORMATION & CONTACT */}
-              <div className={`rounded-3xl p-4 sm:p-6 border shadow-lg space-y-4 ${
-                isDark ? 'bg-[#0d0d0d] border-white/[0.1]' : 'bg-white border-slate-200'
-              }`}>
-                <div className="flex items-center justify-between border-b border-slate-200 dark:border-white/10 pb-2.5 font-extrabold text-xs sm:text-sm uppercase tracking-wider">
+              <div className="rounded-3xl p-5 sm:p-7 border border-[#E4E7DC] bg-white shadow-2xs space-y-4">
+                <div className="flex items-center justify-between border-b border-[#E4E7DC] pb-3 font-bold text-xs sm:text-sm uppercase tracking-wider text-[#111215]">
                   <div className="flex items-center gap-2">
-                    <User className="w-4 h-4 text-emerald-500" />
+                    <User className="w-4 h-4 text-[#8FB305]" />
                     <span>2. Personal Details & Contact</span>
                   </div>
-                  <span className="text-[11px] text-red-500">* Mandatory</span>
+                  <span className="text-[11px] text-rose-500 font-semibold">* Mandatory</span>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
                   <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider mb-1.5">
-                      Full Name <span className="text-red-500">*</span>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-[#575A51] mb-1.5">
+                      Full Name <span className="text-rose-500">*</span>
                     </label>
                     <div className="relative">
-                      <User className="w-4 h-4 absolute left-3 top-3.5 text-slate-400" />
+                      <User className="w-4 h-4 absolute left-3 top-3 text-[#73766C]" />
                       <input
                         type="text"
                         required
                         value={candidateName}
                         onChange={(e) => setCandidateName(e.target.value)}
                         placeholder="e.g. Rahul Sharma"
-                        className={`w-full pl-9 pr-3 py-2.5 rounded-xl border text-xs sm:text-sm outline-none focus:border-emerald-500 transition-all ${
-                          isDark ? 'bg-[#141414] border-white/10 text-white placeholder-slate-500' : 'bg-slate-50 border-slate-300 text-slate-900 placeholder-slate-400'
-                        }`}
+                        className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] text-xs sm:text-sm text-[#111215] outline-none focus:border-[#111215] focus:bg-white transition-all placeholder-[#73766C]"
                       />
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider mb-1.5">
-                      Email Address <span className="text-red-500">*</span>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-[#575A51] mb-1.5">
+                      Email Address <span className="text-rose-500">*</span>
                     </label>
                     <div className="relative">
-                      <Mail className="w-4 h-4 absolute left-3 top-3.5 text-slate-400" />
+                      <Mail className="w-4 h-4 absolute left-3 top-3 text-[#73766C]" />
                       <input
                         type="email"
                         required
@@ -1745,35 +1683,31 @@ export default function PublicJobSeekerUpload() {
                         }}
                         onBlur={(e) => handleCheckEmailExists(e.target.value)}
                         placeholder="e.g. rahul.sharma@example.com"
-                        className={`w-full pl-9 pr-3 py-2.5 rounded-xl border text-xs sm:text-sm outline-none focus:border-emerald-500 transition-all ${
-                          isDark ? 'bg-[#141414] border-white/10 text-white placeholder-slate-500' : 'bg-slate-50 border-slate-300 text-slate-900 placeholder-slate-400'
-                        }`}
+                        className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] text-xs sm:text-sm text-[#111215] outline-none focus:border-[#111215] focus:bg-white transition-all placeholder-[#73766C]"
                       />
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider mb-1.5">
-                      WhatsApp Phone <span className="text-red-500">*</span>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-[#575A51] mb-1.5">
+                      WhatsApp Phone <span className="text-rose-500">*</span>
                     </label>
                     <div className="relative">
-                      <Phone className="w-4 h-4 absolute left-3 top-3.5 text-slate-400" />
+                      <Phone className="w-4 h-4 absolute left-3 top-3 text-[#73766C]" />
                       <input
                         type="tel"
                         required
                         value={candidatePhone}
                         onChange={(e) => setCandidatePhone(e.target.value)}
                         placeholder="e.g. +91 9876543210"
-                        className={`w-full pl-9 pr-3 py-2.5 rounded-xl border text-xs sm:text-sm outline-none focus:border-emerald-500 transition-all ${
-                          isDark ? 'bg-[#141414] border-white/10 text-white placeholder-slate-500' : 'bg-slate-50 border-slate-300 text-slate-900 placeholder-slate-400'
-                        }`}
+                        className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] text-xs sm:text-sm text-[#111215] outline-none focus:border-[#111215] focus:bg-white transition-all placeholder-[#73766C]"
                       />
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider mb-1.5">
-                      Gender <span className="text-red-500">*</span>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-[#575A51] mb-1.5">
+                      Gender <span className="text-rose-500">*</span>
                     </label>
                     <div className="grid grid-cols-3 gap-1.5">
                       {['Male', 'Female', 'Other'].map(g => (
@@ -1783,8 +1717,8 @@ export default function PublicJobSeekerUpload() {
                           onClick={() => setCandidateGender(g)}
                           className={`py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
                             candidateGender === g
-                              ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
-                              : isDark ? 'bg-white/5 text-slate-300 border-white/10 hover:bg-white/10' : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'
+                              ? 'bg-[#111215] text-white border-[#111215] shadow-2xs'
+                              : 'bg-[#F8F9F5] text-[#575A51] border-[#E4E7DC] hover:border-[#111215] hover:text-[#111215]'
                           }`}
                         >
                           {g}
@@ -1794,7 +1728,7 @@ export default function PublicJobSeekerUpload() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider mb-1.5">
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-[#575A51] mb-1.5">
                       Marital Status
                     </label>
                     <div className="grid grid-cols-2 gap-1.5">
@@ -1805,8 +1739,8 @@ export default function PublicJobSeekerUpload() {
                           onClick={() => setCandidateMaritalStatus(m)}
                           className={`py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
                             candidateMaritalStatus === m
-                              ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
-                              : isDark ? 'bg-white/5 text-slate-300 border-white/10 hover:bg-white/10' : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'
+                              ? 'bg-[#111215] text-white border-[#111215] shadow-2xs'
+                              : 'bg-[#F8F9F5] text-[#575A51] border-[#E4E7DC] hover:border-[#111215] hover:text-[#111215]'
                           }`}
                         >
                           {m}
@@ -1818,21 +1752,19 @@ export default function PublicJobSeekerUpload() {
               </div>
 
               {/* CARD BLOCK 3: TARGET LOCATION, EXPERIENCE & QUALIFICATION */}
-              <div className={`rounded-3xl p-4 sm:p-6 border shadow-lg space-y-4 ${
-                isDark ? 'bg-[#0d0d0d] border-white/[0.1]' : 'bg-white border-slate-200'
-              }`}>
-                <div className="flex items-center justify-between border-b border-slate-200 dark:border-white/10 pb-2.5 font-extrabold text-xs sm:text-sm uppercase tracking-wider">
+              <div className="rounded-3xl p-5 sm:p-7 border border-[#E4E7DC] bg-white shadow-2xs space-y-4">
+                <div className="flex items-center justify-between border-b border-[#E4E7DC] pb-3 font-bold text-xs sm:text-sm uppercase tracking-wider text-[#111215]">
                   <div className="flex items-center gap-2">
-                    <MapPin className="w-4 h-4 text-emerald-500" />
+                    <MapPin className="w-4 h-4 text-[#8FB305]" />
                     <span>3. Target Location & Qualification</span>
                   </div>
-                  <span className="text-[11px] text-red-500">* Mandatory</span>
+                  <span className="text-[11px] text-rose-500 font-semibold">* Mandatory</span>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider mb-1.5">
-                      Location / Target City <span className="text-red-500">*</span>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-[#575A51] mb-1.5">
+                      Location / Target City <span className="text-rose-500">*</span>
                     </label>
                     <LocationCityInput
                       value={candidateLocation}
@@ -1840,9 +1772,7 @@ export default function PublicJobSeekerUpload() {
                       selectedState={candidateState}
                       onStateChange={setCandidateState}
                       placeholder="Search city (e.g. Nashik, Pune, Mumbai)..."
-                      className={`w-full rounded-xl border p-2.5 text-xs sm:text-sm outline-none focus:border-emerald-500 ${
-                        isDark ? 'bg-[#141414] border-white/10 text-white placeholder-slate-500' : 'bg-slate-50 border-slate-300 text-slate-900 placeholder-slate-400'
-                      }`}
+                      className="w-full rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] p-2.5 text-xs sm:text-sm text-[#111215] outline-none focus:border-[#111215] focus:bg-white placeholder-[#73766C]"
                     />
 
                     {/* Quick Fast Feed City Presets */}
@@ -1855,13 +1785,13 @@ export default function PublicJobSeekerUpload() {
                             setCandidateLocation(city);
                             setCandidateState('Maharashtra');
                           }}
-                          className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-all cursor-pointer inline-flex items-center gap-1 ${
+                          className={`px-2.5 py-1 rounded-full text-[11px] font-semibold border transition-all cursor-pointer inline-flex items-center gap-1 ${
                             candidateLocation.toLowerCase().includes(city.toLowerCase())
-                              ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
-                              : isDark ? 'bg-white/5 border-white/10 text-slate-300 hover:bg-white/10' : 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'
+                              ? 'bg-[#111215] text-white border-[#111215] shadow-2xs'
+                              : 'bg-white border-[#E4E7DC] text-[#575A51] hover:border-[#111215] hover:text-[#111215]'
                           }`}
                         >
-                          <MapPin className="w-3 h-3" />
+                          <MapPin className="w-3 h-3 text-[#8FB305]" />
                           <span>{city}</span>
                         </button>
                       ))}
@@ -1869,11 +1799,11 @@ export default function PublicJobSeekerUpload() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider mb-1.5">
-                      Experience (Years) <span className="text-red-500">*</span>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-[#575A51] mb-1.5">
+                      Experience (Years) <span className="text-rose-500">*</span>
                     </label>
                     <div className="relative">
-                      <Briefcase className="w-4 h-4 absolute left-3 top-3.5 text-slate-400" />
+                      <Briefcase className="w-4 h-4 absolute left-3 top-3 text-[#73766C]" />
                       <input
                         type="number"
                         step="0.1"
@@ -1883,22 +1813,20 @@ export default function PublicJobSeekerUpload() {
                         value={candidateExp}
                         onChange={(e) => setCandidateExp(e.target.value)}
                         placeholder="e.g. 0 (Fresher) or 2.5 Yrs"
-                        className={`w-full pl-9 pr-3 py-2.5 rounded-xl border text-xs sm:text-sm outline-none focus:border-emerald-500 transition-all ${
-                          isDark ? 'bg-[#141414] border-white/10 text-white placeholder-slate-500' : 'bg-slate-50 border-slate-300 text-slate-900 placeholder-slate-400'
-                        }`}
+                        className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] text-xs sm:text-sm text-[#111215] outline-none focus:border-[#111215] focus:bg-white transition-all placeholder-[#73766C]"
                       />
                     </div>
                     {/* Quick Experience Pills */}
-                    <div className="flex flex-wrap gap-1 pt-2">
+                    <div className="flex flex-wrap gap-1.5 pt-2">
                       {['0', '1', '2', '3', '5'].map(yr => (
                         <button
                           key={yr}
                           type="button"
                           onClick={() => setCandidateExp(yr)}
-                          className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-all cursor-pointer ${
+                          className={`px-3 py-1 rounded-full text-[11px] font-semibold border transition-all cursor-pointer ${
                             candidateExp === yr
-                              ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
-                              : isDark ? 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10' : 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200'
+                              ? 'bg-[#111215] text-white border-[#111215] shadow-2xs'
+                              : 'bg-white border-[#E4E7DC] text-[#575A51] hover:border-[#111215] hover:text-[#111215]'
                           }`}
                         >
                           {yr === '0' ? 'Fresher' : `${yr} Yr`}
@@ -1908,46 +1836,40 @@ export default function PublicJobSeekerUpload() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider mb-1.5">
-                      Highest Education Qualification <span className="text-red-500">*</span>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-[#575A51] mb-1.5">
+                      Highest Education Qualification <span className="text-rose-500">*</span>
                     </label>
                     <EducationInput
                       value={candidateEducation}
                       onChange={setCandidateEducation}
                       placeholder="Select degree (B.Tech, Diploma, BCA)..."
-                      className={`w-full rounded-xl border p-2.5 text-xs sm:text-sm outline-none focus:border-emerald-500 ${
-                        isDark ? 'bg-[#141414] border-white/10 text-white placeholder-slate-500' : 'bg-slate-50 border-slate-300 text-slate-900 placeholder-slate-400'
-                      }`}
+                      className="w-full rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] p-2.5 text-xs sm:text-sm text-[#111215] outline-none focus:border-[#111215] focus:bg-white placeholder-[#73766C]"
                     />
                   </div>
                 </div>
               </div>
 
               {/* CARD BLOCK 4: EMPLOYMENT STATUS, NOTICE PERIOD & SALARY */}
-              <div className={`rounded-3xl p-4 sm:p-6 border shadow-lg space-y-4 ${
-                isDark ? 'bg-[#0d0d0d] border-white/[0.1]' : 'bg-white border-slate-200'
-              }`}>
-                <div className="flex items-center justify-between border-b border-slate-200 dark:border-white/10 pb-2.5 font-extrabold text-xs sm:text-sm uppercase tracking-wider">
+              <div className="rounded-3xl p-5 sm:p-7 border border-[#E4E7DC] bg-white shadow-2xs space-y-4">
+                <div className="flex items-center justify-between border-b border-[#E4E7DC] pb-3 font-bold text-xs sm:text-sm uppercase tracking-wider text-[#111215]">
                   <div className="flex items-center gap-2">
-                    <UserCheck className="w-4 h-4 text-emerald-500" />
+                    <UserCheck className="w-4 h-4 text-[#8FB305]" />
                     <span>4. Employment Status, Notice Period & Salary</span>
                   </div>
-                  <span className="text-[11px] text-red-500">* Mandatory</span>
+                  <span className="text-[11px] text-rose-500 font-semibold">* Mandatory</span>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
                   {/* 1. Working Status */}
                   <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider mb-1.5">
-                      Working Status <span className="text-red-500">*</span>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-[#575A51] mb-1.5">
+                      Working Status <span className="text-rose-500">*</span>
                     </label>
                     <select
                       required
                       value={candidateEmploymentStatus}
                       onChange={(e) => setCandidateEmploymentStatus(e.target.value)}
-                      className={`w-full px-3 py-2.5 rounded-xl border text-xs sm:text-sm outline-none focus:border-emerald-500 font-semibold cursor-pointer ${
-                        isDark ? 'bg-[#141414] border-white/10 text-white' : 'bg-slate-50 border-slate-300 text-slate-900'
-                      }`}
+                      className="w-full px-3 py-2.5 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] text-xs sm:text-sm text-[#111215] outline-none focus:border-[#111215] focus:bg-white font-semibold cursor-pointer"
                     >
                       <option value="Working">Currently Working (Employed)</option>
                       <option value="Not Working">Not Working (Unemployed)</option>
@@ -1957,12 +1879,12 @@ export default function PublicJobSeekerUpload() {
 
                   {/* 2. Notice Period */}
                   <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider mb-1.5 flex items-center justify-between">
-                      <span>Notice Period <span className="text-red-500">*</span></span>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-[#575A51] mb-1.5">
+                      Notice Period <span className="text-rose-500">*</span>
                     </label>
                     <div className="flex items-center gap-2">
                       <div className="relative flex-1">
-                        <Clock className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
+                        <Clock className="w-4 h-4 absolute left-3 top-3 text-[#73766C]" />
                         <input
                           type="number"
                           min="0"
@@ -1971,17 +1893,13 @@ export default function PublicJobSeekerUpload() {
                           value={candidateNoticePeriodVal}
                           onChange={(e) => setCandidateNoticePeriodVal(e.target.value)}
                           placeholder="30"
-                          className={`w-full pl-9 pr-3 py-2.5 rounded-xl border text-xs sm:text-sm outline-none focus:border-emerald-500 ${
-                            isDark ? 'bg-[#141414] border-white/10 text-white placeholder-slate-500' : 'bg-slate-50 border-slate-300 text-slate-900 placeholder-slate-400'
-                          }`}
+                          className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] text-xs sm:text-sm text-[#111215] outline-none focus:border-[#111215] focus:bg-white placeholder-[#73766C]"
                         />
                       </div>
                       <select
                         value={candidateNoticePeriodUnit}
                         onChange={(e) => setCandidateNoticePeriodUnit(e.target.value as 'Days' | 'Months')}
-                        className={`px-3.5 py-2.5 rounded-xl border text-xs font-bold outline-none cursor-pointer ${
-                          isDark ? 'bg-[#141414] border-white/10 text-white' : 'bg-slate-50 border-slate-300 text-slate-900'
-                        }`}
+                        className="px-3.5 py-2.5 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] text-xs font-bold text-[#111215] outline-none cursor-pointer"
                       >
                         <option value="Days">Days</option>
                         <option value="Months">Months</option>
@@ -1992,32 +1910,28 @@ export default function PublicJobSeekerUpload() {
                   {/* 3. Current Salary */}
                   <div>
                     <div className="flex items-center justify-between mb-1.5">
-                      <label className="block text-xs font-bold uppercase tracking-wider">
-                        Current Salary <span className="text-red-500">*</span>
+                      <label className="block text-xs font-semibold uppercase tracking-wider text-[#575A51]">
+                        Current Salary <span className="text-rose-500">*</span>
                       </label>
-                      <span className="text-[11px] text-slate-400">(0 if Fresher)</span>
+                      <span className="text-[11px] text-[#73766C]">(0 if Fresher)</span>
                     </div>
                     <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                       <div className="relative flex-1 min-w-0">
-                        <IndianRupee className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
+                        <IndianRupee className="w-4 h-4 absolute left-3 top-3 text-[#73766C]" />
                         <input
                           type="text"
                           required
                           value={candidateCurrentSalaryVal}
                           onChange={(e) => setCandidateCurrentSalaryVal(e.target.value)}
                           placeholder="e.g. 4.5 or 35,000"
-                          className={`w-full pl-9 pr-3 py-2.5 rounded-xl border text-xs sm:text-sm outline-none focus:border-emerald-500 transition-all ${
-                            isDark ? 'bg-[#141414] border-white/10 text-white placeholder-slate-500' : 'bg-slate-50 border-slate-300 text-slate-900 placeholder-slate-400'
-                          }`}
+                          className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] text-xs sm:text-sm text-[#111215] outline-none focus:border-[#111215] focus:bg-white transition-all placeholder-[#73766C]"
                         />
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
                         <select
                           value={candidateCurrentSalaryPeriod}
                           onChange={(e) => setCandidateCurrentSalaryPeriod(e.target.value as any)}
-                          className={`flex-1 sm:flex-initial px-3 py-2.5 rounded-xl border text-xs font-bold outline-none cursor-pointer ${
-                            isDark ? 'bg-[#141414] border-white/10 text-white' : 'bg-slate-50 border-slate-300 text-slate-900'
-                          }`}
+                          className="flex-1 sm:flex-initial px-3 py-2.5 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] text-xs font-bold text-[#111215] outline-none cursor-pointer"
                           title="Salary Period"
                         >
                           <option value="Per Month">Per Month</option>
@@ -2026,9 +1940,7 @@ export default function PublicJobSeekerUpload() {
                         <select
                           value={candidateCurrentSalaryType}
                           onChange={(e) => setCandidateCurrentSalaryType(e.target.value as any)}
-                          className={`flex-1 sm:flex-initial px-3 py-2.5 rounded-xl border text-xs font-bold outline-none cursor-pointer ${
-                            isDark ? 'bg-[#141414] border-white/10 text-white' : 'bg-slate-50 border-slate-300 text-slate-900'
-                          }`}
+                          className="flex-1 sm:flex-initial px-3 py-2.5 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] text-xs font-bold text-[#111215] outline-none cursor-pointer"
                           title="Salary Structure"
                         >
                           <option value="In-Hand">In-Hand</option>
@@ -2041,32 +1953,28 @@ export default function PublicJobSeekerUpload() {
                   {/* 4. Expected Salary */}
                   <div>
                     <div className="flex items-center justify-between mb-1.5">
-                      <label className="block text-xs font-bold uppercase tracking-wider">
-                        Expected Salary <span className="text-red-500">*</span>
+                      <label className="block text-xs font-semibold uppercase tracking-wider text-[#575A51]">
+                        Expected Salary <span className="text-rose-500">*</span>
                       </label>
-                      <span className="text-[11px] text-slate-400">Target Range</span>
+                      <span className="text-[11px] text-[#73766C]">Target Range</span>
                     </div>
                     <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                       <div className="relative flex-1 min-w-0">
-                        <IndianRupee className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
+                        <IndianRupee className="w-4 h-4 absolute left-3 top-3 text-[#73766C]" />
                         <input
                           type="text"
                           required
                           value={candidateExpectedSalaryVal}
                           onChange={(e) => setCandidateExpectedSalaryVal(e.target.value)}
                           placeholder="e.g. 6.5 or 50,000"
-                          className={`w-full pl-9 pr-3 py-2.5 rounded-xl border text-xs sm:text-sm outline-none focus:border-emerald-500 transition-all ${
-                            isDark ? 'bg-[#141414] border-white/10 text-white placeholder-slate-500' : 'bg-slate-50 border-slate-300 text-slate-900 placeholder-slate-400'
-                          }`}
+                          className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] text-xs sm:text-sm text-[#111215] outline-none focus:border-[#111215] focus:bg-white transition-all placeholder-[#73766C]"
                         />
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
                         <select
                           value={candidateExpectedSalaryPeriod}
                           onChange={(e) => setCandidateExpectedSalaryPeriod(e.target.value as any)}
-                          className={`flex-1 sm:flex-initial px-3 py-2.5 rounded-xl border text-xs font-bold outline-none cursor-pointer ${
-                            isDark ? 'bg-[#141414] border-white/10 text-white' : 'bg-slate-50 border-slate-300 text-slate-900'
-                          }`}
+                          className="flex-1 sm:flex-initial px-3 py-2.5 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] text-xs font-bold text-[#111215] outline-none cursor-pointer"
                           title="Salary Period"
                         >
                           <option value="Per Month">Per Month</option>
@@ -2075,9 +1983,7 @@ export default function PublicJobSeekerUpload() {
                         <select
                           value={candidateExpectedSalaryType}
                           onChange={(e) => setCandidateExpectedSalaryType(e.target.value as any)}
-                          className={`flex-1 sm:flex-initial px-3 py-2.5 rounded-xl border text-xs font-bold outline-none cursor-pointer ${
-                            isDark ? 'bg-[#141414] border-white/10 text-white' : 'bg-slate-50 border-slate-300 text-slate-900'
-                          }`}
+                          className="flex-1 sm:flex-initial px-3 py-2.5 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] text-xs font-bold text-[#111215] outline-none cursor-pointer"
                           title="Salary Structure"
                         >
                           <option value="In-Hand">In-Hand</option>
@@ -2088,9 +1994,9 @@ export default function PublicJobSeekerUpload() {
                   </div>
 
                   {/* 5. Employment Type Preferences */}
-                  <div className="pt-0.5">
-                    <label className="block text-xs font-bold uppercase tracking-wider mb-1.5">
-                      Employment Type Preferences <span className="text-red-500">*</span>
+                  <div className="pt-0.5 md:col-span-2">
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-[#575A51] mb-1.5">
+                      Employment Type Preferences <span className="text-rose-500">*</span>
                     </label>
                     <EmploymentTypeMultiSelect
                       values={candidateEmploymentTypes}
@@ -2102,10 +2008,8 @@ export default function PublicJobSeekerUpload() {
               </div>
 
               {/* CARD BLOCK 5: NOTES & PREFERRED DOMAIN ROLES */}
-              <div className={`rounded-3xl p-4 sm:p-6 border shadow-lg space-y-2.5 ${
-                isDark ? 'bg-[#0d0d0d] border-white/[0.1]' : 'bg-white border-slate-200'
-              }`}>
-                <label className="block text-xs font-bold uppercase tracking-wider">
+              <div className="rounded-3xl p-5 sm:p-7 border border-[#E4E7DC] bg-white shadow-2xs space-y-2.5">
+                <label className="block text-xs font-semibold uppercase tracking-wider text-[#575A51]">
                   5. Preferred Domain Roles & Additional Notes (Optional)
                 </label>
                 <textarea
@@ -2113,9 +2017,7 @@ export default function PublicJobSeekerUpload() {
                   value={extraBioText}
                   onChange={(e) => setExtraBioText(e.target.value)}
                   placeholder="Mention preferred job roles, expected CTC, or work availability..."
-                  className={`w-full p-3 rounded-xl border text-xs sm:text-sm outline-none focus:border-emerald-500 transition-all ${
-                    isDark ? 'bg-[#141414] border-white/10 text-white placeholder-slate-500' : 'bg-slate-50 border-slate-300 text-slate-900 placeholder-slate-400'
-                  }`}
+                  className="w-full p-3.5 rounded-2xl border border-[#E4E7DC] bg-[#F8F9F5] text-xs sm:text-sm text-[#111215] outline-none focus:border-[#111215] focus:bg-white transition-all placeholder-[#73766C]"
                 />
               </div>
 
@@ -2123,7 +2025,7 @@ export default function PublicJobSeekerUpload() {
               <button
                 type="submit"
                 disabled={isSubmitting || isParsingResume}
-                className="w-full py-4 px-6 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-sm sm:text-base flex items-center justify-center gap-2.5 transition-all shadow-lg shadow-emerald-600/25 disabled:opacity-50 cursor-pointer"
+                className="w-full py-4 px-6 rounded-full bg-[#111215] hover:bg-[#202227] text-white font-bold text-sm sm:text-base flex items-center justify-center gap-2.5 transition-all shadow-sm disabled:opacity-50 cursor-pointer"
               >
                 {isSubmitting ? (
                   <>
@@ -2132,9 +2034,9 @@ export default function PublicJobSeekerUpload() {
                   </>
                 ) : (
                   <>
-                    <Sparkles className="w-5 h-5" />
+                    <Sparkles className="w-4 h-4 text-[#D4F82C]" />
                     <span>Submit Resume & Get Matched Jobs</span>
-                    <ArrowRight className="w-5 h-5" />
+                    <span className="text-[#D4F82C]">↗</span>
                   </>
                 )}
               </button>
@@ -2143,48 +2045,34 @@ export default function PublicJobSeekerUpload() {
         ) : (
           /* Post-Submission / Email Lookup Results View */
           <div className="space-y-6 sm:space-y-8 animate-in zoom-in-95 duration-300">
-            {/* Compact Profile Matched Bar - Adaptive Day & Dark App Theme */}
-            <div className={`border rounded-2xl p-4 shadow-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 animate-in fade-in duration-200 backdrop-blur-xl transition-colors ${
-              isDark 
-                ? 'bg-gradient-to-r from-slate-900 via-slate-900 to-[#072418] text-white border-emerald-500/30 shadow-emerald-950/20' 
-                : 'bg-gradient-to-r from-white via-emerald-50/40 to-teal-50/30 text-slate-900 border-emerald-200 shadow-emerald-500/5'
-            }`}>
+            {/* Compact Profile Matched Bar */}
+            <div className="border border-[#E4E7DC] rounded-3xl p-4 sm:p-5 shadow-2xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 animate-in fade-in duration-200 bg-white">
               <div className="flex items-center gap-3 truncate">
-                <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white flex items-center justify-center shrink-0 font-extrabold text-sm shadow-md shadow-emerald-600/30">
+                <div className="h-10 w-10 rounded-2xl bg-[#111215] text-[#D4F82C] flex items-center justify-center shrink-0 font-bold text-sm shadow-2xs">
                   {submittedCandidateData?.name ? submittedCandidateData.name.charAt(0).toUpperCase() : <User className="w-4 h-4" />}
                 </div>
                 <div className="truncate text-xs space-y-0.5">
                   <div className="flex items-center gap-2">
-                    <span className={`text-[11px] uppercase tracking-wider font-extrabold ${
-                      isDark ? 'text-emerald-400' : 'text-emerald-700'
-                    }`}>
+                    <span className="text-[11px] uppercase tracking-wider font-bold text-[#8FB305]">
                       Profile Matched:
                     </span>
-                    <span className={`font-extrabold text-sm ${
-                      isDark ? 'text-white' : 'text-slate-900'
-                    }`}>
+                    <span className="font-bold text-sm text-[#111215]">
                       {submittedCandidateData?.name}
                     </span>
                   </div>
                   <div className="text-[11px] flex flex-wrap items-center gap-2">
-                    <span className={`inline-flex items-center gap-1 font-semibold ${
-                      isDark ? 'text-slate-200' : 'text-slate-600'
-                    }`}>
-                      <MapPin className={`w-3 h-3 ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`} />
+                    <span className="inline-flex items-center gap-1 font-semibold text-[#575A51]">
+                      <MapPin className="w-3 h-3 text-[#8FB305]" />
                       <span>{submittedCandidateData?.location || 'Nashik'}</span>
                     </span>
-                    <span className={isDark ? 'text-slate-500' : 'text-slate-300'}>•</span>
-                    <span className={`inline-flex items-center gap-1 font-semibold ${
-                      isDark ? 'text-slate-200' : 'text-slate-600'
-                    }`}>
-                      <Briefcase className={`w-3 h-3 ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`} />
+                    <span className="text-[#E4E7DC]">•</span>
+                    <span className="inline-flex items-center gap-1 font-semibold text-[#575A51]">
+                      <Briefcase className="w-3 h-3 text-[#8FB305]" />
                       <span>{submittedCandidateData?.experience || 0} Yrs Exp</span>
                     </span>
-                    <span className={isDark ? 'text-slate-500' : 'text-slate-300'}>•</span>
-                    <span className={`inline-flex items-center gap-1 font-bold ${
-                      isDark ? 'text-emerald-300' : 'text-emerald-700'
-                    }`}>
-                      <GraduationCap className={`w-3 h-3 ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`} />
+                    <span className="text-[#E4E7DC]">•</span>
+                    <span className="inline-flex items-center gap-1 font-bold text-[#111215]">
+                      <GraduationCap className="w-3 h-3 text-[#8FB305]" />
                       <span>{submittedCandidateData?.highestEducation || 'Graduate'}</span>
                     </span>
                   </div>
@@ -2195,24 +2083,16 @@ export default function PublicJobSeekerUpload() {
                 <button
                   type="button"
                   onClick={() => setShowCriteriaEditor(true)}
-                  className={`px-3.5 py-2 rounded-xl font-black text-xs transition-all cursor-pointer flex items-center gap-1.5 shadow-md active:scale-[0.98] ${
-                    isDark 
-                      ? 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-emerald-500/20' 
-                      : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-600/25'
-                  }`}
+                  className="px-4 py-2 rounded-full font-bold text-xs transition-all cursor-pointer flex items-center gap-1.5 bg-[#111215] hover:bg-[#202227] text-white shadow-2xs"
                 >
-                  <SlidersHorizontal className="w-3.5 h-3.5" />
+                  <SlidersHorizontal className="w-3.5 h-3.5 text-[#D4F82C]" />
                   <span>Edit Criteria</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={handleResetForm}
-                  className={`px-3 py-2 rounded-xl font-bold text-xs border transition-all cursor-pointer ${
-                    isDark 
-                      ? 'bg-white/10 hover:bg-white/15 text-white border-white/15 hover:border-white/30' 
-                      : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200 hover:border-slate-300 shadow-sm'
-                  }`}
+                  className="px-4 py-2 rounded-full font-bold text-xs border border-[#E4E7DC] bg-[#F8F9F5] hover:bg-white text-[#575A51] hover:text-[#111215] transition-all cursor-pointer"
                 >
                   Change Resume
                 </button>
@@ -2221,21 +2101,19 @@ export default function PublicJobSeekerUpload() {
 
             {/* Live Preferences Customizer Modal Popup */}
             {showCriteriaEditor && submittedCandidateData && (
-              <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-md flex items-center justify-center p-3 sm:p-5 overflow-y-auto animate-in fade-in duration-200">
-                <div className={`border rounded-3xl max-w-3xl w-full p-5 sm:p-7 shadow-2xl space-y-5 relative max-h-[92vh] overflow-y-auto transition-colors ${
-                  isDark ? 'bg-[#0d0d0f] border-white/15 text-white' : 'bg-white border-slate-200 text-slate-900'
-                }`}>
+              <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 overflow-y-auto animate-in fade-in duration-200">
+                <div className="border border-[#E4E7DC] rounded-3xl max-w-3xl w-full p-5 sm:p-7 shadow-xl space-y-5 relative max-h-[92vh] overflow-y-auto bg-white text-[#111215]">
                   {/* Modal Header */}
-                  <div className="flex items-start justify-between border-b border-slate-200 dark:border-white/10 pb-4 relative">
+                  <div className="flex items-start justify-between border-b border-[#E4E7DC] pb-4 relative">
                     <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-500 flex items-center justify-center shrink-0 shadow-inner">
-                        <SlidersHorizontal className="w-5 h-5" />
+                      <div className="h-10 w-10 rounded-2xl bg-[#D4F82C]/20 border border-[#8FB305]/30 text-[#111215] flex items-center justify-center shrink-0">
+                        <SlidersHorizontal className="w-5 h-5 text-[#8FB305]" />
                       </div>
                       <div>
-                        <h3 className="text-lg sm:text-xl font-black tracking-tight">
+                        <h3 className="text-lg sm:text-xl font-bold tracking-tight text-[#111215]">
                           Customize Match Criteria Live
                         </h3>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                        <p className="text-xs text-[#73766C]">
                           Edit your target sectors, departments, location, experience, gender, and education to refresh matched jobs.
                         </p>
                       </div>
@@ -2244,32 +2122,29 @@ export default function PublicJobSeekerUpload() {
                     <button
                       type="button"
                       onClick={() => setShowCriteriaEditor(false)}
-                      className="text-slate-400 hover:text-slate-900 dark:hover:text-white p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-white/10 transition-colors cursor-pointer"
+                      className="text-[#73766C] hover:text-[#111215] p-2 rounded-xl hover:bg-[#F8F9F5] transition-colors cursor-pointer"
                     >
                       <X className="w-5 h-5" />
                     </button>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-
                     {/* Location Selector */}
                     <div>
-                      <label className="block text-[11px] font-bold uppercase tracking-wider mb-1">
+                      <label className="block text-[11px] font-bold uppercase tracking-wider text-[#575A51] mb-1">
                         Target City / Location
                       </label>
                       <LocationCityInput
                         value={submittedCandidateData.location || ''}
                         onChange={(val) => handleUpdateCandidateCriteria('location', val)}
                         placeholder="e.g. Nashik, Pune, Mumbai..."
-                        className={`w-full rounded-xl border p-2.5 text-xs outline-none focus:border-emerald-500 font-semibold ${
-                          isDark ? 'bg-[#141414] border-white/10 text-white' : 'bg-slate-50 border-slate-300 text-slate-900'
-                        }`}
+                        className="w-full rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] p-2.5 text-xs text-[#111215] outline-none focus:border-[#111215] focus:bg-white font-semibold"
                       />
                     </div>
 
                     {/* Experience Selector */}
                     <div>
-                      <label className="block text-[11px] font-bold uppercase tracking-wider mb-1">
+                      <label className="block text-[11px] font-bold uppercase tracking-wider text-[#575A51] mb-1">
                         Experience (Years)
                       </label>
                       <input
@@ -2279,23 +2154,19 @@ export default function PublicJobSeekerUpload() {
                         max="60"
                         value={submittedCandidateData.experience || 0}
                         onChange={(e) => handleUpdateCandidateCriteria('experience', parseFloat(e.target.value) || 0)}
-                        className={`w-full p-2.5 rounded-xl border text-xs font-semibold outline-none focus:border-emerald-500 ${
-                          isDark ? 'bg-[#141414] border-white/10 text-white' : 'bg-slate-50 border-slate-300 text-slate-900'
-                        }`}
+                        className="w-full p-2.5 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] text-xs font-semibold text-[#111215] outline-none focus:border-[#111215] focus:bg-white"
                       />
                     </div>
 
                     {/* Gender Selector */}
                     <div>
-                      <label className="block text-[11px] font-bold uppercase tracking-wider mb-1">
+                      <label className="block text-[11px] font-bold uppercase tracking-wider text-[#575A51] mb-1">
                         Gender
                       </label>
                       <select
                         value={submittedCandidateData.gender || 'Any'}
                         onChange={(e) => handleUpdateCandidateCriteria('gender', e.target.value)}
-                        className={`w-full px-3 py-2.5 rounded-xl border text-xs font-semibold outline-none focus:border-emerald-500 cursor-pointer ${
-                          isDark ? 'bg-[#141414] border-white/10 text-white' : 'bg-slate-50 border-slate-300 text-slate-900'
-                        }`}
+                        className="w-full px-3 py-2.5 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] text-xs font-semibold text-[#111215] outline-none focus:border-[#111215] focus:bg-white cursor-pointer"
                       >
                         <option value="Male">Male</option>
                         <option value="Female">Female</option>
@@ -2305,16 +2176,14 @@ export default function PublicJobSeekerUpload() {
 
                     {/* Highest Qualification */}
                     <div>
-                      <label className="block text-[11px] font-bold uppercase tracking-wider mb-1">
+                      <label className="block text-[11px] font-bold uppercase tracking-wider text-[#575A51] mb-1">
                         Highest Education
                       </label>
                       <EducationInput
                         value={submittedCandidateData.highestEducation || submittedCandidateData.education || ''}
                         onChange={(val) => handleUpdateCandidateCriteria('education', val)}
                         placeholder="Select degree..."
-                        className={`w-full rounded-xl border p-2.5 text-xs outline-none focus:border-emerald-500 font-semibold ${
-                          isDark ? 'bg-[#141414] border-white/10 text-white' : 'bg-slate-50 border-slate-300 text-slate-900'
-                        }`}
+                        className="w-full rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] p-2.5 text-xs text-[#111215] outline-none focus:border-[#111215] focus:bg-white font-semibold"
                       />
                     </div>
                   </div>
@@ -2326,20 +2195,20 @@ export default function PublicJobSeekerUpload() {
                         key={city}
                         type="button"
                         onClick={() => handleUpdateCandidateCriteria('location', city)}
-                        className={`px-2.5 py-1 rounded-xl text-xs font-bold border transition-all cursor-pointer inline-flex items-center gap-1 ${
+                        className={`px-2.5 py-1 rounded-full text-xs font-semibold border transition-all cursor-pointer inline-flex items-center gap-1 ${
                           (submittedCandidateData.location || '').toLowerCase().includes(city.toLowerCase())
-                            ? 'bg-emerald-600 text-white border-emerald-600'
-                            : isDark ? 'bg-white/10 text-slate-300 border-white/10' : 'bg-slate-100 text-slate-700 border-slate-200'
+                            ? 'bg-[#111215] text-white border-[#111215]'
+                            : 'bg-[#F8F9F5] text-[#575A51] border-[#E4E7DC] hover:border-[#111215] hover:text-[#111215]'
                         }`}
                       >
-                        <MapPin className="w-3 h-3" />
+                        <MapPin className="w-3 h-3 text-[#8FB305]" />
                         <span>{city}</span>
                       </button>
                     ))}
                   </div>
 
                   {/* Add Custom Skill Filter */}
-                  <div className="flex items-center gap-2 pt-1 border-t border-slate-200 dark:border-white/10">
+                  <div className="flex items-center gap-2 pt-1 border-t border-[#E4E7DC]">
                     <input
                       type="text"
                       value={resultSkillInput}
@@ -2351,14 +2220,12 @@ export default function PublicJobSeekerUpload() {
                         }
                       }}
                       placeholder="Add target skill (e.g. AutoCAD, Python, Java, Tally)..."
-                      className={`flex-1 px-3 py-2 rounded-xl text-xs outline-none focus:border-emerald-500 border ${
-                        isDark ? 'bg-[#141414] border-white/10 text-white placeholder-slate-500' : 'bg-slate-50 border-slate-300 text-slate-900 placeholder-slate-400'
-                      }`}
+                      className="flex-1 px-3.5 py-2 rounded-full text-xs outline-none focus:border-[#111215] border border-[#E4E7DC] bg-[#F8F9F5] text-[#111215] placeholder-[#73766C]"
                     />
                     <button
                       type="button"
                       onClick={handleAddSkillToResults}
-                      className="px-3.5 py-2 rounded-xl bg-emerald-600 text-white font-bold text-xs flex items-center gap-1 cursor-pointer"
+                      className="px-4 py-2 rounded-full bg-[#111215] hover:bg-[#202227] text-white font-bold text-xs flex items-center gap-1 cursor-pointer"
                     >
                       <Plus className="w-3.5 h-3.5" />
                       <span>Add</span>
@@ -2366,12 +2233,12 @@ export default function PublicJobSeekerUpload() {
                   </div>
 
                   {/* Modal Action Footer */}
-                  <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-slate-200 dark:border-white/10">
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-[#E4E7DC]">
                     <button
                       type="button"
                       disabled={isSavingCriteria}
                       onClick={handleSaveUpdatedCriteriaToResumeDump}
-                      className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-white/10 dark:hover:bg-white/15 text-slate-800 dark:text-white font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50 border border-slate-200 dark:border-white/10"
+                      className="w-full sm:w-auto px-4 py-2.5 rounded-full bg-[#F8F9F5] hover:bg-white text-[#575A51] hover:text-[#111215] font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50 border border-[#E4E7DC]"
                     >
                       {isSavingCriteria ? (
                         <>
@@ -2389,10 +2256,10 @@ export default function PublicJobSeekerUpload() {
                     <button
                       type="button"
                       onClick={() => setShowCriteriaEditor(false)}
-                      className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs flex items-center justify-center gap-1.5 transition-all shadow-lg shadow-emerald-600/30 cursor-pointer active:scale-[0.98]"
+                      className="w-full sm:w-auto px-6 py-2.5 rounded-full bg-[#111215] hover:bg-[#202227] text-white font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-sm cursor-pointer"
                     >
                       <span>Done & View Matches</span>
-                      <ArrowRight className="w-3.5 h-3.5" />
+                      <span className="text-[#D4F82C]">↗</span>
                     </button>
                   </div>
                 </div>
@@ -2400,185 +2267,165 @@ export default function PublicJobSeekerUpload() {
             )}
 
             {/* Recommended Jobs Header & Filter Tabs */}
-            <div className="space-y-3">
-              <div>
-                <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wider mb-1.5 border shadow-sm ${
-                  isCandidateBanned
-                    ? 'bg-red-500/10 border-red-500/30 text-red-500'
-                    : isDark ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' : 'bg-emerald-50 border-emerald-200 text-emerald-800'
-                }`}>
-                  {isCandidateBanned ? (
-                    <>
-                      <Ban className="w-3.5 h-3.5 text-red-500" />
-                      <span>Access Restricted</span>
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="w-3.5 h-3.5 text-emerald-500 animate-pulse" />
-                      <span>AI Job Recommendations</span>
-                    </>
-                  )}
+            <div className="space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
+                <div>
+                  <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider mb-2 border shadow-2xs ${
+                    isCandidateBanned
+                      ? 'bg-rose-50 border-rose-200 text-rose-700'
+                      : 'bg-white border-[#E4E7DC] text-[#575A51]'
+                  }`}>
+                    {isCandidateBanned ? (
+                      <>
+                        <Ban className="w-3.5 h-3.5 text-rose-600" />
+                        <span>Access Restricted</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="h-1.5 w-1.5 rounded-full bg-[#8FB305] animate-pulse" />
+                        <span>AI MATCHED REQUISITIONS</span>
+                      </>
+                    )}
+                  </div>
+                  <h3 className="text-2xl sm:text-3xl font-bold tracking-tight text-[#111215] flex items-center gap-2">
+                    <span>{isCandidateBanned ? 'Account Banned' : 'Top Matched Openings'}</span>
+                    {!isCandidateBanned && (
+                      <span className="text-base font-normal text-[#73766C]">({matchedJobsList.length})</span>
+                    )}
+                  </h3>
                 </div>
-                <h3 className="text-xl sm:text-2xl font-black tracking-tight flex items-center gap-2">
-                  <span>{isCandidateBanned ? 'Account Banned' : 'Best Matched Job Openings'}</span>
-                  {!isCandidateBanned && (
-                    <span className="text-sm font-bold text-slate-400">({matchedJobsList.length})</span>
-                  )}
-                </h3>
-              </div>
 
-              {/* Segmented Filter Tabs - Only shown if candidate is not banned */}
-              {!isCandidateBanned && (
-                <div className={`flex items-center gap-1 p-1 rounded-2xl shadow-sm border overflow-x-auto ${
-                  isDark ? 'bg-[#0f0f10] border-white/10' : 'bg-slate-100/90 border-slate-200'
-                }`}>
-                  <button
-                    type="button"
-                    onClick={() => setMatchFilter('EligibleOnly')}
-                    className={`px-4 py-2 rounded-xl text-xs font-black transition-all shrink-0 cursor-pointer ${
-                      matchFilter === 'EligibleOnly' 
-                        ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/25 scale-[1.02]' 
-                        : isDark ? 'text-slate-400 hover:text-white hover:bg-white/5' : 'text-slate-600 hover:text-slate-900 hover:bg-white/70 font-semibold'
-                    }`}
-                  >
-                    Eligible
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setMatchFilter('HighMatch')}
-                    className={`px-4 py-2 rounded-xl text-xs font-black transition-all shrink-0 cursor-pointer ${
-                      matchFilter === 'HighMatch' 
-                        ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/25 scale-[1.02]' 
-                        : isDark ? 'text-slate-400 hover:text-white hover:bg-white/5' : 'text-slate-600 hover:text-slate-900 hover:bg-white/70 font-semibold'
-                    }`}
-                  >
-                    High Match (&ge; 75%)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setMatchFilter('LocalCity')}
-                    className={`px-4 py-2 rounded-xl text-xs font-black transition-all shrink-0 cursor-pointer inline-flex items-center gap-1.5 ${
-                      matchFilter === 'LocalCity' 
-                        ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/25 scale-[1.02]' 
-                        : isDark ? 'text-slate-400 hover:text-white hover:bg-white/5' : 'text-slate-600 hover:text-slate-900 hover:bg-white/70 font-semibold'
-                    }`}
-                  >
-                    <MapPin className="w-3.5 h-3.5" />
-                    <span>{submittedCandidateData?.location || 'Location'}</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setMatchFilter('All')}
-                    className={`px-4 py-2 rounded-xl text-xs font-black transition-all shrink-0 cursor-pointer ${
-                      matchFilter === 'All' 
-                        ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/25 scale-[1.02]' 
-                        : isDark ? 'text-slate-400 hover:text-white hover:bg-white/5' : 'text-slate-600 hover:text-slate-900 hover:bg-white/70 font-semibold'
-                    }`}
-                  >
-                    All ({matchedJobsList.length})
-                  </button>
-                </div>
-              )}
+                {/* Segmented Filter Tabs */}
+                {!isCandidateBanned && (
+                  <div className="inline-flex items-center gap-1 p-1 rounded-full border border-[#E4E7DC] bg-[#F8F9F5] shadow-2xs overflow-x-auto">
+                    <button
+                      type="button"
+                      onClick={() => setMatchFilter('EligibleOnly')}
+                      className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all shrink-0 cursor-pointer ${
+                        matchFilter === 'EligibleOnly' 
+                          ? 'bg-[#111215] text-white shadow-2xs' 
+                          : 'text-[#575A51] hover:text-[#111215]'
+                      }`}
+                    >
+                      Eligible
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMatchFilter('HighMatch')}
+                      className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all shrink-0 cursor-pointer ${
+                        matchFilter === 'HighMatch' 
+                          ? 'bg-[#111215] text-white shadow-2xs' 
+                          : 'text-[#575A51] hover:text-[#111215]'
+                      }`}
+                    >
+                      High Match (&ge; 75%)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMatchFilter('LocalCity')}
+                      className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all shrink-0 cursor-pointer inline-flex items-center gap-1.5 ${
+                        matchFilter === 'LocalCity' 
+                          ? 'bg-[#111215] text-white shadow-2xs' 
+                          : 'text-[#575A51] hover:text-[#111215]'
+                      }`}
+                    >
+                      <MapPin className="w-3 h-3 text-[#8FB305]" />
+                      <span>{submittedCandidateData?.location || 'Location'}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMatchFilter('All')}
+                      className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all shrink-0 cursor-pointer ${
+                        matchFilter === 'All' 
+                          ? 'bg-[#111215] text-white shadow-2xs' 
+                          : 'text-[#575A51] hover:text-[#111215]'
+                      }`}
+                    >
+                      All ({matchedJobsList.length})
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Jobs List Grid */}
             {jobsLoading ? (
-              <div className={`py-12 text-center space-y-3 rounded-3xl border ${
-                isDark ? 'bg-[#0d0d0d] border-white/10' : 'bg-white border-slate-200'
-              }`}>
-                <RefreshCw className="w-8 h-8 animate-spin text-emerald-500 mx-auto" />
-                <p className="text-sm font-bold text-slate-400">Scoring active job openings...</p>
+              <div className="py-16 text-center space-y-3 rounded-3xl border border-[#E4E7DC] bg-white shadow-2xs">
+                <RefreshCw className="w-7 h-7 animate-spin text-[#8FB305] mx-auto" />
+                <p className="text-sm font-semibold text-[#575A51]">Scoring active job requisitions against your profile...</p>
               </div>
             ) : isCandidateBanned ? (
-              <div className={`py-12 px-6 text-center space-y-4 rounded-3xl border shadow-xl ${
-                isDark ? 'bg-red-950/25 border-red-500/40 text-red-200' : 'bg-red-50/90 border-red-200 text-red-950'
-              }`}>
-                <div className="w-16 h-16 rounded-2xl bg-red-500/15 border border-red-500/30 flex items-center justify-center mx-auto text-red-500 shadow-md">
-                  <Ban className="w-9 h-9" strokeWidth={2.4} />
+              <div className="py-12 px-6 text-center space-y-4 rounded-3xl border border-rose-200 bg-white shadow-2xs text-[#111215]">
+                <div className="w-16 h-16 rounded-2xl bg-rose-50 border border-rose-200 flex items-center justify-center mx-auto text-rose-600 shadow-2xs">
+                  <Ban className="w-8 h-8" strokeWidth={2.2} />
                 </div>
                 <div className="space-y-2">
-                  <h4 className="text-xl sm:text-2xl font-black text-red-600 dark:text-red-400 tracking-tight">
-                    You are banned. Contact Administrator.
+                  <h4 className="text-xl sm:text-2xl font-bold text-rose-600 tracking-tight">
+                    Candidate Profile Suspended
                   </h4>
-                  <p className="text-xs sm:text-sm text-slate-600 dark:text-zinc-300 max-w-md mx-auto leading-relaxed">
-                    Your candidate profile, email, and contact number are banned on this software. You are restricted from searching for jobs, receiving job recommendations, or applying to openings until unbanned.
+                  <p className="text-xs sm:text-sm text-[#575A51] max-w-md mx-auto leading-relaxed">
+                    Your candidate profile, email, and contact number are restricted from submitting applications on this portal.
                   </p>
-                </div>
-                <div className="pt-2">
-                  <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20">
-                    <span>Contact: Please reach out to your administrator to request an account review.</span>
-                  </div>
                 </div>
               </div>
             ) : matchedJobsList.length === 0 ? (
-              <div className={`py-10 text-center space-y-3 rounded-3xl border px-4 ${
-                isDark ? 'bg-[#0d0d0d] border-white/10' : 'bg-white border-slate-200'
-              }`}>
-                <AlertCircle className="w-8 h-8 text-slate-400 mx-auto" />
-                <h4 className="text-base font-bold">No Job Matches Found for this Filter</h4>
-                <p className="text-xs text-slate-400 max-w-xs mx-auto">
+              <div className="py-12 text-center space-y-3 rounded-3xl border border-[#E4E7DC] bg-white shadow-2xs px-4">
+                <AlertCircle className="w-8 h-8 text-[#73766C] mx-auto" />
+                <h4 className="text-base font-bold text-[#111215]">No Job Matches Found for this Filter</h4>
+                <p className="text-xs text-[#73766C] max-w-xs mx-auto">
                   Switch filter to "All" or edit your preferences to view more openings.
                 </p>
                 <button
                   type="button"
                   onClick={() => setMatchFilter('All')}
-                  className="px-4 py-2 rounded-xl bg-emerald-600 text-white text-xs font-bold cursor-pointer"
+                  className="px-5 py-2 rounded-full bg-[#111215] hover:bg-[#202227] text-white text-xs font-bold cursor-pointer transition-all"
                 >
                   View All Openings
                 </button>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                 {matchedJobsList.map((matchItem) => {
-                  const { job, overallScore, matchGrade, badgeColor, skillMatch, locationMatch, genderMatch, expMatch, eduMatch, failReasons } = matchItem;
+                  const { job, overallScore, matchGrade, skillMatch, locationMatch, genderMatch, expMatch, eduMatch, failReasons } = matchItem;
                   const isDisqualified = !expMatch.isMatch || !genderMatch.isMatch || overallScore === 0;
 
                   return (
                     <div
                       key={job.id}
-                      className={`group relative flex flex-col justify-between rounded-3xl border p-5 sm:p-6 transition-all duration-300 shadow-lg overflow-hidden backdrop-blur-xl ${
-                        isDark 
-                          ? 'bg-[#0d0d0f] border-white/[0.09] hover:border-emerald-500/50 hover:bg-[#121215] hover:shadow-2xl hover:shadow-emerald-950/40' 
-                          : 'bg-white border-slate-200/90 hover:border-emerald-500/50 hover:shadow-2xl hover:shadow-emerald-500/10'
-                      } ${isDisqualified ? 'opacity-85' : ''}`}
+                      className={`group relative flex flex-col justify-between rounded-3xl border border-[#E4E7DC] bg-white p-5 sm:p-7 transition-all duration-300 hover:border-[#111215] shadow-2xs ${
+                        isDisqualified ? 'opacity-85' : ''
+                      }`}
                     >
-                      {/* Ambient hover glow gradient */}
-                      <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/[0.04] via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
-
-                      <div className="space-y-3.5 relative z-10">
+                      <div className="space-y-4">
                         {/* Top Header Badge Row */}
                         <div className="flex items-start justify-between gap-2">
-                          <span className={`px-3 py-1 rounded-full text-xs font-black shadow-md flex items-center gap-1.5 ${
+                          <span className={`px-3 py-1 rounded-full text-xs font-bold shadow-2xs flex items-center gap-1.5 ${
                             isDisqualified 
-                              ? badgeColor 
-                              : 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-emerald-500/20'
+                              ? 'bg-rose-50 text-rose-700 border border-rose-200' 
+                              : 'bg-[#D4F82C] text-[#111215] border border-[#8FB305]/30'
                           }`}>
-                            {isDisqualified ? <Ban className="w-3.5 h-3.5" /> : <Sparkles className="w-3.5 h-3.5" />}
+                            {isDisqualified ? <Ban className="w-3.5 h-3.5" /> : <Sparkles className="w-3.5 h-3.5 text-[#8FB305]" />}
                             <span>{overallScore}% Match • {matchGrade}</span>
                           </span>
 
-                          <span className={`text-[11px] font-mono font-extrabold px-2.5 py-1 rounded-xl border ${
-                            isDark ? 'bg-white/[0.06] border-white/10 text-slate-300' : 'bg-slate-100 border-slate-200 text-slate-600'
-                          }`}>
+                          <span className="text-[11px] font-mono font-bold px-2.5 py-1 rounded-full border border-[#E4E7DC] bg-[#F8F9F5] text-[#575A51]">
                             Code: {job.accessCode}
                           </span>
                         </div>
 
                         {/* Title & Recruiter / Department */}
                         <div>
-                          <h4 className={`text-lg sm:text-xl font-black transition-colors tracking-tight line-clamp-1 ${
-                            isDark ? 'text-white group-hover:text-emerald-400' : 'text-slate-900 group-hover:text-emerald-600'
-                          }`}>
+                          <h4 className="text-lg sm:text-xl font-bold tracking-tight line-clamp-1 text-[#111215] group-hover:text-[#8FB305] transition-colors">
                             {job.title}
                           </h4>
-                          <div className="flex items-center gap-2 text-xs font-semibold mt-1">
-                            <span className="text-slate-400 font-medium inline-flex items-center gap-1">
-                              <User className="w-3.5 h-3.5 text-slate-400" />
+                          <div className="flex items-center gap-2 text-xs font-medium text-[#575A51] mt-1">
+                            <span className="inline-flex items-center gap-1">
+                              <User className="w-3.5 h-3.5 text-[#73766C]" />
                               <span>{job.entryBy || job.recruiterName || 'Recruiter'}</span>
                             </span>
-                            <span className="text-slate-400 select-none">•</span>
-                            <span className="text-emerald-600 dark:text-emerald-400 font-bold inline-flex items-center gap-1">
-                              <Briefcase className="w-3.5 h-3.5 text-emerald-500" />
+                            <span className="text-[#E4E7DC] select-none">•</span>
+                            <span className="font-semibold text-[#111215] inline-flex items-center gap-1">
+                              <Briefcase className="w-3.5 h-3.5 text-[#8FB305]" />
                               <span>{job.department}</span>
                             </span>
                           </div>
@@ -2589,21 +2436,21 @@ export default function PublicJobSeekerUpload() {
                           {/* Location Badge */}
                           <div className={`p-2.5 rounded-2xl border text-[11px] flex items-center gap-2 ${
                             locationMatch.isMatch 
-                              ? isDark ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300' : 'bg-emerald-50/70 border-emerald-200 text-emerald-900 font-bold'
-                              : isDark ? 'bg-amber-500/10 border-amber-500/30 text-amber-300' : 'bg-amber-50/70 border-amber-200 text-amber-900 font-bold'
+                              ? 'bg-[#F8F9F5] border-[#E4E7DC] text-[#111215] font-semibold'
+                              : 'bg-amber-50 border-amber-200 text-amber-900 font-semibold'
                           }`}>
-                            <MapPin className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                            <MapPin className="w-3.5 h-3.5 text-[#8FB305] shrink-0" />
                             <span className="truncate">{job.location}</span>
                           </div>
 
                           {/* Experience Badge */}
                           <div className={`p-2.5 rounded-2xl border text-[11px] flex items-center gap-2 ${
                             expMatch.isMatch 
-                              ? isDark ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300 font-bold' : 'bg-emerald-50/70 border-emerald-200 text-emerald-900 font-bold'
-                              : isDark ? 'bg-rose-500/20 border-rose-500/40 text-rose-300 font-extrabold' : 'bg-rose-100 border-rose-300 text-rose-900 font-extrabold'
+                              ? 'bg-[#F8F9F5] border-[#E4E7DC] text-[#111215] font-semibold'
+                              : 'bg-rose-50 border-rose-200 text-rose-800 font-semibold'
                           }`}>
                             {expMatch.isMatch ? (
-                              <Briefcase className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                              <Briefcase className="w-3.5 h-3.5 text-[#8FB305] shrink-0" />
                             ) : (
                               <Ban className="w-3.5 h-3.5 text-rose-500 shrink-0" />
                             )}
@@ -2615,36 +2462,30 @@ export default function PublicJobSeekerUpload() {
                           {/* Gender Badge */}
                           <div className={`p-2.5 rounded-2xl border text-[11px] flex items-center gap-2 ${
                             genderMatch.isMatch 
-                              ? isDark ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300 font-bold' : 'bg-emerald-50/70 border-emerald-200 text-emerald-900 font-bold'
-                              : isDark ? 'bg-rose-500/20 border-rose-500/40 text-rose-300 font-extrabold' : 'bg-rose-100 border-rose-300 text-rose-900 font-extrabold'
+                              ? 'bg-[#F8F9F5] border-[#E4E7DC] text-[#111215] font-semibold'
+                              : 'bg-rose-50 border-rose-200 text-rose-800 font-semibold'
                           }`}>
-                            <User className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                            <User className="w-3.5 h-3.5 text-[#8FB305] shrink-0" />
                             <span className="truncate font-semibold">
                               {genderMatch.requiredGender === 'Any' ? 'Gender: Any' : `${genderMatch.requiredGender}`}
                             </span>
                           </div>
                         </div>
 
-                        {/* Education Qualification with Differentiators and Green Highlight for Matches */}
-                        <div className={`p-3 rounded-2xl border text-[11px] space-y-2 ${
-                          isDark ? 'bg-white/[0.03] border-white/[0.08]' : 'bg-slate-50/80 border-slate-200/90'
-                        }`}>
+                        {/* Education Qualification */}
+                        <div className="p-3 rounded-2xl border border-[#E4E7DC] bg-[#F8F9F5] text-[11px] space-y-2">
                           <div className="flex items-center justify-between gap-1.5">
-                            <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 font-extrabold text-[10px] uppercase tracking-wider">
-                              <GraduationCap className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                            <div className="flex items-center gap-1.5 text-[#73766C] font-bold text-[10px] uppercase tracking-wider">
+                              <GraduationCap className="w-3.5 h-3.5 text-[#8FB305] shrink-0" />
                               <span>Required Qualification</span>
                             </div>
                             {eduMatch.isMatch ? (
-                              <span className={`text-[9px] font-black px-2.5 py-0.5 rounded-full border shadow-sm shrink-0 inline-flex items-center gap-1 ${
-                                isDark ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300' : 'bg-emerald-100 border-emerald-300 text-emerald-800'
-                              }`}>
+                              <span className="text-[9px] font-bold px-2.5 py-0.5 rounded-full border border-[#8FB305]/30 bg-[#D4F82C]/30 text-[#111215] shrink-0 inline-flex items-center gap-1">
                                 <Check className="w-2.5 h-2.5 stroke-[3]" />
                                 <span>Fit</span>
                               </span>
                             ) : (
-                              <span className={`text-[9px] font-black px-2.5 py-0.5 rounded-full border shadow-sm shrink-0 ${
-                                isDark ? 'bg-amber-500/20 border-amber-500/40 text-amber-300' : 'bg-amber-100 border-amber-300 text-amber-800'
-                              }`}>
+                              <span className="text-[9px] font-bold px-2.5 py-0.5 rounded-full border border-amber-200 bg-amber-50 text-amber-800 shrink-0">
                                 Mismatch
                               </span>
                             )}
@@ -2660,20 +2501,16 @@ export default function PublicJobSeekerUpload() {
                               
                               return (
                                 <React.Fragment key={option + idx}>
-                                  <span className={`px-2.5 py-1 rounded-xl text-[11px] font-semibold border transition-all inline-flex items-center gap-1.5 ${
+                                  <span className={`px-2.5 py-1 rounded-full text-[11px] font-semibold border transition-all inline-flex items-center gap-1 ${
                                     isOptionMatched
-                                      ? isDark
-                                        ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-300 font-black shadow-sm ring-1 ring-emerald-500/30'
-                                        : 'bg-emerald-100/90 border-emerald-400 text-emerald-950 font-black shadow-sm ring-1 ring-emerald-300'
-                                      : isDark
-                                      ? 'bg-white/[0.04] border-white/10 text-slate-400'
-                                      : 'bg-white border-slate-200 text-slate-600'
+                                      ? 'bg-white border-[#8FB305] text-[#111215] font-bold shadow-2xs'
+                                      : 'bg-white border-[#E4E7DC] text-[#73766C]'
                                   }`}>
-                                    {isOptionMatched && <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 stroke-[3]" />}
+                                    {isOptionMatched && <Check className="w-3 h-3 text-[#8FB305] stroke-[3]" />}
                                     <span>{option}</span>
                                   </span>
                                   {idx < arr.length - 1 && (
-                                    <span className="text-[11px] font-extrabold text-slate-400 dark:text-slate-500 select-none px-0.5">
+                                    <span className="text-[11px] font-bold text-[#E4E7DC] select-none px-0.5">
                                       •
                                     </span>
                                   )}
@@ -2686,16 +2523,14 @@ export default function PublicJobSeekerUpload() {
                         {/* Skills Display */}
                         {skillMatch.matchedSkills.length > 0 ? (
                           <div className="space-y-1.5 pt-0.5">
-                            <div className="flex items-center gap-1.5 text-[11px] font-black text-slate-600 dark:text-slate-300 uppercase tracking-wider">
-                              <Tag className="w-3 h-3 text-emerald-500" />
+                            <div className="flex items-center gap-1.5 text-[11px] font-bold text-[#575A51] uppercase tracking-wider">
+                              <Tag className="w-3 h-3 text-[#8FB305]" />
                               <span>Matched Skills</span>
                             </div>
                             <div className="flex flex-wrap gap-1.5">
                               {skillMatch.matchedSkills.map(s => (
-                                <span key={s} className={`px-2.5 py-0.5 rounded-lg text-[10px] font-black border flex items-center gap-1 ${
-                                  isDark ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300' : 'bg-emerald-100/80 border-emerald-300 text-emerald-900'
-                                }`}>
-                                  <Check className="w-2.5 h-2.5 stroke-[3]" />
+                                <span key={s} className="px-2.5 py-0.5 rounded-full text-[10px] font-bold border border-[#8FB305]/30 bg-[#D4F82C]/20 text-[#111215] flex items-center gap-1">
+                                  <Check className="w-2.5 h-2.5 stroke-[3] text-[#8FB305]" />
                                   <span>{s}</span>
                                 </span>
                               ))}
@@ -2703,15 +2538,13 @@ export default function PublicJobSeekerUpload() {
                           </div>
                         ) : skillMatch.missingSkills.length > 0 && (
                           <div className="space-y-1.5 pt-0.5">
-                            <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                              <Tag className="w-3 h-3 text-slate-400" />
+                            <div className="flex items-center gap-1.5 text-[11px] font-bold text-[#73766C] uppercase tracking-wider">
+                              <Tag className="w-3 h-3 text-[#73766C]" />
                               <span>Key Job Skills</span>
                             </div>
                             <div className="flex flex-wrap gap-1.5">
                               {skillMatch.missingSkills.slice(0, 3).map(s => (
-                                <span key={s} className={`px-2.5 py-0.5 rounded-lg text-[10px] border font-medium ${
-                                  isDark ? 'bg-white/[0.04] border-white/10 text-slate-400' : 'bg-slate-100 border-slate-200 text-slate-500'
-                                }`}>
+                                <span key={s} className="px-2.5 py-0.5 rounded-full text-[10px] border border-[#E4E7DC] bg-[#F8F9F5] text-[#575A51] font-medium">
                                   {s}
                                 </span>
                               ))}
@@ -2721,12 +2554,12 @@ export default function PublicJobSeekerUpload() {
 
                         {/* Fail Reasons if strict criteria fail */}
                         {failReasons.length > 0 && (
-                          <div className={`p-2.5 rounded-xl border text-[11px] space-y-0.5 ${
+                          <div className={`p-2.5 rounded-2xl border text-[11px] space-y-0.5 ${
                             isDisqualified 
-                              ? isDark ? 'bg-rose-950/40 border-rose-800/60 text-rose-200' : 'bg-rose-50 border-rose-200 text-rose-950' 
-                              : isDark ? 'bg-amber-950/40 border-amber-800/60 text-amber-200' : 'bg-amber-50 border-amber-200 text-amber-900'
+                              ? 'bg-rose-50 border-rose-200 text-rose-900' 
+                              : 'bg-amber-50 border-amber-200 text-amber-900'
                           }`}>
-                            <span className="font-bold block flex items-center gap-1">
+                            <span className="font-semibold block flex items-center gap-1">
                               <AlertCircle className="w-3.5 h-3.5 shrink-0" />
                               <span>{isDisqualificationReason(failReasons[0]) ? 'Reason: ' : 'Note: '} {failReasons[0]}</span>
                             </span>
@@ -2735,15 +2568,13 @@ export default function PublicJobSeekerUpload() {
                       </div>
 
                       {/* Card Action Footer */}
-                      <div className="pt-4 border-t border-slate-200 dark:border-white/10 flex items-center justify-between gap-2.5 relative z-10">
+                      <div className="pt-4 border-t border-[#E4E7DC] flex items-center justify-between gap-2.5 mt-4">
                         <button
                           type="button"
                           onClick={() => setSelectedJobForModal(matchItem)}
-                          className={`flex-1 py-2.5 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer border ${
-                            isDark ? 'bg-white/[0.06] border-white/10 text-white hover:bg-white/[0.12]' : 'bg-slate-100 border-slate-200 text-slate-800 hover:bg-slate-200'
-                          }`}
+                          className="flex-1 py-2.5 px-4 rounded-full font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer border border-[#E4E7DC] bg-[#F8F9F5] text-[#111215] hover:bg-white"
                         >
-                          <Eye className="w-3.5 h-3.5 text-slate-400" />
+                          <Eye className="w-3.5 h-3.5 text-[#73766C]" />
                           <span>View Details</span>
                         </button>
 
@@ -2751,14 +2582,14 @@ export default function PublicJobSeekerUpload() {
                           type="button"
                           onClick={() => handleOpenApplyModal(matchItem)}
                           disabled={isDisqualified}
-                          className={`flex-1 py-2.5 px-4 rounded-xl font-black text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                          className={`flex-1 py-2.5 px-4 rounded-full font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                             isDisqualified 
-                              ? 'bg-slate-200 dark:bg-white/5 text-slate-400 dark:text-slate-500 cursor-not-allowed border border-slate-300 dark:border-white/10' 
-                              : 'bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-lg shadow-emerald-600/30 hover:shadow-emerald-500/40 active:scale-[0.98]'
+                              ? 'bg-[#F8F9F5] text-[#73766C] cursor-not-allowed border border-[#E4E7DC]' 
+                              : 'bg-[#111215] hover:bg-[#202227] text-white shadow-sm'
                           }`}
                         >
                           <span>{isDisqualified ? 'Criteria Unmet' : 'Apply & Start'}</span>
-                          {!isDisqualified && <ArrowRight className="w-3.5 h-3.5" />}
+                          {!isDisqualified && <span className="text-[#D4F82C]">↗</span>}
                         </button>
                       </div>
                     </div>
@@ -2770,39 +2601,13 @@ export default function PublicJobSeekerUpload() {
         )}
       </main>
 
-      {/* Page Footer */}
-      <footer className={`border-t py-8 text-center text-xs transition-colors mt-12 ${isDark ? 'border-white/[0.08] text-slate-500 bg-[#030303]' : 'border-slate-200 text-slate-600 bg-white'}`}>
-        <div className="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p>
-            © {new Date().getFullYear()} InterviewXpert. All rights reserved. Powered by{' '}
-            <a 
-              href="https://snab.co.in" 
-              target="_blank" 
-              rel="noopener noreferrer" 
-              className="font-bold text-emerald-600 dark:text-emerald-400 hover:underline transition-colors"
-            >
-              SNAB Innovations
-            </a>
-          </p>
-          <div className="flex items-center gap-4">
-            <Link to="/active-jobs" className="hover:text-emerald-500 transition-colors">Active Jobs</Link>
-            <Link to="/career-hub" className="hover:text-emerald-500 transition-colors">Career Hub</Link>
-            <Link to="/blogs" className="hover:text-emerald-500 transition-colors">Blogs</Link>
-            <Link to="/privacy-policy" className="hover:text-emerald-500 transition-colors">Privacy Policy</Link>
-            <Link to="/terms-of-service" className="hover:text-emerald-500 transition-colors">Terms</Link>
-          </div>
-        </div>
-      </footer>
-
       {/* Modal Dialog for View Job Details */}
       {selectedJobForModal && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-200">
-          <div className={`border rounded-3xl max-w-2xl w-full p-5 sm:p-8 shadow-2xl space-y-5 relative max-h-[90vh] overflow-y-auto transition-colors ${
-            isDark ? 'bg-[#0d0d0d] border-white/15 text-white' : 'bg-white border-slate-200 text-slate-900'
-          }`}>
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-200">
+          <div className="border border-[#E4E7DC] rounded-3xl max-w-2xl w-full p-5 sm:p-8 shadow-xl space-y-5 relative max-h-[90vh] overflow-y-auto bg-white text-[#111215]">
             <button
               onClick={() => setSelectedJobForModal(null)}
-              className="absolute right-4 top-4 text-slate-400 hover:text-white p-1 rounded-xl hover:bg-white/10 transition-colors cursor-pointer"
+              className="absolute right-4 top-4 text-[#73766C] hover:text-[#111215] p-2 rounded-xl hover:bg-[#F8F9F5] transition-colors cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>
@@ -2810,52 +2615,46 @@ export default function PublicJobSeekerUpload() {
             {/* Modal Top Match Header */}
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <span className={`px-3 py-1 rounded-full text-xs font-extrabold ${selectedJobForModal.badgeColor}`}>
+                <span className="px-3 py-1 rounded-full text-xs font-bold bg-[#D4F82C] text-[#111215] border border-[#8FB305]/30">
                   {selectedJobForModal.overallScore}% Match • {selectedJobForModal.matchGrade}
                 </span>
-                <span className={`text-xs font-mono px-2.5 py-1 rounded-lg border ${
-                  isDark ? 'bg-white/10 border-white/10 text-slate-300' : 'bg-slate-100 border-slate-200 text-slate-600'
-                }`}>
+                <span className="text-xs font-mono font-bold px-2.5 py-1 rounded-full border border-[#E4E7DC] bg-[#F8F9F5] text-[#575A51]">
                   Code: {selectedJobForModal.job.accessCode}
                 </span>
               </div>
 
-              <h3 className="text-xl sm:text-2xl font-extrabold">
+              <h3 className="text-xl sm:text-2xl font-bold text-[#111215]">
                 {selectedJobForModal.job.title}
               </h3>
-              <p className="text-xs text-slate-400 font-semibold">
+              <p className="text-xs text-[#73766C] font-semibold">
                 Posted by: {selectedJobForModal.job.recruiterName} • {selectedJobForModal.job.department}
               </p>
             </div>
 
             {/* Breakdown Highlights */}
-            <div className={`grid grid-cols-3 gap-2.5 p-3 rounded-2xl text-xs border ${
-              isDark ? 'bg-white/5 border-white/10' : 'bg-slate-50 border-slate-200'
-            }`}>
+            <div className="grid grid-cols-3 gap-2.5 p-3 rounded-2xl text-xs border border-[#E4E7DC] bg-[#F8F9F5]">
               <div>
-                <span className="text-slate-400 block text-[11px]">Location</span>
-                <strong className="block truncate">{selectedJobForModal.job.location}</strong>
+                <span className="text-[#73766C] block text-[11px]">Location</span>
+                <strong className="block truncate text-[#111215]">{selectedJobForModal.job.location}</strong>
               </div>
               <div>
-                <span className="text-slate-400 block text-[11px]">Experience</span>
-                <strong className="block truncate">{selectedJobForModal.expMatch.requiredExp}</strong>
+                <span className="text-[#73766C] block text-[11px]">Experience</span>
+                <strong className="block truncate text-[#111215]">{selectedJobForModal.expMatch.requiredExp}</strong>
               </div>
               <div>
-                <span className="text-slate-400 block text-[11px]">Gender Req.</span>
-                <strong className="block truncate">{selectedJobForModal.genderMatch.requiredGender}</strong>
+                <span className="text-[#73766C] block text-[11px]">Gender Req.</span>
+                <strong className="block truncate text-[#111215]">{selectedJobForModal.genderMatch.requiredGender}</strong>
               </div>
             </div>
 
             {/* Strict Disqualification Warning */}
             {(!selectedJobForModal.expMatch.isMatch || !selectedJobForModal.genderMatch.isMatch) && (
-              <div className={`p-3.5 rounded-2xl border text-xs font-semibold space-y-1 ${
-                isDark ? 'bg-rose-950/50 border-rose-800 text-rose-200' : 'bg-rose-50 border-rose-300 text-rose-950'
-              }`}>
-                <div className="font-extrabold text-rose-400 flex items-center gap-1">
-                  <Ban className="w-4 h-4 text-rose-500" />
+              <div className="p-3.5 rounded-2xl border border-rose-200 bg-rose-50 text-xs font-semibold space-y-1 text-rose-900">
+                <div className="font-bold text-rose-700 flex items-center gap-1">
+                  <Ban className="w-4 h-4 text-rose-600" />
                   <span>Not Recommended due to Criteria Mismatch</span>
                 </div>
-                <p className="text-[11px]">
+                <p className="text-[11px] text-rose-800">
                   {!selectedJobForModal.expMatch.isMatch && (
                     <span>Requires minimum <strong>{selectedJobForModal.expMatch.requiredExp}</strong> experience (Your experience is <strong>{selectedJobForModal.expMatch.candidateExp} Yrs</strong>). </span>
                   )}
@@ -2869,16 +2668,14 @@ export default function PublicJobSeekerUpload() {
             {/* Full Job Description */}
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-400">Job Description & Responsibilities</h4>
+                <h4 className="text-xs font-bold uppercase tracking-wider text-[#73766C]">Job Description & Responsibilities</h4>
                 <ListenJDButton
                   title={selectedJobForModal.job.title}
                   description={selectedJobForModal.job.description || ''}
                   size="sm"
                 />
               </div>
-              <div className={`p-3 rounded-2xl border max-h-56 overflow-y-auto ${
-                isDark ? 'bg-white/5 border-white/10 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-700'
-              }`}>
+              <div className="p-4 rounded-2xl border border-[#E4E7DC] bg-[#F8F9F5] max-h-56 overflow-y-auto text-xs text-[#575A51]">
                 <FormattedJobDescription
                   description={selectedJobForModal.job.description}
                   className="max-w-full text-xs"
@@ -2886,18 +2683,16 @@ export default function PublicJobSeekerUpload() {
               </div>
             </div>
 
-            {/* Education & Qualification with Differentiators */}
+            {/* Education & Qualification */}
             <div className="space-y-1.5">
-              <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-400">Qualification & Education Requirements</h4>
-              <div className={`p-3 rounded-2xl border text-xs space-y-2 ${
-                isDark ? 'bg-white/5 border-white/10' : 'bg-slate-50 border-slate-200'
-              }`}>
+              <h4 className="text-xs font-bold uppercase tracking-wider text-[#73766C]">Qualification & Education Requirements</h4>
+              <div className="p-3.5 rounded-2xl border border-[#E4E7DC] bg-[#F8F9F5] text-xs space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-[11px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">Accepted Degrees / Trades:</span>
-                  <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full border ${
+                  <span className="text-[11px] text-[#73766C] font-bold uppercase tracking-wider">Accepted Degrees / Trades:</span>
+                  <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${
                     selectedJobForModal.eduMatch.isMatch
-                      ? isDark ? 'bg-emerald-500/20 border-emerald-500/30 text-emerald-300' : 'bg-emerald-100 border-emerald-300 text-emerald-800'
-                      : isDark ? 'bg-amber-500/20 border-amber-500/30 text-amber-300' : 'bg-amber-100 border-amber-300 text-amber-800'
+                      ? 'bg-[#D4F82C]/30 border-[#8FB305]/30 text-[#111215]'
+                      : 'bg-amber-50 border-amber-200 text-amber-800'
                   }`}>
                     {selectedJobForModal.eduMatch.isMatch ? '✓ Qualification Fits' : 'Mismatch'}
                   </span>
@@ -2912,20 +2707,16 @@ export default function PublicJobSeekerUpload() {
 
                     return (
                       <React.Fragment key={option + idx}>
-                        <span className={`px-2.5 py-1 rounded-xl text-xs font-semibold border transition-all inline-flex items-center gap-1.5 ${
+                        <span className={`px-2.5 py-1 rounded-full text-xs font-semibold border transition-all inline-flex items-center gap-1 ${
                           isOptionMatched
-                            ? isDark
-                              ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300 font-bold shadow-sm ring-1 ring-emerald-500/30'
-                              : 'bg-emerald-100 border-emerald-400 text-emerald-900 font-bold shadow-sm ring-1 ring-emerald-300'
-                            : isDark
-                            ? 'bg-white/5 border-white/10 text-slate-400'
-                            : 'bg-white border-slate-200 text-slate-600'
+                            ? 'bg-white border-[#8FB305] text-[#111215] font-bold shadow-2xs'
+                            : 'bg-white border-[#E4E7DC] text-[#73766C]'
                         }`}>
-                          {isOptionMatched && <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 stroke-[3]" />}
+                          {isOptionMatched && <Check className="w-3.5 h-3.5 text-[#8FB305] stroke-[3]" />}
                           <span>{option}</span>
                         </span>
                         {idx < arr.length - 1 && (
-                          <span className="text-xs font-extrabold text-slate-400 dark:text-slate-500 select-none px-0.5">
+                          <span className="text-xs font-bold text-[#E4E7DC] select-none px-0.5">
                             •
                           </span>
                         )}
@@ -2937,12 +2728,10 @@ export default function PublicJobSeekerUpload() {
             </div>
 
             {/* Modal Actions */}
-            <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-200 dark:border-white/10">
+            <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-[#E4E7DC]">
               <button
                 onClick={() => setSelectedJobForModal(null)}
-                className={`px-4 py-2 rounded-xl border font-bold text-xs transition-colors cursor-pointer ${
-                  isDark ? 'bg-white/10 border-white/10 text-slate-300 hover:bg-white/15' : 'bg-slate-100 border-slate-300 text-slate-700 hover:bg-slate-200'
-                }`}
+                className="px-5 py-2.5 rounded-full border border-[#E4E7DC] font-bold text-xs text-[#575A51] hover:text-[#111215] bg-[#F8F9F5] hover:bg-white transition-colors cursor-pointer"
               >
                 Close
               </button>
@@ -2953,14 +2742,14 @@ export default function PublicJobSeekerUpload() {
                   handleOpenApplyModal(match);
                 }}
                 disabled={!selectedJobForModal.expMatch.isMatch || !selectedJobForModal.genderMatch.isMatch}
-                className={`px-5 py-2 rounded-xl font-extrabold text-xs transition-all cursor-pointer flex items-center gap-1.5 ${
+                className={`px-6 py-2.5 rounded-full font-bold text-xs transition-all cursor-pointer flex items-center gap-1.5 ${
                   (!selectedJobForModal.expMatch.isMatch || !selectedJobForModal.genderMatch.isMatch)
-                    ? 'bg-slate-200 dark:bg-white/10 text-slate-400 dark:text-slate-500 cursor-not-allowed border border-slate-300 dark:border-white/10'
-                    : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-md'
+                    ? 'bg-[#F8F9F5] text-[#73766C] cursor-not-allowed border border-[#E4E7DC]'
+                    : 'bg-[#111215] hover:bg-[#202227] text-white shadow-sm'
                 }`}
               >
                 <span>{(!selectedJobForModal.expMatch.isMatch || !selectedJobForModal.genderMatch.isMatch) ? 'Criteria Unmet' : 'Apply & Start Interview'}</span>
-                {(selectedJobForModal.expMatch.isMatch && selectedJobForModal.genderMatch.isMatch) && <ArrowRight className="w-3.5 h-3.5" />}
+                {(selectedJobForModal.expMatch.isMatch && selectedJobForModal.genderMatch.isMatch) && <span className="text-[#D4F82C]">↗</span>}
               </button>
             </div>
           </div>
@@ -2969,92 +2758,84 @@ export default function PublicJobSeekerUpload() {
 
       {/* Apply & Start Pre-Interview Confirmation Modal */}
       {applyingJobModal && (
-        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className={`border rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-5 relative transition-colors ${
-            isDark ? 'bg-[#0d0d0d] border-emerald-500/40 text-white' : 'bg-white border-emerald-500/30 text-slate-900'
-          }`}>
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="border border-[#E4E7DC] rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-xl space-y-5 relative bg-white text-[#111215]">
             <button
               onClick={() => setApplyingJobModal(null)}
-              className="absolute right-4 top-4 text-slate-400 hover:text-white p-1 rounded-xl hover:bg-white/10 transition-colors cursor-pointer"
+              className="absolute right-4 top-4 text-[#73766C] hover:text-[#111215] p-2 rounded-xl hover:bg-[#F8F9F5] transition-colors cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>
 
             <div className="space-y-1">
-              <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-[10px] font-bold uppercase tracking-wider border border-emerald-500/30">
-                <Sparkles className="w-3.5 h-3.5" />
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#D4F82C]/30 text-[#111215] text-[10px] font-bold uppercase tracking-wider border border-[#8FB305]/30">
+                <Sparkles className="w-3.5 h-3.5 text-[#8FB305]" />
                 <span>Job Application & Interview Entry</span>
               </div>
-              <h3 className="text-xl font-extrabold tracking-tight">
+              <h3 className="text-xl font-bold tracking-tight text-[#111215]">
                 Apply for {applyingJobModal.job.title}
               </h3>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-[#73766C]">
                 Confirm your details to register your application interest with the recruiter before starting your interview.
               </p>
             </div>
 
-            <form onSubmit={handleConfirmApplicationAndStart} className="space-y-3">
+            <form onSubmit={handleConfirmApplicationAndStart} className="space-y-3.5">
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider mb-1">
-                  Full Name <span className="text-red-500">*</span>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-[#575A51] mb-1">
+                  Full Name <span className="text-rose-500">*</span>
                 </label>
                 <div className="relative">
-                  <User className="w-4 h-4 absolute left-3 top-3.5 text-slate-400" />
+                  <User className="w-4 h-4 absolute left-3 top-3 text-[#73766C]" />
                   <input
                     type="text"
                     required
                     value={applyName}
                     onChange={(e) => setApplyName(e.target.value)}
                     placeholder="Enter your full name..."
-                    className={`w-full pl-9 pr-3 py-2.5 rounded-xl border text-xs font-semibold outline-none focus:border-emerald-500 ${
-                      isDark ? 'bg-[#141414] border-white/10 text-white' : 'bg-slate-50 border-slate-300 text-slate-900'
-                    }`}
+                    className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] text-xs font-semibold text-[#111215] outline-none focus:border-[#111215] focus:bg-white"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider mb-1">
-                  Email Address <span className="text-red-500">*</span>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-[#575A51] mb-1">
+                  Email Address <span className="text-rose-500">*</span>
                 </label>
                 <div className="relative">
-                  <Mail className="w-4 h-4 absolute left-3 top-3.5 text-slate-400" />
+                  <Mail className="w-4 h-4 absolute left-3 top-3 text-[#73766C]" />
                   <input
                     type="email"
                     required
                     value={applyEmail}
                     onChange={(e) => setApplyEmail(e.target.value)}
                     placeholder="Enter your email address..."
-                    className={`w-full pl-9 pr-3 py-2.5 rounded-xl border text-xs font-semibold outline-none focus:border-emerald-500 ${
-                      isDark ? 'bg-[#141414] border-white/10 text-white' : 'bg-slate-50 border-slate-300 text-slate-900'
-                    }`}
+                    className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] text-xs font-semibold text-[#111215] outline-none focus:border-[#111215] focus:bg-white"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider mb-1">
-                  Mobile / WhatsApp Number <span className="text-red-500">*</span>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-[#575A51] mb-1">
+                  Mobile / WhatsApp Number <span className="text-rose-500">*</span>
                 </label>
                 <div className="relative">
-                  <Phone className="w-4 h-4 absolute left-3 top-3.5 text-slate-400" />
+                  <Phone className="w-4 h-4 absolute left-3 top-3 text-[#73766C]" />
                   <input
                     type="tel"
                     required
                     value={applyPhone}
                     onChange={(e) => setApplyPhone(e.target.value)}
                     placeholder="Enter mobile number..."
-                    className={`w-full pl-9 pr-3 py-2.5 rounded-xl border text-xs font-semibold outline-none focus:border-emerald-500 ${
-                      isDark ? 'bg-[#141414] border-white/10 text-white' : 'bg-slate-50 border-slate-300 text-slate-900'
-                    }`}
+                    className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] text-xs font-semibold text-[#111215] outline-none focus:border-[#111215] focus:bg-white"
                   />
                 </div>
               </div>
 
-              <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-[11px] text-emerald-300 space-y-1">
-                <span className="font-extrabold block">✓ Direct Recruiter Notification</span>
-                <p className="text-slate-300 text-[10px]">
-                  Your application will be marked in the hiring manager's portal. Green status will be marked upon interview completion!
+              <div className="p-3.5 rounded-2xl bg-[#F8F9F5] border border-[#E4E7DC] text-[11px] text-[#575A51] space-y-1">
+                <span className="font-bold text-[#111215] block">✓ Direct Recruiter Notification</span>
+                <p className="text-[10px] text-[#73766C]">
+                  Your application will be marked in the hiring manager's portal.
                 </p>
               </div>
 
@@ -3062,16 +2843,14 @@ export default function PublicJobSeekerUpload() {
                 <button
                   type="button"
                   onClick={() => setApplyingJobModal(null)}
-                  className={`flex-1 py-2.5 rounded-xl border text-xs font-bold transition-colors cursor-pointer ${
-                    isDark ? 'bg-white/10 border-white/10 text-slate-300 hover:bg-white/15' : 'bg-slate-100 border-slate-300 text-slate-700 hover:bg-slate-200'
-                  }`}
+                  className="flex-1 py-2.5 rounded-full border border-[#E4E7DC] text-xs font-bold text-[#575A51] hover:text-[#111215] bg-[#F8F9F5] hover:bg-white transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmittingApplication}
-                  className="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs flex items-center justify-center gap-1.5 transition-all shadow-md cursor-pointer disabled:opacity-50"
+                  className="flex-1 py-2.5 rounded-full bg-[#111215] hover:bg-[#202227] text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-sm cursor-pointer disabled:opacity-50"
                 >
                   {isSubmittingApplication ? (
                     <>
@@ -3081,7 +2860,7 @@ export default function PublicJobSeekerUpload() {
                   ) : (
                     <>
                       <span>Confirm & Start</span>
-                      <ArrowRight className="w-3.5 h-3.5" />
+                      <span className="text-[#D4F82C]">↗</span>
                     </>
                   )}
                 </button>
@@ -3090,6 +2869,61 @@ export default function PublicJobSeekerUpload() {
           </div>
         </div>
       )}
+
+      {/* ── Signature hireX Footer ── */}
+      <footer className="relative z-[95] w-full bg-[#F8F9F5] border-t border-[#E4E7DC] mt-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-8 lg:px-12 pt-12 pb-10">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 pb-12">
+            <div>
+              <div className="mb-3">
+                <HireXLogo size="md" variant="full" />
+              </div>
+              <p className="text-xs text-[#73766C] leading-relaxed">
+                The AI-powered recruitment operating system for agile hiring teams and modern staffing agencies.
+              </p>
+            </div>
+
+            <div className="space-y-2 text-xs">
+              <div className="font-bold text-[#111215] uppercase tracking-wider text-[11px]">Product</div>
+              <div><Link to="/#pipeline" className="text-[#73766C] hover:text-[#111215]">Pipeline Kanban</Link></div>
+              <div><Link to="/#client-portal" className="text-[#73766C] hover:text-[#111215]">Client Portal</Link></div>
+              <div><Link to="/#pricing" className="text-[#73766C] hover:text-[#111215]">Pricing Estimator</Link></div>
+              <div><Link to="/active-jobs" className="text-[#111215] font-bold">Active Job Board</Link></div>
+            </div>
+
+            <div className="space-y-2 text-xs">
+              <div className="font-bold text-[#111215] uppercase tracking-wider text-[11px]">Company</div>
+              <div><a href="https://snab.co.in" target="_blank" rel="noopener noreferrer" className="text-[#73766C] hover:text-[#111215]">About SNAB</a></div>
+              <div><Link to="/active-jobs" className="text-[#73766C] hover:text-[#111215]">Careers Desk</Link></div>
+              <div><a href="mailto:hello@snab.co.in" className="text-[#73766C] hover:text-[#111215]">hello@snab.co.in</a></div>
+            </div>
+
+            <div className="space-y-2 text-xs">
+              <div className="font-bold text-[#111215] uppercase tracking-wider text-[11px]">Enterprise</div>
+              <div className="text-[#73766C]">GST Compliant Invoicing</div>
+              <div className="text-[#73766C]">Anti-Poaching Data Masking</div>
+              <div className="text-[#73766C]">Baileys WhatsApp Gateway</div>
+            </div>
+          </div>
+
+          {/* Giant Typographic Wordmark */}
+          <div className="py-4 border-t border-[#E4E7DC] select-none overflow-hidden">
+            <div className="text-[14vw] font-black tracking-tighter leading-none text-[#111215] flex items-center">
+              hireX<span className="text-[#8FB305]">↗</span>
+            </div>
+          </div>
+
+          {/* Copyright Bar */}
+          <div className="pt-4 border-t border-[#E4E7DC] flex flex-wrap items-center justify-between text-xs text-[#73766C] gap-3">
+            <div>© {new Date().getFullYear()} SNAB Technologies. All rights reserved.</div>
+            <div className="flex items-center gap-4">
+              <span>GST Registered</span>
+              <span>•</span>
+              <span>ISO Compliant Hosting</span>
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

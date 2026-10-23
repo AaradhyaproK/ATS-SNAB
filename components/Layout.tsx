@@ -8,6 +8,7 @@ import { useTheme } from '../context/ThemeContext';
 import { Sun, Moon, Menu, X, Monitor, Mail, Bug, MessageSquare } from 'lucide-react';
 import ConnectionStatus from './ConnectionStatus';
 import Logo from './Logo';
+import HireXLogo from './HireXLogo';
 import DashboardSidebar from './ui/dashboard-sidebar';
 import RecruiterRateLimitBanner from './RecruiterRateLimitBanner';
 import WhatsAppConnectModal from './WhatsAppConnectModal';
@@ -95,17 +96,16 @@ const LayoutContent: React.FC<{ children?: React.ReactNode }> = ({ children }) =
             {/* Logo Area */}
             <div className="flex-shrink-0 flex items-center">
               <Link to="/" className="flex items-center group">
-                <div className="h-9 sm:h-10 flex items-center justify-center transition-all duration-300">
-                  <Logo className="h-full w-auto max-h-9 sm:max-h-10 object-contain" />
-                </div>
+                <HireXLogo size="md" variant="full" />
               </Link>
             </div>
 
             {showRecruiterSidebar && location.pathname === '/recruiter/jobs' && (
-              <div className="pointer-events-none absolute left-1/2 top-1/2 hidden -translate-x-1/2 -translate-y-1/2 sm:block">
-                <h1 className="geist-caption font-medium text-white">
-                  Recruiter Dashboard
-                </h1>
+              <div className="pointer-events-none absolute left-1/2 top-1/2 hidden -translate-x-1/2 -translate-y-1/2 sm:flex items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white border border-[#E4E7DC] text-[#111215] text-[11px] font-bold shadow-2xs">
+                  <span className="size-1.5 rounded-full bg-[#8FB305] animate-pulse" />
+                  <span>Recruiter Workspace</span>
+                </span>
               </div>
             )}
 
@@ -154,17 +154,17 @@ const LayoutContent: React.FC<{ children?: React.ReactNode }> = ({ children }) =
                       type="button"
                       onClick={() => setIsWhatsAppModalOpen(true)}
                       title={waRealStatus === 'CONNECTED' ? "WhatsApp is Active & Connected (Click to manage)" : "WhatsApp Disconnected (Click to scan QR code & connect)"}
-                      className={`geist-caption inline-flex h-8 items-center justify-center gap-1.5 rounded-[6px] border px-2.5 text-xs font-semibold transition-all ${
+                      className={`inline-flex h-8.5 items-center justify-center gap-2 rounded-full border px-3 text-xs font-bold transition-all shadow-2xs cursor-pointer ${
                         waRealStatus === 'CONNECTED'
-                          ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/20'
-                          : 'border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-400 hover:bg-amber-500/20'
+                          ? 'border-[#E4E7DC] bg-white text-[#111215] hover:bg-[#F8F9F5]'
+                          : 'border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100'
                       }`}
                     >
-                      <i className="fab fa-whatsapp text-sm text-emerald-600 dark:text-emerald-400"></i>
+                      <i className="fab fa-whatsapp text-sm text-[#8FB305]"></i>
                       <span className="hidden md:inline">
                         {waRealStatus === 'CONNECTED' ? 'WhatsApp Connected' : 'WhatsApp Disconnected (Scan QR)'}
                       </span>
-                      <span className={`h-2 w-2 rounded-full ${waRealStatus === 'CONNECTED' ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500 animate-ping'}`} />
+                      <span className={`size-2 rounded-full ${waRealStatus === 'CONNECTED' ? 'bg-[#8FB305] animate-pulse' : 'bg-amber-500 animate-ping'}`} />
                     </button>
                   )}
 

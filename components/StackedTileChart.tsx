@@ -20,9 +20,9 @@ const GROUP_GAP = 14;
 const CELL = TILE + TILE_GAP;
 
 const COLORS = {
-  jobs: '#7c9cff',
-  interviews: '#71c38d',
-  responses: '#f4b94f',
+  jobs: '#111215',
+  interviews: '#8FB305',
+  responses: '#D4F82C',
 };
 
 const SERIES_KEYS = ['jobs', 'interviews', 'responses'] as const;
@@ -100,24 +100,24 @@ export const StackedTileChart: React.FC<StackedTileChartProps> = ({
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-5">
           {SERIES_KEYS.map((k) => (
-            <span key={k} className="inline-flex items-center gap-2 text-xs text-[#8f8f8f]">
+            <span key={k} className="inline-flex items-center gap-2 text-xs font-semibold text-[#575A51]">
               <span
-                className="h-2.5 w-2.5 rounded-[2px]"
+                className="h-2.5 w-2.5 rounded-sm border border-[#E4E7DC]"
                 style={{ backgroundColor: COLORS[k] }}
               />
               {SERIES_LABELS[k]}
             </span>
           ))}
         </div>
-        <div className="flex rounded-full border border-white/[0.11] bg-white/[0.03] p-0.5">
+        <div className="flex rounded-full border border-[#E4E7DC] bg-[#F8F9F5] p-1">
           {(['weekly', 'monthly', 'yearly'] as const).map((r) => (
             <button
               key={r}
               onClick={() => onTimeRangeChange(r)}
-              className={`rounded-full px-3.5 py-1.5 text-xs font-medium capitalize transition-all ${
+              className={`rounded-full px-3.5 py-1 text-xs font-bold capitalize transition-all cursor-pointer ${
                 timeRange === r
-                  ? 'bg-white text-black shadow-sm'
-                  : 'text-[#8f8f8f] hover:text-white'
+                  ? 'bg-[#111215] text-white shadow-xs'
+                  : 'text-[#73766C] hover:text-[#111215]'
               }`}
             >
               {r}
@@ -145,8 +145,8 @@ export const StackedTileChart: React.FC<StackedTileChartProps> = ({
                   y1={y}
                   x2={SVG_W - PAD_R}
                   y2={y}
-                  stroke="white"
-                  strokeOpacity={0.06}
+                  stroke="#E4E7DC"
+                  strokeOpacity={0.8}
                   strokeDasharray="3 6"
                 />
                 <circle
@@ -154,16 +154,16 @@ export const StackedTileChart: React.FC<StackedTileChartProps> = ({
                   cy={y}
                   r={2.5}
                   fill="none"
-                  stroke="#6b7280"
+                  stroke="#8FB305"
                   strokeWidth={1}
                 />
                 <text
                   x={PAD_L - 14}
                   y={y + 4}
                   textAnchor="end"
-                  fill="#6b7280"
+                  fill="#73766C"
                   fontSize={11}
-                  fontFamily="var(--font-geist-mono, monospace)"
+                  fontFamily="monospace"
                 >
                   {label}
                 </text>

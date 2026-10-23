@@ -2,14 +2,13 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { collection, onSnapshot, query, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../services/firebase';
-import Logo from '../components/Logo';
-import { useTheme } from '../context/ThemeContext';
+import HireXLogo, { HireXMark } from '../components/HireXLogo';
 import { useMessageBox } from '../components/MessageBox';
 import { 
   Briefcase, MapPin, Calendar, Clock, Sparkles, 
-  Search, Filter, ChevronRight, ArrowRight, ShieldCheck, 
+  Search, Filter, ChevronRight, ArrowRight, ArrowUpRight, ShieldCheck, 
   GraduationCap, CheckCircle2, User, Eye, X, Send, Copy, Check, MessageSquare, Phone, Mail, Upload,
-  Layers, Tag
+  Layers, Tag, LayoutDashboard, CheckCheck
 } from 'lucide-react';
 import { getJobDescriptionSnippet, FormattedJobDescription } from '../utils/jobDescriptionFormatter';
 import { splitEducationRequirements } from '../utils/educationMatcher';
@@ -93,7 +92,6 @@ const formatDeadlineDate = (deadline: any): string => {
 };
 
 const ActiveJobsPage: React.FC = () => {
-  const { isDark } = useTheme();
   const navigate = useNavigate();
   const messageBox = useMessageBox();
 
@@ -435,121 +433,142 @@ const ActiveJobsPage: React.FC = () => {
   }, [jobs, searchQuery, selectedSector, selectedDepartment, selectedLocation, selectedExperience, selectedGender]);
 
   return (
-    <div className={`min-h-screen font-sans transition-colors duration-300 ${isDark ? 'bg-[#030303] text-slate-100' : 'bg-slate-50 text-slate-900'}`}>
-      <nav className={`fixed top-0 inset-x-0 z-50 flex items-center justify-between px-4 sm:px-6 py-3.5 sm:py-4 border-b transition-colors backdrop-blur-md ${
-        isDark ? 'border-white/10 bg-[#030303]/85' : 'border-slate-200 bg-white/85'
-      }`}>
-        <Link to="/" className="flex items-center group">
-          <Logo className="h-8 sm:h-9 w-auto object-contain" isDark={isDark} />
-        </Link>
-
-        <div className="flex items-center gap-1.5 sm:gap-3">
-          <Link
-            to="/upload-resume"
-            className={`inline-flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-[11px] sm:text-sm font-extrabold whitespace-nowrap transition-all shadow-md hover:scale-[1.02] active:scale-[0.98] cursor-pointer ${
-              isDark 
-                ? 'bg-gradient-to-r from-emerald-500 to-teal-400 text-black shadow-emerald-500/20 hover:shadow-emerald-500/35' 
-                : 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-emerald-600/25 hover:shadow-emerald-600/40'
-            }`}
-          >
-            <Upload size={14} className="animate-pulse shrink-0" />
-            <span className="hidden xs:inline">Upload Resume / CV</span>
-            <span className="xs:hidden">Upload CV</span>
-          </Link>
-          <button
-            type="button"
-            onClick={() => handleOpenContactModal()}
-            className={`inline-flex items-center justify-center gap-1.5 px-2.5 sm:px-4 py-2 sm:py-2.5 rounded-xl text-[11px] sm:text-sm font-extrabold whitespace-nowrap transition-all border shadow-sm hover:scale-[1.02] active:scale-[0.98] cursor-pointer ${
-              isDark 
-                ? 'border-white/20 bg-white/10 text-white hover:bg-white/15' 
-                : 'border-slate-300 bg-white text-slate-800 hover:bg-slate-50'
-            }`}
-          >
-            <MessageSquare size={14} className="text-emerald-500 shrink-0" />
-            <span>Contact</span>
-          </button>
-        </div>
-      </nav>
-
-      <section className={`relative pt-24 sm:pt-32 pb-10 sm:pb-14 px-4 sm:px-6 lg:px-8 border-b transition-colors ${isDark ? 'border-white/[0.08] bg-[#030303]' : 'border-slate-200 bg-white'}`}>
-        <div className={`absolute inset-0 pointer-events-none ${isDark ? 'bg-gradient-to-b from-emerald-600/10 via-teal-600/5 to-transparent' : 'bg-gradient-to-b from-emerald-500/5 via-teal-500/5 to-transparent'}`} />
-        <div className="max-w-6xl mx-auto relative z-10 text-center space-y-3.5">
-          <div className={`inline-flex items-center gap-2 px-3.5 py-1 rounded-full text-[11px] sm:text-xs font-bold uppercase tracking-wider border ${isDark ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400' : 'border-emerald-200 bg-emerald-50 text-emerald-700'}`}>
-            <Sparkles size={14} className="animate-pulse" />
-            <span>Active Job Openings ({jobs.length})</span>
+    <div className="min-h-screen bg-[#F8F9F5] text-[#111215] font-sans selection:bg-[#D4F82C] selection:text-[#111215]">
+      {/* ── Top Navigation Bar ── */}
+      <header className="sticky top-0 z-[100] bg-[#F8F9F5]/90 backdrop-blur-md border-b border-[#E4E7DC] transition-all">
+        <div className="max-w-7xl mx-auto px-4 sm:px-8 h-18 flex items-center justify-between">
+          
+          {/* Logo & Product Badge */}
+          <div className="flex items-center gap-3">
+            <Link to="/" className="group inline-flex items-center">
+              <HireXLogo size="md" variant="full" />
+            </Link>
+            <div className="hidden sm:flex items-center gap-1.5 pl-3 border-l border-[#E4E7DC] text-[11px] font-medium text-[#73766C]">
+              <span>by</span>
+              <a
+                href="https://snab.co.in"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-bold text-[#111215] hover:underline"
+              >
+                SNAB
+              </a>
+            </div>
           </div>
 
-          <h1 className={`text-2xl sm:text-4xl lg:text-5xl font-black tracking-tight bg-clip-text text-transparent leading-tight ${isDark ? 'bg-gradient-to-r from-white via-slate-100 to-slate-400' : 'bg-gradient-to-r from-slate-900 via-slate-800 to-slate-600'}`}>
-            Explore Posted Jobs & AI Interviews
-          </h1>
+          {/* Centered Navigation Links */}
+          <nav className="hidden lg:flex items-center gap-8 text-[13px] font-semibold text-[#575A51]">
+            <Link to="/#pipeline" className="hover:text-[#111215] transition-colors">
+              Pipeline
+            </Link>
+            <Link to="/#resume-matching" className="hover:text-[#111215] transition-colors">
+              AI Matching
+            </Link>
+            <Link to="/#client-portal" className="hover:text-[#111215] transition-colors flex items-center gap-1.5">
+              <span>Client Portal</span>
+              <span className="size-1.5 rounded-full bg-[#8FB305] animate-pulse"></span>
+            </Link>
+            <Link to="/#pricing" className="hover:text-[#111215] transition-colors">
+              Pricing
+            </Link>
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#111215] text-white text-xs font-bold shadow-2xs">
+              <span className="size-1.5 rounded-full bg-[#D4F82C] animate-pulse"></span>
+              <span>Active Roles ({jobs.length})</span>
+            </span>
+          </nav>
 
-          <p className={`max-w-2xl mx-auto text-xs sm:text-sm md:text-base leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-            Browse open positions from verified recruiters. Filter by Sector, Department, Location, Experience & Gender.
-          </p>
-
-          <div className="pt-1 flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-2.5 sm:gap-3.5 w-full max-w-md sm:max-w-none mx-auto">
+          {/* Right Action Buttons */}
+          <div className="flex items-center gap-2.5 sm:gap-3">
+            <button
+              type="button"
+              onClick={handleOpenContactModal}
+              className="hidden sm:inline-flex h-9.5 items-center gap-2 px-4 rounded-full border border-[#E4E7DC] bg-white hover:bg-slate-50 text-[#111215] text-xs font-bold transition-all shadow-2xs cursor-pointer"
+            >
+              <MessageSquare size={13} className="text-[#8FB305]" />
+              <span>Contact</span>
+            </button>
             <Link
               to="/upload-resume"
-              className={`w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 sm:py-3 rounded-xl text-xs sm:text-sm font-extrabold transition-all shadow-lg hover:scale-[1.02] active:scale-[0.98] cursor-pointer ${
-                isDark 
-                  ? 'bg-gradient-to-r from-emerald-500 to-teal-400 text-black shadow-emerald-500/25 hover:shadow-emerald-500/40' 
-                  : 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-emerald-600/30 hover:shadow-emerald-600/50'
-              }`}
+              className="inline-flex h-9.5 items-center gap-2 px-4 sm:px-5 rounded-full bg-[#111215] hover:bg-black text-white text-xs font-bold transition-all shadow-xs cursor-pointer group"
             >
-              <Upload size={15} className="animate-pulse shrink-0" />
-              <span>Upload Resume / CV for Direct Job Match</span>
+              <Upload size={13} className="text-[#D4F82C]" />
+              <span className="hidden xs:inline">Upload Resume</span>
+              <span className="xs:hidden">Upload CV</span>
+              <span className="text-[#D4F82C] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform">↗</span>
+            </Link>
+          </div>
+        </div>
+      </header>
+
+      {/* ── Hero Section with Editorial Aesthetics ── */}
+      <section className="relative pt-12 sm:pt-16 pb-10 sm:pb-14 px-4 sm:px-8 border-b border-[#E4E7DC] overflow-hidden">
+        {/* Subtle ambient light gradient */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-4/5 h-72 bg-radial from-[#D4F82C]/10 via-transparent to-transparent blur-3xl pointer-events-none" />
+
+        <div className="max-w-5xl mx-auto relative z-10 text-center space-y-4">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white border border-[#E4E7DC] text-[#111215] text-[11px] sm:text-xs font-bold shadow-2xs">
+            <span className="size-2 rounded-full bg-[#8FB305] animate-pulse" />
+            <span>01 • VERIFIED POSITIONS • {jobs.length} ACTIVE MANDATES</span>
+          </div>
+
+          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight text-[#111215] leading-[1.1]">
+            Explore Active Roles &amp; AI Interviews
+          </h1>
+
+          <p className="max-w-2xl mx-auto text-xs sm:text-sm md:text-base text-[#575A51] leading-relaxed">
+            Browse verified job postings across industry sectors. Filter by Department, Location, Experience, and Gender Requirements — or upload your CV for instant Claude 3.5 Sonnet matching.
+          </p>
+
+          <div className="pt-2 flex flex-wrap items-center justify-center gap-3">
+            <Link
+              to="/upload-resume"
+              className="inline-flex h-11 items-center gap-2.5 px-6 rounded-full bg-[#111215] hover:bg-black text-white text-xs sm:text-sm font-bold transition-all shadow-md group cursor-pointer"
+            >
+              <Upload size={14} className="text-[#D4F82C]" />
+              <span>Upload Resume for Direct Match</span>
+              <span className="text-[#D4F82C] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform">↗</span>
             </Link>
             <button
               type="button"
-              onClick={() => handleOpenContactModal()}
-              className={`w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 sm:py-3 rounded-xl text-xs sm:text-sm font-extrabold transition-all border shadow-sm hover:scale-[1.02] active:scale-[0.98] cursor-pointer ${
-                isDark 
-                  ? 'border-white/20 bg-white/10 text-white hover:bg-white/15' 
-                  : 'border-slate-300 bg-white text-slate-800 hover:bg-slate-50'
-              }`}
+              onClick={handleOpenContactModal}
+              className="inline-flex h-11 items-center gap-2 px-5 rounded-full bg-white hover:bg-slate-50 border border-[#E4E7DC] text-[#111215] text-xs sm:text-sm font-bold transition-all shadow-2xs cursor-pointer"
             >
-              <MessageSquare size={15} className="text-emerald-500 shrink-0" />
-              <span>Contact Support Team</span>
+              <MessageSquare size={14} className="text-[#8FB305]" />
+              <span>Contact Recruiting Desk</span>
             </button>
           </div>
 
-          <div className={`max-w-5xl mx-auto mt-6 p-3 sm:p-4 rounded-2xl sm:rounded-3xl border shadow-2xl transition-all space-y-3 ${
-            isDark ? 'bg-[#0d0d0d] border-white/[0.12] shadow-emerald-500/5' : 'bg-white border-slate-200 shadow-slate-200/80'
-          }`}>
+          {/* Search & Filter Bar Container */}
+          <div className="max-w-5xl mx-auto mt-8 p-4 sm:p-6 rounded-3xl bg-white border border-[#E4E7DC] shadow-sm space-y-3.5 text-left">
+            {/* Search Input */}
             <div className="relative w-full">
-              <Search size={20} className={`absolute left-3.5 sm:left-4 top-1/2 -translate-y-1/2 ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`} />
+              <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#8FB305]" />
               <input
                 type="text"
-                placeholder="Search job title, access code, sector, city, or skills..."
+                placeholder="Search job title, access code, sector, city, or required skills..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className={`w-full h-12 sm:h-13 pl-11 sm:pl-12 pr-10 rounded-xl sm:rounded-2xl text-xs sm:text-sm md:text-base font-semibold outline-none transition-all border ${
-                  isDark 
-                    ? 'bg-white/[0.04] border-white/[0.1] text-white placeholder-slate-500 focus:border-emerald-500 focus:bg-white/[0.07] focus:ring-2 focus:ring-emerald-500/20' 
-                    : 'bg-slate-50 border-slate-200 text-slate-900 placeholder-slate-400 focus:border-emerald-500 focus:bg-white focus:ring-2 focus:ring-emerald-500/20'
-                }`}
+                className="w-full h-12 pl-11 pr-10 rounded-2xl bg-[#F8F9F5] border border-[#E4E7DC] text-xs sm:text-sm font-semibold text-[#111215] placeholder-[#73766C] outline-none focus:bg-white focus:border-[#111215] transition-all"
               />
               {searchQuery && (
                 <button
                   type="button"
                   onClick={() => setSearchQuery('')}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 p-1"
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#73766C] hover:text-[#111215] p-1 cursor-pointer"
                 >
                   <X size={16} />
                 </button>
               )}
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 w-full pt-1">
-              <div className="relative">
+            {/* 5 Filter Selects */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 w-full">
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-[#73766C] mb-1">Sector</label>
                 <select
                   value={selectedSector}
                   onChange={(e) => setSelectedSector(e.target.value)}
-                  className={`w-full h-10 sm:h-11 px-2.5 sm:px-3 rounded-xl text-[11px] sm:text-xs font-bold outline-none cursor-pointer border transition-colors truncate ${
-                    isDark
-                      ? 'bg-white/[0.05] border-white/[0.1] text-slate-300 hover:bg-white/[0.08] focus:border-emerald-500'
-                      : 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200 focus:border-emerald-500'
-                  }`}
+                  className="w-full h-10 px-3 rounded-xl bg-[#F8F9F5] border border-[#E4E7DC] text-[11px] sm:text-xs font-semibold text-[#111215] outline-none cursor-pointer hover:border-[#111215] focus:bg-white focus:border-[#111215] transition-colors truncate"
                   title="Filter by Industry Sector"
                 >
                   <option value="All">All Sectors ({sectorsList.length - 1})</option>
@@ -559,15 +578,12 @@ const ActiveJobsPage: React.FC = () => {
                 </select>
               </div>
 
-              <div className="relative">
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-[#73766C] mb-1">Department</label>
                 <select
                   value={selectedDepartment}
                   onChange={(e) => setSelectedDepartment(e.target.value)}
-                  className={`w-full h-10 sm:h-11 px-2.5 sm:px-3 rounded-xl text-[11px] sm:text-xs font-bold outline-none cursor-pointer border transition-colors truncate ${
-                    isDark
-                      ? 'bg-white/[0.05] border-white/[0.1] text-slate-300 hover:bg-white/[0.08] focus:border-emerald-500'
-                      : 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200 focus:border-emerald-500'
-                  }`}
+                  className="w-full h-10 px-3 rounded-xl bg-[#F8F9F5] border border-[#E4E7DC] text-[11px] sm:text-xs font-semibold text-[#111215] outline-none cursor-pointer hover:border-[#111215] focus:bg-white focus:border-[#111215] transition-colors truncate"
                   title="Filter by Functional Department"
                 >
                   <option value="All">All Depts ({departmentsList.length - 1})</option>
@@ -577,15 +593,12 @@ const ActiveJobsPage: React.FC = () => {
                 </select>
               </div>
 
-              <div className="relative">
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-[#73766C] mb-1">Location</label>
                 <select
                   value={selectedLocation}
                   onChange={(e) => setSelectedLocation(e.target.value)}
-                  className={`w-full h-10 sm:h-11 px-2.5 sm:px-3 rounded-xl text-[11px] sm:text-xs font-bold outline-none cursor-pointer border transition-colors truncate ${
-                    isDark
-                      ? 'bg-white/[0.05] border-white/[0.1] text-slate-300 hover:bg-white/[0.08] focus:border-emerald-500'
-                      : 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200 focus:border-emerald-500'
-                  }`}
+                  className="w-full h-10 px-3 rounded-xl bg-[#F8F9F5] border border-[#E4E7DC] text-[11px] sm:text-xs font-semibold text-[#111215] outline-none cursor-pointer hover:border-[#111215] focus:bg-white focus:border-[#111215] transition-colors truncate"
                   title="Filter by City / Location"
                 >
                   <option value="All">All Cities ({locationsList.length - 1})</option>
@@ -595,33 +608,27 @@ const ActiveJobsPage: React.FC = () => {
                 </select>
               </div>
 
-              <div className="relative">
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-[#73766C] mb-1">Experience</label>
                 <select
                   value={selectedExperience}
                   onChange={(e) => setSelectedExperience(e.target.value)}
-                  className={`w-full h-10 sm:h-11 px-2.5 sm:px-3 rounded-xl text-[11px] sm:text-xs font-bold outline-none cursor-pointer border transition-colors truncate ${
-                    isDark
-                      ? 'bg-white/[0.05] border-white/[0.1] text-slate-300 hover:bg-white/[0.08] focus:border-emerald-500'
-                      : 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200 focus:border-emerald-500'
-                  }`}
+                  className="w-full h-10 px-3 rounded-xl bg-[#F8F9F5] border border-[#E4E7DC] text-[11px] sm:text-xs font-semibold text-[#111215] outline-none cursor-pointer hover:border-[#111215] focus:bg-white focus:border-[#111215] transition-colors truncate"
                   title="Filter by Experience"
                 >
-                  <option value="All">All Exp</option>
+                  <option value="All">All Experience</option>
                   {experienceOptions.filter(e => e !== 'All').map(exp => (
                     <option key={exp} value={exp}>{exp}</option>
                   ))}
                 </select>
               </div>
 
-              <div className="relative col-span-2 sm:col-span-1">
+              <div className="col-span-2 sm:col-span-1">
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-[#73766C] mb-1">Gender</label>
                 <select
                   value={selectedGender}
                   onChange={(e) => setSelectedGender(e.target.value)}
-                  className={`w-full h-10 sm:h-11 px-2.5 sm:px-3 rounded-xl text-[11px] sm:text-xs font-bold outline-none cursor-pointer border transition-colors truncate ${
-                    isDark
-                      ? 'bg-white/[0.05] border-white/[0.1] text-slate-300 hover:bg-white/[0.08] focus:border-emerald-500'
-                      : 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200 focus:border-emerald-500'
-                  }`}
+                  className="w-full h-10 px-3 rounded-xl bg-[#F8F9F5] border border-[#E4E7DC] text-[11px] sm:text-xs font-semibold text-[#111215] outline-none cursor-pointer hover:border-[#111215] focus:bg-white focus:border-[#111215] transition-colors truncate"
                   title="Filter by Gender Requirement"
                 >
                   <option value="All">All Genders</option>
@@ -632,8 +639,11 @@ const ActiveJobsPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="flex items-center justify-between pt-1 text-[11px] text-slate-400">
-              <span>Showing <strong>{filteredJobs.length}</strong> matching positions</span>
+            {/* Results Counter and Reset */}
+            <div className="flex items-center justify-between pt-2 text-[11px] text-[#73766C] border-t border-[#E4E7DC]">
+              <span>
+                Showing <strong className="text-[#111215] font-black">{filteredJobs.length}</strong> matching positions
+              </span>
               {(selectedSector !== 'All' || selectedDepartment !== 'All' || selectedLocation !== 'All' || selectedExperience !== 'All' || selectedGender !== 'All' || searchQuery) && (
                 <button
                   type="button"
@@ -645,9 +655,9 @@ const ActiveJobsPage: React.FC = () => {
                     setSelectedGender('All');
                     setSearchQuery('');
                   }}
-                  className="text-emerald-500 hover:text-emerald-400 font-bold underline cursor-pointer"
+                  className="text-[#111215] hover:text-[#8FB305] font-bold underline cursor-pointer"
                 >
-                  Reset Filters
+                  Reset All Filters
                 </button>
               )}
             </div>
@@ -655,44 +665,45 @@ const ActiveJobsPage: React.FC = () => {
         </div>
       </section>
 
-      <section className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-10">
+      {/* ── Active Filters Bar ── */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-8 pt-8">
         {(selectedSector !== 'All' || selectedDepartment !== 'All' || selectedLocation !== 'All' || selectedExperience !== 'All' || selectedGender !== 'All' || searchQuery) && (
-          <div className="flex items-center gap-2 flex-wrap mb-6 p-2.5 rounded-2xl border text-xs bg-emerald-500/[0.04] border-emerald-500/20">
-            <span className="font-extrabold text-emerald-500 text-[11px]">Active Filters:</span>
+          <div className="flex items-center gap-2 flex-wrap mb-6 p-3 rounded-2xl border border-[#E4E7DC] bg-white text-xs shadow-2xs">
+            <span className="font-extrabold text-[#111215] text-[11px]">Active Filters:</span>
             {selectedSector !== 'All' && (
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-blue-500/15 text-blue-400 font-bold text-[11px]">
-                Sector: {selectedSector}
-                <button onClick={() => setSelectedSector('All')} className="hover:text-white"><X size={11} /></button>
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#F8F9F5] border border-[#E4E7DC] text-[#111215] font-bold text-[11px]">
+                <span>Sector: {selectedSector}</span>
+                <button onClick={() => setSelectedSector('All')} className="text-[#73766C] hover:text-[#111215] cursor-pointer"><X size={11} /></button>
               </span>
             )}
             {selectedDepartment !== 'All' && (
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-emerald-500/15 text-emerald-400 font-bold text-[11px]">
-                Dept: {selectedDepartment}
-                <button onClick={() => setSelectedDepartment('All')} className="hover:text-white"><X size={11} /></button>
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#F8F9F5] border border-[#E4E7DC] text-[#111215] font-bold text-[11px]">
+                <span>Dept: {selectedDepartment}</span>
+                <button onClick={() => setSelectedDepartment('All')} className="text-[#73766C] hover:text-[#111215] cursor-pointer"><X size={11} /></button>
               </span>
             )}
             {selectedLocation !== 'All' && (
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-teal-500/15 text-teal-400 font-bold text-[11px]">
-                City: {selectedLocation}
-                <button onClick={() => setSelectedLocation('All')} className="hover:text-white"><X size={11} /></button>
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#F8F9F5] border border-[#E4E7DC] text-[#111215] font-bold text-[11px]">
+                <span>City: {selectedLocation}</span>
+                <button onClick={() => setSelectedLocation('All')} className="text-[#73766C] hover:text-[#111215] cursor-pointer"><X size={11} /></button>
               </span>
             )}
             {selectedExperience !== 'All' && (
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-purple-500/15 text-purple-400 font-bold text-[11px]">
-                Exp: {selectedExperience}
-                <button onClick={() => setSelectedExperience('All')} className="hover:text-white"><X size={11} /></button>
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#F8F9F5] border border-[#E4E7DC] text-[#111215] font-bold text-[11px]">
+                <span>Exp: {selectedExperience}</span>
+                <button onClick={() => setSelectedExperience('All')} className="text-[#73766C] hover:text-[#111215] cursor-pointer"><X size={11} /></button>
               </span>
             )}
             {selectedGender !== 'All' && (
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-pink-500/15 text-pink-400 font-bold text-[11px]">
-                Gender: {selectedGender}
-                <button onClick={() => setSelectedGender('All')} className="hover:text-white"><X size={11} /></button>
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#F8F9F5] border border-[#E4E7DC] text-[#111215] font-bold text-[11px]">
+                <span>Gender: {selectedGender}</span>
+                <button onClick={() => setSelectedGender('All')} className="text-[#73766C] hover:text-[#111215] cursor-pointer"><X size={11} /></button>
               </span>
             )}
             {searchQuery && (
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-amber-500/15 text-amber-400 font-bold text-[11px]">
-                Search: "{searchQuery}"
-                <button onClick={() => setSearchQuery('')} className="hover:text-white"><X size={11} /></button>
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#F8F9F5] border border-[#E4E7DC] text-[#111215] font-bold text-[11px]">
+                <span>Search: "{searchQuery}"</span>
+                <button onClick={() => setSearchQuery('')} className="text-[#73766C] hover:text-[#111215] cursor-pointer"><X size={11} /></button>
               </span>
             )}
             <button
@@ -704,44 +715,54 @@ const ActiveJobsPage: React.FC = () => {
                 setSelectedGender('All');
                 setSearchQuery('');
               }}
-              className="ml-auto text-[11px] font-bold text-rose-400 hover:text-rose-300 underline"
+              className="ml-auto text-[11px] font-bold text-[#8FB305] hover:text-[#111215] underline cursor-pointer"
             >
-              Reset All
+              Clear All
             </button>
           </div>
         )}
+      </section>
 
+      {/* ── Job Cards Grid ── */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-8 pb-16">
         {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4.5">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[1, 2, 3, 4, 5, 6].map((i) => (
-              <div key={i} className={`h-64 rounded-2xl animate-pulse p-5 space-y-3.5 border ${isDark ? 'bg-white/[0.03] border-white/[0.08]' : 'bg-white border-slate-200'}`}>
-                <div className={`h-5 rounded w-2/3 ${isDark ? 'bg-white/10' : 'bg-slate-200'}`} />
-                <div className={`h-3.5 rounded w-1/3 ${isDark ? 'bg-white/10' : 'bg-slate-200'}`} />
-                <div className={`h-14 rounded w-full ${isDark ? 'bg-white/5' : 'bg-slate-100'}`} />
-                <div className={`h-8 rounded w-1/2 ${isDark ? 'bg-white/10' : 'bg-slate-200'}`} />
+              <div key={i} className="h-72 rounded-2xl bg-white border border-[#E4E7DC] p-6 space-y-4 animate-pulse">
+                <div className="h-5 rounded-md bg-[#F8F9F5] w-2/3" />
+                <div className="h-4 rounded-md bg-[#F8F9F5] w-1/3" />
+                <div className="h-16 rounded-xl bg-[#F8F9F5] w-full" />
+                <div className="h-8 rounded-full bg-[#F8F9F5] w-1/2" />
               </div>
             ))}
           </div>
         ) : filteredJobs.length === 0 ? (
-          <div className={`text-center py-16 rounded-3xl border p-8 space-y-4 max-w-lg mx-auto ${isDark ? 'bg-[#0a0a0a] border-white/[0.08]' : 'bg-white border-slate-200 shadow-lg'}`}>
-            <div className="w-14 h-14 rounded-2xl bg-blue-500/10 text-blue-500 flex items-center justify-center mx-auto">
-              <Briefcase size={28} />
+          <div className="text-center py-20 rounded-3xl border border-[#E4E7DC] bg-white p-8 space-y-4 max-w-lg mx-auto shadow-sm">
+            <div className="size-14 rounded-2xl bg-[#F8F9F5] border border-[#E4E7DC] text-[#8FB305] flex items-center justify-center mx-auto">
+              <Briefcase size={26} />
             </div>
-            <h3 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>No active jobs found</h3>
-            <p className={`text-xs max-w-sm mx-auto ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-              There are currently no open positions matching your search or filters. Try adjusting your keywords or clearing filters.
+            <h3 className="text-lg font-bold text-[#111215]">No active job openings found</h3>
+            <p className="text-xs text-[#73766C] max-w-sm mx-auto leading-relaxed">
+              There are currently no open positions matching your search or active filters. Try adjusting your search query or reset the filters.
             </p>
             <button
-              onClick={() => { setSearchQuery(''); setSelectedSector('All'); setSelectedDepartment('All'); setSelectedJobType('All'); }}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-colors ${isDark ? 'bg-white/10 text-white hover:bg-white/15' : 'bg-slate-100 text-slate-800 hover:bg-slate-200'}`}
+              type="button"
+              onClick={() => {
+                setSearchQuery('');
+                setSelectedSector('All');
+                setSelectedDepartment('All');
+                setSelectedLocation('All');
+                setSelectedExperience('All');
+                setSelectedGender('All');
+              }}
+              className="px-5 py-2.5 rounded-full bg-[#111215] hover:bg-black text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
             >
-              Clear Filters
+              Clear All Filters
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4.5">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredJobs.map((job) => {
-              const deadlineStr = formatDeadlineDate(job.deadline);
               const skillsList = Array.isArray(job.skills) 
                 ? job.skills 
                 : typeof job.skills === 'string' 
@@ -753,28 +774,22 @@ const ActiveJobsPage: React.FC = () => {
               return (
                 <div
                   key={job.id}
-                  className={`group relative flex flex-col justify-between rounded-2xl border p-4.5 sm:p-5 transition-all duration-300 shadow-md hover:shadow-xl overflow-hidden ${
-                    isDark 
-                      ? 'bg-[#0d0d0d] border-white/[0.08] hover:border-emerald-500/40 hover:bg-[#111111]' 
-                      : 'bg-white border-slate-200 hover:border-emerald-500/50 hover:shadow-emerald-500/10'
-                  }`}
+                  className="group relative flex flex-col justify-between rounded-2xl border border-[#E4E7DC] bg-white hover:border-[#111215] p-5 sm:p-6 transition-all duration-300 shadow-2xs hover:shadow-xl hover:-translate-y-0.5 overflow-hidden"
                 >
-                  <div className="absolute top-0 right-0 w-28 h-28 bg-emerald-500/5 rounded-full blur-2xl group-hover:bg-emerald-500/10 transition-all pointer-events-none" />
-
-                  <div className="space-y-3 relative z-10">
+                  <div className="space-y-3.5 relative z-10">
+                    {/* Header Row: Job No, Sector, Access Code */}
                     <div className="flex items-center justify-between gap-1.5 flex-wrap">
                       <div className="flex items-center gap-1.5 flex-wrap">
                         {job.jobNo && (
-                          <span className={`px-2 py-0.5 rounded-md text-[10px] font-mono font-black uppercase tracking-wider ${
-                            isDark ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-400' : 'bg-emerald-50 border border-emerald-300 text-emerald-700'
-                          }`}>
+                          <span className="px-2.5 py-0.5 rounded-md text-[10px] font-mono font-bold uppercase tracking-wider bg-[#F8F9F5] border border-[#E4E7DC] text-[#111215]">
                             Job: {job.jobNo}
                           </span>
                         )}
-                        <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold tracking-wide border truncate max-w-[150px] ${
-                          isDark ? 'bg-white/[0.04] border-white/10 text-slate-300' : 'bg-slate-100 border-slate-200 text-slate-700'
-                        }`} title={job.industrySector || job.sector || 'General Sector'}>
-                          <Layers size={10} className="inline mr-1 text-emerald-500 shrink-0" />
+                        <span 
+                          className="px-2.5 py-0.5 rounded-md text-[10px] font-semibold tracking-wide bg-[#F8F9F5] border border-[#E4E7DC] text-[#575A51] truncate max-w-[150px]"
+                          title={job.industrySector || job.sector || 'General Sector'}
+                        >
+                          <Layers size={10} className="inline mr-1 text-[#8FB305] shrink-0" />
                           {job.industrySector || job.sector || 'General Sector'}
                         </span>
                       </div>
@@ -782,120 +797,105 @@ const ActiveJobsPage: React.FC = () => {
                       {job.accessCode && (
                         <div 
                           onClick={(e) => handleCopyCode(e, job.accessCode!)}
-                          className={`text-[10px] font-mono font-extrabold px-2 py-0.5 rounded-lg border flex items-center gap-1 cursor-pointer hover:scale-105 active:scale-95 transition-all shadow-xs shrink-0 ${
-                            isDark ? 'bg-white/[0.05] border-white/10 text-slate-300 hover:text-white' : 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'
-                          }`}
-                          title="Click to copy Access Code"
+                          className="text-[10px] font-mono font-black px-2.5 py-0.5 rounded-md bg-[#111215] text-[#D4F82C] hover:bg-black border border-[#111215] flex items-center gap-1 cursor-pointer hover:scale-105 active:scale-95 transition-all shadow-2xs shrink-0"
+                          title="Click to copy Job Access Code"
                         >
                           <span>Code: {job.accessCode}</span>
                           {copiedCode === job.accessCode ? (
-                            <Check size={11} className="text-emerald-500" />
+                            <Check size={11} className="text-[#D4F82C]" />
                           ) : (
-                            <Copy size={10} className="text-slate-400" />
+                            <Copy size={10} className="text-[#D4F82C]/70" />
                           )}
                         </div>
                       )}
                     </div>
 
+                    {/* Role Title & Recruiter */}
                     <div>
-                      <h2 className={`text-[15px] sm:text-base font-black transition-colors tracking-tight line-clamp-1 ${
-                        isDark ? 'text-white group-hover:text-emerald-400' : 'text-slate-900 group-hover:text-emerald-600'
-                      }`}>
+                      <h2 className="text-[16px] sm:text-[17px] font-bold text-[#111215] group-hover:text-[#8FB305] transition-colors leading-snug line-clamp-1">
                         {job.title}
                       </h2>
 
-                      <div className="flex items-center gap-1.5 text-[11px] font-semibold mt-1 flex-wrap">
-                        <span className="text-slate-400 font-medium inline-flex items-center gap-1 truncate max-w-[140px]">
-                          <User className="w-3 h-3 text-slate-400 shrink-0" />
-                          <span className="truncate">Posted by: <strong className={isDark ? 'text-slate-300' : 'text-slate-700'}>{job.entryBy || job.recruiterName || 'Recruiter'}</strong></span>
+                      <div className="flex items-center gap-1.5 text-[11px] font-medium mt-1 text-[#73766C] flex-wrap">
+                        <span className="inline-flex items-center gap-1 truncate max-w-[140px]">
+                          <User className="size-3 text-[#73766C] shrink-0" />
+                          <span className="truncate">Posted by: <strong className="text-[#111215] font-semibold">{job.entryBy || job.recruiterName || 'Recruiter'}</strong></span>
                         </span>
-                        <span className="text-slate-400 select-none">•</span>
-                        <span className="text-emerald-600 dark:text-emerald-400 font-bold inline-flex items-center gap-1 truncate max-w-[150px]">
-                          <Briefcase className="w-3 h-3 text-emerald-500 shrink-0" />
-                          <span className="truncate">{job.department || 'Accounts / Finance / Taxation'}</span>
+                        <span className="select-none">•</span>
+                        <span className="text-[#575A51] font-semibold inline-flex items-center gap-1 truncate max-w-[150px]">
+                          <Briefcase className="size-3 text-[#8FB305] shrink-0" />
+                          <span className="truncate">{job.department || 'Accounts / Finance'}</span>
                         </span>
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-3 gap-1.5 pt-0.5">
-                      <div className={`p-2 rounded-xl border text-[10px] flex items-center gap-1.5 ${
-                        isDark ? 'bg-emerald-500/10 border-emerald-500/25 text-emerald-300' : 'bg-emerald-50/70 border-emerald-200 text-emerald-900 font-bold'
-                      }`}>
-                        <MapPin className="w-3 h-3 text-emerald-500 shrink-0" />
+                    {/* 3-Column Metadata Spec Box */}
+                    <div className="grid grid-cols-3 gap-1.5 pt-1">
+                      <div className="p-2.5 rounded-xl bg-[#F8F9F5] border border-[#E4E7DC] text-[10px] flex items-center gap-1.5">
+                        <MapPin className="size-3.5 text-[#8FB305] shrink-0" />
                         <div className="truncate min-w-0">
-                          <span className="text-[9px] text-slate-400 block font-medium uppercase tracking-wider leading-none">Location</span>
-                          <span className="truncate block font-bold leading-tight mt-0.5">{job.location || 'Ambad, Nashik'}</span>
+                          <span className="text-[9px] text-[#73766C] block font-bold uppercase tracking-wider leading-none">Location</span>
+                          <span className="truncate block font-bold text-[#111215] leading-tight mt-0.5">{job.location || 'Nashik, MH'}</span>
                         </div>
                       </div>
 
-                      <div className={`p-2 rounded-xl border text-[10px] flex items-center gap-1.5 ${
-                        isDark ? 'bg-emerald-500/10 border-emerald-500/25 text-emerald-300 font-bold' : 'bg-emerald-50/70 border-emerald-200 text-emerald-900 font-bold'
-                      }`}>
-                        <Briefcase className="w-3 h-3 text-emerald-500 shrink-0" />
+                      <div className="p-2.5 rounded-xl bg-[#F8F9F5] border border-[#E4E7DC] text-[10px] flex items-center gap-1.5">
+                        <Briefcase className="size-3.5 text-[#8FB305] shrink-0" />
                         <div className="truncate min-w-0">
-                          <span className="text-[9px] text-slate-400 block font-medium uppercase tracking-wider leading-none">Experience</span>
-                          <span className="truncate block font-bold leading-tight mt-0.5">{job.experience || '2 - 3 Yrs'}</span>
+                          <span className="text-[9px] text-[#73766C] block font-bold uppercase tracking-wider leading-none">Experience</span>
+                          <span className="truncate block font-bold text-[#111215] leading-tight mt-0.5">{job.experience || '2 - 3 Yrs'}</span>
                         </div>
                       </div>
 
-                      <div className={`p-2 rounded-xl border text-[10px] flex items-center gap-1.5 ${
-                        isDark ? 'bg-emerald-500/10 border-emerald-500/25 text-emerald-300 font-bold' : 'bg-emerald-50/70 border-emerald-200 text-emerald-900 font-bold'
-                      }`}>
-                        <User className="w-3 h-3 text-emerald-500 shrink-0" />
+                      <div className="p-2.5 rounded-xl bg-[#F8F9F5] border border-[#E4E7DC] text-[10px] flex items-center gap-1.5">
+                        <User className="size-3.5 text-[#8FB305] shrink-0" />
                         <div className="truncate min-w-0">
-                          <span className="text-[9px] text-slate-400 block font-medium uppercase tracking-wider leading-none">Gender Req.</span>
-                          <span className="truncate block font-bold leading-tight mt-0.5">
-                            {job.genderRequirement && job.genderRequirement !== 'Any' ? job.genderRequirement : (job.gender && job.gender !== 'Any' ? job.gender : 'Female Only')}
+                          <span className="text-[9px] text-[#73766C] block font-bold uppercase tracking-wider leading-none">Gender</span>
+                          <span className="truncate block font-bold text-[#111215] leading-tight mt-0.5">
+                            {job.genderRequirement && job.genderRequirement !== 'Any' ? job.genderRequirement : (job.gender && job.gender !== 'Any' ? job.gender : 'Open / Any')}
                           </span>
                         </div>
                       </div>
                     </div>
 
-                    <div className={`p-2.5 rounded-xl border text-[10px] space-y-1.5 ${
-                      isDark ? 'bg-white/[0.02] border-white/[0.06]' : 'bg-slate-50/80 border-slate-200/90'
-                    }`}>
-                      <div className="flex items-center gap-1 text-slate-500 dark:text-slate-400 font-bold text-[9.5px] uppercase tracking-wider">
-                        <GraduationCap className="w-3 h-3 text-emerald-500 shrink-0" />
+                    {/* Accepted Degrees */}
+                    <div className="p-2.5 rounded-xl bg-[#F8F9F5] border border-[#E4E7DC] text-[10px] space-y-1.5">
+                      <div className="flex items-center gap-1 text-[#73766C] font-bold text-[9.5px] uppercase tracking-wider">
+                        <GraduationCap className="size-3 text-[#8FB305] shrink-0" />
                         <span>Accepted Degrees / Trades:</span>
                       </div>
 
                       <div className="flex flex-wrap items-center gap-1">
                         {educationOptions.slice(0, 3).map((option, idx) => (
-                          <span key={option + idx} className={`px-2 py-0.5 rounded-md text-[10px] font-semibold border transition-all inline-flex items-center ${
-                            isDark
-                              ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300 font-bold'
-                              : 'bg-emerald-100/90 border-emerald-300 text-emerald-950 font-bold'
-                          }`}>
-                            <span className="truncate max-w-[160px]">{option}</span>
+                          <span key={option + idx} className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-white border border-[#E4E7DC] text-[#111215] inline-flex items-center">
+                            <span className="truncate max-w-[150px]">{option}</span>
                           </span>
                         ))}
                         {educationOptions.length > 3 && (
-                          <span className={`text-[9.5px] font-semibold ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                          <span className="text-[9.5px] font-semibold text-[#73766C]">
                             +{educationOptions.length - 3} more
                           </span>
                         )}
                       </div>
                     </div>
 
+                    {/* Description Snippet */}
                     {job.description && (
-                      <p className={`text-[11px] line-clamp-2 leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                      <p className="text-[11px] line-clamp-2 leading-relaxed text-[#575A51]">
                         {getJobDescriptionSnippet(job.description, 120)}
                       </p>
                     )}
 
+                    {/* Skills Tags */}
                     {skillsList.length > 0 && (
                       <div className="flex flex-wrap gap-1 pt-0.5">
                         {skillsList.slice(0, 3).map((skill, idx) => (
-                          <span key={idx} className={`px-1.5 py-0.5 rounded text-[9.5px] font-medium border ${
-                            isDark 
-                              ? 'bg-white/[0.04] border-white/[0.06] text-slate-300' 
-                              : 'bg-slate-100 border-slate-200 text-slate-700'
-                          }`}>
+                          <span key={idx} className="px-2 py-0.5 rounded-md text-[9.5px] font-medium bg-[#F8F9F5] border border-[#E4E7DC] text-[#575A51]">
                             {skill}
                           </span>
                         ))}
                         {skillsList.length > 3 && (
-                          <span className={`px-1.5 py-0.5 rounded text-[9.5px] font-medium ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+                          <span className="px-1.5 py-0.5 rounded text-[9.5px] font-medium text-[#73766C]">
                             +{skillsList.length - 3}
                           </span>
                         )}
@@ -903,31 +903,30 @@ const ActiveJobsPage: React.FC = () => {
                     )}
                   </div>
 
-                  <div className={`flex items-center justify-between gap-2 pt-3 mt-3 border-t relative z-10 ${isDark ? 'border-white/[0.06]' : 'border-slate-200'}`}>
-                    <div className={`flex items-center gap-1.5 text-[10.5px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0" />
-                      <span className="font-semibold text-emerald-600 dark:text-emerald-400">Actively Hiring</span>
+                  {/* Card Bottom: Status & Action Buttons */}
+                  <div className="flex items-center justify-between gap-2 pt-3.5 mt-4 border-t border-[#E4E7DC] relative z-10">
+                    <div className="flex items-center gap-1.5 text-[11px] text-[#575A51]">
+                      <span className="size-2 rounded-full bg-[#8FB305] animate-pulse shrink-0" />
+                      <span className="font-bold text-[#111215]">Actively Hiring</span>
                     </div>
 
-                    <div className="flex items-center gap-1.5 shrink-0">
+                    <div className="flex items-center gap-2 shrink-0">
                       <button
+                        type="button"
                         onClick={() => setSelectedJobModal(job)}
-                        className={`px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition-colors flex items-center gap-1 border ${
-                          isDark
-                            ? 'bg-white/[0.05] hover:bg-white/[0.1] border-white/[0.08] text-slate-300'
-                            : 'bg-slate-100 hover:bg-slate-200 border-slate-200 text-slate-700'
-                        }`}
+                        className="px-3 py-1.5 rounded-full border border-[#E4E7DC] bg-white hover:bg-[#F8F9F5] text-[#111215] text-[11px] font-bold transition-colors flex items-center gap-1 cursor-pointer"
                       >
                         <Eye size={12} />
                         <span>Details</span>
                       </button>
 
                       <button
+                        type="button"
                         onClick={() => navigate(`/candidate?job=${job.id}`)}
-                        className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-[11px] font-bold text-white shadow-md shadow-emerald-600/20 transition-all flex items-center gap-1 group/btn cursor-pointer"
+                        className="px-4 py-1.5 rounded-full bg-[#111215] hover:bg-black text-white text-[11px] font-black transition-all shadow-2xs flex items-center gap-1.5 group/btn cursor-pointer"
                       >
                         <span>Apply</span>
-                        <ArrowRight size={11} className="group-hover/btn:translate-x-0.5 transition-transform" />
+                        <span className="text-[#D4F82C] group-hover/btn:translate-x-0.5 group-hover/btn:-translate-y-0.5 transition-transform">↗</span>
                       </button>
                     </div>
                   </div>
@@ -938,196 +937,197 @@ const ActiveJobsPage: React.FC = () => {
         )}
       </section>
 
+      {/* ── Job Details Modal ── */}
       {selectedJobModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-3 sm:p-4 overflow-hidden" onClick={() => setSelectedJobModal(null)}>
+        <div 
+          className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-hidden animate-in fade-in duration-200"
+          onClick={() => setSelectedJobModal(null)}
+        >
           <div 
-            className={`relative flex flex-col max-w-2xl w-full max-h-[calc(100dvh-2rem)] sm:max-h-[calc(100vh-4rem)] rounded-3xl border shadow-2xl overflow-hidden my-auto transition-colors ${
-              isDark ? 'bg-[#0d0d0d] border-white/[0.15] text-white' : 'bg-white border-slate-200 text-slate-900'
-            }`} 
+            className="relative flex flex-col max-w-2xl w-full max-h-[calc(100dvh-2rem)] rounded-3xl bg-white border border-[#E4E7DC] shadow-2xl overflow-hidden my-auto"
             onClick={e => e.stopPropagation()}
           >
-            <div className={`flex items-start justify-between gap-4 border-b p-5 sm:p-6 shrink-0 ${isDark ? 'border-white/[0.1] bg-[#0d0d0d]' : 'border-slate-200 bg-white'}`}>
+            {/* Modal Header */}
+            <div className="flex items-start justify-between gap-4 border-b border-[#E4E7DC] p-5 sm:p-6 bg-[#F8F9F5] shrink-0">
               <div>
-                <div className="flex items-center gap-2 flex-wrap mb-1">
+                <div className="flex items-center gap-2 flex-wrap mb-1.5">
                   {selectedJobModal.jobNo && (
-                    <span className={`px-2.5 py-1 rounded-lg text-[11px] font-mono font-extrabold uppercase tracking-wider ${
-                      isDark ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-400' : 'bg-emerald-50 border border-emerald-300 text-emerald-700'
-                    }`}>
+                    <span className="px-2.5 py-0.5 rounded-md text-[11px] font-mono font-bold uppercase tracking-wider bg-white border border-[#E4E7DC] text-[#111215]">
                       Job No: {selectedJobModal.jobNo}
                     </span>
                   )}
-                  <span className={`px-2.5 py-1 rounded-lg text-[11px] font-bold uppercase tracking-wider border ${
-                    isDark ? 'bg-white/[0.05] border-white/10 text-slate-300' : 'bg-slate-100 border-slate-200 text-slate-700'
-                  }`}>
+                  <span className="px-2.5 py-0.5 rounded-md text-[11px] font-semibold tracking-wide bg-white border border-[#E4E7DC] text-[#575A51]">
                     {selectedJobModal.industrySector || selectedJobModal.sector || 'General Sector'}
                   </span>
                 </div>
-                <h2 className={`text-2xl font-extrabold mt-2 ${isDark ? 'text-white' : 'text-slate-900'}`}>{selectedJobModal.title}</h2>
-                <div className={`flex flex-wrap items-center gap-3 text-xs mt-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-                  <span>Posted by: <strong className={isDark ? 'text-slate-300' : 'text-slate-800'}>{selectedJobModal.entryBy || selectedJobModal.recruiterName || 'Recruiter'}</strong></span>
-                  <span>·</span>
-                  <span className="text-emerald-500 font-bold">{selectedJobModal.department || 'General'}</span>
+                <h2 className="text-xl sm:text-2xl font-black text-[#111215] tracking-tight">{selectedJobModal.title}</h2>
+                <div className="flex flex-wrap items-center gap-2 text-xs text-[#73766C] mt-1">
+                  <span>Posted by: <strong className="text-[#111215]">{selectedJobModal.entryBy || selectedJobModal.recruiterName || 'Recruiter'}</strong></span>
+                  <span>•</span>
+                  <span className="text-[#575A51] font-semibold">{selectedJobModal.department || 'General'}</span>
                 </div>
               </div>
 
-              <button onClick={() => setSelectedJobModal(null)} className={`p-1.5 rounded-lg border transition-colors cursor-pointer shrink-0 ${isDark ? 'border-white/10 text-slate-400 hover:text-white hover:bg-white/5' : 'border-slate-200 text-slate-500 hover:text-slate-900 hover:bg-slate-100'}`}>
-                <X size={18} />
+              <button 
+                type="button"
+                onClick={() => setSelectedJobModal(null)} 
+                className="size-8 rounded-lg border border-[#E4E7DC] bg-white hover:bg-slate-100 flex items-center justify-center text-[#111215] transition-colors cursor-pointer shrink-0"
+              >
+                <X size={16} />
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-5 overscroll-contain">
+            {/* Modal Scroll Content */}
+            <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4 overscroll-contain">
+              {/* Access Code Banner */}
+              {selectedJobModal.accessCode && (
+                <div className="p-4.5 rounded-2xl bg-[#111215] text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md">
+                  <div>
+                    <span className="block text-[10px] uppercase font-bold tracking-wider text-[#73766C]">
+                      Candidate Interview Access Code
+                    </span>
+                    <span className="font-mono text-xl sm:text-2xl font-black text-[#D4F82C] tracking-widest block mt-0.5">
+                      {selectedJobModal.accessCode}
+                    </span>
+                  </div>
 
-            {selectedJobModal.accessCode && (
-              <div className={`p-4 rounded-2xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md ${
-                isDark 
-                  ? 'bg-gradient-to-r from-emerald-600/15 via-teal-600/15 to-emerald-500/15 border-emerald-500/30' 
-                  : 'bg-emerald-50 border-emerald-200'
-              }`}>
+                  <button
+                    type="button"
+                    onClick={(e) => handleCopyCode(e, selectedJobModal.accessCode!)}
+                    className="px-4 py-2 rounded-full bg-white hover:bg-slate-100 text-[#111215] text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-2xs shrink-0 cursor-pointer"
+                  >
+                    {copiedCode === selectedJobModal.accessCode ? (
+                      <>
+                        <Check size={14} className="text-[#8FB305]" />
+                        <span>Copied Code!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy size={14} />
+                        <span>Copy Code</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
+
+              {/* 3-Column Specs */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 p-4 rounded-2xl bg-[#F8F9F5] border border-[#E4E7DC] text-xs">
                 <div>
-                  <span className={`block text-[10px] uppercase font-extrabold tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                    Job Access Code
-                  </span>
-                  <span className="font-mono text-xl font-black text-emerald-500 dark:text-emerald-300 tracking-widest block mt-0.5">
-                    {selectedJobModal.accessCode}
-                  </span>
+                  <span className="block text-[10px] uppercase font-bold tracking-wider text-[#73766C]">Location</span>
+                  <span className="font-bold text-[#111215] block mt-0.5 truncate">{selectedJobModal.location || 'Nashik, Maharashtra'}</span>
                 </div>
-
-                <button
-                  onClick={(e) => handleCopyCode(e, selectedJobModal.accessCode!)}
-                  className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-md shrink-0"
-                >
-                  {copiedCode === selectedJobModal.accessCode ? (
-                    <>
-                      <Check size={14} />
-                      <span>Copied Code!</span>
-                    </>
-                  ) : (
-                    <>
-                      <Copy size={14} />
-                      <span>Copy Access Code</span>
-                    </>
-                  )}
-                </button>
-              </div>
-            )}
-
-            <div className={`grid grid-cols-1 sm:grid-cols-3 gap-3 p-4 rounded-2xl border text-xs ${
-              isDark ? 'bg-white/[0.03] border-white/[0.08]' : 'bg-slate-100/70 border-slate-200'
-            }`}>
-              <div>
-                <span className={`block text-[10px] uppercase font-bold tracking-wider ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>Location</span>
-                <span className={`font-semibold block mt-0.5 truncate ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>{selectedJobModal.location || 'Ambad, Nashik'}</span>
-              </div>
-              <div>
-                <span className={`block text-[10px] uppercase font-bold tracking-wider ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>Experience</span>
-                <span className={`font-semibold block mt-0.5 truncate ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>{selectedJobModal.experience || '2 - 3 Yrs'}</span>
-              </div>
-              <div>
-                <span className={`block text-[10px] uppercase font-bold tracking-wider ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>Gender Req.</span>
-                <span className={`font-semibold block mt-0.5 truncate ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>{selectedJobModal.genderRequirement || selectedJobModal.gender || 'Female Only / Open'}</span>
-              </div>
-            </div>
-
-            <div className={`p-4 rounded-2xl border space-y-2 text-xs ${
-              isDark ? 'bg-white/[0.03] border-white/[0.08]' : 'bg-slate-50 border-slate-200'
-            }`}>
-              <div className="flex items-center gap-1.5 text-slate-400 font-bold uppercase tracking-wider text-[11px]">
-                <GraduationCap className="w-4 h-4 text-emerald-500 shrink-0" />
-                <span>Accepted Degrees / Trades:</span>
-              </div>
-              <div className="flex flex-wrap gap-1.5">
-                {splitEducationRequirements(selectedJobModal.qualification || selectedJobModal.education || 'Any Qualification').map((opt, i) => (
-                  <span key={opt + i} className={`px-2.5 py-1 rounded-xl text-xs font-semibold border ${
-                    isDark ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300' : 'bg-emerald-100 border-emerald-300 text-emerald-900 font-bold'
-                  }`}>
-                    {opt}
-                  </span>
-                ))}
-              </div>
-            </div>
-
-            {selectedJobModal.description && (
-              <div className="space-y-2">
-                <h3 className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Job Description & Responsibilities</h3>
-                <div className={`text-xs whitespace-pre-line leading-relaxed p-4 rounded-2xl border max-h-60 overflow-y-auto ${
-                  isDark ? 'bg-white/[0.02] border-white/[0.06] text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-700'
-                }`}>
-                  <FormattedJobDescription description={selectedJobModal.description} className="max-w-full text-xs" />
+                <div>
+                  <span className="block text-[10px] uppercase font-bold tracking-wider text-[#73766C]">Experience</span>
+                  <span className="font-bold text-[#111215] block mt-0.5 truncate">{selectedJobModal.experience || '2 - 3 Yrs'}</span>
+                </div>
+                <div>
+                  <span className="block text-[10px] uppercase font-bold tracking-wider text-[#73766C]">Gender Req.</span>
+                  <span className="font-bold text-[#111215] block mt-0.5 truncate">{selectedJobModal.genderRequirement || selectedJobModal.gender || 'Open / Any'}</span>
                 </div>
               </div>
-            )}
 
+              {/* Education */}
+              <div className="p-4 rounded-2xl bg-[#F8F9F5] border border-[#E4E7DC] space-y-2 text-xs">
+                <div className="flex items-center gap-1.5 text-[#73766C] font-bold uppercase tracking-wider text-[11px]">
+                  <GraduationCap className="size-4 text-[#8FB305] shrink-0" />
+                  <span>Accepted Qualifications / Trades:</span>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {splitEducationRequirements(selectedJobModal.qualification || selectedJobModal.education || 'Any Qualification').map((opt, i) => (
+                    <span key={opt + i} className="px-3 py-1 rounded-full text-xs font-bold bg-white border border-[#E4E7DC] text-[#111215]">
+                      {opt}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              {/* Job Description */}
+              {selectedJobModal.description && (
+                <div className="space-y-2">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-[#73766C]">Job Description &amp; Scope</h3>
+                  <div className="text-xs leading-relaxed p-4 rounded-2xl border border-[#E4E7DC] bg-[#F8F9F5] max-h-60 overflow-y-auto text-[#111215]">
+                    <FormattedJobDescription description={selectedJobModal.description} className="max-w-full text-xs" />
+                  </div>
+                </div>
+              )}
             </div>
 
-            <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 sm:p-5 border-t shrink-0 ${isDark ? 'border-white/[0.1] bg-[#0d0d0d]' : 'border-slate-200 bg-slate-50'}`}>
+            {/* Modal Footer */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 sm:p-5 border-t border-[#E4E7DC] bg-[#F8F9F5] shrink-0">
               <div className="flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">Open for Candidates</span>
+                <span className="size-2 rounded-full bg-[#8FB305] animate-pulse" />
+                <span className="text-xs font-bold text-[#111215]">Active Mandate — Open for Applications</span>
               </div>
 
               <button
+                type="button"
                 onClick={() => { setSelectedJobModal(null); navigate(`/candidate?job=${selectedJobModal.id}`); }}
-                className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-sm font-bold text-white shadow-xl shadow-emerald-600/30 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                className="px-6 py-2.5 rounded-full bg-[#111215] hover:bg-black text-white text-xs font-bold transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer group"
               >
                 <span>Apply in Candidate Portal</span>
-                <ArrowRight size={16} />
+                <span className="text-[#D4F82C] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform">↗</span>
               </button>
             </div>
           </div>
         </div>
       )}
 
+      {/* ── Contact Support Modal ── */}
       {showContactModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4" onClick={() => setShowContactModal(false)}>
+        <div 
+          className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200" 
+          onClick={() => setShowContactModal(false)}
+        >
           <div 
-            className={`max-w-lg w-full rounded-3xl border p-6 sm:p-8 shadow-2xl space-y-6 transition-colors ${
-              isDark ? 'bg-[#0d0d0d] border-white/[0.15] text-white' : 'bg-white border-slate-200 text-slate-900'
-            }`} 
+            className="max-w-lg w-full rounded-3xl border border-[#E4E7DC] bg-white p-6 sm:p-8 shadow-2xl space-y-6"
             onClick={e => e.stopPropagation()}
           >
-            {/* Modal Header */}
-            <div className={`flex items-center justify-between border-b pb-4 ${isDark ? 'border-white/[0.1]' : 'border-slate-200'}`}>
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-[#E4E7DC] pb-4">
               <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${isDark ? 'bg-emerald-500/10 text-emerald-400' : 'bg-emerald-50 text-emerald-600'}`}>
-                  <MessageSquare size={20} />
+                <div className="size-10 rounded-xl bg-[#F8F9F5] border border-[#E4E7DC] flex items-center justify-center text-[#8FB305]">
+                  <MessageSquare size={18} />
                 </div>
                 <div>
-                  <h3 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                    Contact Us
+                  <h3 className="text-base sm:text-lg font-bold text-[#111215]">
+                    Contact Recruiting Desk
                   </h3>
-                  <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                    Send us your query or feedback
+                  <p className="text-xs text-[#73766C]">
+                    Submit your query or employer partnership request
                   </p>
                 </div>
               </div>
 
-              <button onClick={() => setShowContactModal(false)} className={`p-1 transition-colors ${isDark ? 'text-slate-400 hover:text-white' : 'text-slate-500 hover:text-slate-900'}`}>
-                <X size={20} />
+              <button 
+                type="button"
+                onClick={() => setShowContactModal(false)} 
+                className="size-8 rounded-lg border border-[#E4E7DC] bg-white hover:bg-slate-100 flex items-center justify-center text-[#111215] transition-colors cursor-pointer"
+              >
+                <X size={16} />
               </button>
             </div>
 
             {/* Form */}
-            <form onSubmit={handleContactSubmit} className="space-y-4">
+            <form onSubmit={handleContactSubmit} className="space-y-3.5">
               <div>
-                <label className={`block text-xs font-bold uppercase tracking-wider mb-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-                  Full Name <span className="text-red-500">*</span>
+                <label className="block text-[11px] font-bold text-[#111215] mb-1">
+                  Full Name <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="text"
                   required
-                  placeholder="Enter your full name"
+                  placeholder="e.g. Rahul Sharma"
                   value={contactForm.name}
                   onChange={(e) => setContactForm({ ...contactForm, name: e.target.value })}
-                  className={`w-full h-10 px-3.5 rounded-xl text-sm outline-none border transition-colors ${
-                    isDark ? 'bg-white/[0.04] border-white/[0.1] text-white focus:border-emerald-500' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-emerald-500'
-                  }`}
+                  className="w-full h-10 px-3.5 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] text-xs text-[#111215] outline-none focus:bg-white focus:border-[#111215] transition-all"
                 />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className={`block text-xs font-bold uppercase tracking-wider mb-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-                    Email Address <span className="text-red-500">*</span>
+                  <label className="block text-[11px] font-bold text-[#111215] mb-1">
+                    Email Address <span className="text-rose-500">*</span>
                   </label>
                   <input
                     type="email"
@@ -1135,55 +1135,47 @@ const ActiveJobsPage: React.FC = () => {
                     placeholder="name@example.com"
                     value={contactForm.email}
                     onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })}
-                    className={`w-full h-10 px-3.5 rounded-xl text-sm outline-none border transition-colors ${
-                      isDark ? 'bg-white/[0.04] border-white/[0.1] text-white focus:border-emerald-500' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-emerald-500'
-                    }`}
+                    className="w-full h-10 px-3.5 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] text-xs text-[#111215] outline-none focus:bg-white focus:border-[#111215] transition-all"
                   />
                 </div>
                 <div>
-                  <label className={`block text-xs font-bold uppercase tracking-wider mb-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                  <label className="block text-[11px] font-bold text-[#111215] mb-1">
                     Phone / Mobile
                   </label>
                   <input
                     type="tel"
-                    placeholder="Mobile number"
+                    placeholder="+91 9876543210"
                     value={contactForm.phone}
                     onChange={(e) => setContactForm({ ...contactForm, phone: e.target.value })}
-                    className={`w-full h-10 px-3.5 rounded-xl text-sm outline-none border transition-colors ${
-                      isDark ? 'bg-white/[0.04] border-white/[0.1] text-white focus:border-emerald-500' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-emerald-500'
-                    }`}
+                    className="w-full h-10 px-3.5 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] text-xs text-[#111215] outline-none focus:bg-white focus:border-[#111215] transition-all"
                   />
                 </div>
               </div>
 
               <div>
-                <label className={`block text-xs font-bold uppercase tracking-wider mb-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                <label className="block text-[11px] font-bold text-[#111215] mb-1">
                   Subject
                 </label>
                 <input
                   type="text"
-                  placeholder="Subject"
+                  placeholder="Inquiry Subject"
                   value={contactForm.subject}
                   onChange={(e) => setContactForm({ ...contactForm, subject: e.target.value })}
-                  className={`w-full h-10 px-3.5 rounded-xl text-sm outline-none border transition-colors ${
-                    isDark ? 'bg-white/[0.04] border-white/[0.1] text-white focus:border-emerald-500' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-emerald-500'
-                  }`}
+                  className="w-full h-10 px-3.5 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] text-xs text-[#111215] outline-none focus:bg-white focus:border-[#111215] transition-all"
                 />
               </div>
 
               <div>
-                <label className={`block text-xs font-bold uppercase tracking-wider mb-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-                  Message / Inquiry <span className="text-red-500">*</span>
+                <label className="block text-[11px] font-bold text-[#111215] mb-1">
+                  Message / Inquiry <span className="text-rose-500">*</span>
                 </label>
                 <textarea
                   required
                   rows={4}
-                  placeholder="Write your message or question here..."
+                  placeholder="Write your message or inquiry here..."
                   value={contactForm.message}
                   onChange={(e) => setContactForm({ ...contactForm, message: e.target.value })}
-                  className={`w-full p-3 rounded-xl text-sm outline-none border resize-none transition-colors ${
-                    isDark ? 'bg-white/[0.04] border-white/[0.1] text-white focus:border-emerald-500' : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-emerald-500'
-                  }`}
+                  className="w-full p-3 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] text-xs text-[#111215] outline-none resize-none focus:bg-white focus:border-[#111215] transition-all"
                 />
               </div>
 
@@ -1191,26 +1183,21 @@ const ActiveJobsPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowContactModal(false)}
-                  className={`px-4 py-2 rounded-xl text-xs font-semibold transition-colors ${
-                    isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'
-                  }`}
+                  className="px-4 py-2 rounded-full border border-[#E4E7DC] text-xs font-bold text-[#73766C] hover:text-[#111215] transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submittingContact}
-                  className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-lg shadow-emerald-500/20 transition-all flex items-center gap-2 disabled:opacity-50"
+                  className="px-6 py-2.5 rounded-full bg-[#111215] hover:bg-black text-white text-xs font-bold shadow-md transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50 group"
                 >
                   {submittingContact ? (
-                    <>
-                      <i className="fas fa-spinner fa-spin"></i>
-                      <span>Sending...</span>
-                    </>
+                    <span>Sending...</span>
                   ) : (
                     <>
-                      <Send size={14} />
                       <span>Send Message</span>
+                      <span className="text-[#D4F82C] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform">↗</span>
                     </>
                   )}
                 </button>
@@ -1220,26 +1207,57 @@ const ActiveJobsPage: React.FC = () => {
         </div>
       )}
 
-      {/* Page Footer */}
-      <footer className={`border-t py-8 text-center text-xs transition-colors ${isDark ? 'border-white/[0.08] text-slate-500' : 'border-slate-200 text-slate-600 bg-white'}`}>
-        <div className="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p>
-            © {new Date().getFullYear()} InterviewXpert. All rights reserved. Powered by{' '}
-            <a 
-              href="https://snab.co.in" 
-              target="_blank" 
-              rel="noopener noreferrer" 
-              className="font-bold text-emerald-600 dark:text-emerald-400 hover:underline transition-colors"
-            >
-              SNAB Innovations
-            </a>
-          </p>
-          <div className="flex items-center gap-4">
-            <Link to="/career-hub" className="hover:text-emerald-500 transition-colors">Career Hub</Link>
-            <Link to="/blogs" className="hover:text-emerald-500 transition-colors">Blogs</Link>
-            <Link to="/contact" className="hover:text-emerald-500 transition-colors">Contact Us</Link>
-            <Link to="/privacy-policy" className="hover:text-emerald-500 transition-colors">Privacy Policy</Link>
-            <Link to="/terms-of-service" className="hover:text-emerald-500 transition-colors">Terms</Link>
+      {/* ── Signature hireX Footer ── */}
+      <footer className="relative z-[95] w-full bg-[#F8F9F5] border-t border-[#E4E7DC]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-8 lg:px-12 pt-12 pb-10">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 pb-12">
+            <div>
+              <div className="mb-3">
+                <HireXLogo size="md" variant="full" />
+              </div>
+              <p className="text-xs text-[#73766C] leading-relaxed">
+                The AI-powered recruitment operating system for agile hiring teams and modern staffing agencies.
+              </p>
+            </div>
+
+            <div className="space-y-2 text-xs">
+              <div className="font-bold text-[#111215] uppercase tracking-wider text-[11px]">Product</div>
+              <div><Link to="/#pipeline" className="text-[#73766C] hover:text-[#111215]">Pipeline Kanban</Link></div>
+              <div><Link to="/#client-portal" className="text-[#73766C] hover:text-[#111215]">Client Portal</Link></div>
+              <div><Link to="/#pricing" className="text-[#73766C] hover:text-[#111215]">Pricing Estimator</Link></div>
+              <div><Link to="/active-jobs" className="text-[#111215] font-bold">Active Job Board</Link></div>
+            </div>
+
+            <div className="space-y-2 text-xs">
+              <div className="font-bold text-[#111215] uppercase tracking-wider text-[11px]">Company</div>
+              <div><a href="https://snab.co.in" target="_blank" rel="noopener noreferrer" className="text-[#73766C] hover:text-[#111215]">About SNAB</a></div>
+              <div><button type="button" onClick={handleOpenContactModal} className="text-[#73766C] hover:text-[#111215] cursor-pointer">Contact Desk</button></div>
+              <div><a href="mailto:hello@snab.co.in" className="text-[#73766C] hover:text-[#111215]">hello@snab.co.in</a></div>
+            </div>
+
+            <div className="space-y-2 text-xs">
+              <div className="font-bold text-[#111215] uppercase tracking-wider text-[11px]">Enterprise</div>
+              <div className="text-[#73766C]">GST Compliant Invoicing</div>
+              <div className="text-[#73766C]">Anti-Poaching Data Masking</div>
+              <div className="text-[#73766C]">Baileys WhatsApp Gateway</div>
+            </div>
+          </div>
+
+          {/* Giant Typographic Wordmark */}
+          <div className="py-4 border-t border-[#E4E7DC] select-none overflow-hidden">
+            <div className="text-[14vw] font-black tracking-tighter leading-none text-[#111215] flex items-center">
+              hireX<span className="text-[#8FB305]">↗</span>
+            </div>
+          </div>
+
+          {/* Copyright Bar */}
+          <div className="pt-4 border-t border-[#E4E7DC] flex flex-wrap items-center justify-between text-xs text-[#73766C] gap-3">
+            <div>© {new Date().getFullYear()} SNAB Technologies. All rights reserved.</div>
+            <div className="flex items-center gap-4">
+              <span>GST Registered</span>
+              <span>•</span>
+              <span>ISO Compliant Hosting</span>
+            </div>
           </div>
         </div>
       </footer>

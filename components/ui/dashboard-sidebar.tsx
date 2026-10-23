@@ -105,31 +105,31 @@ function NavItem({
       to={item.href}
       onClick={() => onNavigate(item.href)}
       className={cn(
-        'group flex w-full items-center justify-between rounded-[6px] px-2 py-1.5 text-left transition-colors duration-150 active:scale-[0.98] select-none cursor-pointer',
+        'group flex w-full items-center justify-between rounded-xl px-3 py-2 text-left transition-all duration-150 active:scale-[0.98] select-none cursor-pointer',
         isActive
-          ? 'bg-white/[0.08] text-white font-medium shadow-2xs'
-          : 'text-[#8f8f8f] hover:bg-white/[0.04] hover:text-white active:bg-white/[0.06]'
+          ? 'bg-[#111215] text-white font-bold shadow-xs active-nav-item'
+          : 'text-[#575A51] hover:bg-[#F8F9F5] hover:text-[#111215] font-medium'
       )}
     >
-      <span className="flex min-w-0 items-center gap-2">
+      <span className="flex min-w-0 items-center gap-2.5">
         <item.icon
           className={cn(
-            'size-[15px] shrink-0 transition-colors',
-            isActive ? 'text-white' : 'text-[#6b7280] group-hover:text-white'
+            'size-4 shrink-0 transition-colors',
+            isActive ? 'text-[#D4F82C]' : 'text-[#73766C] group-hover:text-[#111215]'
           )}
-          strokeWidth={1.5}
+          strokeWidth={1.8}
         />
-        <span className="geist-small truncate">{item.title}</span>
+        <span className="text-xs truncate">{item.title}</span>
       </span>
 
       <span className="flex items-center gap-2">
         {item.shortcut && (
-          <kbd className="hidden h-5 items-center justify-center rounded-[4px] border border-border bg-background px-1.5 font-mono text-[10px] font-medium text-muted-foreground shadow-sm group-hover:inline-flex">
+          <kbd className="hidden h-5 items-center justify-center rounded-[4px] border border-[#E4E7DC] bg-[#F8F9F5] px-1.5 font-mono text-[10px] font-medium text-[#73766C] shadow-2xs group-hover:inline-flex">
             {item.shortcut}
           </kbd>
         )}
         {item.badge && (
-          <span className="flex h-5 min-w-5 items-center justify-center rounded-[6px] border border-white/[0.11] bg-white/[0.04] px-1.5 text-[10px] font-medium text-white">
+          <span className="flex h-5 min-w-5 items-center justify-center rounded-full border border-[#E4E7DC] bg-[#F8F9F5] px-1.5 text-[10px] font-bold text-[#111215]">
             {item.badge}
           </span>
         )}
@@ -163,15 +163,13 @@ export function DashboardSidebar({
       ]
     : [];
 
-
-
   return (
-      <aside className={cn('recruiter-sidebar flex h-full w-[190px] flex-col border-r border-white/[0.11] bg-[#000] p-2 pt-3 font-sans text-white', className)}>
+      <aside className={cn('recruiter-sidebar flex h-full w-[205px] flex-col border-r border-[#E4E7DC] bg-white p-2.5 pt-3.5 font-sans text-[#111215]', className)}>
         <div className="flex flex-1 flex-col gap-3 overflow-y-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {recruiterNavGroups.map((group, index) => (
-            <div key={group.heading || index} className="flex flex-col gap-0.5">
+            <div key={group.heading || index} className="flex flex-col gap-1">
               {group.heading && (
-                <span className="geist-label mb-1 px-2 uppercase text-[#6b7280]">
+                <span className="mb-1 px-3 text-[10px] font-bold uppercase tracking-wider text-[#73766C]">
                   {group.heading}
                 </span>
               )}
@@ -179,8 +177,8 @@ export function DashboardSidebar({
                 <div key={item.id}>
                   <NavItem item={item} activePath={activePath} onNavigate={handleNavigate} />
                   {item.id === 'all-jobs' && manageSubItems.length > 0 && (
-                    <div className="ml-[17px] mt-1 border-l border-white/[0.13] pl-3">
-                      <div className="flex flex-col gap-0.5">
+                    <div className="ml-[18px] mt-1 border-l border-[#E4E7DC] pl-3">
+                      <div className="flex flex-col gap-1">
                         {manageSubItems.map((subItem) => {
                           const isActive = activeManageSection === subItem.id;
                           return (
@@ -189,13 +187,13 @@ export function DashboardSidebar({
                               to={subItem.href}
                               onClick={() => handleNavigate(subItem.href)}
                               className={cn(
-                                'group flex w-full items-center rounded-[6px] px-2 py-1.5 text-left transition-colors duration-150 active:scale-[0.98] select-none cursor-pointer',
+                                'group flex w-full items-center rounded-xl px-2.5 py-1.5 text-left transition-colors duration-150 active:scale-[0.98] select-none cursor-pointer text-xs',
                                 isActive
-                                  ? 'bg-white/[0.08] text-white font-medium'
-                                  : 'text-[#8f8f8f] hover:bg-white/[0.04] hover:text-white'
+                                  ? 'bg-[#111215] text-white font-bold'
+                                  : 'text-[#575A51] hover:bg-[#F8F9F5] hover:text-[#111215]'
                               )}
                             >
-                              <span className="geist-small truncate">{subItem.title}</span>
+                              <span className="truncate">{subItem.title}</span>
                             </Link>
                           );
                         })}
