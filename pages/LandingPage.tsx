@@ -2403,13 +2403,16 @@ export default function LandingPage() {
       </section>
 
       {/* ── SECTION 10: BESTEST SIGNATURE FOOTER WITH GIANT "hireX ↗" ── */}
-      <footer className="relative z-[95] w-full bg-[#F8F9F5] border-t border-[#E4E7DC] text-[#111215]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-8 lg:px-12 pt-14 sm:pt-16 pb-10">
+      <footer className="relative z-[95] w-full bg-[#F8F9F5] border-t border-[#E4E7DC] text-[#111215] overflow-hidden">
+        {/* Subtle Ambient Organic Lime Glow */}
+        <div className="absolute top-0 right-1/4 w-96 h-64 bg-[#D4F82C]/10 rounded-full blur-3xl pointer-events-none -translate-y-1/2"></div>
+        
+        <div className="max-w-7xl mx-auto px-4 sm:px-8 lg:px-12 pt-14 sm:pt-16 pb-12 relative z-10">
           
-          {/* Main 6-Column Grid */}
+          {/* Main 5-Column Navigation & Trust Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8 sm:gap-10 pb-12 sm:pb-16 border-b border-[#E4E7DC]">
             
-            {/* Col 1: Brand & Enterprise Trust (2 cols on large) */}
+            {/* Col 1: Brand & Enterprise Trust Architecture (2 cols on large) */}
             <div className="sm:col-span-2 lg:col-span-2 space-y-4">
               <div className="mb-2">
                 <Link to="/" className="inline-block" title="hireX Home">
@@ -2417,35 +2420,45 @@ export default function LandingPage() {
                 </Link>
               </div>
               <p className="text-xs text-[#575A51] leading-relaxed max-w-sm">
-                The modern AI recruitment operating system. Replacing repetitive busywork with intelligent candidate matching, anti-poaching client shortlists, and WhatsApp outreach.
+                The modern AI recruitment operating system. Replacing repetitive busywork with intelligent candidate matching, anti-poaching client shortlists, and automated WhatsApp outreach.
               </p>
 
               {/* Legally Verified Compliance Badges */}
-              <div className="flex flex-wrap items-center gap-2 pt-1">
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-white border border-[#E4E7DC] text-[#575A51] shadow-2xs">
-                  <Building2 size={12} className="text-[#8FB305]" />
-                  <span>MCA Registered Entity</span>
-                </span>
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-white border border-[#E4E7DC] text-[#575A51] shadow-2xs">
-                  <Lock size={12} className="text-[#8FB305]" />
-                  <span>SSL 256-Bit Encrypted</span>
-                </span>
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-white border border-[#E4E7DC] text-[#575A51] shadow-2xs">
-                  <ShieldCheck size={12} className="text-[#8FB305]" />
-                  <span>DPDP Act Aligned</span>
-                </span>
+              <div className="space-y-2 pt-2">
+                <div className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#73766C]">
+                  Trust & Regulatory Governance
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold bg-white border border-[#E4E7DC] text-[#111215] shadow-2xs hover:border-[#8FB305] transition-colors">
+                    <Building2 size={13} className="text-[#8FB305]" />
+                    <span>MCA Registered Entity</span>
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold bg-white border border-[#E4E7DC] text-[#111215] shadow-2xs hover:border-[#8FB305] transition-colors">
+                    <ShieldCheck size={13} className="text-[#8FB305]" />
+                    <span>DPDP Act 2023 Aligned</span>
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold bg-white border border-[#E4E7DC] text-[#111215] shadow-2xs hover:border-[#8FB305] transition-colors">
+                    <Lock size={13} className="text-[#8FB305]" />
+                    <span>TLS 256-Bit Encrypted</span>
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold bg-white border border-[#E4E7DC] text-[#111215] shadow-2xs hover:border-[#8FB305] transition-colors">
+                    <Eye size={13} className="text-[#8FB305]" />
+                    <span>Anti-Poaching Data Masking</span>
+                  </span>
+                </div>
               </div>
 
               {/* Real-time System Status Pill */}
               <div className="pt-2">
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-[#E4E7DC] text-[11px] font-bold text-[#111215] shadow-2xs">
+                <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white border border-[#E4E7DC] text-[11px] font-bold text-[#111215] shadow-2xs">
                   <span className="size-2 rounded-full bg-emerald-500 animate-pulse"></span>
                   <span>All Platform Systems Operational</span>
+                  <span className="text-[#73766C] font-normal">• 99.98% Uptime</span>
                 </div>
               </div>
             </div>
 
-            {/* Col 2: Product & Core Modules */}
+            {/* Col 2: Product & AI Modules */}
             <div className="space-y-3 text-xs">
               <div className="font-bold text-[#111215] uppercase tracking-wider text-[11px] flex items-center gap-1.5">
                 <Kanban size={13} className="text-[#8FB305]" />
@@ -2501,15 +2514,37 @@ export default function LandingPage() {
                 <span>Contact & Trust</span>
               </div>
               <ul className="space-y-2 text-[#73766C]">
-                <li><a href="mailto:hello@snab.co.in" className="hover:text-[#111215] transition-colors flex items-center gap-1"><Mail size={11} /><span>hello@snab.co.in</span></a></li>
-                <li><a href="mailto:support@snab.co.in" className="hover:text-[#111215] transition-colors flex items-center gap-1"><Mail size={11} /><span>support@snab.co.in</span></a></li>
-                <li><a href="https://wa.me/919876543210" target="_blank" rel="noopener noreferrer" className="hover:text-[#111215] transition-colors flex items-center gap-1 text-emerald-700 font-bold"><MessageCircle size={11} /><span>WhatsApp Business</span></a></li>
-                <li><a href="https://snab.co.in" target="_blank" rel="noopener noreferrer" className="hover:text-[#111215] transition-colors">About SNAB Technologies</a></li>
-                <li className="pt-1 text-[11px] text-[#575A51]">
-                  <span>Headquarters:</span>
-                  <div className="font-semibold text-[#111215]">Nashik, Maharashtra, India</div>
+                <li>
+                  <a href="mailto:hello@snab.co.in" className="hover:text-[#111215] transition-colors flex items-center gap-1.5 font-medium text-[#111215]">
+                    <Mail size={12} className="text-[#8FB305]" />
+                    <span>hello@snab.co.in</span>
+                  </a>
+                </li>
+                <li>
+                  <a href="https://wa.me/919876543210" target="_blank" rel="noopener noreferrer" className="hover:text-[#111215] transition-colors flex items-center gap-1.5 text-emerald-700 font-bold">
+                    <MessageCircle size={12} />
+                    <span>WhatsApp Business</span>
+                  </a>
+                </li>
+                <li>
+                  <a href="https://snab.co.in" target="_blank" rel="noopener noreferrer" className="hover:text-[#111215] transition-colors">
+                    About SNAB Technologies
+                  </a>
                 </li>
               </ul>
+
+              {/* Headquarters Bento Chip */}
+              <div className="p-3.5 rounded-2xl bg-white border border-[#E4E7DC] space-y-1 shadow-2xs mt-3">
+                <div className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#73766C]">
+                  Corporate Office
+                </div>
+                <div className="font-bold text-xs text-[#111215]">
+                  SNAB Technologies Pvt. Ltd.
+                </div>
+                <div className="text-[11px] text-[#575A51] leading-snug">
+                  Nashik, Maharashtra, India
+                </div>
+              </div>
             </div>
 
           </div>
@@ -2528,14 +2563,19 @@ export default function LandingPage() {
               <span>© {new Date().getFullYear()} SNAB Technologies Private Limited. All rights reserved.</span>
             </div>
 
-            <div className="flex flex-wrap items-center justify-center gap-4 text-xs font-medium">
-              <Link to="/privacy-policy" className="hover:text-[#111215] transition-colors">Privacy Policy</Link>
-              <span>•</span>
-              <Link to="/terms-of-service" className="hover:text-[#111215] transition-colors">Terms of Service</Link>
-              <span>•</span>
-              <Link to="/candidate-data-charter" className="hover:text-[#111215] transition-colors">Candidate Data Charter</Link>
-              <span>•</span>
-              <Link to="/security-whitepaper" className="hover:text-[#111215] transition-colors">Security Whitepaper</Link>
+            <div className="flex flex-wrap items-center justify-center gap-2 text-xs font-semibold">
+              <Link to="/privacy-policy" className="px-3 py-1 rounded-full bg-white border border-[#E4E7DC] text-[#575A51] hover:text-[#111215] hover:border-[#111215] transition-all shadow-2xs">
+                Privacy Policy
+              </Link>
+              <Link to="/terms-of-service" className="px-3 py-1 rounded-full bg-white border border-[#E4E7DC] text-[#575A51] hover:text-[#111215] hover:border-[#111215] transition-all shadow-2xs">
+                Terms of Service
+              </Link>
+              <Link to="/candidate-data-charter" className="px-3 py-1 rounded-full bg-white border border-[#E4E7DC] text-[#575A51] hover:text-[#111215] hover:border-[#111215] transition-all shadow-2xs">
+                Candidate Data Charter
+              </Link>
+              <Link to="/security-whitepaper" className="px-3 py-1 rounded-full bg-white border border-[#E4E7DC] text-[#575A51] hover:text-[#111215] hover:border-[#111215] transition-all shadow-2xs">
+                Security Whitepaper
+              </Link>
             </div>
           </div>
         </div>

@@ -461,7 +461,7 @@ export default function ClientReviewPortal() {
             Go to hireX Home
           </Link>
           <a
-            href="mailto:support@snab.co.in"
+            href="mailto:hello@snab.co.in"
             className="px-5 py-2.5 rounded-full text-xs font-bold border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-white/5 text-[#575A51] dark:text-neutral-300 hover:bg-[#F8F9F5] dark:hover:bg-white/10 transition-colors"
           >
             Contact Support
