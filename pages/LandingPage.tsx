@@ -49,7 +49,12 @@ import {
   MessageSquare,
   User,
   HelpCircle,
-  BadgeCheck
+  BadgeCheck,
+  Video,
+  Mic,
+  Bot,
+  Activity,
+  Volume2
 } from 'lucide-react';
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { db } from '../services/firebase';
@@ -64,9 +69,10 @@ import HireXLogo, { HireXMark } from '../components/HireXLogo';
 // 2: (360,0) -> (1120,900)  [AI Matching]
 // 3: (1120,0) -> (280,900)  [Client Portal]
 // 4: (280,0) -> (440,900)   [Productivity]
-// 5: (440,0) -> (1080,900)  [Pricing]
-// 6: (1080,0) -> (520,900)  [FAQ]
-// 7: (520,0) -> (720,640)   [CTA finish]
+// 5: (440,0) -> (440,900)   [AI Interview]
+// 6: (440,0) -> (1080,900)  [Pricing]
+// 7: (1080,0) -> (520,900)  [FAQ]
+// 8: (520,0) -> (720,640)   [CTA finish]
 const SECTION_CURVE_PATHS = [
   // 01: Hero (gentle rounded S-curve looping down behind title, exiting vertically at 880,900)
   "M 180,0 C 180,120 360,200 560,180 C 780,150 920,80 1140,120 C 1340,160 1400,380 1320,540 C 1240,700 1040,680 940,740 C 880,780 880,840 880,900",
@@ -78,11 +84,13 @@ const SECTION_CURVE_PATHS = [
   "M 1120,0 C 1120,120 1300,240 1320,400 C 1340,560 1160,640 920,600 C 680,560 480,440 320,520 C 160,600 120,740 180,800 C 220,850 280,840 280,900",
   // 05: Productivity (enters vertically at 280,0, loops around 14h badge & savings cards, exiting vertically at 440,900)
   "M 280,0 C 280,120 180,260 220,380 C 260,520 480,440 700,460 C 940,480 1180,380 1260,540 C 1340,700 1220,820 1040,850 C 760,880 440,820 440,900",
-  // 06: Pricing (enters vertically at 440,0, winds around team slider & calculator cards, exiting vertically at 1080,900)
+  // 06: AI Interview (enters vertically at 440,0, sweeps through simulator console, exiting vertically at 440,900)
+  "M 440,0 C 440,120 720,180 960,260 C 1220,360 1340,540 1240,680 C 1140,800 880,780 680,820 C 520,850 440,840 440,900",
+  // 07: Pricing (enters vertically at 440,0, winds around team slider & calculator cards, exiting vertically at 1080,900)
   "M 440,0 C 440,120 220,240 160,380 C 100,520 220,660 460,620 C 700,580 920,440 1140,480 C 1340,520 1360,720 1240,820 C 1160,880 1080,840 1080,900",
-  // 07: FAQ (enters vertically at 1080,0, gracefully arches behind questions, exiting vertically at 520,900)
+  // 08: FAQ (enters vertically at 1080,0, gracefully arches behind questions, exiting vertically at 520,900)
   "M 1080,0 C 1080,120 1280,260 1240,420 C 1200,580 980,520 740,540 C 500,560 300,440 180,560 C 60,680 120,820 320,850 C 440,870 520,840 520,900",
-  // 08: Start Trial (enters vertically at 520,0, swirls into dark CTA hero, terminating right at trial CTA)
+  // 09: Start Trial (enters vertically at 520,0, swirls into dark CTA hero, terminating right at trial CTA)
   "M 520,0 C 520,120 320,260 280,420 C 240,580 440,700 660,680 C 880,660 1160,540 1220,380 C 1280,220 1080,160 900,240 C 720,320 680,520 720,640",
 ];
 
@@ -92,9 +100,10 @@ const SECTION_JUNCTION_COORDS = [
   { start: { x: 360, y: 0 }, end: { x: 1120, y: 900 } },
   { start: { x: 1120, y: 0 }, end: { x: 280, y: 900 } },
   { start: { x: 280, y: 0 }, end: { x: 440, y: 900 } },
-  { start: { x: 440, y: 0 }, end: { x: 1080, y: 900 } },
-  { start: { x: 1080, y: 0 }, end: { x: 520, y: 900 } },
-  { start: { x: 520, y: 0 }, end: { x: 720, y: 640 } },
+  { start: { x: 440, y: 0 }, end: { x: 440, y: 900 } }, // AI Interview
+  { start: { x: 440, y: 0 }, end: { x: 1080, y: 900 } }, // Pricing
+  { start: { x: 1080, y: 0 }, end: { x: 520, y: 900 } }, // FAQ
+  { start: { x: 520, y: 0 }, end: { x: 720, y: 640 } },  // CTA
 ];
 
 const OrganicSectionCurve: React.FC<{
@@ -245,6 +254,10 @@ const FAQ_ITEMS = [
     a: 'You receive full platform access for 30 days — including unlimited resume screening, ATS Kanban boards, WhatsApp outreach, voice screening demo, and live client sharing portals. No credit card is required to get started.',
   },
   {
+    q: 'How does the AI Video Interview work and what does it cost?',
+    a: 'Our autonomous AI interviewer conducts live, interactive spoken video interviews with candidates 24/7. It asks dynamic technical cross-questions, records full-length HD video with live word-for-word transcripts, enforces anti-cheat verification, and automatically generates personalized evaluation reports with executive scorecards. Pricing is fully dynamic: starting at ₹65 per interview for 10 interviews, scaling down to ₹50 per interview for volume screening — saving you over 92% compared to manual recruiter calls.',
+  },
+  {
     q: 'How is candidate data secured and privacy preserved?',
     a: 'hireX provides built-in anti-poaching blind masking to hide candidate contact numbers and personal emails when sharing shortlists with external clients. All data is encrypted in transit and at rest with enterprise-grade security protocols.',
   },
@@ -284,6 +297,47 @@ export default function LandingPage() {
   const [calcBilling, setCalcBilling] = useState<'annual' | 'monthly'>('annual');
   const [calcVoiceScreening, setCalcVoiceScreening] = useState<boolean>(false);
   const [copiedQuote, setCopiedQuote] = useState<boolean>(false);
+
+  // Dynamic AI Interview Pricing Calculator State (₹65 down to ₹50 / interview)
+  const [pricingTab, setPricingTab] = useState<'ai-interviews' | 'subscription'>('ai-interviews');
+  const [calcAiInterviews, setCalcAiInterviews] = useState<number>(50);
+
+  const aiInterviewCalc = useMemo(() => {
+    const count = calcAiInterviews;
+    // Dynamic tiered pricing: ₹65 for 10, drops down to ₹50 for 1,000+
+    let ratePerInterview = 65;
+    if (count >= 1000) {
+      ratePerInterview = 50;
+    } else if (count >= 500) {
+      ratePerInterview = 52;
+    } else if (count >= 200) {
+      ratePerInterview = 55;
+    } else if (count >= 50) {
+      ratePerInterview = 60;
+    } else {
+      ratePerInterview = 65;
+    }
+
+    const totalCost = count * ratePerInterview;
+    const baseCostAt65 = count * 65;
+    const volumeDiscount = baseCostAt65 - totalCost;
+    const manualScreeningCost = count * 750;
+    const recruiterHoursSaved = Math.round(count * 0.75);
+    const savingsAmount = manualScreeningCost - totalCost;
+    const savingsPercent = Math.round((savingsAmount / manualScreeningCost) * 100);
+
+    return {
+      count,
+      ratePerInterview,
+      totalCost,
+      baseCostAt65,
+      volumeDiscount,
+      manualScreeningCost,
+      recruiterHoursSaved,
+      savingsAmount,
+      savingsPercent,
+    };
+  }, [calcAiInterviews]);
 
   // Why Recruiters Switch & ROI State
   const [activeComparisonTab, setActiveComparisonTab] = useState<'matrix' | 'roi' | 'pipeline' | 'pillars'>('matrix');
@@ -395,7 +449,7 @@ export default function LandingPage() {
 
   // ── Real-time Dynamic Scroll Progress for On-Page Animated Curves ──
   const [sectionProgresses, setSectionProgresses] = useState<number[]>(() => {
-    const init = new Array(8).fill(0);
+    const init = new Array(9).fill(0);
     init[0] = 0.35; // Initial graceful crest on page 1
     return init;
   });
@@ -416,6 +470,7 @@ export default function LandingPage() {
             'resume-matching',
             'client-portal',
             'productivity',
+            'ai-interview',
             'pricing',
             'faq',
             'start-trial',
@@ -551,10 +606,9 @@ export default function LandingPage() {
             <a
               href="#client-portal"
               onClick={(e) => scrollToSection(e, 'client-portal')}
-              className="hover:text-[#111215] transition-colors cursor-pointer flex items-center gap-1.5"
+              className="hover:text-[#111215] transition-colors cursor-pointer"
             >
-              <span>Client Portal</span>
-              <span className="size-1.5 rounded-full bg-[#8FB305] animate-pulse"></span>
+              Client Portal
             </a>
             <a
               href="#productivity"
@@ -562,6 +616,13 @@ export default function LandingPage() {
               className="hover:text-[#111215] transition-colors cursor-pointer"
             >
               Why Switch
+            </a>
+            <a
+              href="#ai-interview"
+              onClick={(e) => scrollToSection(e, 'ai-interview')}
+              className="hover:text-[#111215] transition-colors cursor-pointer"
+            >
+              AI Interview
             </a>
             <a
               href="#pricing"
@@ -725,6 +786,21 @@ export default function LandingPage() {
                   <span className="flex items-center gap-2">
                     <TrendingUp className="size-3.5 text-[#8FB305]" />
                     <span>04 • Why Switch & ROI Estimator</span>
+                  </span>
+                  <ChevronRight className="size-3.5 text-[#73766C]" />
+                </a>
+
+                <a
+                  href="#ai-interview"
+                  onClick={(e) => {
+                    scrollToSection(e, 'ai-interview');
+                    setMobileMenuOpen(false);
+                  }}
+                  className="flex items-center justify-between px-3.5 py-2.5 text-xs font-bold text-[#111215] hover:bg-[#F8F9F5] transition-colors"
+                >
+                  <span className="flex items-center gap-2">
+                    <Video className="size-3.5 text-[#8FB305]" />
+                    <span>05 • AI Video & Voice Interview</span>
                   </span>
                   <ChevronRight className="size-3.5 text-[#73766C]" />
                 </a>
@@ -2147,169 +2223,665 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── SECTION 6: PRICING ESTIMATOR CARD ── */}
-      <section id="pricing" className="relative z-60 min-h-[auto] sm:min-h-[calc(100vh-4.5rem)] flex flex-col justify-center bg-[#F8F9F5] scroll-mt-18 transition-all duration-300 overflow-x-clip py-10 sm:py-16">
-        <OrganicSectionCurve index={5} progress={sectionProgresses[5]} />
-        <div className="flex-1 flex flex-col justify-center py-6 sm:py-8 px-4 sm:px-8 lg:px-12 max-w-7xl mx-auto w-full relative z-10">
-          <div className="text-center max-w-3xl mx-auto mb-4 sm:mb-6">
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/90 border border-[#E4E7DC] shadow-2xs text-[10px] font-mono font-bold text-[#111215] mb-2">
-              <span className="size-1.5 rounded-full bg-[#D4F82C] animate-pulse"></span>
-              <span>06 • PRICING</span>
+      {/* ── SECTION: AI VIDEO & VOICE INTERVIEW SHOWCASE ── */}
+      <section id="ai-interview" className="relative z-55 min-h-[auto] sm:min-h-[calc(100vh-4.5rem)] flex flex-col justify-center bg-[#0B0D0F] text-white scroll-mt-18 transition-all duration-300 overflow-x-clip py-14 sm:py-20 border-y border-white/10">
+        <OrganicSectionCurve index={5} progress={sectionProgresses[5]} isDark={true} />
+        <div className="flex-1 flex flex-col justify-center py-6 sm:py-10 px-4 sm:px-8 lg:px-12 max-w-7xl mx-auto w-full relative z-10">
+          
+          {/* Header */}
+          <div className="text-center max-w-3xl mx-auto mb-8 sm:mb-12">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/15 text-[#D4F82C] text-[10px] font-mono font-bold uppercase tracking-wider mb-3 shadow-xs">
+              <span className="size-2 rounded-full bg-[#D4F82C] animate-pulse"></span>
+              <span>24/7 AUTONOMOUS INTERVIEWS • CLIENT-READY EVALUATIONS</span>
             </div>
-            <div className="text-[11px] font-bold uppercase tracking-wider text-[#73766C] mb-1">
-              Transparent Pricing
+            <div className="text-xs font-bold uppercase tracking-widest text-[#8F9489] mb-2">
+              Autonomous Video & Spoken Screening
             </div>
-            <h2 className="text-2xl sm:text-4xl font-black text-[#111215] tracking-tight">
-              Calculate your exact monthly plan.
+            <h2 className="text-2xl sm:text-5xl font-black text-white tracking-tight leading-tight">
+              Real Spoken Technical Interviews. Conducted Intelligently 24/7.
             </h2>
-            <p className="mt-1.5 text-xs sm:text-sm text-[#575A51]">
-              Scale smoothly with your hiring volume. Free Baileys WhatsApp engine, masked resumes, and zero lock-in contracts.
+            <p className="mt-3 text-xs sm:text-base text-[#A1A79B] leading-relaxed">
+              Screen hundreds of applicants simultaneously without burning senior engineering or recruiter bandwidth.
+              Receive deep personalised evaluation reports, word-for-word live transcripts, permanent HD video recordings, and verified anti-cheat evidence — delivering instant hiring intelligence with zero recruiter fatigue.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 items-start">
-            
-            {/* Left Calculator Controls */}
-            <div className="lg:col-span-7 bg-white rounded-2xl border border-[#E4E7DC] p-4 sm:p-5 space-y-4 shadow-sm">
-              
-              {/* 1. Recruiters */}
-              <div>
-                <div className="flex items-center justify-between text-xs font-bold mb-1.5">
-                  <span className="text-[#111215]">Recruiter & Team Seats</span>
-                  <span className="px-2 py-0.5 rounded bg-[#F8F9F5] text-[#111215] font-black border border-[#E4E7DC]">
-                    {calcRecruiters} {calcRecruiters === 1 ? 'Seat' : 'Seats'}
-                  </span>
-                </div>
-                <input
-                  type="range"
-                  min={1}
-                  max={20}
-                  value={calcRecruiters}
-                  onChange={(e) => setCalcRecruiters(parseInt(e.target.value))}
-                  className="w-full accent-[#111215] cursor-pointer"
-                />
-                <div className="flex justify-between text-[10px] text-[#73766C] mt-1 font-mono">
-                  <span>1 Seat</span>
-                  <span>5 Seats</span>
-                  <span>10 Seats</span>
-                  <span>20+ Seats</span>
-                </div>
+          {/* Interactive Live Interview Simulator Mockup */}
+          <div className="mb-14 rounded-3xl border border-white/15 bg-white/[0.02] p-4 sm:p-7 backdrop-blur-xl shadow-2xl">
+            <div className="flex flex-wrap items-center justify-between gap-3 pb-4 mb-5 border-b border-white/10">
+              <div className="flex items-center gap-3">
+                <div className="size-3 rounded-full bg-rose-500 animate-ping"></div>
+                <span className="text-xs font-mono font-bold text-white tracking-wide">LIVE INTERVIEW SESSION SIMULATOR</span>
+                <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold">
+                  Real-Time Spoken Dialogue • 100% Anti-Cheat Verified
+                </span>
               </div>
-
-              {/* 2. Monthly Resumes */}
-              <div>
-                <div className="flex items-center justify-between text-xs font-bold mb-1.5">
-                  <span className="text-[#111215]">Resumes Processed / Month</span>
-                  <span className="px-2 py-0.5 rounded bg-[#D4F82C] text-[#111215] font-black">
-                    {calcResumes} Resumes
-                  </span>
-                </div>
-                <input
-                  type="range"
-                  min={200}
-                  max={10000}
-                  step={200}
-                  value={calcResumes}
-                  onChange={(e) => setCalcResumes(parseInt(e.target.value))}
-                  className="w-full accent-[#111215] cursor-pointer"
-                />
-                <div className="flex justify-between text-[10px] text-[#73766C] mt-1 font-mono">
-                  <span>200</span>
-                  <span>2,500</span>
-                  <span>5,000</span>
-                  <span>10,000+</span>
-                </div>
+              <div className="flex items-center gap-2">
+                <Link
+                  to="/interview/demo"
+                  className="px-3.5 py-1.5 rounded-full bg-[#D4F82C] hover:bg-[#c2e424] text-[#111215] text-xs font-black transition-all flex items-center gap-1.5 shadow-sm"
+                >
+                  <Play size={12} className="fill-current" />
+                  <span>Launch Live Candidate Demo</span>
+                </Link>
               </div>
-
-              {/* 3. Billing Toggle */}
-              <div className="pt-0.5">
-                <div className="text-xs font-bold text-[#111215] mb-1.5">Billing Frequency</div>
-                <div className="grid grid-cols-2 gap-2.5">
-                  <button
-                    type="button"
-                    onClick={() => setCalcBilling('annual')}
-                    className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
-                      calcBilling === 'annual'
-                        ? 'border-[#111215] bg-[#111215] text-white'
-                        : 'border-[#E4E7DC] bg-[#F8F9F5] text-[#111215]'
-                    }`}
-                  >
-                    <div className="text-xs font-bold flex items-center justify-between">
-                      <span>Annual Billing</span>
-                      <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-[#D4F82C] text-[#111215]">Save 20%</span>
-                    </div>
-                    <div className="text-[10px] text-slate-400 mt-0.5">Discounted yearly rate</div>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setCalcBilling('monthly')}
-                    className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
-                      calcBilling === 'monthly'
-                        ? 'border-[#111215] bg-[#111215] text-white'
-                        : 'border-[#E4E7DC] bg-[#F8F9F5] text-[#111215]'
-                    }`}
-                  >
-                    <div className="text-xs font-bold">Monthly Billing</div>
-                    <div className="text-[10px] text-[#73766C] mt-0.5">Cancel anytime</div>
-                  </button>
-                </div>
-              </div>
-
             </div>
 
-            {/* Right Quote Summary Card */}
-            <div className="lg:col-span-5 rounded-2xl border border-[#111215] bg-[#111215] text-white p-5 sm:p-6 space-y-4 shadow-xl">
-              <div className="flex items-center justify-between pb-2.5 border-b border-white/10">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+              {/* Left: Candidate Video Feed & Real-time Speech Captions */}
+              <div className="lg:col-span-7 rounded-2xl bg-[#111215] border border-white/10 p-5 flex flex-col justify-between relative overflow-hidden">
+                <div className="flex items-center justify-between text-xs mb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="px-2 py-0.5 rounded bg-rose-500/20 text-rose-400 border border-rose-500/30 text-[10px] font-black flex items-center gap-1">
+                      <span className="size-1.5 rounded-full bg-rose-500 animate-pulse"></span>
+                      <span>LIVE REC 1080p HD</span>
+                    </span>
+                    <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold flex items-center gap-1">
+                      <ShieldCheck size={11} />
+                      <span>FULLSCREEN PROCTOR & TAB-MONITOR ON</span>
+                    </span>
+                  </div>
+                  <span className="text-[11px] font-mono text-[#A1A79B]">QUESTION 1 OF 5 • 01:42</span>
+                </div>
+
+                {/* Candidate Video Simulation */}
+                <div className="relative aspect-video rounded-xl bg-neutral-900 border border-white/5 overflow-hidden flex items-center justify-center mb-4">
+                  <img
+                    src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800&auto=format&fit=crop&q=80"
+                    alt="Candidate video screening"
+                    className="w-full h-full object-cover opacity-85"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30 pointer-events-none"></div>
+                  
+                  {/* Focus tracking reticle */}
+                  <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2 py-1 rounded bg-black/60 backdrop-blur-md text-[10px] font-mono text-emerald-400 border border-white/10">
+                    <Activity size={11} className="text-emerald-400 animate-pulse" />
+                    <span>Candidate Eye-Contact: 98% Verified</span>
+                  </div>
+
+                  {/* Question Overlay Banner */}
+                  <div className="absolute bottom-3 inset-x-3 p-3 rounded-lg bg-black/80 backdrop-blur-md border border-white/15">
+                    <p className="text-[10px] font-bold uppercase text-[#D4F82C] mb-0.5">Current Core Question</p>
+                    <p className="text-xs sm:text-sm font-semibold text-white leading-snug">
+                      "How do you design a resilient caching layer to mitigate cache stampedes during flash sales?"
+                    </p>
+                  </div>
+                </div>
+
+                {/* Live Candidate Speech Caption Box */}
+                <div className="p-3.5 rounded-xl bg-white/[0.04] border border-white/10 backdrop-blur-xs">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="flex items-center gap-1.5 text-[10px] font-mono font-bold text-emerald-400 uppercase">
+                      <span className="size-2 rounded-full bg-emerald-500 animate-ping"></span>
+                      <span>Real-Time Searchable Transcript (Live Audio Feed)</span>
+                    </span>
+                    <span className="text-[10px] text-[#A1A79B] font-mono">128 WPM</span>
+                  </div>
+                  <p className="text-xs font-medium text-neutral-200 italic leading-relaxed">
+                    "We implement a Redis cluster with probabilistic early expiration and mutex locks to ensure only one worker thread recalculates hot cache entries while secondary requests receive stale-while-revalidate data..."
+                  </p>
+                </div>
+              </div>
+
+              {/* Right: AI Interviewer "Alex" Reactive Console */}
+              <div className="lg:col-span-5 rounded-2xl bg-[#14171B] border border-white/10 p-5 flex flex-col justify-between">
                 <div>
-                  <span className="text-[10px] uppercase tracking-wider text-[#D4F82C] font-bold">Recommended Tier</span>
-                  <h3 className="text-lg sm:text-xl font-black text-white">{quoteCalculation.tierName}</h3>
-                </div>
-                <HireXMark size={28} />
-              </div>
+                  {/* Alex Header Card */}
+                  <div className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.03] border border-white/10 mb-4">
+                    <div className="relative size-12 rounded-full bg-gradient-to-tr from-[#D4F82C]/30 via-emerald-500/20 to-blue-500/30 flex items-center justify-center border border-[#D4F82C]/40">
+                      <Bot size={22} className="text-[#D4F82C]" />
+                      <span className="absolute inset-0 rounded-full border border-[#D4F82C]/50 animate-ping opacity-40"></span>
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-sm font-black text-white">Alex</span>
+                        <span className="px-1.5 py-0.2 rounded bg-[#D4F82C] text-[#111215] text-[9px] font-black uppercase">Autonomous Lead</span>
+                      </div>
+                      <p className="text-[11px] text-[#A1A79B]">Principal Technical Interviewer • Active</p>
+                    </div>
+                  </div>
 
-              <div>
-                <div className="text-2xl sm:text-3xl font-black text-white">
-                  ₹{quoteCalculation.subtotalMonthly.toLocaleString('en-IN')}
-                  <span className="text-xs text-slate-400 font-normal"> / month</span>
+                  {/* AI Compliment Banner */}
+                  <div className="mb-3 p-3 rounded-xl bg-[#D4F82C]/10 border border-[#D4F82C]/30 text-white flex items-center gap-2 animate-fade-in shadow-xs">
+                    <Sparkles size={16} className="text-[#D4F82C] shrink-0" />
+                    <span className="text-xs font-bold text-[#D4F82C]">
+                      Alex: "Spot on! That's a very clean architectural solution for cache stampedes."
+                    </span>
+                  </div>
+
+                  {/* Dynamic Cross-Question Card */}
+                  <div className="mb-4 p-3.5 rounded-xl bg-gradient-to-r from-amber-500/15 via-orange-500/10 to-transparent border border-amber-500/30 text-amber-200">
+                    <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-amber-400 mb-1">
+                      <Zap size={12} className="text-amber-400" />
+                      <span>Contextual Technical Follow-up (Dynamic Cross-Question)</span>
+                    </div>
+                    <p className="text-xs font-semibold text-white leading-relaxed">
+                      "What happens if your primary Redis node undergoes replica lag or network partition during peak traffic?"
+                    </p>
+                  </div>
+
+                  {/* Real-Time Speech Analytics Bar */}
+                  <div className="grid grid-cols-2 gap-2 text-center mb-4">
+                    <div className="p-2.5 rounded-xl bg-white/[0.03] border border-white/5">
+                      <p className="text-[10px] uppercase font-bold text-[#A1A79B]">Words Spoken</p>
+                      <p className="text-base font-black text-white">142</p>
+                    </div>
+                    <div className="p-2.5 rounded-xl bg-white/[0.03] border border-white/5">
+                      <p className="text-[10px] uppercase font-bold text-[#A1A79B]">Speaking Pace</p>
+                      <p className="text-base font-black text-emerald-400">128 <span className="text-[10px] font-normal">WPM</span></p>
+                    </div>
+                    <div className="p-2.5 rounded-xl bg-white/[0.03] border border-white/5">
+                      <p className="text-[10px] uppercase font-bold text-[#A1A79B]">Fluency Score</p>
+                      <p className="text-base font-black text-[#D4F82C]">96%</p>
+                    </div>
+                    <div className="p-2.5 rounded-xl bg-white/[0.03] border border-white/5">
+                      <p className="text-[10px] uppercase font-bold text-[#A1A79B]">Anti-Cheat Status</p>
+                      <p className="text-base font-black text-emerald-400">100% Clean</p>
+                    </div>
+                  </div>
                 </div>
-                <div className="text-xs text-slate-400 mt-1">
-                  <span>Transparent flat pricing • Zero hidden charges</span>
+
+                {/* Scorecard Preview Callout */}
+                <div className="p-3 rounded-xl bg-black/40 border border-white/10 text-xs text-[#A1A79B] flex items-center justify-between">
+                  <span>Personalised Evaluation Report & Evidence Dossier Generated on Finish</span>
+                  <span className="font-bold text-white flex items-center gap-1">
+                    Auto-Graded <CheckCircle2 size={13} className="text-emerald-400" />
+                  </span>
                 </div>
               </div>
+            </div>
+          </div>
 
-              <div className="space-y-1.5 text-xs text-slate-300 pt-2 border-t border-white/10">
-                <div className="flex items-center gap-2">
-                  <Check className="size-3.5 text-[#D4F82C]" />
-                  <span>Unlimited WhatsApp candidate messaging included</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Check className="size-3.5 text-[#D4F82C]" />
-                  <span>Zero-friction client review links with live sync</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Check className="size-3.5 text-[#D4F82C]" />
-                  <span>Visual Kanban pipeline & slide-over resume preview</span>
-                </div>
+          {/* 6 Core Client Advantages Grid (Promotional & Benefit-Driven) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 mb-12">
+            
+            {/* Advantage 1: Personalised Reports */}
+            <div className="p-6 rounded-2xl bg-white/[0.03] border border-white/10 hover:border-[#D4F82C]/50 transition-all hover:bg-white/[0.05] group">
+              <div className="size-10 rounded-xl bg-[#D4F82C]/10 border border-[#D4F82C]/20 flex items-center justify-center text-[#D4F82C] mb-4 group-hover:scale-110 transition-transform">
+                <FileCheck size={20} />
               </div>
+              <h3 className="text-base font-black text-white mb-1.5">Personalised Evaluation Reports</h3>
+              <p className="text-xs text-[#A1A79B] leading-relaxed">
+                Comprehensive candidate dossier generated within 60 seconds. Includes technical depth scores, communication ratings, core competency rubrics, and hire recommendations ready to present directly to clients.
+              </p>
+            </div>
 
-              <button
-                type="button"
-                onClick={() => setBookingModalOpen(true)}
-                className="w-full py-3 rounded-full bg-[#D4F82C] hover:bg-[#bde023] text-[#111215] text-xs font-black transition-all cursor-pointer shadow-sm flex items-center justify-center gap-2"
-              >
-                <span>Get Started With 1-Month Free Trial</span>
-                <span>↗</span>
-              </button>
+            {/* Advantage 2: Real-Time Transcripts */}
+            <div className="p-6 rounded-2xl bg-white/[0.03] border border-white/10 hover:border-[#D4F82C]/50 transition-all hover:bg-white/[0.05] group">
+              <div className="size-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 mb-4 group-hover:scale-110 transition-transform">
+                <FileText size={20} />
+              </div>
+              <h3 className="text-base font-black text-white mb-1.5">Real-Time Searchable Transcripts</h3>
+              <p className="text-xs text-[#A1A79B] leading-relaxed">
+                Word-for-word transcript generated live as the candidate answers. Fully searchable and timestamped — review an entire 15-minute technical discussion in 60 seconds without scrubbing through video.
+              </p>
+            </div>
+
+            {/* Advantage 3: Permanent Video Storing */}
+            <div className="p-6 rounded-2xl bg-white/[0.03] border border-white/10 hover:border-[#D4F82C]/50 transition-all hover:bg-white/[0.05] group">
+              <div className="size-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 mb-4 group-hover:scale-110 transition-transform">
+                <Video size={20} />
+              </div>
+              <h3 className="text-base font-black text-white mb-1.5">Permanent HD Video & Audio Storage</h3>
+              <p className="text-xs text-[#A1A79B] leading-relaxed">
+                Every interview is recorded in 1080p HD video and clear studio audio, securely stored in the cloud forever. Re-watch critical answers, share full recordings with hiring managers, and build an on-demand talent archive.
+              </p>
+            </div>
+
+            {/* Advantage 4: Complete Anti-Cheat Evidence */}
+            <div className="p-6 rounded-2xl bg-white/[0.03] border border-white/10 hover:border-[#D4F82C]/50 transition-all hover:bg-white/[0.05] group">
+              <div className="size-10 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 mb-4 group-hover:scale-110 transition-transform">
+                <ShieldCheck size={20} />
+              </div>
+              <h3 className="text-base font-black text-white mb-1.5">Complete Evidence & Audit Logs</h3>
+              <p className="text-xs text-[#A1A79B] leading-relaxed">
+                Full integrity logs maintain indisputable evidence: tab-switch detection, browser window minimize events, multiple face warnings, and background speech anomalies — ensuring 100% genuine candidate submissions.
+              </p>
+            </div>
+
+            {/* Advantage 5: Automated Messages */}
+            <div className="p-6 rounded-2xl bg-white/[0.03] border border-white/10 hover:border-[#D4F82C]/50 transition-all hover:bg-white/[0.05] group">
+              <div className="size-10 rounded-xl bg-green-500/10 border border-green-500/20 flex items-center justify-center text-green-400 mb-4 group-hover:scale-110 transition-transform">
+                <MessageSquare size={20} />
+              </div>
+              <h3 className="text-base font-black text-white mb-1.5">Automated WhatsApp & Email Messaging</h3>
+              <p className="text-xs text-[#A1A79B] leading-relaxed">
+                Zero manual coordination. Candidates automatically receive personalized WhatsApp & email interview invites with 1-click test links, automated calendar reminders, and instant completion updates sent to hiring teams.
+              </p>
+            </div>
+
+            {/* Advantage 6: Dynamic Cross-Questioning */}
+            <div className="p-6 rounded-2xl bg-white/[0.03] border border-white/10 hover:border-[#D4F82C]/50 transition-all hover:bg-white/[0.05] group">
+              <div className="size-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 mb-4 group-hover:scale-110 transition-transform">
+                <Brain size={20} />
+              </div>
+              <h3 className="text-base font-black text-white mb-1.5">Active Listening & Cross-Questioning</h3>
+              <p className="text-xs text-[#A1A79B] leading-relaxed">
+                Alex actively listens, comprehends candidate explanations, and poses sharp contextual follow-up questions in real time — probing architectural choices, edge cases, and verifying hands-on authenticity.
+              </p>
             </div>
 
           </div>
+
+          {/* Client Demo & Walkthrough Action Bar */}
+          <div className="rounded-2xl bg-gradient-to-r from-white/[0.05] via-white/[0.02] to-white/[0.05] border border-white/10 p-6 flex flex-wrap items-center justify-between gap-6">
+            <div className="flex items-center gap-4">
+              <div className="size-12 rounded-2xl bg-[#D4F82C]/15 border border-[#D4F82C]/30 text-[#D4F82C] flex items-center justify-center shrink-0">
+                <Sparkles size={22} className="text-[#D4F82C]" />
+              </div>
+              <div>
+                <h4 className="text-sm font-black text-white">Experience Autonomous Screening For Your Team</h4>
+                <p className="text-xs text-[#A1A79B]">
+                  Take the live candidate test drive in 2 minutes, or schedule a tailored enterprise walkthrough with our team.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <Link
+                to="/interview/demo"
+                className="px-5 py-2.5 rounded-full bg-[#D4F82C] hover:bg-[#c2e424] text-[#111215] text-xs font-black transition-all shadow-sm flex items-center gap-1.5"
+              >
+                <Play size={12} className="fill-current" />
+                <span>Experience AI Interview Live</span>
+              </Link>
+              <button
+                type="button"
+                onClick={() => setBookingModalOpen(true)}
+                className="px-5 py-2.5 rounded-full bg-white/10 hover:bg-white/15 text-white text-xs font-bold transition-all border border-white/15 cursor-pointer"
+              >
+                Book Client Walkthrough
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      {/* ── SECTION 6: PRICING ESTIMATOR CARD ── */}
+      <section id="pricing" className="relative z-60 min-h-[auto] sm:min-h-[calc(100vh-4.5rem)] flex flex-col justify-center bg-[#F8F9F5] scroll-mt-18 transition-all duration-300 overflow-x-clip py-10 sm:py-16">
+        <OrganicSectionCurve index={6} progress={sectionProgresses[6]} />
+        <div className="flex-1 flex flex-col justify-center py-6 sm:py-8 px-4 sm:px-8 lg:px-12 max-w-7xl mx-auto w-full relative z-10">
+          
+          {/* Pricing Header */}
+          <div className="text-center max-w-3xl mx-auto mb-6 sm:mb-8">
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/90 border border-[#E4E7DC] shadow-2xs text-[10px] font-mono font-bold text-[#111215] mb-2">
+              <span className="size-1.5 rounded-full bg-[#D4F82C] animate-pulse"></span>
+              <span>06 • TRANSPARENT PRICING</span>
+            </div>
+            <div className="text-[11px] font-bold uppercase tracking-wider text-[#73766C] mb-1">
+              Flexible Plans & Pay-Per-Interview
+            </div>
+            <h2 className="text-2xl sm:text-4xl font-black text-[#111215] tracking-tight">
+              Simple, transparent pricing. Zero hidden fees.
+            </h2>
+            <p className="mt-1.5 text-xs sm:text-sm text-[#575A51]">
+              Choose between on-demand AI Video Interviews or full-featured recruitment platform subscriptions.
+            </p>
+
+            {/* Pricing Model Tab Switcher */}
+            <div className="inline-flex p-1.5 rounded-2xl bg-white border border-[#E4E7DC] shadow-sm mt-5">
+              <button
+                type="button"
+                onClick={() => setPricingTab('ai-interviews')}
+                className={`px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer ${
+                  pricingTab === 'ai-interviews'
+                    ? 'bg-[#111215] text-[#D4F82C] shadow-sm'
+                    : 'text-[#73766C] hover:text-[#111215]'
+                }`}
+              >
+                <Video size={14} className={pricingTab === 'ai-interviews' ? 'text-[#D4F82C]' : 'text-neutral-400'} />
+                <span>AI Video Interview</span>
+                <span className="px-1.5 py-0.2 rounded bg-[#D4F82C] text-[#111215] text-[9px] font-black uppercase">Popular</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setPricingTab('subscription')}
+                className={`px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer ${
+                  pricingTab === 'subscription'
+                    ? 'bg-[#111215] text-white shadow-sm'
+                    : 'text-[#73766C] hover:text-[#111215]'
+                }`}
+              >
+                <Users size={14} className={pricingTab === 'subscription' ? 'text-white' : 'text-neutral-400'} />
+                <span>Recruiter Platform Seats</span>
+              </button>
+            </div>
+          </div>
+
+          {/* TAB 1: AI VIDEO INTERVIEWS (DYNAMIC ₹65 TO ₹50 / INTERVIEW) */}
+          {pricingTab === 'ai-interviews' && (
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 items-start">
+              
+              {/* Left: AI Interview Volume Calculator */}
+              <div className="lg:col-span-7 bg-white rounded-2xl border border-[#E4E7DC] p-5 sm:p-6 space-y-5 shadow-sm">
+                <div className="flex items-center justify-between pb-3 border-b border-[#E4E7DC]">
+                  <div>
+                    <h3 className="text-base font-black text-[#111215]">Estimate Your AI Screening Investment</h3>
+                    <p className="text-xs text-[#73766C]">Dynamic volume rates: ₹65 at 10, scaling down to ₹50 for 1,000+ volume.</p>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="px-2.5 py-1 rounded-full bg-[#111215] text-[#D4F82C] text-xs font-black shadow-xs">
+                      ₹{aiInterviewCalc.ratePerInterview} / Interview
+                    </span>
+                    {aiInterviewCalc.ratePerInterview < 65 && (
+                      <span className="hidden sm:inline-flex px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold">
+                        Volume Discount
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Candidate Interview Volume Slider */}
+                <div>
+                  <div className="flex items-center justify-between text-xs font-bold mb-2">
+                    <span className="text-[#111215]">Planned Candidate Interviews</span>
+                    <span className="px-2.5 py-1 rounded bg-[#111215] text-[#D4F82C] font-black text-sm">
+                      {calcAiInterviews} Interviews • ₹{aiInterviewCalc.ratePerInterview} INR / interview
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min={10}
+                    max={1000}
+                    step={10}
+                    value={calcAiInterviews}
+                    onChange={(e) => setCalcAiInterviews(parseInt(e.target.value))}
+                    className="w-full accent-[#111215] cursor-pointer"
+                  />
+                  <div className="flex justify-between text-[10px] text-[#73766C] mt-1 font-mono">
+                    <span>10 (₹65)</span>
+                    <span>50 (₹60)</span>
+                    <span>200 (₹55)</span>
+                    <span>500 (₹52)</span>
+                    <span>1,000+ (₹50)</span>
+                  </div>
+                </div>
+
+                {/* Quick Preset Packs */}
+                <div>
+                  <span className="text-[11px] font-bold text-[#73766C] uppercase tracking-wider block mb-2">Popular Volume Packs</span>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {[
+                      { count: 10, label: 'Starter Pack', rate: '₹65 INR / interview', price: '₹650 INR' },
+                      { count: 50, label: 'Growth Pack', rate: '₹60 INR / interview', price: '₹3,000 INR' },
+                      { count: 200, label: 'Scale Pack', rate: '₹55 INR / interview', price: '₹11,000 INR' },
+                      { count: 1000, label: 'Enterprise', rate: '₹50 INR / interview', price: '₹50,000 INR' }
+                    ].map(pack => (
+                      <button
+                        key={pack.count}
+                        type="button"
+                        onClick={() => setCalcAiInterviews(pack.count)}
+                        className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                          calcAiInterviews === pack.count
+                            ? 'border-[#111215] bg-[#111215] text-white shadow-xs'
+                            : 'border-[#E4E7DC] bg-[#F8F9F5] text-[#111215] hover:border-black/30'
+                        }`}
+                      >
+                        <p className="text-[11px] font-bold">{pack.label}</p>
+                        <p className={`text-xs font-black ${calcAiInterviews === pack.count ? 'text-[#D4F82C]' : 'text-neutral-900'}`}>{pack.price}</p>
+                        <p className="text-[10px] opacity-75">{pack.count} interviews • {pack.rate}</p>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Direct ROI Comparison */}
+                <div className="p-4 rounded-xl bg-[#F8F9F5] border border-[#E4E7DC] space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-[#73766C]">Manual Recruiter Screening Cost (~₹750/call):</span>
+                    <span className="line-through text-rose-600 font-bold">₹{aiInterviewCalc.manualScreeningCost.toLocaleString('en-IN')}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-[#73766C]">hireX Dynamic AI Screening:</span>
+                    <span className="text-emerald-700 font-black text-sm">₹{aiInterviewCalc.totalCost.toLocaleString('en-IN')} INR</span>
+                  </div>
+                  <div className="pt-2 border-t border-[#E4E7DC] flex items-center justify-between text-xs font-bold text-[#111215]">
+                    <span className="flex items-center gap-1.5 text-emerald-700 font-black">
+                      <Zap size={14} className="fill-current" />
+                      <span>Net Savings ({aiInterviewCalc.savingsPercent}%):</span>
+                    </span>
+                    <span className="text-emerald-700 font-black">
+                      Save ₹{aiInterviewCalc.savingsAmount.toLocaleString('en-IN')} INR & {aiInterviewCalc.recruiterHoursSaved} Recruiter Hours!
+                    </span>
+                  </div>
+                </div>
+
+              </div>
+
+              {/* Right: AI Interview Plan Details Card */}
+              <div className="lg:col-span-5 rounded-2xl border border-[#111215] bg-[#111215] text-white p-5 sm:p-6 space-y-4 shadow-xl">
+                <div className="flex items-center justify-between pb-3 border-b border-white/10">
+                  <div>
+                    <span className="text-[10px] uppercase tracking-wider text-[#D4F82C] font-bold">Dynamic Pay-Per-Interview</span>
+                    <h3 className="text-xl font-black text-white">AI Video Screening Pack</h3>
+                  </div>
+                  <div className="px-2.5 py-1 rounded bg-[#D4F82C] text-[#111215] text-xs font-black">
+                    ₹{aiInterviewCalc.ratePerInterview} INR / interview
+                  </div>
+                </div>
+
+                <div>
+                  <div className="text-3xl font-black text-white">
+                    ₹{aiInterviewCalc.totalCost.toLocaleString('en-IN')}
+                    <span className="text-xs text-slate-400 font-normal"> for {aiInterviewCalc.count} interviews</span>
+                  </div>
+                  <div className="text-xs text-[#D4F82C] font-semibold mt-1">
+                    Pay strictly per completed interview • Credits never expire
+                  </div>
+                  {aiInterviewCalc.volumeDiscount > 0 && (
+                    <div className="text-[11px] text-emerald-400 font-semibold mt-0.5">
+                      Volume discount unlocked: Saved ₹{aiInterviewCalc.volumeDiscount.toLocaleString('en-IN')} vs base rate!
+                    </div>
+                  )}
+                </div>
+
+                {/* What's Included (100% Promotional Benefits, Zero tech jargon) */}
+                <div className="space-y-2 text-xs text-slate-300 pt-3 border-t border-white/10">
+                  <div className="flex items-center gap-2">
+                    <Check className="size-3.5 text-[#D4F82C] shrink-0" />
+                    <span>Personalised candidate evaluation reports & scorecards</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Check className="size-3.5 text-[#D4F82C] shrink-0" />
+                    <span>Real-time searchable word-for-word live transcripts</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Check className="size-3.5 text-[#D4F82C] shrink-0" />
+                    <span>Permanent 1080p HD video & audio cloud storage</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Check className="size-3.5 text-[#D4F82C] shrink-0" />
+                    <span>Complete anti-cheat evidence & tab-switch audit logs</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Check className="size-3.5 text-[#D4F82C] shrink-0" />
+                    <span>Automated WhatsApp & email invitations & smart reminders</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Check className="size-3.5 text-[#D4F82C] shrink-0" />
+                    <span>Dynamic in-depth technical cross-questioning</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Check className="size-3.5 text-[#D4F82C] shrink-0" />
+                    <span>Communication fluency, speaking pace (WPM) & filler metrics</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Check className="size-3.5 text-[#D4F82C] shrink-0" />
+                    <span>Instant 1-click shareable client dossier link</span>
+                  </div>
+                </div>
+
+                <div className="pt-3 border-t border-white/10 space-y-2">
+                  <button
+                    type="button"
+                    onClick={() => setBookingModalOpen(true)}
+                    className="w-full py-3 rounded-full bg-[#D4F82C] hover:bg-[#bde023] text-[#111215] text-xs font-black transition-all cursor-pointer shadow-sm flex items-center justify-center gap-2"
+                  >
+                    <span>Get Started • Buy AI Interview Credits</span>
+                    <ArrowRight size={14} />
+                  </button>
+
+                  <Link
+                    to="/interview/demo"
+                    className="w-full py-2.5 rounded-full bg-white/10 hover:bg-white/15 text-white text-xs font-bold transition-all text-center block"
+                  >
+                    Try Live Interactive Demo First
+                  </Link>
+                </div>
+              </div>
+
+            </div>
+          )}
+
+          {/* TAB 2: RECRUITER TEAM PLATFORM SUBSCRIPTIONS */}
+          {pricingTab === 'subscription' && (
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 items-start">
+              
+              {/* Left Calculator Controls */}
+              <div className="lg:col-span-7 bg-white rounded-2xl border border-[#E4E7DC] p-4 sm:p-5 space-y-4 shadow-sm">
+                
+                {/* 1. Recruiters */}
+                <div>
+                  <div className="flex items-center justify-between text-xs font-bold mb-1.5">
+                    <span className="text-[#111215]">Recruiter & Team Seats</span>
+                    <span className="px-2 py-0.5 rounded bg-[#F8F9F5] text-[#111215] font-black border border-[#E4E7DC]">
+                      {calcRecruiters} {calcRecruiters === 1 ? 'Seat' : 'Seats'}
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min={1}
+                    max={20}
+                    value={calcRecruiters}
+                    onChange={(e) => setCalcRecruiters(parseInt(e.target.value))}
+                    className="w-full accent-[#111215] cursor-pointer"
+                  />
+                  <div className="flex justify-between text-[10px] text-[#73766C] mt-1 font-mono">
+                    <span>1 Seat</span>
+                    <span>5 Seats</span>
+                    <span>10 Seats</span>
+                    <span>20+ Seats</span>
+                  </div>
+                </div>
+
+                {/* 2. Monthly Resumes */}
+                <div>
+                  <div className="flex items-center justify-between text-xs font-bold mb-1.5">
+                    <span className="text-[#111215]">Resumes Processed / Month</span>
+                    <span className="px-2 py-0.5 rounded bg-[#D4F82C] text-[#111215] font-black">
+                      {calcResumes} Resumes
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min={200}
+                    max={10000}
+                    step={200}
+                    value={calcResumes}
+                    onChange={(e) => setCalcResumes(parseInt(e.target.value))}
+                    className="w-full accent-[#111215] cursor-pointer"
+                  />
+                  <div className="flex justify-between text-[10px] text-[#73766C] mt-1 font-mono">
+                    <span>200</span>
+                    <span>2,500</span>
+                    <span>5,000</span>
+                    <span>10,000+</span>
+                  </div>
+                </div>
+
+                {/* 3. Billing Toggle */}
+                <div className="pt-0.5">
+                  <div className="text-xs font-bold text-[#111215] mb-1.5">Billing Frequency</div>
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <button
+                      type="button"
+                      onClick={() => setCalcBilling('annual')}
+                      className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                        calcBilling === 'annual'
+                          ? 'border-[#111215] bg-[#111215] text-white'
+                          : 'border-[#E4E7DC] bg-[#F8F9F5] text-[#111215]'
+                      }`}
+                    >
+                      <div className="text-xs font-bold flex items-center justify-between">
+                        <span>Annual Billing</span>
+                        <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-[#D4F82C] text-[#111215]">Save 20%</span>
+                      </div>
+                      <div className="text-[10px] text-slate-400 mt-0.5">Discounted yearly rate</div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCalcBilling('monthly')}
+                      className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                        calcBilling === 'monthly'
+                          ? 'border-[#111215] bg-[#111215] text-white'
+                          : 'border-[#E4E7DC] bg-[#F8F9F5] text-[#111215]'
+                      }`}
+                    >
+                      <div className="text-xs font-bold">Monthly Billing</div>
+                      <div className="text-[10px] text-[#73766C] mt-0.5">Cancel anytime</div>
+                    </button>
+                  </div>
+                </div>
+
+              </div>
+
+              {/* Right Quote Summary Card */}
+              <div className="lg:col-span-5 rounded-2xl border border-[#111215] bg-[#111215] text-white p-5 sm:p-6 space-y-4 shadow-xl">
+                <div className="flex items-center justify-between pb-2.5 border-b border-white/10">
+                  <div>
+                    <span className="text-[10px] uppercase tracking-wider text-[#D4F82C] font-bold">Recommended Tier</span>
+                    <h3 className="text-lg sm:text-xl font-black text-white">{quoteCalculation.tierName}</h3>
+                  </div>
+                  <HireXMark size={28} />
+                </div>
+
+                <div>
+                  <div className="text-2xl sm:text-3xl font-black text-white">
+                    ₹{quoteCalculation.subtotalMonthly.toLocaleString('en-IN')}
+                    <span className="text-xs text-slate-400 font-normal"> / month</span>
+                  </div>
+                  <div className="text-xs text-slate-400 mt-1">
+                    <span>Transparent flat pricing • Zero hidden charges</span>
+                  </div>
+                </div>
+
+                <div className="space-y-1.5 text-xs text-slate-300 pt-2 border-t border-white/10">
+                  <div className="flex items-center gap-2">
+                    <Check className="size-3.5 text-[#D4F82C]" />
+                    <span>Unlimited WhatsApp candidate messaging included</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Check className="size-3.5 text-[#D4F82C]" />
+                    <span>Zero-friction client review links with live sync</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Check className="size-3.5 text-[#D4F82C]" />
+                    <span>Visual Kanban pipeline & slide-over resume preview</span>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setBookingModalOpen(true)}
+                  className="w-full py-3 rounded-full bg-[#D4F82C] hover:bg-[#bde023] text-[#111215] text-xs font-black transition-all cursor-pointer shadow-sm flex items-center justify-center gap-2"
+                >
+                  <span>Get Started With 1-Month Free Trial</span>
+                  <span>↗</span>
+                </button>
+              </div>
+
+            </div>
+          )}
+
         </div>
 
       </section>
 
       {/* ── SECTION 7: FAQ ACCORDION CARD ("A little more clarity.") ── */}
       <section id="faq" className="relative z-70 min-h-[auto] sm:min-h-[calc(100vh-4.5rem)] flex flex-col justify-center bg-[#F8F9F5] scroll-mt-18 transition-all duration-300 overflow-x-clip py-10 sm:py-16">
-        <OrganicSectionCurve index={6} progress={sectionProgresses[6]} />
+        <OrganicSectionCurve index={7} progress={sectionProgresses[7]} />
         <div className="flex-1 flex flex-col justify-center py-6 sm:py-8 px-4 sm:px-8 lg:px-12 max-w-7xl mx-auto w-full relative z-10">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-10 items-start">
             
@@ -2362,7 +2934,7 @@ export default function LandingPage() {
 
       {/* ── SECTION 8: DARK CTA CARD ("Your next great hire. A clearer way forward.") ── */}
       <section id="start-trial" className="relative z-80 min-h-[auto] sm:min-h-[calc(100vh-4.5rem)] flex flex-col justify-center bg-[#111215] text-white scroll-mt-18 transition-all duration-300 overflow-x-clip py-12 sm:py-16">
-        <OrganicSectionCurve index={7} progress={sectionProgresses[7]} isDark={true} />
+        <OrganicSectionCurve index={8} progress={sectionProgresses[8]} isDark={true} />
         <div className="flex-1 flex items-center py-8 sm:py-12 px-4 sm:px-8 lg:px-12 max-w-7xl mx-auto w-full relative z-10">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 sm:gap-12 w-full">
             
