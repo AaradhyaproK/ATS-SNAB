@@ -33,8 +33,6 @@ function localServerlessPlugin(env: Record<string, string>): Plugin {
           handlerModule = await import('./api/jobs.js');
         } else if (pathname === '/api/bedrock' || pathname === '/api/ai') {
           handlerModule = await import('./api/bedrock.js');
-        } else if (pathname === '/api/livekit-token') {
-          handlerModule = await import('./api/livekit-token.js');
         }
 
         if (!handlerModule || !handlerModule.default) {

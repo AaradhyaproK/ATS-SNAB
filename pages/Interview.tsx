@@ -16,7 +16,6 @@ import * as pdfjsLib from 'pdfjs-dist';
 import { getCandidateRateLimitReachedMessage, isRateLimitReached, loadCompanyRateLimitStatus, recordCandidateSubmission } from '../services/rateLimitService';
 import { analyzeResumeText, readResumeText, saveResumeDumpCandidate, ParsedResumeProfile } from '../services/resumeService';
 import { useCompanyRateLimits } from '../hooks/useRecruiterRateLimits';
-import { useLiveKitInterview } from '../hooks/useLiveKitInterview';
 import { saveCandidateConsent } from '../services/candidateConsent';
 import { LocationCityInput } from '../components/LocationCityInput';
 import { EducationInput } from '../components/EducationInput';
@@ -2918,43 +2917,7 @@ const ActiveInterviewSession: React.FC<{
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isVoiceMuted, setIsVoiceMuted] = useState(() => getMuteTTS());
 
-  const livekit = useLiveKitInterview({
-    jobId: jobId || state.jobId,
-    jobTitle: jobTitle || state.jobTitle,
-    candidateName: candidateInfo?.name || 'Candidate',
-    candidateEmail: candidateInfo?.email || '',
-    questions: state.questions,
-    enabled: true,
-    onComplete: (data) => {
-      console.log('[LiveKit Auto-Submission]: All questions completed by AI Interviewer', data);
-      setState(prev => {
-        const nextTexts = [...(prev.transcriptTexts || [])];
-        if (livekit.questionTranscripts) {
-          Object.entries(livekit.questionTranscripts).forEach(([qIdx, parts]) => {
-            const idx = Number(qIdx);
-            if (idx >= 0 && parts && parts.length > 0) {
-              nextTexts[idx] = parts.join('\n\n');
-            }
-          });
-        }
-        return {
-          ...prev,
-          transcriptTexts: nextTexts
-        };
-      });
-      handleSessionFinish();
-    },
-    onQuestionChange: (index) => {
-      if (typeof index === 'number' && index >= 0 && index < state.questions.length) {
-        setState(prev => ({
-          ...prev,
-          currentQuestionIndex: index
-        }));
-      }
-    },
-  });
-
-  const isAiSpeaking = isSpeaking || livekit.isAgentSpeaking;
+  const isAiSpeaking = isSpeaking;
 
   const toggleMuteVoice = () => {
     const next = !isVoiceMuted;
@@ -3029,20 +2992,11 @@ const ActiveInterviewSession: React.FC<{
 
     try {
       videoUrl = await uploadToCloudinary(blob, 'video');
-      
-      // Use LiveKit real-time transcribed text if available
-      const livekitParts = livekit.questionTranscripts[questionIndex];
-      if (livekitParts && livekitParts.length > 0) {
-        transcriptText = livekitParts.join('\n');
-      } else if (livekit.liveCandidateTranscript) {
-        transcriptText = livekit.liveCandidateTranscript;
-      } else if (videoUrl) {
+      if (videoUrl) {
         transcriptId = await requestTranscription(videoUrl, language);
       }
     } catch (error) {
       console.warn("Upload/transcription notice:", error);
-      const livekitParts = livekit.questionTranscripts[questionIndex];
-      transcriptText = livekitParts?.join('\n') || livekit.liveCandidateTranscript || '(Speech captured via LiveKit)';
     } finally {
       setState(prev => {
         const nextVideoUrls = [...prev.videoURLs];
@@ -3521,19 +3475,12 @@ const ActiveInterviewSession: React.FC<{
           </div>
         </div>
 
-        {/* Right: Proctor & LiveKit Status Badges */}
+        {/* Right: Proctor Status Badges */}
         <div className="flex items-center gap-2">
-          {livekit.isConnected ? (
-            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#D4F82C]/15 border border-[#D4F82C]/35 text-[#111215] dark:text-[#D4F82C] text-[11px] font-black tracking-wide">
-              <span className="w-2 h-2 rounded-full bg-[#D4F82C] animate-pulse"></span>
-              <span className="hidden sm:inline">LIVEKIT AI</span>
-            </div>
-          ) : (
-            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-[11px] font-bold">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-              <span className="hidden sm:inline">AI READY</span>
-            </div>
-          )}
+          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-[11px] font-bold">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span className="hidden sm:inline">AI READY</span>
+          </div>
 
           <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full border text-[11px] font-mono font-bold transition-all ${
             isFullscreen 
@@ -3782,83 +3729,11 @@ const ActiveInterviewSession: React.FC<{
                     <Mic size={11} className="text-[#D4F82C]" />
                     <span>Speak Your Response Clearly Below</span>
                   </span>
-                  {livekit.isConnected && (
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 text-[10px] font-bold">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                      {livekit.isAgentSpeaking ? 'Alex (AI) is Speaking...' : livekit.isCandidateSpeaking ? 'Listening to You...' : 'Realtime Voice AI Active'}
-                    </span>
-                  )}
                 </div>
 
-                {livekit.lastCompliment && (
-                  <div className="mb-4 px-4 py-3 rounded-2xl bg-[#D4F82C]/20 border border-[#D4F82C]/50 text-[#111215] dark:text-[#D4F82C] text-xs font-black flex items-center gap-2 animate-fade-in shadow-xs">
-                    <Sparkles size={16} className="text-[#111215] dark:text-[#D4F82C] shrink-0" />
-                    <span>Alex: "{livekit.lastCompliment}"</span>
-                  </div>
-                )}
-
-                {livekit.isCrossQuestioning && (
-                  <div className="mb-4 px-4 py-3 rounded-2xl bg-gradient-to-r from-amber-500/15 via-orange-500/10 to-transparent border border-amber-500/30 text-amber-800 dark:text-amber-300 text-xs font-black flex items-center gap-2 animate-pulse">
-                    <Sparkles size={16} className="text-amber-500 shrink-0" />
-                    <span>AI Cross-Questioning: Probing In-Depth Technical Architecture & Real-World Decisions</span>
-                  </div>
-                )}
-
                 <h2 className="text-xl sm:text-2xl md:text-3xl font-black leading-relaxed text-[#111215] dark:text-white selection:bg-[#D4F82C]/40 tracking-tight">
-                  {livekit.currentQuestionText || currentQ}
+                  {currentQ}
                 </h2>
-
-                {/* LiveKit Real-Time Speech Captions & Active Monitor */}
-                {livekit.isConnected && (
-                  <div className="mt-4 p-4 rounded-2xl bg-black/[0.03] dark:bg-white/[0.04] border border-black/[0.08] dark:border-white/10 backdrop-blur-xs transition-all shadow-xs">
-                    <div className="flex items-center justify-between gap-2 mb-2">
-                      <div className="flex items-center gap-2">
-                        <span className={`w-2 h-2 rounded-full ${livekit.isCandidateSpeaking ? 'bg-emerald-500 animate-ping' : livekit.isAgentSpeaking ? 'bg-[#D4F82C] animate-pulse' : 'bg-emerald-500'}`} />
-                        <span className="text-[10px] font-black uppercase tracking-wider text-[#73766C] dark:text-neutral-400">
-                          {livekit.isCandidateSpeaking
-                            ? 'Transcribing Your Voice in Real-Time'
-                            : livekit.isAgentSpeaking
-                            ? 'Alex (AI Interviewer Speaking)'
-                            : 'Real-Time Voice AI Transcription Active'}
-                        </span>
-                      </div>
-                      <span className="text-[10px] font-bold text-neutral-500 dark:text-neutral-400">
-                        {livekit.isCandidateSpeaking ? 'Listening 🎙️' : livekit.isAgentSpeaking ? 'Voice Active 🔊' : 'LiveKit WebRTC'}
-                      </span>
-                    </div>
-                    <p className="text-sm font-medium text-neutral-800 dark:text-neutral-200 min-h-[2.5rem] leading-relaxed italic select-none">
-                      {livekit.isCandidateSpeaking && livekit.liveCandidateTranscript
-                        ? `"${livekit.liveCandidateTranscript}"`
-                        : livekit.isAgentSpeaking && livekit.liveAiTranscript
-                        ? `"${livekit.liveAiTranscript}"`
-                        : livekit.liveCandidateTranscript
-                        ? `"${livekit.liveCandidateTranscript}"`
-                        : 'Alex is listening through your microphone. Speak your response naturally to see live transcription and dynamic follow-up questioning.'}
-                    </p>
-                  </div>
-                )}
-
-                {/* LiveKit Real-Time Speech Analytics Bar */}
-                {livekit.isConnected && (
-                  <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
-                    <div className="p-2.5 rounded-xl bg-white dark:bg-white/5 border border-black/[0.06] dark:border-white/10 shadow-xs">
-                      <p className="text-[10px] uppercase font-bold text-[#73766C] dark:text-neutral-400">Words Spoken</p>
-                      <p className="text-base font-black text-neutral-900 dark:text-white">{livekit.metrics.candidateWords}</p>
-                    </div>
-                    <div className="p-2.5 rounded-xl bg-white dark:bg-white/5 border border-black/[0.06] dark:border-white/10 shadow-xs">
-                      <p className="text-[10px] uppercase font-bold text-[#73766C] dark:text-neutral-400">Speaking Pace</p>
-                      <p className="text-base font-black text-emerald-600 dark:text-emerald-400">{livekit.metrics.speakingPaceWpm || 0} <span className="text-[10px] font-normal">WPM</span></p>
-                    </div>
-                    <div className="p-2.5 rounded-xl bg-white dark:bg-white/5 border border-black/[0.06] dark:border-white/10 shadow-xs">
-                      <p className="text-[10px] uppercase font-bold text-[#73766C] dark:text-neutral-400">Cross Questions</p>
-                      <p className="text-base font-black text-amber-600 dark:text-amber-400">{livekit.metrics.crossQuestions || 0}</p>
-                    </div>
-                    <div className="p-2.5 rounded-xl bg-white dark:bg-white/5 border border-black/[0.06] dark:border-white/10 shadow-xs">
-                      <p className="text-[10px] uppercase font-bold text-[#73766C] dark:text-neutral-400">AI Compliments</p>
-                      <p className="text-base font-black text-[#85a00a] dark:text-[#D4F82C]">{livekit.metrics.compliments || 0}</p>
-                    </div>
-                  </div>
-                )}
               </div>
 
               {/* Candidate Audio Listening Status Card */}

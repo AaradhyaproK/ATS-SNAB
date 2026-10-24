@@ -500,7 +500,7 @@ export const uploadToCloudinary = async (blob: Blob, resourceType: 'video' | 'im
 // ── AssemblyAI ────────────────────────────────────────────────────────────────
 export const requestTranscription = async (audioUrl: string, languageCode: string = 'en') => {
   if (!ASSEMBLYAI_API_KEY) {
-    console.log("[Transcription]: VITE_ASSEMBLYAI_API_KEY not set. Using LiveKit real-time STT.");
+    console.log("[Transcription]: VITE_ASSEMBLYAI_API_KEY not set. Skipping external audio transcription.");
     return null;
   }
   try {
