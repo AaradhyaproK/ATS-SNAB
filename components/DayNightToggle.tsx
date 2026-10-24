@@ -1,6 +1,8 @@
 import React from 'react';
 import { useTheme } from '../context/ThemeContext';
 
+import { auth } from '../services/firebase';
+
 interface DayNightToggleProps {
   className?: string;
 }
@@ -8,6 +10,11 @@ interface DayNightToggleProps {
 const DayNightToggle: React.FC<DayNightToggleProps> = ({ className = '' }) => {
   const { theme, setTheme } = useTheme();
   
+  // If user is logged in, day mode is compulsory and mode switching is completely disabled
+  if (auth.currentUser) {
+    return null;
+  }
+
   const isDark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
 
   const handleToggle = () => {

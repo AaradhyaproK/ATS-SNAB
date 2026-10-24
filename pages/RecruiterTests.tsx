@@ -14,6 +14,16 @@ import {
   Search,
   Sparkles,
   Trash2,
+  Users,
+  CheckCircle2,
+  TrendingUp,
+  Layers,
+  Clock,
+  Target,
+  Share2,
+  FileCheck,
+  Check,
+  AlertCircle
 } from 'lucide-react';
 import { useMessageBox } from '../components/MessageBox';
 import { useCompanyRateLimits } from '../hooks/useRecruiterRateLimits';
@@ -46,7 +56,7 @@ const toMillis = (value: TimestampLike): number => {
 const formatDate = (value: TimestampLike): string => {
   const millis = toMillis(value);
   if (!millis) return 'Recently';
-  return new Date(millis).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  return new Date(millis).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 };
 
 const chunkArray = <T,>(items: T[], size: number) => {
@@ -67,13 +77,6 @@ const getStats = (test: any, submissions: any[]) => {
     passed: submissions.filter((submission) => submission.status === 'passed' || Number(submission.score) >= passingScore).length,
   };
 };
-
-const StatCell = ({ label, value, tone = 'text-white' }: { label: string; value: React.ReactNode; tone?: string }) => (
-  <div className="border-r border-white/[0.11] px-4 py-4 last:border-r-0 sm:px-6 lg:px-7">
-    <p className="geist-label uppercase text-[#6b7280]">{label}</p>
-    <p className={`geist-metric mt-2 tabular-nums ${tone}`}>{value}</p>
-  </div>
-);
 
 const RecruiterTests: React.FC = () => {
   const { userProfile } = useAuth();
@@ -165,7 +168,7 @@ const RecruiterTests: React.FC = () => {
           delete nextMap[id];
           return nextMap;
         });
-        showSuccess('Assessment deleted.');
+        showSuccess('Assessment deleted successfully.');
       } catch (error) {
         console.error('Error deleting assessment:', error);
         showError('Unable to delete assessment.');
@@ -194,246 +197,425 @@ const RecruiterTests: React.FC = () => {
 
   const overviewStats = useMemo(() => {
     const allStats = tests.map((test) => getStats(test, submissionsMap[test.id] || []));
+    const totalSubmissions = allStats.reduce((sum, stats) => sum + stats.submissions, 0);
+    const totalPassed = allStats.reduce((sum, stats) => sum + stats.passed, 0);
+
     return {
       coding: tests.filter(test => test.type === 'coding').length,
       aptitude: tests.filter(test => test.type !== 'coding').length,
-      submissions: allStats.reduce((sum, stats) => sum + stats.submissions, 0),
-      passed: allStats.reduce((sum, stats) => sum + stats.passed, 0),
+      submissions: totalSubmissions,
+      passed: totalPassed,
       averageScore: allStats.length && allStats.some(stats => stats.submissions > 0)
-        ? Math.round(allStats.reduce((sum, stats) => sum + (stats.averageScore * stats.submissions), 0) / Math.max(allStats.reduce((sum, stats) => sum + stats.submissions, 0), 1))
+        ? Math.round(allStats.reduce((sum, stats) => sum + (stats.averageScore * stats.submissions), 0) / Math.max(totalSubmissions, 1))
         : 0,
+      passRate: totalSubmissions > 0 ? Math.round((totalPassed / totalSubmissions) * 100) : 0,
     };
   }, [tests, submissionsMap]);
 
+  const secondaryButtonClass = "inline-flex h-10 items-center justify-center rounded-full border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-white/5 px-4 font-bold text-xs text-[#111215] dark:text-white transition-all hover:bg-[#F1F3EB] dark:hover:bg-white/10 cursor-pointer shadow-2xs gap-2 disabled:cursor-not-allowed disabled:opacity-40";
+  const primaryButtonClass = "inline-flex h-10 items-center justify-center rounded-full bg-[#111215] text-white hover:bg-[#202227] dark:bg-[#D4F82C] dark:text-[#111215] dark:hover:bg-[#c5ea24] px-5 font-bold text-xs sm:text-sm transition-all shadow-md cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 gap-2";
+
   return (
-    <div className="flex h-[calc(100vh-3.5rem)] min-h-0 flex-col overflow-y-hidden bg-[#000] text-white">
-      <section className="shrink-0 border-b border-white/[0.11] bg-[#000]">
-        <div className="flex flex-col gap-4 px-4 py-5 sm:px-6 lg:px-7 xl:flex-row xl:items-start xl:justify-between">
+    <div className="w-full min-h-screen bg-[#F8F9F5] dark:bg-[#0D0E11] text-[#111215] dark:text-[#F8F9F5] font-sans antialiased selection:bg-[#D4F82C] selection:text-[#111215]">
+      
+      {/* Header */}
+      <header className="border-b border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-[#0D0E11] px-4 py-6 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <Link to="/recruiter/dashboard" className="geist-caption inline-flex h-8 items-center gap-2 rounded-[6px] border border-white/[0.11] bg-white/[0.03] px-3 font-medium text-[#d4d4d4] transition-colors hover:bg-white/[0.06] hover:text-white">
-              <ArrowLeft size={14} />
-              <span>Dashboard</span>
-            </Link>
-            <div className="mt-3 flex flex-wrap items-center gap-2">
-              <span className="geist-label inline-flex h-7 items-center gap-2 rounded-[6px] border border-white/[0.11] bg-white/[0.03] px-2.5 uppercase text-[#9ca3af]">
-                <BarChart3 size={13} />
-                Assessment workspace
-              </span>
+            <div className="flex items-center gap-3 mb-2">
+              <Link
+                to="/recruiter/jobs"
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-white dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 text-[#575A51] dark:text-neutral-300 hover:text-[#111215] dark:hover:text-white hover:border-[#111215] dark:hover:border-white/30 transition-all shadow-2xs"
+              >
+                <ArrowLeft size={13} />
+                <span>Dashboard</span>
+              </Link>
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 text-[11px] font-bold text-[#111215] dark:text-[#F8F9F5] shadow-2xs">
+                <span className="size-2 rounded-full bg-[#8FB305] dark:bg-[#D4F82C] animate-pulse"></span>
+                <span className="font-mono uppercase text-[10px] text-[#73766C] dark:text-neutral-400">ASSESSMENT STUDIO</span>
+                <span className="text-[#E4E7DC] dark:text-white/20">|</span>
+                <span>Screening & Evaluation Hub</span>
+              </div>
             </div>
-            <h1 className="geist-page-title mt-2 text-white">Assessments</h1>
-            <p className="geist-small mt-1 max-w-2xl text-[#8f8f8f]">
-              Review assessment health, share secure links, and move candidates into the next round from one workspace.
+
+            <h1 className="text-2xl sm:text-3xl font-black text-[#111215] dark:text-[#F8F9F5] tracking-tight">
+              Assessments
+            </h1>
+            <p className="text-xs sm:text-sm text-[#575A51] dark:text-neutral-400 mt-1 max-w-2xl leading-relaxed">
+              Review candidate assessment performance, generate secure test links, and manage automated screening tests.
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Link to="/recruiter/tests/create?type=aptitude" onClick={(event) => guardCreateLink(event, 'assessments')} aria-disabled={assessmentLimitReached} className={`geist-caption inline-flex h-8 items-center justify-center gap-2 rounded-[6px] border px-3 font-medium transition-colors ${assessmentLimitReached ? 'cursor-not-allowed border-red-500/30 bg-red-500/10 text-red-400' : 'border-white/[0.11] bg-white/[0.03] text-[#d4d4d4] hover:bg-white/[0.06] hover:text-white'}`}>
-              <FileText size={14} />
-              <span>Aptitude</span>
+
+          <div className="flex flex-wrap items-center gap-2.5">
+            <Link
+              to="/recruiter/tests/create?type=aptitude"
+              onClick={(event) => guardCreateLink(event, 'assessments')}
+              aria-disabled={assessmentLimitReached}
+              className={secondaryButtonClass}
+            >
+              <FileText size={14} className="text-[#8FB305] dark:text-[#D4F82C]" />
+              <span>+ Aptitude Test</span>
             </Link>
-            <Link to="/recruiter/tests/create?type=coding" onClick={(event) => guardCreateLink(event, 'codingAssessments')} aria-disabled={codingLimitReached} className={`geist-caption inline-flex h-8 items-center justify-center gap-2 rounded-[6px] border px-3 font-medium transition-colors ${codingLimitReached ? 'cursor-not-allowed border-red-500/30 bg-red-500/10 text-red-400' : 'border-white/[0.11] bg-white/[0.03] text-[#d4d4d4] hover:bg-white/[0.06] hover:text-white'}`}>
-              <Code size={14} />
-              <span>Coding</span>
+            <Link
+              to="/recruiter/tests/create?type=coding"
+              onClick={(event) => guardCreateLink(event, 'codingAssessments')}
+              aria-disabled={codingLimitReached}
+              className={secondaryButtonClass}
+            >
+              <Code size={14} className="text-blue-500" />
+              <span>+ Coding Challenge</span>
             </Link>
-            <Link to="/recruiter/tests/create" onClick={(event) => guardCreateLink(event, 'assessments')} aria-disabled={assessmentLimitReached} className={`geist-caption inline-flex h-8 items-center justify-center gap-2 rounded-[6px] border px-3 font-medium transition-colors ${assessmentLimitReached ? 'cursor-not-allowed border-red-500/30 bg-red-500/10 text-red-400' : 'border-white bg-white text-black hover:bg-[#eaeaea]'}`}>
-              <Plus size={14} />
-              <span>{assessmentLimitReached ? 'Limit reached' : 'Create Assessment'}</span>
+            <Link
+              to="/recruiter/tests/create"
+              onClick={(event) => guardCreateLink(event, 'assessments')}
+              aria-disabled={assessmentLimitReached}
+              className={primaryButtonClass}
+            >
+              <Plus size={16} />
+              <span>{assessmentLimitReached ? 'Limit Reached' : 'Create Assessment'}</span>
             </Link>
           </div>
         </div>
-      </section>
 
-      <section className="grid shrink-0 grid-cols-2 border-b border-white/[0.11] lg:grid-cols-6">
-        <StatCell label="Total" value={tests.length} />
-        <StatCell label="Aptitude" value={overviewStats.aptitude} />
-        <StatCell label="Coding" value={overviewStats.coding} />
-        <StatCell label="Submissions" value={overviewStats.submissions} tone="text-[#83d0a3]" />
-        <StatCell label="Passed" value={overviewStats.passed} tone="text-[#8bbde8]" />
-        <StatCell label="Avg score" value={`${overviewStats.averageScore}%`} tone="text-[#f5c76b]" />
-      </section>
+        {assessmentLimitReached && (
+          <div className="max-w-7xl mx-auto mt-4 rounded-2xl border border-red-500/20 bg-red-500/10 p-4 text-xs sm:text-sm font-semibold text-red-600 dark:text-red-400 flex items-center gap-2.5">
+            <AlertCircle size={18} className="shrink-0" />
+            <span>{getRateLimitReachedMessage('assessments')}</span>
+          </div>
+        )}
+      </header>
 
-      <section className="shrink-0 border-b border-white/[0.11]">
-        <div className="flex flex-col gap-3 px-4 py-3 sm:px-6 lg:px-7 xl:flex-row xl:items-center xl:justify-between">
-          <div className="relative w-full xl:max-w-sm">
-            <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#6b7280]" size={14} />
+      {/* Main Container */}
+      <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8 space-y-6">
+
+        {/* 6 Bento Metric Stat Cards */}
+        <section className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5 sm:gap-4">
+          
+          {/* Total */}
+          <div className="rounded-2xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] p-4 sm:p-5 shadow-xs flex flex-col justify-between">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-[11px] font-bold text-[#73766C] dark:text-neutral-400 uppercase tracking-wider">Total Tests</span>
+              <div className="size-7 rounded-lg bg-[#F8F9F5] dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 flex items-center justify-center text-[#111215] dark:text-white">
+                <Layers size={14} />
+              </div>
+            </div>
+            <div>
+              <p className="text-2xl sm:text-3xl font-black font-mono text-[#111215] dark:text-white">{tests.length}</p>
+              <p className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">Active in bank</p>
+            </div>
+          </div>
+
+          {/* Aptitude */}
+          <div className="rounded-2xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] p-4 sm:p-5 shadow-xs flex flex-col justify-between">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-[11px] font-bold text-[#73766C] dark:text-neutral-400 uppercase tracking-wider">Aptitude</span>
+              <div className="size-7 rounded-lg bg-[#F4F9EB] dark:bg-emerald-950/20 border border-[#D2E7B3] dark:border-emerald-800/40 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+                <FileText size={14} />
+              </div>
+            </div>
+            <div>
+              <p className="text-2xl sm:text-3xl font-black font-mono text-[#111215] dark:text-white">{overviewStats.aptitude}</p>
+              <p className="text-[10px] font-medium text-[#73766C] dark:text-neutral-400 mt-0.5">MCQ evaluations</p>
+            </div>
+          </div>
+
+          {/* Coding */}
+          <div className="rounded-2xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] p-4 sm:p-5 shadow-xs flex flex-col justify-between">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-[11px] font-bold text-[#73766C] dark:text-neutral-400 uppercase tracking-wider">Coding</span>
+              <div className="size-7 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800/40 flex items-center justify-center text-blue-600 dark:text-blue-400">
+                <Code size={14} />
+              </div>
+            </div>
+            <div>
+              <p className="text-2xl sm:text-3xl font-black font-mono text-[#111215] dark:text-white">{overviewStats.coding}</p>
+              <p className="text-[10px] font-medium text-[#73766C] dark:text-neutral-400 mt-0.5">Coding challenges</p>
+            </div>
+          </div>
+
+          {/* Submissions */}
+          <div className="rounded-2xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] p-4 sm:p-5 shadow-xs flex flex-col justify-between">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-[11px] font-bold text-[#73766C] dark:text-neutral-400 uppercase tracking-wider">Submissions</span>
+              <div className="size-7 rounded-lg bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-800/40 flex items-center justify-center text-purple-600 dark:text-purple-400">
+                <Users size={14} />
+              </div>
+            </div>
+            <div>
+              <p className="text-2xl sm:text-3xl font-black font-mono text-[#111215] dark:text-white">{overviewStats.submissions}</p>
+              <p className="text-[10px] font-medium text-[#73766C] dark:text-neutral-400 mt-0.5">Candidates tested</p>
+            </div>
+          </div>
+
+          {/* Passed */}
+          <div className="rounded-2xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] p-4 sm:p-5 shadow-xs flex flex-col justify-between">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-[11px] font-bold text-[#73766C] dark:text-neutral-400 uppercase tracking-wider">Passed</span>
+              <div className="size-7 rounded-lg bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800/40 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+                <CheckCircle2 size={14} />
+              </div>
+            </div>
+            <div>
+              <p className="text-2xl sm:text-3xl font-black font-mono text-emerald-600 dark:text-emerald-400">{overviewStats.passed}</p>
+              <p className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">{overviewStats.passRate}% pass rate</p>
+            </div>
+          </div>
+
+          {/* Avg Score */}
+          <div className="rounded-2xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] p-4 sm:p-5 shadow-xs flex flex-col justify-between">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-[11px] font-bold text-[#73766C] dark:text-neutral-400 uppercase tracking-wider">Avg Score</span>
+              <div className="size-7 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40 flex items-center justify-center text-amber-600 dark:text-amber-400">
+                <TrendingUp size={14} />
+              </div>
+            </div>
+            <div>
+              <p className="text-2xl sm:text-3xl font-black font-mono text-amber-600 dark:text-amber-400">{overviewStats.averageScore}%</p>
+              <p className="text-[10px] font-medium text-[#73766C] dark:text-neutral-400 mt-0.5">Overall cohort</p>
+            </div>
+          </div>
+
+        </section>
+
+        {/* Filter and Search Bar */}
+        <section className="rounded-2xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] p-3 sm:p-4 shadow-xs flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="relative flex-1 max-w-md">
+            <Search className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[#73766C]" size={15} />
             <input
               type="text"
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
-              placeholder="Search assessments..."
-              className="geist-caption h-9 w-full rounded-[6px] border border-white/[0.11] bg-white/[0.03] pl-9 pr-3 text-white outline-none transition-colors placeholder:text-[#6b7280] focus:border-white/[0.28] focus:bg-white/[0.05]"
+              placeholder="Search assessments by title, code or ID..."
+              className="w-full h-10 pl-10 pr-4 rounded-xl border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-[#101114] text-xs sm:text-sm text-[#111215] dark:text-white placeholder:text-[#73766C] outline-none transition-all focus:border-[#111215] dark:focus:border-[#D4F82C]"
             />
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="geist-label uppercase text-[#6b7280]">Type</span>
-            <div className="flex rounded-[6px] border border-white/[0.11] bg-white/[0.03] p-0.5">
-              {(['All', 'aptitude', 'coding'] as const).map((type) => (
+
+          <div className="flex items-center flex-wrap gap-2">
+            <span className="text-xs font-bold text-[#73766C] dark:text-neutral-400 mr-1">Format:</span>
+            <div className="flex p-1 rounded-full border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-[#101114]">
+              {(['All', 'aptitude', 'coding'] as const).map((filter) => (
                 <button
-                  key={type}
+                  key={filter}
                   type="button"
-                  onClick={() => setTypeFilter(type)}
-                  className={`geist-caption rounded-[4px] px-2.5 py-1 font-medium capitalize transition-colors ${typeFilter === type ? 'bg-white/[0.09] text-white' : 'text-[#6b7280] hover:text-[#d4d4d4]'}`}
+                  onClick={() => setTypeFilter(filter)}
+                  className={`px-3 py-1 text-xs font-bold rounded-full transition-all capitalize cursor-pointer ${
+                    typeFilter === filter
+                      ? 'bg-[#111215] text-[#D4F82C] dark:bg-[#D4F82C] dark:text-[#111215] shadow-xs'
+                      : 'text-[#575A51] dark:text-neutral-400 hover:text-[#111215] dark:hover:text-white'
+                  }`}
                 >
-                  {type}
+                  {filter}
                 </button>
               ))}
             </div>
+
             {(searchQuery || typeFilter !== 'All') && (
               <button
                 type="button"
                 onClick={() => { setSearchQuery(''); setTypeFilter('All'); }}
-                className="geist-caption inline-flex h-8 items-center justify-center rounded-[6px] border border-[#3f1d1d] bg-[#180707] px-3 font-medium text-[#ff8f8f] transition-colors hover:bg-[#260b0b]"
+                className="px-3 py-1 text-xs font-bold rounded-full bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400 border border-red-200 dark:border-red-500/20 hover:bg-red-100 transition-colors cursor-pointer"
               >
-                Clear
+                Clear Filters
               </button>
             )}
           </div>
-        </div>
-      </section>
+        </section>
 
-      <section className="flex min-h-0 flex-1 flex-col">
+        {/* Content Section */}
         {loading ? (
-          <div className="flex min-h-0 flex-1 flex-col">
-            <div className="hidden shrink-0 items-center gap-4 border-b border-white/[0.11] px-4 py-2 sm:px-6 lg:grid lg:grid-cols-[minmax(0,1.2fr)_140px_150px_120px_130px_120px] lg:px-7">
-              {[...Array(6)].map((_, index) => (
-                <div key={index} className="h-3 rounded bg-white/[0.04]" />
-              ))}
-            </div>
-            <div className="min-h-0 flex-1 overflow-y-auto">
-              {[...Array(7)].map((_, index) => (
-                <div key={index} className="grid gap-3 border-b border-white/[0.08] px-4 py-4 sm:px-6 lg:grid-cols-[minmax(0,1.2fr)_140px_150px_120px_130px_120px] lg:items-center lg:px-7">
-                  <div className="space-y-2">
-                    <div className="h-4 w-52 rounded bg-white/[0.04]" />
-                  </div>
-                  {[...Array(5)].map((__, cellIndex) => (
-                    <div key={cellIndex} className="h-6 rounded bg-white/[0.04]" />
-                  ))}
+          <div className="space-y-4">
+            {[...Array(4)].map((_, index) => (
+              <div key={index} className="rounded-3xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] p-6 shadow-xs animate-pulse space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="h-5 w-60 rounded-xl bg-gray-200 dark:bg-white/10" />
+                  <div className="h-8 w-24 rounded-full bg-gray-200 dark:bg-white/10" />
                 </div>
-              ))}
-            </div>
+                <div className="h-4 w-96 rounded-lg bg-gray-100 dark:bg-white/5" />
+              </div>
+            ))}
           </div>
         ) : tests.length === 0 ? (
-          <div className="flex min-h-0 flex-1 items-center justify-center overflow-y-auto border-b border-dashed border-white/[0.11] px-4 py-16 text-center sm:px-6 lg:px-7">
-            <div>
-              <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-[6px] border border-white/[0.11] bg-white/[0.03] text-[#8f8f8f]">
-                <Sparkles size={18} />
-              </div>
-              <p className="geist-caption mt-4 text-[#d4d4d4]">No assessments created yet.</p>
-              <p className="geist-small mt-1 text-[#8f8f8f]">Start with an aptitude screen or coding challenge, then connect passers to an interview.</p>
-              <Link to="/recruiter/tests/create" className="geist-caption mt-4 inline-flex h-8 items-center justify-center gap-2 rounded-[6px] border border-white bg-white px-3 font-medium text-black transition-colors hover:bg-[#eaeaea]">
-                <Plus size={14} />
+          <div className="rounded-3xl border-2 border-dashed border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] p-12 sm:p-16 text-center shadow-xs">
+            <div className="size-14 rounded-2xl bg-[#F8F9F5] dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 flex items-center justify-center text-[#8FB305] dark:text-[#D4F82C] mx-auto mb-4 shadow-2xs">
+              <Sparkles size={24} />
+            </div>
+            <h3 className="text-lg font-black text-[#111215] dark:text-white">No assessments created yet</h3>
+            <p className="text-xs sm:text-sm text-[#575A51] dark:text-neutral-400 max-w-md mx-auto mt-1 leading-relaxed">
+              Create an automated aptitude screen or coding challenge to evaluate candidates before moving them into interview rounds.
+            </p>
+            <div className="flex items-center justify-center gap-3 mt-6">
+              <Link to="/recruiter/tests/create" className={primaryButtonClass}>
+                <Plus size={16} />
                 <span>Create your first assessment</span>
               </Link>
             </div>
           </div>
         ) : filteredTests.length === 0 ? (
-          <div className="flex min-h-0 flex-1 items-center justify-center overflow-y-auto border-b border-dashed border-white/[0.11] px-4 py-16 text-center sm:px-6 lg:px-7">
-            <div>
-              <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-[6px] border border-white/[0.11] bg-white/[0.03] text-[#8f8f8f]">
-                <Search size={18} />
-              </div>
-              <p className="geist-caption mt-4 text-[#d4d4d4]">No assessments match your filters.</p>
-              <button
-                type="button"
-                onClick={() => { setSearchQuery(''); setTypeFilter('All'); }}
-                className="geist-caption mt-3 inline-flex h-8 items-center justify-center rounded-[6px] border border-[#3f1d1d] bg-[#180707] px-3 font-medium text-[#ff8f8f] transition-colors hover:bg-[#260b0b]"
-              >
-                Reset filters
-              </button>
+          <div className="rounded-3xl border-2 border-dashed border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] p-12 text-center shadow-xs">
+            <div className="size-12 rounded-2xl bg-[#F8F9F5] dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 flex items-center justify-center text-[#73766C] mx-auto mb-3">
+              <Search size={20} />
             </div>
+            <h3 className="text-base font-bold text-[#111215] dark:text-white">No matching assessments</h3>
+            <p className="text-xs text-[#73766C] dark:text-neutral-400 max-w-sm mx-auto mt-1">
+              Try adjusting your search query or format filter to find what you are looking for.
+            </p>
+            <button
+              type="button"
+              onClick={() => { setSearchQuery(''); setTypeFilter('All'); }}
+              className="mt-4 px-4 py-2 rounded-full bg-[#111215] text-white text-xs font-bold cursor-pointer"
+            >
+              Reset Search & Filters
+            </button>
           </div>
         ) : (
-          <>
-            <div className="hidden shrink-0 items-center gap-4 border-b border-white/[0.11] bg-[#000] px-4 py-2 sm:px-6 lg:grid lg:grid-cols-[minmax(0,1.2fr)_140px_150px_120px_130px_120px] lg:px-7">
-              <span className="geist-label uppercase text-[#6b7280]">Assessment</span>
-              <span className="geist-label text-center uppercase text-[#6b7280]">Copy link</span>
-              <span className="geist-label text-center uppercase text-[#6b7280]">Copy pass</span>
-              <span className="geist-label text-center uppercase text-[#6b7280]">Type</span>
-              <span className="geist-label text-center uppercase text-[#6b7280]">Created</span>
-              <span className="geist-label text-right uppercase text-[#6b7280]">Actions</span>
-            </div>
+          <div className="space-y-4">
+            {filteredTests.map((test) => {
+              const isCoding = test.type === 'coding';
+              const stats = getStats(test, submissionsMap[test.id] || []);
+              const testLink = getAssessmentLink(test.id);
 
-            <div className="min-h-0 flex-1 overflow-y-auto [scrollbar-color:#27272a_#000] [scrollbar-width:thin]">
-              {filteredTests.map((test) => {
-                const isCoding = test.type === 'coding';
+              return (
+                <article
+                  key={test.id}
+                  className="rounded-3xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] p-5 sm:p-6 shadow-xs hover:shadow-md transition-all space-y-4 hover:border-[#111215]/30 dark:hover:border-white/20"
+                >
+                  {/* Top Bar: Title, Badges, Actions */}
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-[#E4E7DC] dark:border-white/10">
+                    <div className="flex items-center gap-3">
+                      <div className={`size-10 rounded-2xl flex items-center justify-center font-bold shadow-2xs shrink-0 ${
+                        isCoding
+                          ? 'bg-blue-50 text-blue-600 dark:bg-blue-950/30 dark:text-blue-400 border border-blue-200 dark:border-blue-800/40'
+                          : 'bg-[#F4F9EB] text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400 border border-[#D2E7B3] dark:border-emerald-800/40'
+                      }`}>
+                        {isCoding ? <Code size={18} /> : <FileText size={18} />}
+                      </div>
 
-                return (
-                  <article
-                    key={test.id}
-                    className="grid gap-3 border-b border-white/[0.08] px-4 py-3 transition-colors hover:bg-white/[0.025] sm:px-6 lg:grid-cols-[minmax(0,1.2fr)_140px_150px_120px_130px_120px] lg:items-center lg:gap-4 lg:px-7"
-                  >
-                    <div className="min-w-0">
+                      <div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <button
+                            type="button"
+                            onClick={() => navigate(`/recruiter/tests/${test.id}/results`)}
+                            className="text-base sm:text-lg font-black text-[#111215] dark:text-white hover:text-emerald-600 dark:hover:text-[#D4F82C] text-left transition-colors cursor-pointer"
+                          >
+                            {test.title}
+                          </button>
+                          <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider ${
+                            isCoding
+                              ? 'bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400 border border-blue-200 dark:border-blue-800/50'
+                              : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/50'
+                          }`}>
+                            {isCoding ? 'Coding' : 'Aptitude'}
+                          </span>
+                        </div>
+                        <p className="text-xs text-[#73766C] dark:text-neutral-400 mt-0.5">
+                          Created on {formatDate(test.createdAt)} • {test.questions?.length || 0} questions
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0">
                       <button
                         type="button"
                         onClick={() => navigate(`/recruiter/tests/${test.id}/results`)}
-                        className="geist-caption block max-w-full truncate text-left font-semibold text-white hover:underline"
-                        title={test.title}
+                        className={secondaryButtonClass}
                       >
-                        {test.title}
-                      </button>
-                    </div>
-
-                    <div className="flex items-center justify-between gap-3 lg:justify-center">
-                      <span className="geist-label uppercase text-[#6b7280] lg:hidden">Copy link</span>
-                      <button
-                        type="button"
-                        onClick={() => copyToClipboard(getAssessmentLink(test.id), 'Assessment link copied.')}
-                        className="geist-caption inline-flex h-8 min-w-[112px] items-center justify-center gap-2 rounded-[6px] border border-white/[0.11] bg-white/[0.03] px-3 font-medium text-[#d4d4d4] transition-colors hover:bg-white/[0.06] hover:text-white"
-                      >
-                        <ExternalLink size={13} />
-                        <span>Copy link</span>
-                      </button>
-                    </div>
-
-                    <div className="flex items-center justify-between gap-3 lg:justify-center">
-                      <span className="geist-label uppercase text-[#6b7280] lg:hidden">Copy pass</span>
-                      <button
-                        type="button"
-                        onClick={() => copyToClipboard(test.accessCode || '', 'Access code copied.')}
-                        className="geist-label inline-flex h-8 min-w-[124px] items-center justify-center gap-2 rounded-[6px] border border-white/[0.11] bg-white/[0.03] px-3 font-medium text-[#d4d4d4] transition-colors hover:bg-white/[0.06] hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
-                        disabled={!test.accessCode}
-                      >
-                        <span className="tabular-nums">{test.accessCode || 'No pass'}</span>
-                        <Copy size={12} />
-                      </button>
-                    </div>
-
-                    <div className="flex items-center justify-between gap-3 lg:justify-center">
-                      <span className="geist-label uppercase text-[#6b7280] lg:hidden">Type</span>
-                      <span className="geist-small inline-flex h-8 items-center gap-1.5 rounded-[6px] border border-white/[0.11] bg-white/[0.03] px-2.5 font-medium capitalize text-[#d4d4d4]">
-                        {isCoding ? <Code size={13} /> : <FileText size={13} />}
-                        {test.type || 'aptitude'}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center justify-between gap-3 lg:justify-center">
-                      <span className="geist-label uppercase text-[#6b7280] lg:hidden">Created</span>
-                      <span className="geist-small text-[#8f8f8f]">{formatDate(test.createdAt)}</span>
-                    </div>
-
-                    <div className="flex items-center justify-end gap-2">
-                      <button
-                        type="button"
-                        onClick={() => navigate(`/recruiter/tests/${test.id}/results`)}
-                        className="geist-caption inline-flex h-8 items-center justify-center gap-2 rounded-[6px] border border-white/[0.11] bg-white/[0.03] px-3 font-medium text-[#d4d4d4] transition-colors hover:bg-white/[0.06] hover:text-white"
-                      >
-                        Results
+                        <BarChart3 size={13} />
+                        <span>View Results ({stats.submissions})</span>
                       </button>
                       <button
                         type="button"
                         onClick={() => handleDelete(test.id)}
-                        className="flex h-8 w-8 items-center justify-center rounded-[6px] border border-[#3f1d1d] bg-[#180707] text-[#ff8f8f] transition-colors hover:bg-[#260b0b] hover:text-[#ffc3c3]"
+                        className="size-10 rounded-full flex items-center justify-center text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 border border-transparent hover:border-red-200 dark:hover:border-red-500/20 transition-all cursor-pointer"
                         title="Delete assessment"
                       >
-                        <Trash2 size={14} />
+                        <Trash2 size={16} />
                       </button>
                     </div>
-                  </article>
-                );
-              })}
-            </div>
-          </>
+                  </div>
+
+                  {/* Metrics & Shareable Link Grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
+                    
+                    {/* Left: Stats Pill Strip (6 cols) */}
+                    <div className="md:col-span-6 grid grid-cols-4 gap-2">
+                      <div className="p-3 rounded-2xl bg-[#F8F9F5] dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 text-center">
+                        <span className="text-[10px] font-bold text-[#73766C] dark:text-neutral-400 block uppercase">Duration</span>
+                        <span className="text-xs sm:text-sm font-black font-mono text-[#111215] dark:text-white">{test.duration || 10}m</span>
+                      </div>
+                      <div className="p-3 rounded-2xl bg-[#F8F9F5] dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 text-center">
+                        <span className="text-[10px] font-bold text-[#73766C] dark:text-neutral-400 block uppercase">Pass Score</span>
+                        <span className="text-xs sm:text-sm font-black font-mono text-emerald-600 dark:text-emerald-400">{test.passingScore || 70}%</span>
+                      </div>
+                      <div className="p-3 rounded-2xl bg-[#F8F9F5] dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 text-center">
+                        <span className="text-[10px] font-bold text-[#73766C] dark:text-neutral-400 block uppercase">Submissions</span>
+                        <span className="text-xs sm:text-sm font-black font-mono text-[#111215] dark:text-white">{stats.submissions}</span>
+                      </div>
+                      <div className="p-3 rounded-2xl bg-[#F8F9F5] dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 text-center">
+                        <span className="text-[10px] font-bold text-[#73766C] dark:text-neutral-400 block uppercase">Avg Score</span>
+                        <span className="text-xs sm:text-sm font-black font-mono text-amber-600 dark:text-amber-400">{stats.averageScore}%</span>
+                      </div>
+                    </div>
+
+                    {/* Right: Candidate Links & Access Code (6 cols) */}
+                    <div className="md:col-span-6 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                      {/* Copy Link Pill */}
+                      <div className="flex-1 flex items-center justify-between px-3.5 py-2.5 rounded-2xl bg-[#F8F9F5] dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10">
+                        <div className="flex items-center gap-2 min-w-0 mr-2">
+                          <Share2 size={13} className="text-[#8FB305] dark:text-[#D4F82C] shrink-0" />
+                          <span className="text-xs font-mono text-[#575A51] dark:text-neutral-300 truncate">
+                            {testLink}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => copyToClipboard(testLink, 'Candidate test link copied to clipboard.')}
+                            className="p-1.5 rounded-lg bg-white dark:bg-white/10 hover:bg-[#E4E7DC] text-[#111215] dark:text-white transition-colors cursor-pointer"
+                            title="Copy candidate URL"
+                          >
+                            <Copy size={13} />
+                          </button>
+                          <a
+                            href={testLink}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-1.5 rounded-lg bg-white dark:bg-white/10 hover:bg-[#E4E7DC] text-[#111215] dark:text-white transition-colors"
+                            title="Preview test in new tab"
+                          >
+                            <ExternalLink size={13} />
+                          </a>
+                        </div>
+                      </div>
+
+                      {/* Access Code Pill */}
+                      <div className="flex items-center justify-between px-3.5 py-2.5 rounded-2xl bg-[#F8F9F5] dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 shrink-0">
+                        <div className="mr-2">
+                          <span className="text-[9px] font-bold text-[#73766C] dark:text-neutral-400 uppercase block">Code</span>
+                          <span className="text-xs font-mono font-black text-[#111215] dark:text-white">
+                            {test.accessCode || 'NONE'}
+                          </span>
+                        </div>
+                        {test.accessCode && (
+                          <button
+                            type="button"
+                            onClick={() => copyToClipboard(test.accessCode, 'Access code copied.')}
+                            className="p-1.5 rounded-lg bg-white dark:bg-white/10 hover:bg-[#E4E7DC] text-[#111215] dark:text-white transition-colors cursor-pointer"
+                            title="Copy access code"
+                          >
+                            <Copy size={13} />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                  </div>
+                </article>
+              );
+            })}
+          </div>
         )}
-      </section>
+
+      </div>
     </div>
   );
 };

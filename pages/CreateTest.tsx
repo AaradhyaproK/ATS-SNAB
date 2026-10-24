@@ -12,49 +12,28 @@ import {
   Plus,
   Save,
   Sparkles,
-  Trash,
+  Trash2,
+  Wand2,
+  AlertCircle,
+  HelpCircle,
+  CheckCircle2,
+  Clock,
+  Target,
+  Layers,
+  CheckCircle,
+  ArrowRight
 } from 'lucide-react';
 import { grokGenerateJson } from '../services/grokService';
 import { useMessageBox } from '../components/MessageBox';
 import { useCompanyRateLimits } from '../hooks/useRecruiterRateLimits';
 import { getRateLimitReachedMessage, isRateLimitReached, RateLimitResource } from '../services/rateLimitService';
 
-const FieldSection = ({
-  label,
-  title,
-  description,
-  children,
-}: {
-  label: string;
-  title: string;
-  description: string;
-  children: React.ReactNode;
-}) => (
-  <section className="border-b border-white/[0.11] px-4 py-5 sm:px-6 lg:px-7">
-    <p className="geist-label uppercase text-[#6b7280]">{label}</p>
-    <h2 className="geist-section-title mt-1 text-white">{title}</h2>
-    <p className="geist-small mt-1 max-w-2xl text-[#8f8f8f]">{description}</p>
-    <div className="mt-5">{children}</div>
-  </section>
-);
-
-const EmptyQuestions = ({ type }: { type: 'aptitude' | 'coding' }) => (
-  <div className="flex min-h-40 items-center justify-center rounded-[6px] border border-dashed border-white/[0.14] bg-white/[0.025] px-4 py-8 text-center">
-    <div>
-      <div className="mx-auto flex h-9 w-9 items-center justify-center rounded-[6px] border border-white/[0.11] bg-white/[0.03] text-[#8f8f8f]">
-        {type === 'coding' ? <Code size={16} /> : <FileText size={16} />}
-      </div>
-      <p className="geist-caption mt-3 font-medium text-[#d4d4d4]">No questions added.</p>
-      <p className="geist-small mt-1 text-[#8f8f8f]">Generate with AI or add one manually before saving.</p>
-    </div>
-  </div>
-);
-
 const CreateTest: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { showError, showSuccess } = useMessageBox();
   const { status: rateLimitStatus, loading: rateLimitLoading, refresh: refreshRateLimit } = useCompanyRateLimits();
+  
   const initialType = searchParams.get('type') === 'coding' ? 'coding' : 'aptitude';
   const [type, setType] = useState<'aptitude' | 'coding'>(initialType);
   const [title, setTitle] = useState('');
@@ -69,6 +48,7 @@ const CreateTest: React.FC = () => {
   const [automationType, setAutomationType] = useState<'internal' | 'external'>('internal');
   const [externalLink, setExternalLink] = useState('');
   const [externalAccessCode, setExternalAccessCode] = useState('');
+  
   const activeLimitResource: RateLimitResource = type === 'coding' ? 'codingAssessments' : 'assessments';
   const activeLimitReached = isRateLimitReached(rateLimitStatus, activeLimitResource);
 
@@ -99,11 +79,13 @@ const CreateTest: React.FC = () => {
 
   const completionItems = useMemo(() => {
     return [
-      { label: 'Details', complete: Boolean(title.trim()) && duration > 0 },
-      { label: 'Scoring', complete: passingScore >= 0 && passingScore <= 100 },
-      { label: 'Questions', complete: questions.length > 0 },
+      { step: '01', label: 'Basic Details', desc: 'Title, type & duration', complete: Boolean(title.trim()) && duration > 0 },
+      { step: '02', label: 'Scoring Criteria', desc: 'Passing score percentage', complete: passingScore >= 0 && passingScore <= 100 },
+      { step: '03', label: 'Questions Bank', desc: `${questions.length} questions configured`, complete: questions.length > 0 },
       {
-        label: 'Routing',
+        step: '04',
+        label: 'Candidate Routing',
+        desc: automationType === 'internal' ? (nextInterviewId ? 'Interview mapped' : 'None selected') : (externalLink ? 'URL configured' : 'Optional'),
         complete: automationType === 'internal' ? Boolean(nextInterviewId) : Boolean(externalLink.trim()),
         optional: true,
       },
@@ -121,7 +103,7 @@ const CreateTest: React.FC = () => {
   const handleAiGenerate = async () => {
     const trimmedPrompt = aiPrompt.trim();
     if (!trimmedPrompt) {
-      showError('Topic is required.');
+      showError('Please enter a topic or subject prompt.');
       return;
     }
 
@@ -140,10 +122,11 @@ const CreateTest: React.FC = () => {
       const generated: any[] = parsed.questions || parsed.problems || [];
       if (!Array.isArray(generated) || generated.length === 0) throw new Error('No questions returned');
       setQuestions((currentQuestions) => [...currentQuestions, ...generated]);
-      showSuccess('Questions generated.');
+      showSuccess(`Successfully generated ${generated.length} question(s).`);
+      setAiPrompt('');
     } catch (error) {
       console.error('AI Error:', error);
-      showError('Failed to generate questions.');
+      showError('Failed to generate questions. Please try again.');
     } finally {
       setGenerating(false);
     }
@@ -154,7 +137,7 @@ const CreateTest: React.FC = () => {
       const hasQuestion = manualQ.question.trim();
       const hasOptions = manualQ.options.every(option => option.trim());
       if (!hasQuestion || !hasOptions) {
-        showError('Question and all four options are required.');
+        showError('Question text and all four options are required.');
         return;
       }
 
@@ -167,6 +150,7 @@ const CreateTest: React.FC = () => {
         },
       ]);
       setManualQ({ question: '', options: ['', '', '', ''], correct: 0 });
+      showSuccess('Question added to bank.');
       return;
     }
 
@@ -184,6 +168,7 @@ const CreateTest: React.FC = () => {
       },
     ]);
     setManualCodeQ({ title: '', description: '', testCases: '' });
+    showSuccess('Coding problem added to bank.');
   };
 
   const handleSave = async (event: React.FormEvent) => {
@@ -230,7 +215,7 @@ const CreateTest: React.FC = () => {
       }
 
       await addDoc(collection(db, 'tests'), testData);
-      showSuccess('Assessment created.');
+      showSuccess('Assessment created successfully!');
       navigate('/recruiter/tests');
     } catch (error) {
       console.error(error);
@@ -240,413 +225,743 @@ const CreateTest: React.FC = () => {
     }
   };
 
-  const inputClass = "geist-caption h-9 w-full rounded-[6px] border border-white/[0.11] bg-[#050505] px-3 text-white outline-none transition-colors placeholder:text-[#6b7280] focus:border-white/[0.28] focus:bg-white/[0.04] disabled:cursor-not-allowed disabled:opacity-50 [color-scheme:dark]";
-  const textareaClass = "geist-caption min-h-[112px] w-full resize-y rounded-[6px] border border-white/[0.11] bg-[#050505] px-3 py-2.5 text-white outline-none transition-colors placeholder:text-[#6b7280] focus:border-white/[0.28] focus:bg-white/[0.04]";
-  const selectClass = `${inputClass} appearance-none`;
-  const labelClass = "geist-label mb-1.5 block text-[#a1a1aa]";
-  const helperClass = "geist-small mt-1 text-[#8f8f8f]";
-  const secondaryButtonClass = "geist-caption inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-[6px] border border-white/[0.11] bg-white/[0.03] px-3 font-medium text-[#d4d4d4] transition-colors hover:bg-white/[0.06] hover:text-white disabled:cursor-not-allowed disabled:opacity-40";
-  const primaryButtonClass = "geist-caption inline-flex h-10 items-center justify-center gap-2 rounded-[6px] border border-white bg-white px-4 font-medium text-black transition-colors hover:bg-[#eaeaea] disabled:cursor-not-allowed disabled:opacity-50";
+  const inputClass = "w-full h-11 px-4 rounded-2xl border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-[#101114] text-xs sm:text-sm text-[#111215] dark:text-[#F8F9F5] placeholder:text-[#73766C] dark:placeholder:text-neutral-500 outline-none transition-all focus:border-[#111215] dark:focus:border-[#D4F82C] focus:bg-white dark:focus:bg-[#15161A] disabled:cursor-not-allowed disabled:opacity-50";
+  const textareaClass = "w-full min-h-[110px] p-4 rounded-2xl border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-[#101114] text-xs sm:text-sm text-[#111215] dark:text-[#F8F9F5] placeholder:text-[#73766C] dark:placeholder:text-neutral-500 outline-none transition-all focus:border-[#111215] dark:focus:border-[#D4F82C] focus:bg-white dark:focus:bg-[#15161A] leading-relaxed resize-y";
+  const selectClass = `${inputClass} cursor-pointer`;
+  const labelClass = "text-xs font-bold text-[#111215] dark:text-[#F8F9F5] mb-2 flex items-center justify-between";
+  const secondaryButtonClass = "inline-flex h-11 items-center justify-center rounded-full border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-white/5 px-5 font-bold text-xs text-[#111215] dark:text-white transition-all hover:bg-[#F1F3EB] dark:hover:bg-white/10 cursor-pointer shadow-2xs gap-2 disabled:cursor-not-allowed disabled:opacity-40";
+  const primaryButtonClass = "inline-flex h-11 items-center justify-center rounded-full bg-[#111215] text-white hover:bg-[#202227] dark:bg-[#D4F82C] dark:text-[#111215] dark:hover:bg-[#c5ea24] px-6 font-bold text-xs sm:text-sm transition-all shadow-md cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 gap-2";
 
   return (
-    <div className="-mx-4 -my-8 min-h-[calc(100dvh-3.5rem)] bg-[#000] text-white sm:-mx-6 lg:-mx-8">
-      <header className="border-b border-white/[0.11]">
-        <div className="flex flex-col gap-4 px-4 py-5 sm:px-6 lg:px-7 xl:flex-row xl:items-start xl:justify-between">
+    <div className="w-full min-h-screen bg-[#F8F9F5] dark:bg-[#0D0E11] text-[#111215] dark:text-[#F8F9F5] font-sans antialiased selection:bg-[#D4F82C] selection:text-[#111215]">
+      
+      {/* Top Header */}
+      <header className="border-b border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-[#0D0E11] px-4 py-6 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
+            <div className="flex items-center gap-3 mb-2">
+              <button
+                type="button"
+                onClick={() => navigate('/recruiter/tests')}
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-white dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 text-[#575A51] dark:text-neutral-300 hover:text-[#111215] dark:hover:text-white hover:border-[#111215] dark:hover:border-white/30 transition-all shadow-2xs"
+              >
+                <ArrowLeft size={13} />
+                <span>Assessments</span>
+              </button>
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 text-[11px] font-bold text-[#111215] dark:text-[#F8F9F5] shadow-2xs">
+                <span className="size-2 rounded-full bg-[#8FB305] dark:bg-[#D4F82C] animate-pulse"></span>
+                <span className="font-mono uppercase text-[10px] text-[#73766C] dark:text-neutral-400">STUDIO</span>
+                <span className="text-[#E4E7DC] dark:text-white/20">|</span>
+                <span>{type === 'coding' ? 'Technical Coding Screen' : 'Aptitude & Logic Screen'}</span>
+              </div>
+            </div>
+            
+            <h1 className="text-2xl sm:text-3xl font-black text-[#111215] dark:text-[#F8F9F5] tracking-tight">
+              Create Assessment
+            </h1>
+            <p className="text-xs sm:text-sm text-[#575A51] dark:text-neutral-400 mt-1 max-w-2xl leading-relaxed">
+              Build a focused candidate screen, configure passing criteria, auto-generate questions with AI, and automate routing into the next interview round.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3">
             <button
               type="button"
               onClick={() => navigate('/recruiter/tests')}
               className={secondaryButtonClass}
             >
-              <ArrowLeft size={14} />
-              <span>Assessments</span>
+              Cancel
             </button>
-            <p className="geist-label mt-4 uppercase text-[#6b7280]">Assessment setup</p>
-            <h1 className="geist-page-title mt-2 text-white">Create assessment</h1>
-            <p className="geist-small mt-1 max-w-2xl text-[#8f8f8f]">
-              Build a focused screen, set pass criteria, and route qualified candidates into the next interview round.
-            </p>
+            <button
+              type="submit"
+              form="create-assessment-form"
+              disabled={saving || generating || questions.length === 0 || rateLimitLoading || activeLimitReached}
+              className={primaryButtonClass}
+            >
+              <Save size={16} />
+              <span>{saving ? 'Saving...' : activeLimitReached ? 'Limit Reached' : 'Create Assessment'}</span>
+            </button>
           </div>
-          <button
-            type="submit"
-            form="create-assessment-form"
-            disabled={saving || generating || questions.length === 0 || rateLimitLoading || activeLimitReached}
-            className={primaryButtonClass}
-          >
-            <Save size={16} />
-            <span>{saving ? 'Saving' : activeLimitReached ? 'Rate limit reached' : 'Create Assessment'}</span>
-          </button>
         </div>
+
         {activeLimitReached && (
-          <div className="border-t border-red-500/20 bg-red-500/10 px-4 py-3 text-sm font-medium text-red-400 sm:px-6 lg:px-7">
-            {getRateLimitReachedMessage(activeLimitResource)}
+          <div className="max-w-7xl mx-auto mt-4 rounded-2xl border border-red-500/20 bg-red-500/10 p-4 text-xs sm:text-sm font-semibold text-red-600 dark:text-red-400 flex items-center gap-2.5">
+            <AlertCircle size={18} className="shrink-0" />
+            <span>{getRateLimitReachedMessage(activeLimitResource)}</span>
           </div>
         )}
       </header>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[minmax(280px,0.4fr)_1px_minmax(0,1fr)]">
-        <aside className="border-b border-white/[0.11] bg-[#020202] px-4 py-5 sm:px-6 lg:border-b-0 lg:px-7">
-          <div className="lg:sticky lg:top-[5.25rem]">
-            <p className="geist-label uppercase text-[#6b7280]">Flow</p>
-            <h2 className="geist-section-title mt-1 text-white">Assessment workflow</h2>
-            <p className="geist-small mt-1 max-w-2xl text-[#8f8f8f]">
-              Configure the assessment, generate or write prompts, then save it for candidate access.
-            </p>
+      {/* Main 2-Column Bento Workspace */}
+      <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
 
-            <div className="mt-5 divide-y divide-white/[0.11] border border-white/[0.11]">
-              {completionItems.map((item) => (
-                <div key={item.label} className="flex items-center justify-between gap-3 px-3 py-3">
-                  <div>
-                    <p className="geist-caption font-medium text-white">{item.label}</p>
-                    {item.optional && <p className="geist-small mt-0.5 text-[#6b7280]">Optional</p>}
+          {/* Left Column: Progress & Draft Summary (4 cols) */}
+          <aside className="lg:col-span-4 space-y-6 lg:sticky lg:top-6">
+            
+            {/* Workflow Card */}
+            <div className="rounded-3xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] p-5 sm:p-6 shadow-xs space-y-5">
+              <div className="flex items-center justify-between pb-3 border-b border-[#E4E7DC] dark:border-white/10">
+                <div className="flex items-center gap-2.5">
+                  <div className="size-8 rounded-xl bg-[#111215] text-[#D4F82C] dark:bg-[#D4F82C] dark:text-[#111215] flex items-center justify-center font-bold shadow-2xs">
+                    <Layers size={15} />
                   </div>
-                  <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-[6px] border ${item.complete ? 'border-[#173d25] bg-[#071a10] text-[#7ee787]' : 'border-white/[0.11] bg-white/[0.03] text-[#6b7280]'}`}>
-                    {item.complete ? <Check size={13} /> : <span className="h-1.5 w-1.5 rounded-full bg-current" />}
-                  </span>
+                  <div>
+                    <h2 className="text-sm font-bold text-[#111215] dark:text-[#F8F9F5]">Workflow</h2>
+                    <p className="text-[11px] text-[#73766C] dark:text-neutral-400">Setup checklist & readiness</p>
+                  </div>
                 </div>
-              ))}
-            </div>
+                <span className="px-2.5 py-1 rounded-full bg-[#F1F3EB] dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 text-[10px] font-mono font-bold text-[#8FB305] dark:text-[#D4F82C]">
+                  {completionItems.filter(i => i.complete).length} / {completionItems.length}
+                </span>
+              </div>
 
-            <div className="mt-7 border-t border-white/[0.11] pt-5">
-              <p className="geist-label uppercase text-[#6b7280]">Draft</p>
-              <dl className="mt-3 divide-y divide-white/[0.11] border border-white/[0.11]">
-                {[
-                  ['Type', type === 'coding' ? 'Coding' : 'Aptitude'],
-                  ['Duration', `${duration || 0} min`],
-                  ['Passing Score', `${passingScore || 0}%`],
-                  ['Questions', String(questions.length)],
-                ].map(([label, value]) => (
-                  <div key={label} className="flex items-center justify-between gap-3 px-3 py-2.5">
-                    <dt className="geist-small text-[#8f8f8f]">{label}</dt>
-                    <dd className="geist-label tabular-nums text-white">{value}</dd>
+              <div className="space-y-2.5">
+                {completionItems.map((item) => (
+                  <div
+                    key={item.label}
+                    className={`p-3 rounded-2xl border transition-all flex items-center justify-between gap-3 ${
+                      item.complete
+                        ? 'bg-[#F4F9EB] dark:bg-emerald-950/20 border-[#D2E7B3] dark:border-emerald-800/40 text-emerald-900 dark:text-emerald-300'
+                        : 'bg-[#F8F9F5] dark:bg-white/5 border-[#E4E7DC] dark:border-white/10 text-[#111215] dark:text-white'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className={`size-7 rounded-xl flex items-center justify-center text-xs font-mono font-black ${
+                        item.complete
+                          ? 'bg-emerald-600 text-white'
+                          : 'bg-white dark:bg-white/10 text-[#73766C] dark:text-neutral-400 border border-[#E4E7DC] dark:border-white/10'
+                      }`}>
+                        {item.complete ? <Check size={14} /> : item.step}
+                      </span>
+                      <div>
+                        <div className="text-xs font-bold">{item.label}</div>
+                        <div className="text-[11px] text-[#73766C] dark:text-neutral-400">{item.desc}</div>
+                      </div>
+                    </div>
+                    {item.optional && !item.complete && (
+                      <span className="text-[10px] font-mono text-[#73766C] px-2 py-0.5 rounded-full bg-white dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10">
+                        Optional
+                      </span>
+                    )}
                   </div>
                 ))}
-              </dl>
-            </div>
-          </div>
-        </aside>
-
-        <div className="hidden bg-white/[0.11] lg:block" />
-
-        <form id="create-assessment-form" onSubmit={handleSave} className="min-w-0">
-          <FieldSection
-            label="Details"
-            title="Assessment profile"
-            description="Name the assessment and choose the test format candidates will complete."
-          >
-            <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-              <div>
-                <label className={labelClass}>Assessment Title</label>
-                <input
-                  type="text"
-                  value={title}
-                  onChange={event => setTitle(event.target.value)}
-                  className={inputClass}
-                  placeholder="Frontend React Screen"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className={labelClass}>Assessment Type</label>
-                <div className="grid grid-cols-2 rounded-[6px] border border-white/[0.11] bg-white/[0.03] p-0.5">
-                  {[
-                    { value: 'aptitude' as const, label: 'Aptitude', icon: FileText },
-                    { value: 'coding' as const, label: 'Coding', icon: Code },
-                  ].map((option) => {
-                    const Icon = option.icon;
-                    const isSelected = type === option.value;
-                    return (
-                      <button
-                        key={option.value}
-                        type="button"
-                        onClick={() => handleTypeChange(option.value)}
-                        className={`geist-caption inline-flex h-8 items-center justify-center gap-2 rounded-[4px] font-medium transition-colors ${isSelected ? 'bg-white text-black' : 'text-[#8f8f8f] hover:bg-white/[0.06] hover:text-white'}`}
-                      >
-                        <Icon size={14} />
-                        {option.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div>
-                <label className={labelClass}>Duration</label>
-                <div className="flex h-9 items-center rounded-[6px] border border-white/[0.11] bg-[#050505]">
-                  <button type="button" disabled={duration <= 1} onClick={() => setDuration(Math.max(1, duration - 5))} className="h-full w-10 border-r border-white/[0.11] text-[#8f8f8f] transition-colors hover:bg-white/[0.06] hover:text-white disabled:cursor-not-allowed disabled:opacity-30">-</button>
-                  <input
-                    type="number"
-                    min="1"
-                    value={duration}
-                    onChange={event => setDuration(Number(event.target.value))}
-                    className="geist-caption h-full min-w-0 flex-1 border-none bg-transparent px-3 text-center font-medium tabular-nums text-white outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                  />
-                  <button type="button" onClick={() => setDuration(duration + 5)} className="h-full w-10 border-l border-white/[0.11] text-[#8f8f8f] transition-colors hover:bg-white/[0.06] hover:text-white">+</button>
-                </div>
-                <p className={helperClass}>Candidate time limit in minutes.</p>
-              </div>
-
-              <div>
-                <label className={labelClass}>Passing Score</label>
-                <div className="flex h-9 items-center rounded-[6px] border border-white/[0.11] bg-[#050505]">
-                  <input
-                    type="number"
-                    value={passingScore}
-                    onChange={event => setPassingScore(Number(event.target.value))}
-                    min="0"
-                    max="100"
-                    className="geist-caption h-full min-w-0 flex-1 border-none bg-transparent px-3 font-medium tabular-nums text-white outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                  />
-                  <span className="geist-label border-l border-white/[0.11] px-3 text-[#8f8f8f]">%</span>
-                </div>
-                <p className={helperClass}>Scores at or above this value can trigger the next round.</p>
               </div>
             </div>
-          </FieldSection>
 
-          <FieldSection
-            label="Automation"
-            title="Next-round routing"
-            description="Optionally send passing candidates to an internal interview or an external link."
-          >
-            <div className="grid grid-cols-1 gap-4">
-              <div>
-                <label className={labelClass}>Routing Type</label>
-                <div className="grid grid-cols-2 rounded-[6px] border border-white/[0.11] bg-white/[0.03] p-0.5">
-                  {[
-                    ['internal', 'Internal Interview'],
-                    ['external', 'External URL'],
-                  ].map(([value, label]) => (
-                    <button
-                      key={value}
-                      type="button"
-                      onClick={() => setAutomationType(value as 'internal' | 'external')}
-                      className={`geist-caption h-8 rounded-[4px] font-medium transition-colors ${automationType === value ? 'bg-white text-black' : 'text-[#8f8f8f] hover:bg-white/[0.06] hover:text-white'}`}
-                    >
-                      {label}
-                    </button>
-                  ))}
+            {/* Draft Summary Card */}
+            <div className="rounded-3xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] p-5 sm:p-6 shadow-xs space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b border-[#E4E7DC] dark:border-white/10">
+                <span className="text-xs font-mono font-bold uppercase tracking-wider text-[#73766C] dark:text-neutral-400">
+                  Assessment Specs
+                </span>
+                <span className="px-2 py-0.5 rounded-md bg-[#111215] text-[#D4F82C] text-[10px] font-mono font-bold">
+                  DRAFT
+                </span>
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex items-center justify-between text-xs py-1">
+                  <span className="text-[#73766C] dark:text-neutral-400 font-medium">Evaluation Type</span>
+                  <span className="font-bold text-[#111215] dark:text-white capitalize px-2.5 py-0.5 rounded-full bg-[#F1F3EB] dark:bg-white/10 text-xs">
+                    {type}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-xs py-1">
+                  <span className="text-[#73766C] dark:text-neutral-400 font-medium">Duration</span>
+                  <span className="font-mono font-bold text-[#111215] dark:text-white">
+                    {duration} Minutes
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-xs py-1">
+                  <span className="text-[#73766C] dark:text-neutral-400 font-medium">Passing Threshold</span>
+                  <span className="font-mono font-bold text-[#8FB305] dark:text-[#D4F82C]">
+                    {passingScore}%
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-xs py-1">
+                  <span className="text-[#73766C] dark:text-neutral-400 font-medium">Questions Configured</span>
+                  <span className="font-mono font-bold text-[#111215] dark:text-white">
+                    {questions.length} Questions
+                  </span>
                 </div>
               </div>
 
-              {automationType === 'internal' ? (
-                <div>
-                  <label className={labelClass}>Next Interview</label>
-                  <select value={nextInterviewId} onChange={event => setNextInterviewId(event.target.value)} className={selectClass}>
-                    <option value="">Select an interview</option>
-                    {recruiterInterviews.map(interview => (
-                      <option key={interview.id} value={interview.id}>{interview.title}</option>
-                    ))}
-                  </select>
-                  <p className={helperClass}>Passing candidates receive the selected interview link and access code.</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_220px]">
+              <div className="p-3.5 rounded-2xl bg-[#F8F9F5] dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 text-[11px] text-[#575A51] dark:text-neutral-300 leading-relaxed flex items-start gap-2.5">
+                <Sparkles size={15} className="text-[#8FB305] dark:text-[#D4F82C] shrink-0 mt-0.5" />
+                <span>
+                  Candidates who score ≥ {passingScore}% will automatically receive next steps or unlock the subsequent interview round.
+                </span>
+              </div>
+            </div>
+
+          </aside>
+
+          {/* Right Column: Main Form (8 cols) */}
+          <form id="create-assessment-form" onSubmit={handleSave} className="lg:col-span-8 space-y-6">
+
+            {/* SECTION 1: Assessment Profile */}
+            <section className="rounded-3xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] p-6 sm:p-8 shadow-xs space-y-6">
+              <div className="flex items-center justify-between pb-4 border-b border-[#E4E7DC] dark:border-white/10">
+                <div className="flex items-center gap-2.5">
+                  <span className="px-2.5 py-1 rounded-full bg-[#111215] text-[#D4F82C] dark:bg-[#D4F82C] dark:text-[#111215] text-[10px] font-mono font-black">
+                    01
+                  </span>
                   <div>
-                    <label className={labelClass}>External Interview Link</label>
-                    <div className="relative">
-                      <LinkIcon className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#6b7280]" size={14} />
+                    <h2 className="text-base font-bold text-[#111215] dark:text-[#F8F9F5]">Assessment Profile</h2>
+                    <p className="text-xs text-[#73766C] dark:text-neutral-400">Name the assessment, select test format and set time limit</p>
+                  </div>
+                </div>
+                <Target size={18} className="text-[#8FB305] dark:text-[#D4F82C]" />
+              </div>
+
+              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                
+                {/* Title */}
+                <div className="sm:col-span-2">
+                  <label className={labelClass}>
+                    <span>Assessment Title</span>
+                    <span className="text-[10px] text-red-500 font-semibold">* Required</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={title}
+                    onChange={event => setTitle(event.target.value)}
+                    className={inputClass}
+                    placeholder="e.g. Frontend React & State Management Screen"
+                    required
+                  />
+                </div>
+
+                {/* Format Segment Control */}
+                <div className="sm:col-span-2">
+                  <label className={labelClass}>
+                    <span>Assessment Format</span>
+                    <span className="text-[10px] text-[#73766C] font-normal">Choose question type</span>
+                  </label>
+                  <div className="grid grid-cols-2 p-1 rounded-full border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-[#101114]">
+                    <button
+                      type="button"
+                      onClick={() => handleTypeChange('aptitude')}
+                      className={`py-2.5 text-xs font-bold rounded-full transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                        type === 'aptitude'
+                          ? 'bg-[#111215] text-[#D4F82C] dark:bg-[#D4F82C] dark:text-[#111215] shadow-xs'
+                          : 'text-[#575A51] dark:text-neutral-400 hover:text-[#111215] dark:hover:text-white'
+                      }`}
+                    >
+                      <FileText size={15} />
+                      <span>Multiple Choice (MCQ)</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleTypeChange('coding')}
+                      className={`py-2.5 text-xs font-bold rounded-full transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                        type === 'coding'
+                          ? 'bg-[#111215] text-[#D4F82C] dark:bg-[#D4F82C] dark:text-[#111215] shadow-xs'
+                          : 'text-[#575A51] dark:text-neutral-400 hover:text-[#111215] dark:hover:text-white'
+                      }`}
+                    >
+                      <Code size={15} />
+                      <span>Technical Coding Challenge</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Duration Stepper */}
+                <div>
+                  <label className={labelClass}>
+                    <span className="flex items-center gap-1.5"><Clock size={13} className="text-[#8FB305]" /> Duration</span>
+                    <span className="text-[10px] text-[#73766C] font-normal">Minutes</span>
+                  </label>
+                  <div className="flex h-11 items-center rounded-2xl border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-[#101114] overflow-hidden">
+                    <button
+                      type="button"
+                      disabled={duration <= 5}
+                      onClick={() => setDuration(Math.max(1, duration - 5))}
+                      className="h-full w-12 flex items-center justify-center font-bold text-base text-[#111215] dark:text-white hover:bg-[#E4E7DC] dark:hover:bg-white/10 transition-colors disabled:opacity-30 cursor-pointer"
+                    >
+                      -
+                    </button>
+                    <input
+                      type="number"
+                      min="1"
+                      value={duration}
+                      onChange={event => setDuration(Math.max(1, Number(event.target.value)))}
+                      className="h-full min-w-0 flex-1 border-none bg-transparent px-3 text-center font-mono font-bold text-sm text-[#111215] dark:text-white outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setDuration(duration + 5)}
+                      className="h-full w-12 flex items-center justify-center font-bold text-base text-[#111215] dark:text-white hover:bg-[#E4E7DC] dark:hover:bg-white/10 transition-colors cursor-pointer"
+                    >
+                      +
+                    </button>
+                  </div>
+                  <p className="text-[11px] text-[#73766C] dark:text-neutral-400 mt-1.5">Candidate countdown starts on test launch.</p>
+                </div>
+
+                {/* Passing Score */}
+                <div>
+                  <label className={labelClass}>
+                    <span className="flex items-center gap-1.5"><Target size={13} className="text-[#8FB305]" /> Passing Score</span>
+                    <span className="text-[10px] text-[#73766C] font-normal">Percentage</span>
+                  </label>
+                  <div className="relative flex h-11 items-center rounded-2xl border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-[#101114] overflow-hidden">
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={passingScore}
+                      onChange={event => setPassingScore(Number(event.target.value))}
+                      className="h-full min-w-0 flex-1 border-none bg-transparent px-4 font-mono font-bold text-sm text-[#111215] dark:text-white outline-none"
+                    />
+                    <span className="px-3.5 py-1 mr-2 text-xs font-mono font-black rounded-lg bg-white dark:bg-white/10 border border-[#E4E7DC] dark:border-white/10 text-[#8FB305] dark:text-[#D4F82C]">
+                      %
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-[#73766C] dark:text-neutral-400 mt-1.5">Scores at or above this trigger automated progression.</p>
+                </div>
+
+              </div>
+            </section>
+
+            {/* SECTION 2: Next-round Routing Automation */}
+            <section className="rounded-3xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] p-6 sm:p-8 shadow-xs space-y-6">
+              <div className="flex items-center justify-between pb-4 border-b border-[#E4E7DC] dark:border-white/10">
+                <div className="flex items-center gap-2.5">
+                  <span className="px-2.5 py-1 rounded-full bg-[#111215] text-[#D4F82C] dark:bg-[#D4F82C] dark:text-[#111215] text-[10px] font-mono font-black">
+                    02
+                  </span>
+                  <div>
+                    <h2 className="text-base font-bold text-[#111215] dark:text-[#F8F9F5]">Next-Round Automation</h2>
+                    <p className="text-xs text-[#73766C] dark:text-neutral-400">Direct passing candidates straight into an interview</p>
+                  </div>
+                </div>
+                <LinkIcon size={18} className="text-[#8FB305] dark:text-[#D4F82C]" />
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className={labelClass}>
+                    <span>Routing Destination</span>
+                    <span className="text-[10px] text-[#73766C] font-normal">Optional</span>
+                  </label>
+                  <div className="grid grid-cols-2 p-1 rounded-full border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-[#101114]">
+                    <button
+                      type="button"
+                      onClick={() => setAutomationType('internal')}
+                      className={`py-2 text-xs font-bold rounded-full transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                        automationType === 'internal'
+                          ? 'bg-[#111215] text-[#D4F82C] dark:bg-[#D4F82C] dark:text-[#111215] shadow-xs'
+                          : 'text-[#575A51] dark:text-neutral-400 hover:text-[#111215] dark:hover:text-white'
+                      }`}
+                    >
+                      <span>Internal Interview</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAutomationType('external')}
+                      className={`py-2 text-xs font-bold rounded-full transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                        automationType === 'external'
+                          ? 'bg-[#111215] text-[#D4F82C] dark:bg-[#D4F82C] dark:text-[#111215] shadow-xs'
+                          : 'text-[#575A51] dark:text-neutral-400 hover:text-[#111215] dark:hover:text-white'
+                      }`}
+                    >
+                      <span>External Link / Tool</span>
+                    </button>
+                  </div>
+                </div>
+
+                {automationType === 'internal' ? (
+                  <div>
+                    <label className={labelClass}>
+                      <span>Target Interview</span>
+                      <span className="text-[10px] text-[#73766C] font-normal">Mapped after test completion</span>
+                    </label>
+                    <select
+                      value={nextInterviewId}
+                      onChange={event => setNextInterviewId(event.target.value)}
+                      className={selectClass}
+                    >
+                      <option value="">Select an interview opening...</option>
+                      {recruiterInterviews.map(interview => (
+                        <option key={interview.id} value={interview.id}>{interview.title}</option>
+                      ))}
+                    </select>
+                    <p className="text-[11px] text-[#73766C] dark:text-neutral-400 mt-1.5">
+                      Passing candidates immediately receive the selected interview invitation and access code.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="sm:col-span-2">
+                      <label className={labelClass}>
+                        <span>External Interview URL</span>
+                      </label>
                       <input
                         type="url"
                         value={externalLink}
                         onChange={event => setExternalLink(event.target.value)}
-                        className={`${inputClass} pl-9`}
-                        placeholder="https://meet.example.com/session"
+                        className={inputClass}
+                        placeholder="https://meet.google.com/... or Calendly"
+                      />
+                    </div>
+                    <div>
+                      <label className={labelClass}>
+                        <span>Access Code</span>
+                        <span className="text-[10px] text-[#73766C] font-normal">Optional</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={externalAccessCode}
+                        onChange={event => setExternalAccessCode(event.target.value)}
+                        className={inputClass}
+                        placeholder="e.g. SEC-901"
                       />
                     </div>
                   </div>
+                )}
+              </div>
+            </section>
+
+            {/* SECTION 3: AI Question Generation */}
+            <section className="rounded-3xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] p-6 sm:p-8 shadow-xs space-y-6">
+              <div className="flex items-center justify-between pb-4 border-b border-[#E4E7DC] dark:border-white/10">
+                <div className="flex items-center gap-2.5">
+                  <div className="size-8 rounded-xl bg-[#D4F82C] text-[#111215] flex items-center justify-center font-black shadow-2xs">
+                    <Wand2 size={16} />
+                  </div>
                   <div>
-                    <label className={labelClass}>Access Code</label>
+                    <h2 className="text-base font-bold text-[#111215] dark:text-[#F8F9F5]">AI Question Generator</h2>
+                    <p className="text-xs text-[#73766C] dark:text-neutral-400">Instant generation tailored to role tech stack or skills</p>
+                  </div>
+                </div>
+                <span className="px-2.5 py-1 rounded-full bg-[#F1F3EB] dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 text-[10px] font-mono font-bold text-[#8FB305] dark:text-[#D4F82C]">
+                  Smart Draft
+                </span>
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex flex-col sm:flex-row gap-2.5">
+                  <div className="relative flex-1">
+                    <Bot size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#73766C]" />
                     <input
                       type="text"
-                      value={externalAccessCode}
-                      onChange={event => setExternalAccessCode(event.target.value)}
-                      className={inputClass}
-                      placeholder="RND-204"
+                      value={aiPrompt}
+                      onChange={event => setAiPrompt(event.target.value)}
+                      placeholder={type === 'aptitude' ? 'e.g. React 19 hooks, rendering cycle, TypeScript generics' : 'e.g. Binary Search & Tree Traversal in Python'}
+                      className={`${inputClass} pl-11`}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAiGenerate();
+                        }
+                      }}
                     />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleAiGenerate}
+                    disabled={generating || saving}
+                    className={primaryButtonClass}
+                  >
+                    {generating ? (
+                      <>
+                        <div className="size-4 rounded-full border-2 border-white dark:border-[#111215] border-t-transparent animate-spin" />
+                        <span>Generating...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles size={15} />
+                        <span>Generate with AI</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {/* Quick Prompts Suggestions */}
+                <div className="flex items-center flex-wrap gap-1.5 pt-1">
+                  <span className="text-[11px] font-bold text-[#73766C] mr-1">Suggestions:</span>
+                  {(type === 'aptitude' ? [
+                    'React Hooks & Virtual DOM',
+                    'JavaScript ES6+ & Async/Await',
+                    'Logical Aptitude & Problem Solving',
+                    'SQL Joins & Indexing',
+                    'RESTful API Architecture',
+                  ] : [
+                    'Array Two-Pointer Problems',
+                    'String Parsing & Regex',
+                    'Dynamic Programming Basics',
+                    'Stack & Queue Implementation',
+                  ]).map((suggestion) => (
+                    <button
+                      key={suggestion}
+                      type="button"
+                      onClick={() => setAiPrompt(suggestion)}
+                      className="px-2.5 py-1 rounded-full bg-[#F8F9F5] dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 text-[11px] font-medium text-[#575A51] dark:text-neutral-300 hover:border-[#111215] dark:hover:border-white/40 hover:text-[#111215] dark:hover:text-white transition-all cursor-pointer"
+                    >
+                      + {suggestion}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </section>
+
+            {/* SECTION 4: Add Manual Question */}
+            <section className="rounded-3xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] p-6 sm:p-8 shadow-xs space-y-6">
+              <div className="flex items-center justify-between pb-4 border-b border-[#E4E7DC] dark:border-white/10">
+                <div className="flex items-center gap-2.5">
+                  <span className="px-2.5 py-1 rounded-full bg-[#111215] text-[#D4F82C] dark:bg-[#D4F82C] dark:text-[#111215] text-[10px] font-mono font-black">
+                    03
+                  </span>
+                  <div>
+                    <h2 className="text-base font-bold text-[#111215] dark:text-[#F8F9F5]">
+                      {type === 'aptitude' ? 'Add Custom Question' : 'Add Custom Coding Problem'}
+                    </h2>
+                    <p className="text-xs text-[#73766C] dark:text-neutral-400">
+                      {type === 'aptitude' ? 'Compose question with 4 multiple choice options' : 'Write challenge description and test cases'}
+                    </p>
+                  </div>
+                </div>
+                <Plus size={18} className="text-[#8FB305] dark:text-[#D4F82C]" />
+              </div>
+
+              {type === 'aptitude' ? (
+                <div className="space-y-4">
+                  <div>
+                    <label className={labelClass}>
+                      <span>Question Text</span>
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Which React hook is used to perform side effects in functional components?"
+                      value={manualQ.question}
+                      onChange={event => setManualQ({ ...manualQ, question: event.target.value })}
+                      className={inputClass}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-1">
+                    {manualQ.options.map((option, index) => (
+                      <div key={index}>
+                        <label className={labelClass}>
+                          <span>Option {index + 1} {manualQ.correct === index && <span className="text-emerald-600 dark:text-emerald-400 font-bold ml-1">(Correct Answer)</span>}</span>
+                          <button
+                            type="button"
+                            onClick={() => setManualQ({ ...manualQ, correct: index })}
+                            className={`text-[10px] font-bold px-2 py-0.5 rounded-md cursor-pointer transition-colors ${
+                              manualQ.correct === index
+                                ? 'bg-emerald-600 text-white'
+                                : 'bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-neutral-400 hover:bg-gray-200'
+                            }`}
+                          >
+                            Mark Correct
+                          </button>
+                        </label>
+                        <input
+                          type="text"
+                          placeholder={index === 0 ? 'useEffect' : `Option ${index + 1}`}
+                          value={option}
+                          onChange={event => {
+                            const nextOptions = [...manualQ.options];
+                            nextOptions[index] = event.target.value;
+                            setManualQ({ ...manualQ, options: nextOptions });
+                          }}
+                          className={inputClass}
+                        />
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2">
+                    <span className="text-xs text-[#73766C] dark:text-neutral-400">
+                      Currently marked correct: <strong className="text-[#111215] dark:text-white">Option {manualQ.correct + 1}</strong>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={addManualQuestion}
+                      className={secondaryButtonClass}
+                    >
+                      <Plus size={15} />
+                      <span>Add to Assessment Bank</span>
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div>
+                    <label className={labelClass}>
+                      <span>Problem Title</span>
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Merge Overlapping Intervals"
+                      value={manualCodeQ.title}
+                      onChange={event => setManualCodeQ({ ...manualCodeQ, title: event.target.value })}
+                      className={inputClass}
+                    />
+                  </div>
+                  <div>
+                    <label className={labelClass}>
+                      <span>Problem Description & Constraints</span>
+                    </label>
+                    <textarea
+                      placeholder="Given an array of intervals where intervals[i] = [starti, endi], merge all overlapping intervals..."
+                      value={manualCodeQ.description}
+                      onChange={event => setManualCodeQ({ ...manualCodeQ, description: event.target.value })}
+                      className={textareaClass}
+                      rows={4}
+                    />
+                  </div>
+                  <div>
+                    <label className={labelClass}>
+                      <span>Sample Test Cases & Expected Output</span>
+                    </label>
+                    <textarea
+                      placeholder={"Input: [[1,3],[2,6],[8,10]]\nOutput: [[1,6],[8,10]]"}
+                      value={manualCodeQ.testCases}
+                      onChange={event => setManualCodeQ({ ...manualCodeQ, testCases: event.target.value })}
+                      className={textareaClass}
+                      rows={3}
+                    />
+                  </div>
+                  <div className="flex justify-end pt-2">
+                    <button
+                      type="button"
+                      onClick={addManualQuestion}
+                      className={secondaryButtonClass}
+                    >
+                      <Plus size={15} />
+                      <span>Add Coding Problem</span>
+                    </button>
                   </div>
                 </div>
               )}
-            </div>
-          </FieldSection>
+            </section>
 
-          <FieldSection
-            label="Generator"
-            title="Generate questions"
-            description="Use AI to draft a starter set, then edit the list by adding or removing questions."
-          >
-            <div className="grid grid-cols-1 gap-2 md:grid-cols-[minmax(0,1fr)_auto]">
-              <div className="relative">
-                <Bot className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#6b7280]" size={14} />
-                <input
-                  type="text"
-                  value={aiPrompt}
-                  onChange={event => setAiPrompt(event.target.value)}
-                  placeholder={type === 'aptitude' ? 'React fundamentals and browser APIs' : 'Array manipulation in JavaScript'}
-                  className={`${inputClass} pl-9`}
-                />
-              </div>
-              <button type="button" onClick={handleAiGenerate} disabled={generating || saving} className={secondaryButtonClass}>
-                <Sparkles size={14} />
-                <span>{generating ? 'Generating' : 'Generate'}</span>
-              </button>
-            </div>
-          </FieldSection>
-
-          <FieldSection
-            label="Manual"
-            title={type === 'aptitude' ? 'Add MCQ question' : 'Add coding problem'}
-            description={type === 'aptitude' ? 'Write the question, four answer options, and mark the correct option.' : 'Define a coding prompt and optional sample test cases.'}
-          >
-            {type === 'aptitude' ? (
-              <div className="grid grid-cols-1 gap-4">
-                <div>
-                  <label className={labelClass}>Question</label>
-                  <input
-                    type="text"
-                    placeholder="Which hook memoizes an expensive calculation?"
-                    value={manualQ.question}
-                    onChange={event => setManualQ({ ...manualQ, question: event.target.value })}
-                    className={inputClass}
-                  />
+            {/* SECTION 5: Review Question Bank */}
+            <section className="rounded-3xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] p-6 sm:p-8 shadow-xs space-y-6">
+              <div className="flex items-center justify-between pb-4 border-b border-[#E4E7DC] dark:border-white/10">
+                <div className="flex items-center gap-2.5">
+                  <span className="px-2.5 py-1 rounded-full bg-[#111215] text-[#D4F82C] dark:bg-[#D4F82C] dark:text-[#111215] text-[10px] font-mono font-black">
+                    04
+                  </span>
+                  <div>
+                    <h2 className="text-base font-bold text-[#111215] dark:text-[#F8F9F5]">
+                      Question Bank ({questions.length})
+                    </h2>
+                    <p className="text-xs text-[#73766C] dark:text-neutral-400">Review all configured questions before publishing</p>
+                  </div>
                 </div>
+                <span className="px-3 py-1 rounded-full bg-[#F1F3EB] dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 text-xs font-mono font-bold text-[#111215] dark:text-white">
+                  {questions.length} Items
+                </span>
+              </div>
 
-                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                  {manualQ.options.map((option, index) => (
-                    <div key={index}>
-                      <label className={labelClass}>Option {index + 1}</label>
-                      <input
-                        type="text"
-                        placeholder={index === 0 ? 'useMemo' : `Answer option ${index + 1}`}
-                        value={option}
-                        onChange={event => {
-                          const nextOptions = [...manualQ.options];
-                          nextOptions[index] = event.target.value;
-                          setManualQ({ ...manualQ, options: nextOptions });
-                        }}
-                        className={inputClass}
-                      />
-                    </div>
+              {questions.length === 0 ? (
+                <div className="flex min-h-48 flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-white/[0.02] p-8 text-center">
+                  <div className="size-12 rounded-2xl bg-white dark:bg-white/10 border border-[#E4E7DC] dark:border-white/10 flex items-center justify-center text-[#73766C] dark:text-neutral-400 mb-3 shadow-2xs">
+                    {type === 'coding' ? <Code size={22} /> : <FileText size={22} />}
+                  </div>
+                  <h3 className="text-sm font-bold text-[#111215] dark:text-white">No questions added yet</h3>
+                  <p className="text-xs text-[#73766C] dark:text-neutral-400 max-w-sm mt-1">
+                    Use the AI generator above or write questions manually. You need at least 1 question to publish.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {questions.map((question, index) => (
+                    <article
+                      key={index}
+                      className="p-5 rounded-2xl border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-[#101114] space-y-3.5 transition-all hover:border-[#111215]/30 dark:hover:border-white/20"
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex items-start gap-3">
+                          <span className="size-6 rounded-lg bg-white dark:bg-white/10 border border-[#E4E7DC] dark:border-white/10 text-xs font-mono font-black flex items-center justify-center text-[#73766C] dark:text-neutral-400 shrink-0 mt-0.5">
+                            {index + 1}
+                          </span>
+                          <div>
+                            <h3 className="text-sm font-bold text-[#111215] dark:text-white leading-snug">
+                              {type === 'aptitude' ? question.question : question.title}
+                            </h3>
+                            {type === 'coding' && (
+                              <p className="text-xs text-[#575A51] dark:text-neutral-400 mt-1.5 leading-relaxed">
+                                {question.description}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => setQuestions((current) => current.filter((_, qIdx) => qIdx !== index))}
+                          className="size-8 rounded-xl flex items-center justify-center text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 border border-transparent hover:border-red-200 dark:hover:border-red-500/20 transition-all cursor-pointer shrink-0"
+                          title="Remove question"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      </div>
+
+                      {type === 'aptitude' && question.options && (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 pl-9">
+                          {question.options.map((option: string, optIndex: number) => {
+                            const isCorrect = optIndex === question.correctIndex;
+                            return (
+                              <div
+                                key={optIndex}
+                                className={`px-3 py-2 rounded-xl text-xs flex items-center gap-2 border ${
+                                  isCorrect
+                                    ? 'bg-[#EAF7E8] dark:bg-emerald-950/30 border-[#BCE4B8] dark:border-emerald-800/40 text-emerald-900 dark:text-emerald-300 font-bold'
+                                    : 'bg-white dark:bg-white/5 border-[#E4E7DC] dark:border-white/10 text-[#575A51] dark:text-neutral-300'
+                                }`}
+                              >
+                                <span className={`size-4 rounded-full flex items-center justify-center text-[10px] font-mono ${
+                                  isCorrect ? 'bg-emerald-600 text-white font-bold' : 'bg-gray-100 dark:bg-white/10 text-gray-500'
+                                }`}>
+                                  {isCorrect ? '✓' : String.fromCharCode(65 + optIndex)}
+                                </span>
+                                <span className="truncate">{option}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+
+                      {type === 'coding' && question.testCases && (
+                        <div className="pl-9 pt-1">
+                          <div className="p-3 rounded-xl bg-white dark:bg-black/40 border border-[#E4E7DC] dark:border-white/10 text-xs font-mono text-[#575A51] dark:text-neutral-400 whitespace-pre-wrap">
+                            {question.testCases}
+                          </div>
+                        </div>
+                      )}
+                    </article>
                   ))}
                 </div>
+              )}
+            </section>
 
-                <div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_auto]">
-                  <div>
-                    <label className={labelClass}>Correct Option</label>
-                    <select value={manualQ.correct} onChange={event => setManualQ({ ...manualQ, correct: Number(event.target.value) })} className={selectClass}>
-                      {manualQ.options.map((_, index) => <option key={index} value={index}>Option {index + 1}</option>)}
-                    </select>
-                  </div>
-                  <button type="button" onClick={addManualQuestion} className={`${secondaryButtonClass} self-end`}>
-                    <Plus size={14} />
-                    <span>Add Question</span>
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 gap-4">
-                <div>
-                  <label className={labelClass}>Problem Title</label>
-                  <input
-                    type="text"
-                    placeholder="Merge Overlapping Intervals"
-                    value={manualCodeQ.title}
-                    onChange={event => setManualCodeQ({ ...manualCodeQ, title: event.target.value })}
-                    className={inputClass}
-                  />
-                </div>
-                <div>
-                  <label className={labelClass}>Description</label>
-                  <textarea
-                    placeholder="Given a list of intervals, merge all overlapping intervals and return the result."
-                    value={manualCodeQ.description}
-                    onChange={event => setManualCodeQ({ ...manualCodeQ, description: event.target.value })}
-                    className={textareaClass}
-                    rows={5}
-                  />
-                </div>
-                <div>
-                  <label className={labelClass}>Test Cases</label>
-                  <textarea
-                    placeholder={"Input: [[1,3],[2,6],[8,10]]\nOutput: [[1,6],[8,10]]"}
-                    value={manualCodeQ.testCases}
-                    onChange={event => setManualCodeQ({ ...manualCodeQ, testCases: event.target.value })}
-                    className={textareaClass}
-                    rows={4}
-                  />
-                </div>
-                <div className="flex justify-end">
-                  <button type="button" onClick={addManualQuestion} className={secondaryButtonClass}>
-                    <Plus size={14} />
-                    <span>Add Problem</span>
-                  </button>
-                </div>
-              </div>
-            )}
-          </FieldSection>
+            {/* Bottom Form Actions */}
+            <div className="flex items-center justify-between p-4 rounded-2xl bg-white dark:bg-[#15161A] border border-[#E4E7DC] dark:border-white/10 shadow-xs">
+              <button
+                type="button"
+                onClick={() => navigate('/recruiter/tests')}
+                className={secondaryButtonClass}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={saving || generating || questions.length === 0 || rateLimitLoading || activeLimitReached}
+                className={primaryButtonClass}
+              >
+                <Save size={16} />
+                <span>{saving ? 'Creating Assessment...' : activeLimitReached ? 'Limit Reached' : 'Publish Assessment'}</span>
+              </button>
+            </div>
 
-          <FieldSection
-            label="Review"
-            title={`Questions (${questions.length})`}
-            description="Review the current assessment prompt set before creating candidate access."
-          >
-            {questions.length === 0 ? (
-              <EmptyQuestions type={type} />
-            ) : (
-              <div className="divide-y divide-white/[0.08] border border-white/[0.11]">
-                {questions.map((question, index) => (
-                  <article key={index} className="group px-3 py-3 transition-colors hover:bg-white/[0.025]">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="geist-label uppercase text-[#6b7280]">Question {index + 1}</p>
-                        <h3 className="geist-caption mt-1 font-semibold text-white">
-                          {type === 'aptitude' ? question.question : question.title}
-                        </h3>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setQuestions((currentQuestions) => currentQuestions.filter((_, questionIndex) => questionIndex !== index))}
-                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[6px] border border-[#3f1d1d] bg-[#180707] text-[#ff8f8f] opacity-100 transition-colors hover:bg-[#260b0b] hover:text-[#ffc3c3] sm:opacity-0 sm:group-hover:opacity-100"
-                        title="Remove question"
-                      >
-                        <Trash size={14} />
-                      </button>
-                    </div>
+          </form>
 
-                    {type === 'aptitude' ? (
-                      <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-2">
-                        {question.options?.map((option: string, optionIndex: number) => (
-                          <div
-                            key={optionIndex}
-                            className={`geist-caption rounded-[6px] border px-3 py-2 ${optionIndex === question.correctIndex ? 'border-[#173d25] bg-[#071a10] text-[#7ee787]' : 'border-white/[0.08] bg-white/[0.025] text-[#d4d4d4]'}`}
-                          >
-                            {option}
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="mt-3 rounded-[6px] border border-white/[0.08] bg-white/[0.025] px-3 py-2">
-                        <p className="geist-caption line-clamp-3 text-[#d4d4d4]">{question.description}</p>
-                        {question.testCases && <p className="geist-small mt-2 whitespace-pre-wrap font-mono text-[#8f8f8f]">{question.testCases}</p>}
-                      </div>
-                    )}
-                  </article>
-                ))}
-              </div>
-            )}
-          </FieldSection>
-
-          <div className="sticky bottom-0 flex items-center justify-end gap-2 border-t border-white/[0.11] bg-[#000]/95 px-4 py-3 backdrop-blur sm:px-6 lg:px-7">
-            <button type="button" onClick={() => navigate('/recruiter/tests')} className={secondaryButtonClass}>
-              Cancel
-            </button>
-            <button type="submit" disabled={saving || generating || questions.length === 0 || rateLimitLoading || activeLimitReached} className={primaryButtonClass}>
-              <Save size={16} />
-              <span>{saving ? 'Saving' : activeLimitReached ? 'Rate limit reached' : 'Create Assessment'}</span>
-            </button>
-          </div>
-        </form>
+        </div>
       </div>
     </div>
   );

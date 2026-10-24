@@ -5,7 +5,7 @@ import NotificationCenter from './NotificationCenter';
 import { signOut } from 'firebase/auth';
 import { auth } from '../services/firebase';
 import { useTheme } from '../context/ThemeContext';
-import { Sun, Moon, Menu, X, Monitor, Mail, Bug, MessageSquare } from 'lucide-react';
+import { Sun, Menu, X, Mail, Bug, MessageSquare } from 'lucide-react';
 import ConnectionStatus from './ConnectionStatus';
 import Logo from './Logo';
 import HireXLogo from './HireXLogo';
@@ -61,7 +61,18 @@ const LayoutContent: React.FC<{ children?: React.ReactNode }> = ({ children }) =
     }
   };
 
-  const { theme, setTheme } = useTheme();
+  const { setTheme } = useTheme();
+
+  // Compulsory Day Mode in dashboard / authenticated layout
+  React.useEffect(() => {
+    document.documentElement.classList.remove('dark');
+    setTheme('light');
+    try {
+      localStorage.setItem('theme', 'light');
+    } catch {
+      // ignore
+    }
+  }, [setTheme]);
 
   const isActive = (path: string) => location.pathname === path;
   const showRecruiterSidebar = location.pathname.startsWith('/recruiter/') || Boolean(user && userProfile?.role === 'recruiter');
@@ -238,28 +249,9 @@ const LayoutContent: React.FC<{ children?: React.ReactNode }> = ({ children }) =
                       </button>
                     </div>
                     <div className="p-3 border-t border-border flex justify-between items-center bg-muted rounded-b-xl">
-                      <div className="flex items-center gap-1 bg-secondary rounded-lg p-1 border border-border">
-                        <button
-                          onClick={() => setTheme('light')}
-                          className={`p-1.5 rounded-md transition-all ${theme === 'light' ? 'bg-white text-black shadow-sm' : 'text-gray-500 hover:text-gray-300'}`}
-                          title="Light"
-                        >
-                          <Sun size={14} />
-                        </button>
-                        <button
-                          onClick={() => setTheme('dark')}
-                          className={`p-1.5 rounded-md transition-all ${theme === 'dark' ? 'bg-gray-700 text-white shadow-sm' : 'text-gray-500 hover:text-gray-300'}`}
-                          title="Dark"
-                        >
-                          <Moon size={14} />
-                        </button>
-                        <button
-                          onClick={() => setTheme('system')}
-                          className={`p-1.5 rounded-md transition-all ${theme === 'system' ? 'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400 border border-blue-200 dark:border-blue-500/30' : 'text-gray-500 hover:text-gray-300'}`}
-                          title="System"
-                        >
-                          <Monitor size={14} />
-                        </button>
+                      <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200">
+                        <Sun size={13} className="text-amber-500" />
+                        <span>Day Mode</span>
                       </div>
                       <ConnectionStatus />
                     </div>
@@ -375,6 +367,7 @@ const LayoutContent: React.FC<{ children?: React.ReactNode }> = ({ children }) =
                     <Link to="/recruiter/interview/create" onClick={() => setIsMobileMenuOpen(false)} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium ${isActive('/recruiter/interview/create') ? 'bg-primary/10 text-primary' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-white'}`}><i className="fas fa-plus-circle w-5 text-center"></i> Post Job</Link>
                     <Link to="/recruiter/add-candidate" onClick={() => setIsMobileMenuOpen(false)} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium ${isActive('/recruiter/add-candidate') ? 'bg-primary/10 text-primary' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-white'}`}><i className="fas fa-user-plus w-5 text-center"></i> Add Candidate</Link>
                     <Link to="/recruiter/all-jobs" onClick={() => setIsMobileMenuOpen(false)} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium ${isActive('/recruiter/all-jobs') || isActive('/recruiter/interviews') ? 'bg-primary/10 text-primary' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-white'}`}><i className="fas fa-briefcase w-5 text-center"></i> All Jobs</Link>
+                    <Link to="/recruiter/tests" onClick={() => setIsMobileMenuOpen(false)} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium ${isActive('/recruiter/tests') ? 'bg-primary/10 text-primary' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-white'}`}><i className="fas fa-file-signature w-5 text-center text-emerald-500"></i> Assessments</Link>
                     <Link to="/recruiter/hot-leads" onClick={() => setIsMobileMenuOpen(false)} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium ${isActive('/recruiter/hot-leads') ? 'bg-primary/10 text-primary' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-white'}`}><i className="fas fa-fire w-5 text-center text-amber-500"></i> Candidate Responses</Link>
                     <Link to="/recruiter/pipeline" onClick={() => setIsMobileMenuOpen(false)} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium ${isActive('/recruiter/pipeline') || isActive('/recruiter/kanban') ? 'bg-primary/10 text-primary' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-white'}`}><i className="fas fa-tasks w-5 text-center text-blue-500"></i> Pipeline Kanban</Link>
                     <Link to="/recruiter/resume-dump" onClick={() => setIsMobileMenuOpen(false)} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium ${isActive('/recruiter/resume-dump') ? 'bg-primary/10 text-primary' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-white'}`}><i className="fas fa-archive w-5 text-center"></i> Resume Dump</Link>
@@ -407,21 +400,13 @@ const LayoutContent: React.FC<{ children?: React.ReactNode }> = ({ children }) =
                     </Link>
                   )}
 
-                  {/* Theme */}
-                  <div className="bg-muted p-1 rounded-xl flex">
-                    <button
-                      onClick={() => setTheme('light')}
-                      className={`flex-1 p-2 rounded-lg transition-all flex items-center justify-center gap-2 text-xs font-medium ${theme === 'light' ? 'bg-white text-black shadow-sm' : 'text-gray-500 hover:text-gray-300'}`}
-                      title="Light"
-                    >
-                      <Sun size={14} /> Light
-                    </button>
-                    <button onClick={() => setTheme('dark')} className={`flex-1 p-2 rounded-lg transition-all flex items-center justify-center gap-2 text-xs font-medium ${theme === 'dark' ? 'bg-gray-700 text-white shadow-sm' : 'text-gray-500 hover:text-gray-300'}`}>
-                      <Moon size={14} /> Dark
-                    </button>
-                    <button onClick={() => setTheme('system')} className={`flex-1 p-2 rounded-lg transition-all flex items-center justify-center gap-2 text-xs font-medium ${theme === 'system' ? 'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400' : 'text-gray-500 hover:text-gray-300'}`}>
-                      <Monitor size={14} /> Auto
-                    </button>
+                  {/* Day Mode Enforced */}
+                  <div className="flex items-center justify-between p-2.5 rounded-xl bg-gray-50 border border-gray-200 text-xs font-medium text-gray-700">
+                    <div className="flex items-center gap-2">
+                      <Sun size={14} className="text-amber-500" />
+                      <span>Day Mode</span>
+                    </div>
+                    <span className="text-[10px] uppercase font-bold tracking-wider text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">Active</span>
                   </div>
                 </div>
               )}

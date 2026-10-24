@@ -3,13 +3,22 @@ import { useNavigate } from 'react-router-dom';
 import { doc, onSnapshot, updateDoc, setDoc } from 'firebase/firestore';
 import { db, auth } from '../services/firebase';
 import { useTheme } from '../context/ThemeContext';
-import { User, Mail, Calendar, Shield, Sun, Moon, Monitor, ArrowLeft, Edit2, Save, X, FileText, DollarSign } from 'lucide-react';
+import { User, Mail, Calendar, Shield, Sun, ArrowLeft, Edit2, Save, X, FileText, DollarSign } from 'lucide-react';
 import gsap from 'gsap';
 import { signOut } from 'firebase/auth';
 
 const AdminProfile: React.FC = () => {
     const navigate = useNavigate();
-    const { theme, setTheme } = useTheme();
+    const { setTheme } = useTheme();
+
+    // Compulsory Day Mode
+    useEffect(() => {
+        document.documentElement.classList.remove('dark');
+        setTheme('light');
+        try {
+            localStorage.setItem('theme', 'light');
+        } catch {}
+    }, [setTheme]);
     const [adminData, setAdminData] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [isEditing, setIsEditing] = useState(false);
@@ -173,20 +182,10 @@ const AdminProfile: React.FC = () => {
                                 <p className="text-xs text-gray-500">{adminData?.email || 'admin@snab.co.in'}</p>
                             </div>
 
-                            {/* Theme Toggle */}
-                            <div className="p-3 border-b border-gray-100 dark:border-white/5">
-                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Appearance</p>
-                                <div className="flex bg-gray-100 dark:bg-white/5 p-1 rounded-lg gap-1">
-                                    <button onClick={() => setTheme('light')} className={`flex-1 p-2 rounded-md transition-all text-xs font-medium ${theme === 'light' ? 'bg-white text-black shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}>
-                                        <Sun size={14} className="mx-auto" />
-                                    </button>
-                                    <button onClick={() => setTheme('dark')} className={`flex-1 p-2 rounded-md transition-all text-xs font-medium ${theme === 'dark' ? 'bg-zinc-800 text-white shadow-sm' : 'text-gray-400 hover:text-gray-200'}`}>
-                                        <Moon size={14} className="mx-auto" />
-                                    </button>
-                                    <button onClick={() => setTheme('system')} className={`flex-1 p-2 rounded-md transition-all text-xs font-medium ${theme === 'system' ? 'bg-primary/10 text-primary' : 'text-gray-400 hover:text-primary'}`}>
-                                        <Monitor size={14} className="mx-auto" />
-                                    </button>
-                                </div>
+                            {/* Day Mode Enforced */}
+                            <div className="p-3 border-b border-gray-100 dark:border-white/5 flex items-center justify-between text-xs font-semibold text-emerald-700">
+                                <span className="flex items-center gap-1.5"><Sun size={13} className="text-amber-500" /> Day Mode</span>
+                                <span className="text-[10px] uppercase font-bold tracking-wider text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">Active</span>
                             </div>
 
                             <button onClick={() => navigate('/admin/blogs')} className="w-full text-left px-4 py-3 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors flex items-center gap-2 border-b border-gray-100 dark:border-white/5">

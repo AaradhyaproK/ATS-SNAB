@@ -11,6 +11,7 @@ import {
   Flame,
   UserPlus,
   Kanban,
+  FileCheck,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
@@ -63,6 +64,13 @@ const recruiterNavGroups: NavGroupData[] = [
           path === '/recruiter/interviews' ||
           path.startsWith('/recruiter/interview/responses') ||
           (path.startsWith('/recruiter/interview/') && !path.startsWith('/recruiter/interview/create')),
+      },
+      {
+        id: 'assessments',
+        title: 'Assessments',
+        icon: FileCheck,
+        href: '/recruiter/tests',
+        match: (path) => path.startsWith('/recruiter/tests'),
       },
       {
         id: 'hot-leads',

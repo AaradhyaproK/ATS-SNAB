@@ -56,6 +56,15 @@ const AdminDashboard: React.FC = () => {
   const contentRef = useRef<HTMLDivElement>(null);
   const hasAnimated = useRef(false);
 
+  // Compulsory Day Mode in Admin Dashboard
+  useEffect(() => {
+    document.documentElement.classList.remove('dark');
+    setTheme('light');
+    try {
+      localStorage.setItem('theme', 'light');
+    } catch {}
+  }, [setTheme]);
+
   // Load Real-time Data
   useEffect(() => {
     // 1. Recruiter Requests
@@ -816,17 +825,10 @@ const AdminDashboard: React.FC = () => {
                 <Trash2 size={14} className="rotate-180" /> Sign Out
               </button>
 
-              {/* Theme Toggle */}
-              <div className="p-2 sm:p-3 border-t border-gray-100 dark:border-white/5 bg-gray-50 dark:bg-black/20 flex justify-center gap-1 sm:gap-2">
-                <button onClick={() => setTheme('light')} className={`p-1.5 sm:p-2 rounded-lg transition-all ${theme === 'light' ? 'bg-white text-black shadow-sm' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-200'}`} title="Light Mode">
-                  <Sun size={14} />
-                </button>
-                <button onClick={() => setTheme('dark')} className={`p-1.5 sm:p-2 rounded-lg transition-all ${theme === 'dark' ? 'bg-gray-800 text-white shadow-sm' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-200'}`} title="Dark Mode">
-                  <Moon size={14} />
-                </button>
-                <button onClick={() => setTheme('system')} className={`p-1.5 sm:p-2 rounded-lg transition-all ${theme === 'system' ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 border border-blue-200 dark:border-blue-500/30' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-200'}`} title="System Default">
-                  <Monitor size={14} />
-                </button>
+              {/* Day Mode Enforced */}
+              <div className="p-2 sm:p-3 border-t border-gray-100 dark:border-white/5 bg-gray-50 dark:bg-black/20 flex items-center justify-between text-xs font-semibold text-emerald-700">
+                <span className="flex items-center gap-1.5"><Sun size={13} className="text-amber-500" /> Day Mode</span>
+                <span className="text-[10px] uppercase font-bold tracking-wider text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">Active</span>
               </div>
             </div>
           </div>

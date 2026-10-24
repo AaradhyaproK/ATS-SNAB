@@ -101,23 +101,25 @@ const Navbar: React.FC = () => {
 
           {/* CTAs */}
           <div className="hidden lg:flex items-center gap-4">
-            {/* Theme Toggle */}
-            <button
-              onClick={toggleTheme}
-              className={`p-2 rounded-full transition-all duration-300 ${isDark
-                ? 'bg-slate-800 hover:bg-slate-700 text-yellow-400'
-                : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
-                }`}
-              aria-label="Toggle theme"
-            >
-              <motion.div
-                initial={false}
-                animate={{ rotate: isDark ? 0 : 180, scale: [1, 0.8, 1] }}
-                transition={{ duration: 0.3 }}
+            {/* Theme Toggle - only for guest visitors */}
+            {!user && (
+              <button
+                onClick={toggleTheme}
+                className={`p-2 rounded-full transition-all duration-300 ${isDark
+                  ? 'bg-slate-800 hover:bg-slate-700 text-yellow-400'
+                  : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                  }`}
+                aria-label="Toggle theme"
               >
-                {isDark ? <Sun size={18} /> : <Moon size={18} />}
-              </motion.div>
-            </button>
+                <motion.div
+                  initial={false}
+                  animate={{ rotate: isDark ? 0 : 180, scale: [1, 0.8, 1] }}
+                  transition={{ duration: 0.3 }}
+                >
+                  {isDark ? <Sun size={18} /> : <Moon size={18} />}
+                </motion.div>
+              </button>
+            )}
             {user ? (
               <Link to={userDashboardPath}>
                 <MagnetButton variant="primary" className="!px-4 !py-2 !text-sm flex items-center gap-1.5">
@@ -139,17 +141,19 @@ const Navbar: React.FC = () => {
 
           {/* Mobile Menu Toggle */}
           <div className="lg:hidden flex items-center gap-2">
-            {/* Mobile Theme Toggle */}
-            <button
-              onClick={toggleTheme}
-              className={`p-2 rounded-full transition-all duration-300 ${isDark
-                ? 'bg-slate-800 hover:bg-slate-700 text-yellow-400'
-                : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
-                }`}
-              aria-label="Toggle theme"
-            >
-              {isDark ? <Sun size={18} /> : <Moon size={18} />}
-            </button>
+            {/* Mobile Theme Toggle - only for guest visitors */}
+            {!user && (
+              <button
+                onClick={toggleTheme}
+                className={`p-2 rounded-full transition-all duration-300 ${isDark
+                  ? 'bg-slate-800 hover:bg-slate-700 text-yellow-400'
+                  : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                  }`}
+                aria-label="Toggle theme"
+              >
+                {isDark ? <Sun size={18} /> : <Moon size={18} />}
+              </button>
+            )}
             <button
               className={`p-1 ${isDark ? 'text-white' : 'text-slate-900'}`}
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
