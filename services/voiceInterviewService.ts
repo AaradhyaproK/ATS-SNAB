@@ -234,8 +234,8 @@ export async function generateCrossQuestionOrAcknowledge(
   candidateAnswer: string,
   jobTitle: string
 ): Promise<{ shouldCrossQuestion: boolean; responseText: string }> {
-  // If answer is empty or trivial, don't cross-question
-  if (!candidateAnswer || candidateAnswer.trim().split(/\s+/).length < 4) {
+  // If answer is empty or single word, don't cross-question
+  if (!candidateAnswer || candidateAnswer.trim().split(/\s+/).length < 2) {
     return {
       shouldCrossQuestion: false,
       responseText: 'Got it, thank you for clarifying.'
@@ -244,23 +244,27 @@ export async function generateCrossQuestionOrAcknowledge(
 
   try {
     const prompt = `
-Context: A candidate is participating in an automated phone screening for "${jobTitle}".
+You are Alex, an experienced, empathetic, and sharp Senior Recruiter conducting a live voice screening interview for the role "${jobTitle}".
 Screening Question asked: "${question}"
 Candidate's spoken answer: "${candidateAnswer}"
 
-Analyze if this answer calls for a single, brief cross-question / follow-up clarification (e.g. if they mentioned a tool, number, or claim that needs a 1-sentence deeper check), OR if their answer is sufficient.
-If sufficient, provide a natural 3-5 word acknowledgment like "Understood, thank you." or "Great, thanks for explaining."
-If a cross-question is helpful, provide a polite, natural, short follow-up question (under 20 words).
+YOUR GOAL:
+Decide if their answer calls for a natural, sharp, single cross-question (e.g. if they mentioned a specific tool, architecture, project, or metric that needs a quick practical check, or if their answer was slightly theoretical/vague), OR if their answer is already comprehensive.
+
+RULES FOR THE RESPONSE:
+1. Natural Spoken Voice Only: Keep it conversational, warm, and brief (under 25 spoken words total).
+2. If Cross-Questioning: Start with a brief natural affirmation ("Nice approach.", "That makes sense.", "Understood.") followed by one sharp technical or situational follow-up. Example: "That makes sense. What were the biggest performance trade-offs or bottlenecks you encountered with that setup?"
+3. If Sufficient: Provide a warm, concise conversational transition (e.g. "Great, thank you for sharing that context.", "Understood, that is very helpful.").
 
 Return valid JSON:
 {
   "shouldCrossQuestion": boolean,
-  "responseText": "Your short acknowledgment or single cross-question"
+  "responseText": "Your natural spoken reply or cross-question"
 }
 `;
 
     const result = await geminiGenerateJson<{ shouldCrossQuestion: boolean; responseText: string }>(
-      'You are a friendly HR phone screener. Output JSON only.',
+      'You are a professional, conversational human interviewer speaking aloud. Return valid JSON only.',
       prompt,
       0.3
     );

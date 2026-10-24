@@ -14,15 +14,21 @@ export class VoiceCallRecorder {
   private mediaRecorder: MediaRecorder | null = null;
   private chunks: Blob[] = [];
   private activeAiSourceNode: AudioBufferSourceNode | null = null;
+  private activeFallbackAudio: HTMLAudioElement | null = null;
   private mimeType: string = 'audio/webm';
   private isRecording = false;
 
   /**
    * Initialize AudioContext and mix candidate microphone stream
    */
-  public async init(micStream: MediaStream): Promise<void> {
-    const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-    this.audioContext = new AudioContextClass();
+  public async init(micStream: MediaStream, existingContext?: AudioContext): Promise<void> {
+    if (existingContext && existingContext.state !== 'closed') {
+      this.audioContext = existingContext;
+    } else {
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      this.audioContext = new AudioContextClass();
+    }
+
     if (this.audioContext.state === 'suspended') {
       await this.audioContext.resume().catch(() => {});
     }
@@ -75,54 +81,95 @@ export class VoiceCallRecorder {
   }
 
   /**
-   * Play AI speech through speakers AND inject it into the call recording stream
+   * Play AI speech through speakers AND inject it into the call recording stream.
+   * Returns true if audio played successfully, false if caller should fall back to speech synthesis.
    */
-  public async playAiAudioBlob(audioBlob: Blob, isMuted = false): Promise<void> {
-    if (!this.audioContext || !this.mixedDestination) return;
+  public async playAiAudioBlob(audioBlob: Blob, isMuted = false): Promise<boolean> {
+    this.stopAiSpeech();
 
+    // 1. Digital Mixing: Pipe AI audio directly into the mixed recording stream in background
+    if (this.audioContext && this.mixedDestination) {
+      try {
+        if (this.audioContext.state === 'suspended') {
+          this.audioContext.resume().catch(() => {});
+        }
+        audioBlob.arrayBuffer().then(async (ab) => {
+          if (!this.audioContext || !this.mixedDestination) return;
+          try {
+            const audioBuffer = await this.audioContext.decodeAudioData(ab.slice(0));
+            if (audioBuffer && this.audioContext && this.mixedDestination) {
+              const recNode = this.audioContext.createBufferSource();
+              recNode.buffer = audioBuffer;
+              recNode.connect(this.mixedDestination);
+              recNode.start(0);
+            }
+          } catch (_) {}
+        }).catch(() => {});
+      } catch (_) {}
+    }
+
+    // 2. Direct, Loud & Clear Physical Speaker Playback via HTML5 Audio
     try {
-      if (this.audioContext.state === 'suspended') {
-        await this.audioContext.resume().catch(() => {});
+      const audioUrl = URL.createObjectURL(audioBlob);
+      const audio = new Audio(audioUrl);
+      audio.volume = 1.0;
+      this.activeFallbackAudio = audio;
+
+      if (isMuted) {
+        audio.muted = true;
       }
 
-      const arrayBuffer = await audioBlob.arrayBuffer();
-      // Decode audio data (makes a copy to prevent detachment)
-      const audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer.slice(0));
-
-      return new Promise<void>((resolve) => {
-        if (!this.audioContext || !this.mixedDestination) {
-          resolve();
-          return;
-        }
-
-        const sourceNode = this.audioContext.createBufferSource();
-        sourceNode.buffer = audioBuffer;
-        this.activeAiSourceNode = sourceNode;
-
-        // 1. Send to recording stream so AI speech is captured in digital quality
-        sourceNode.connect(this.mixedDestination);
-
-        // 2. Send to user speakers (unless candidate muted AI audio)
-        if (!isMuted) {
-          sourceNode.connect(this.audioContext.destination);
-        }
-
-        sourceNode.onended = () => {
-          if (this.activeAiSourceNode === sourceNode) {
-            this.activeAiSourceNode = null;
+      return await new Promise<boolean>((resolve) => {
+        let finished = false;
+        const cleanup = () => {
+          if (!finished) {
+            finished = true;
+            URL.revokeObjectURL(audioUrl);
+            if (this.activeFallbackAudio === audio) {
+              this.activeFallbackAudio = null;
+            }
           }
-          resolve();
         };
 
-        sourceNode.start(0);
+        // Safety timeout based on blob size or max 25s
+        const estDurationMs = Math.max(3000, Math.min(25000, (audioBlob.size / 3200) * 1000 + 3000));
+        const safetyTimer = setTimeout(() => {
+          if (!finished) {
+            cleanup();
+            resolve(true);
+          }
+        }, estDurationMs);
+
+        audio.onended = () => {
+          clearTimeout(safetyTimer);
+          cleanup();
+          resolve(true);
+        };
+
+        audio.onerror = (err) => {
+          console.warn('[Call Recorder] HTML5 audio error:', err);
+          clearTimeout(safetyTimer);
+          cleanup();
+          resolve(false);
+        };
+
+        audio.play().then(() => {
+          // Playing successfully through speakers
+        }).catch((err) => {
+          console.warn('[Call Recorder] HTML5 play rejected:', err);
+          clearTimeout(safetyTimer);
+          cleanup();
+          resolve(false);
+        });
       });
     } catch (err) {
-      console.warn('[Call Recorder] Error playing AI audio buffer:', err);
+      console.warn('[Call Recorder] Audio playback error:', err);
+      return false;
     }
   }
 
   /**
-   * Stop any currently playing AI audio node
+   * Stop any currently playing AI audio node or fallback element (Immediate Barge-in)
    */
   public stopAiSpeech(): void {
     if (this.activeAiSourceNode) {
@@ -131,6 +178,14 @@ export class VoiceCallRecorder {
         this.activeAiSourceNode.disconnect();
       } catch (_) {}
       this.activeAiSourceNode = null;
+    }
+    if (this.activeFallbackAudio) {
+      try {
+        this.activeFallbackAudio.pause();
+        this.activeFallbackAudio.currentTime = 0;
+        this.activeFallbackAudio.src = '';
+      } catch (_) {}
+      this.activeFallbackAudio = null;
     }
   }
 

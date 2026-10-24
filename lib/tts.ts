@@ -319,11 +319,12 @@ const playAudioStreamTTS = async (textToSpeak: string, langTag: string, options?
   return true;
 };
 
-import { synthesizeWithPolly, stopPollyAudio } from '../services/pollyService';
+import { synthesizeWithDeepgram, stopDeepgramAudio } from '../services/deepgramService';
+import { stopPollyAudio } from '../services/pollyService';
 
 /**
- * Primary Speak Function: Powered by AWS Polly Aditi Indian Bilingual Voice Engine
- * Specs: VoiceId: Aditi | Engine: standard | LanguageCode: hi-IN / en-IN | OutputFormat: mp3
+ * Primary Speak Function: Powered by Deepgram Aura Voice Engine with Native Fallback
+ * Specs: Model: aura-asteria-en | High Fidelity | Low Latency Conversational Voice
  */
 async function speak(text: string, options?: SpeakOptions): Promise<void> {
   speak.stop();
@@ -340,28 +341,23 @@ async function speak(text: string, options?: SpeakOptions): Promise<void> {
 
   const lang = detectLang(cleaned, options?.lang);
 
-  // 1. Primary Engine: AWS Polly (VoiceId: Aditi, Engine: standard, LanguageCode: hi-IN/en-IN, OutputFormat: mp3)
+  // 1. Primary Engine: Deepgram Aura High-Fidelity Voice
   try {
-    const pollySuccess = await synthesizeWithPolly(cleaned, {
-      lang,
-      rate: options?.rate ?? 0.95,
-      onEnd: () => {
-        currentlySpeaking = false;
-        options?.onEnd?.();
-      },
-      onError: () => {
-        currentlySpeaking = false;
-      },
+    const deepgramSuccess = await synthesizeWithDeepgram(cleaned, {
+      voice: 'aura-asteria-en',
+      rate: options?.rate ?? 1.0,
     });
 
-    if (pollySuccess) {
+    if (deepgramSuccess) {
+      currentlySpeaking = false;
+      options?.onEnd?.();
       return;
     }
-  } catch (pollyErr) {
-    console.warn('AWS Polly Aditi synthesis fallback triggered:', pollyErr);
+  } catch (deepgramErr) {
+    console.warn('[TTS] Deepgram Aura synthesis fallback triggered:', deepgramErr);
   }
 
-  // 2. Fallback: Web Speech API Native Synthesis with Indian HD Voice Prioritization
+  // 2. Direct Fallback: Web Speech API Native Synthesis with HD Voice Prioritization
   return new Promise<void>(async (resolve) => {
     await playNativeTTS(cleaned, lang, options, () => {
       currentlySpeaking = false;
@@ -371,7 +367,7 @@ async function speak(text: string, options?: SpeakOptions): Promise<void> {
 }
 
 /**
- * Web Speech API Native Synthesis Implementation with GC-Safe Utterance Ref & Chrome Unfreeze Heartbeat
+ * Web Speech API Native Synthesis Implementation with GC-Safe Utterance Ref, Chrome Unfreeze Heartbeat & Sentence Timeout
  */
 async function playNativeTTS(text: string, voiceLang: string, options: SpeakOptions | undefined, resolve: () => void) {
   if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
@@ -425,9 +421,20 @@ async function playNativeTTS(text: string, voiceLang: string, options: SpeakOpti
 
     let ended = false;
 
+    // Safety timeout: prevents browser SpeechSynthesis freeze from blocking execution
+    const safetyDurationMs = Math.max(2500, (sentenceText.length / 8) * 1000 + 3000);
+    const safetyTimer = setTimeout(() => {
+      if (!ended) {
+        ended = true;
+        currentIndex++;
+        playNextSentence();
+      }
+    }, safetyDurationMs);
+
     utter.onend = () => {
       if (!ended) {
         ended = true;
+        clearTimeout(safetyTimer);
         currentIndex++;
         playNextSentence();
       }
@@ -436,6 +443,7 @@ async function playNativeTTS(text: string, voiceLang: string, options: SpeakOpti
     utter.onerror = (err) => {
       if (!ended) {
         ended = true;
+        clearTimeout(safetyTimer);
         currentIndex++;
         playNextSentence();
       }
@@ -446,6 +454,7 @@ async function playNativeTTS(text: string, voiceLang: string, options: SpeakOpti
     } catch (e) {
       if (!ended) {
         ended = true;
+        clearTimeout(safetyTimer);
         currentIndex++;
         playNextSentence();
       }
@@ -462,7 +471,8 @@ speak.stop = (): void => {
   currentlySpeaking = false;
   currentUtterance = null;
   stopKeepAlive();
-  stopPollyAudio();
+  stopDeepgramAudio();
+  try { stopPollyAudio(); } catch (_) {}
 
   if (currentAudio) {
     try {

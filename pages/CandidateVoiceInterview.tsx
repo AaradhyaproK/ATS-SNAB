@@ -18,11 +18,18 @@ import { resolveJobOrInterviewDocument } from '../services/jobResolutionService'
 import { speak, unlockTTSAudio } from '../lib/tts';
 import { VoiceInterview, VoiceInterviewQuestion, VoiceInterviewTurn, VoiceInterviewResponse } from '../types';
 import { db } from '../services/firebase';
-import { AssemblyAiRealtimeSession } from '../services/assemblyAiStreaming';
+import { collection, query, where, getDocs, limit } from 'firebase/firestore';
+import { 
+  DeepgramRealtimeSession, 
+  fetchDeepgramAudioBlob, 
+  stopDeepgramAudio,
+  transcribeAudioBlobWithDeepgram,
+  synthesizeWithDeepgram
+} from '../services/deepgramService';
 import { VoiceCallRecorder } from '../services/voiceCallRecorder';
 import { uploadToS3 } from '../services/s3Service';
-import { fetchPollyAudioBlob } from '../services/pollyService';
 import { readResumeText } from '../services/resumeService';
+import HireXLogo, { HireXMark } from '../components/HireXLogo';
 
 export const CandidateVoiceInterview: React.FC = () => {
   const { voiceInterviewId } = useParams<{ voiceInterviewId: string }>();
@@ -79,7 +86,7 @@ export const CandidateVoiceInterview: React.FC = () => {
   const liveTranscriptRef = useRef<string>('');
   const voiceInterviewRef = useRef<VoiceInterview | null>(null);
 
-  const assemblySessionRef = useRef<AssemblyAiRealtimeSession | null>(null);
+  const deepgramSessionRef = useRef<DeepgramRealtimeSession | null>(null);
   const callRecorderRef = useRef<VoiceCallRecorder | null>(null);
   const noReplyTimerRef = useRef<any>(null);
   const countdownIntervalRef = useRef<any>(null);
@@ -439,12 +446,12 @@ export const CandidateVoiceInterview: React.FC = () => {
     setRemainingWaitSeconds(null);
   };
 
-  // Start 8-second timer waiting for candidate to respond to question
+  // Natural human interview response timer: gives candidate 25s of comfortable thinking time
   const startNoReplyCountdown = () => {
     clearNoReplyTimer();
-    setRemainingWaitSeconds(8);
+    setRemainingWaitSeconds(25);
 
-    let secondsLeft = 8;
+    let secondsLeft = 25;
     countdownIntervalRef.current = setInterval(() => {
       secondsLeft -= 1;
       if (secondsLeft >= 0) {
@@ -454,27 +461,28 @@ export const CandidateVoiceInterview: React.FC = () => {
       }
     }, 1000);
 
-    noReplyTimerRef.current = setTimeout(() => {
+    noReplyTimerRef.current = setTimeout(async () => {
       clearNoReplyTimer();
-      // If candidate did not reply within 8 seconds, automatically advance to next question
+      // If candidate has not replied after 25s, offer a gentle verbal check-in instead of abruptly cutting them off
       if (
         callStateRef.current === 'calling' &&
         !aiSpeakingRef.current &&
         !isProcessingAnswerRef.current &&
         accumulatedAnswerRef.current.trim().length === 0
       ) {
-        console.info('[Voice Interview] No reply received for 8 seconds. Automatically advancing to next question...');
-        handleCandidateUtterance('I did not provide an answer for this question, please move forward to the next question');
+        console.info('[Voice Interview] No reply after 25s. Providing gentle conversational reminder...');
+        const reminderText = "Take your time. Whenever you're ready, please share your thoughts, or let me know if you would like me to repeat the question.";
+        await speakAiResponse(reminderText).catch(() => {});
       }
-    }, 8000);
+    }, 25000);
   };
 
-  // Pause candidate mic during AI speech (keeps audio capture and WebSocket warm with rolling pre-roll)
+  // Pause candidate mic during AI speech (keeps audio capture and WebSocket warm)
   const pauseListening = () => {
     clearNoReplyTimer();
     if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
-    if (assemblySessionRef.current) {
-      assemblySessionRef.current.pause();
+    if (deepgramSessionRef.current) {
+      deepgramSessionRef.current.pause();
     }
     if (recognitionRef.current && isSpeechActiveRef.current) {
       try {
@@ -485,14 +493,14 @@ export const CandidateVoiceInterview: React.FC = () => {
     setCandidateListening(false);
   };
 
-  // Resume candidate mic with ZERO delay (flushes rolling pre-roll buffer so the very first words are never dropped!)
+  // Resume candidate mic with ZERO delay
   const resumeListening = () => {
     if (aiSpeakingRef.current || isMicMutedRef.current || callStateRef.current !== 'calling') return;
     accumulatedAnswerRef.current = '';
     updateLiveTranscript('');
 
-    if (assemblySessionRef.current) {
-      assemblySessionRef.current.resume();
+    if (deepgramSessionRef.current) {
+      deepgramSessionRef.current.resume();
       isSpeechActiveRef.current = true;
       setCandidateListening(true);
     } else {
@@ -500,24 +508,36 @@ export const CandidateVoiceInterview: React.FC = () => {
     }
   };
 
-  // Primary Start Listening: Powered by AssemblyAI Real-Time Engine with 16kHz PCM and pre-roll buffers
+  // Primary Start Listening: Powered by Deepgram Nova-3 Real-Time Streaming Engine
   const startListening = async () => {
     if (aiSpeakingRef.current || isProcessingAnswerRef.current || isMicMutedRef.current) return;
 
     try {
-      if (!assemblySessionRef.current) {
-        assemblySessionRef.current = new AssemblyAiRealtimeSession({
-          onTranscript: (text: string, isEndOfTurn: boolean, isFormatted?: boolean) => {
+      if (!deepgramSessionRef.current) {
+        // Collect job-specific technical keywords to boost Deepgram speech recognition
+        const dynamicKeywords: string[] = [];
+        if (voiceInterview?.jobTitle) dynamicKeywords.push(`${voiceInterview.jobTitle}:2`);
+        if (voiceInterview?.companyName) dynamicKeywords.push(`${voiceInterview.companyName}:2`);
+        if (voiceInterview?.requiredSkills && Array.isArray(voiceInterview.requiredSkills)) {
+          voiceInterview.requiredSkills.forEach(skill => {
+            if (skill && typeof skill === 'string') dynamicKeywords.push(`${skill.trim()}:2`);
+          });
+        }
+
+        deepgramSessionRef.current = new DeepgramRealtimeSession({
+          onTranscript: (text: string, isFinal: boolean, isSpeechFinal: boolean) => {
             if (aiSpeakingRef.current || isProcessingAnswerRef.current) return;
-            // Candidate has replied: clear the 8-second no-reply countdown
+            console.log(`[Deepgram Nova-3 STT] Candidate voice detected (final=${isFinal}): "${text}"`);
+            // Candidate has replied: clear the no-reply countdown
             clearNoReplyTimer();
 
             accumulatedAnswerRef.current = text;
             updateLiveTranscript(text);
             setCandidateListening(true);
 
-            // Wait 8 seconds after candidate answer: if candidate stays silent for 8s, submit answer automatically!
+            // Natural pause detection: when candidate finishes sentence or pauses, submit answer
             if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+            const silenceTimeout = isSpeechFinal ? 1500 : 3200;
             silenceTimerRef.current = setTimeout(() => {
               if (
                 !aiSpeakingRef.current &&
@@ -526,23 +546,65 @@ export const CandidateVoiceInterview: React.FC = () => {
               ) {
                 submitCandidateAnswer();
               }
-            }, 8000);
+            }, silenceTimeout);
+          },
+          onSpeechStarted: () => {
+            // Conversational Barge-In: If candidate starts speaking while AI was answering, interrupt AI immediately!
+            if (aiSpeakingRef.current) {
+              console.log('[Deepgram Voice Agent] Barge-in: Candidate started speaking, interrupting AI voice.');
+              stopDeepgramAudio();
+              if (callRecorderRef.current) {
+                callRecorderRef.current.stopAiSpeech();
+              }
+              if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+                try { window.speechSynthesis.cancel(); } catch (_) {}
+              }
+              setAiSpeaking(false);
+              aiSpeakingRef.current = false;
+            }
+          },
+          onUtteranceEnd: () => {
+            // Deepgram VAD UtteranceEnd event: candidate finished speaking their sentence
+            if (
+              !aiSpeakingRef.current &&
+              !isProcessingAnswerRef.current &&
+              accumulatedAnswerRef.current.trim().length > 3
+            ) {
+              // Accelerate submission: candidate stopped talking, respond in 900ms
+              if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+              silenceTimerRef.current = setTimeout(() => {
+                if (
+                  !aiSpeakingRef.current &&
+                  !isProcessingAnswerRef.current &&
+                  accumulatedAnswerRef.current.trim().length > 3
+                ) {
+                  submitCandidateAnswer();
+                }
+              }, 900);
+            }
           },
           onError: (err) => {
-            console.warn('[AssemblyAI Stream] Engine notice:', err);
+            console.warn('[Deepgram Stream] Engine notice:', err);
             if (webSpeechNetworkFailuresRef.current < 2) {
               startWebSpeechFallback();
             }
           }
+        }, {
+          keywords: dynamicKeywords,
+          endpointing: 300,
+          utteranceEndMs: 1000,
+          fillerWords: true,
+          numerals: true,
+          smartFormat: true,
         });
       }
 
-      await assemblySessionRef.current.start();
+      await deepgramSessionRef.current.start();
       isSpeechActiveRef.current = true;
       setCandidateListening(true);
       webSpeechNetworkFailuresRef.current = 0;
-    } catch (assemblyErr) {
-      console.warn('[AssemblyAI Stream] Primary start failed, checking fallback:', assemblyErr);
+    } catch (deepgramErr) {
+      console.warn('[Deepgram Stream] Primary start failed, checking fallback:', deepgramErr);
       if (webSpeechNetworkFailuresRef.current < 2) {
         startWebSpeechFallback();
       }
@@ -554,12 +616,21 @@ export const CandidateVoiceInterview: React.FC = () => {
     clearNoReplyTimer();
     if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
 
-    // Stop AssemblyAI session
-    if (assemblySessionRef.current) {
+    // Stop any ongoing speech immediately
+    stopDeepgramAudio();
+    if (callRecorderRef.current) {
+      callRecorderRef.current.stopAiSpeech();
+    }
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      try { window.speechSynthesis.cancel(); } catch (_) {}
+    }
+
+    // Stop Deepgram session
+    if (deepgramSessionRef.current) {
       try {
-        assemblySessionRef.current.stop();
+        deepgramSessionRef.current.stop();
       } catch (_) {}
-      assemblySessionRef.current = null;
+      deepgramSessionRef.current = null;
     }
 
     // Stop Web Speech fallback if running
@@ -596,23 +667,53 @@ export const CandidateVoiceInterview: React.FC = () => {
       return;
     }
 
-    // 1. Digital call stream injection: fetch Polly audio blob and play directly through Call Recorder
+    // Clean text: strip markdown symbols, URLs, asterisks, brackets so speech is human-accurate
+    const cleanSpeech = text
+      .replace(/<[^>]*>/g, ' ')
+      .replace(/https?:\/\/\S+/gi, ' link ')
+      .replace(/(\*\*|__|[*_])([^*_]+)\1/g, '$2')
+      .replace(/#{1,6}\s+/g, '')
+      .replace(/```[\s\S]*?```/g, ' ')
+      .replace(/`([^`]+)`/g, '$1')
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+      .replace(/[-*•▪♦▶►]\s+/g, '. ')
+      .replace(/&/g, ' and ')
+      .replace(/@/g, ' at ')
+      .replace(/\//g, ' or ')
+      .replace(/[#*^_{}\[\]|\\<>+=~`]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    // 1. Digital call stream injection: fetch Deepgram Aura audio blob and play directly through Call Recorder
     try {
-      const pollyBlob = await fetchPollyAudioBlob(text);
-      if (pollyBlob && callRecorderRef.current) {
-        await callRecorderRef.current.playAiAudioBlob(pollyBlob, isAudioMutedRef.current);
-        finishSpeaking();
-        return;
+      const deepgramBlob = await fetchDeepgramAudioBlob(cleanSpeech, 'aura-asteria-en');
+      if (deepgramBlob && deepgramBlob.size > 0) {
+        if (callRecorderRef.current) {
+          const played = await callRecorderRef.current.playAiAudioBlob(deepgramBlob, isAudioMutedRef.current);
+          if (played) {
+            finishSpeaking();
+            return;
+          }
+        } else {
+          const played = await synthesizeWithDeepgram(cleanSpeech, {
+            voice: 'aura-asteria-en',
+            rate: 1.0,
+          });
+          if (played) {
+            finishSpeaking();
+            return;
+          }
+        }
       }
-    } catch (pollyErr) {
-      console.warn('[Call Recorder] Polly speech synthesis notice:', pollyErr);
+    } catch (deepgramErr) {
+      console.warn('[Call Recorder] Deepgram Aura speech notice, triggering native fallback:', deepgramErr);
     }
 
-    // 2. Fallback to lib/tts speak
+    // 2. High-Fidelity Fallback using Browser SpeechSynthesis
     return new Promise((resolve) => {
       try {
         unlockTTSAudio();
-        speak(text, {
+        speak(cleanSpeech, {
           lang: 'en-US',
           rate: 0.98,
           onEnd: () => {
@@ -625,7 +726,7 @@ export const CandidateVoiceInterview: React.FC = () => {
           }
         });
       } catch (err) {
-        console.warn('[Voice AI] TTS error:', err);
+        console.warn('[Voice AI] TTS fallback error:', err);
         finishSpeaking();
         resolve();
       }
@@ -643,20 +744,32 @@ export const CandidateVoiceInterview: React.FC = () => {
     setErrorMsg(null);
     setCallState('calling');
     callStateRef.current = 'calling';
-    unlockTTSAudio();
 
-    // 1. Pre-warm the streaming audio session
+    // 1. Synchronously pre-warm audio permissions within the user click gesture
+    unlockTTSAudio();
+    const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+    let prewarmedAudioCtx: AudioContext | null = null;
+    if (AudioContextClass) {
+      try {
+        prewarmedAudioCtx = new AudioContextClass();
+        if (prewarmedAudioCtx.state === 'suspended') {
+          prewarmedAudioCtx.resume().catch(() => {});
+        }
+      } catch (_) {}
+    }
+
+    // 2. Pre-warm the streaming audio session
     try {
       await startListening();
     } catch (_) {}
     pauseListening();
 
-    // 2. Start recording the ENTIRE call (AI question audio + candidate microphone audio)
+    // 3. Start recording the ENTIRE call (AI question audio + candidate microphone audio)
     try {
-      const micStream = assemblySessionRef.current?.getMediaStream() || 
+      const micStream = deepgramSessionRef.current?.getMediaStream() || 
         await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
       const recorder = new VoiceCallRecorder();
-      await recorder.init(micStream);
+      await recorder.init(micStream, prewarmedAudioCtx || undefined);
       recorder.start();
       callRecorderRef.current = recorder;
     } catch (recErr) {
@@ -893,28 +1006,40 @@ export const CandidateVoiceInterview: React.FC = () => {
       acknowledgment = "Thank you for explaining your background and interest in this role.";
     }
 
-    // Check if we should ask a brief follow-up cross-question for the skills question
-    const isSkillsQ = cat.includes('skill') || currentQ.question.toLowerCase().includes('skill');
-    const isAnswerBrief = candidateText.trim().split(/\s+/).length < 7;
-    if (isSkillsQ && isAnswerBrief && !activeCrossQuestionRef.current) {
-      const followUp = "Could you share a quick example of a project where you applied those skills?";
-      activeCrossQuestionRef.current = followUp;
-      setActiveCrossQuestion(followUp);
+    // Dynamic AI Cross-Questioning Evaluation
+    // Check if candidate answer warrants a targeted technical or situational follow-up
+    if (!activeCrossQuestionRef.current && candidateText.trim().split(/\s+/).length >= 2) {
+      try {
+        const crossCheck = await generateCrossQuestionOrAcknowledge(
+          currentQ.question,
+          candidateText,
+          voiceInterviewRef.current?.jobTitle || 'Role'
+        );
 
-      const crossSpeech = `${acknowledgment} ${followUp}`;
-      const aiTurn: VoiceInterviewTurn = {
-        speaker: 'ai',
-        text: crossSpeech,
-        timestamp: new Date().toLocaleTimeString(),
-        isCrossQuestion: true,
-        questionId: currentQ.id
-      };
-      const crossHist = [...updatedHistory, aiTurn];
-      setDialogueHistory(crossHist);
-      dialogueHistoryRef.current = crossHist;
+        if (crossCheck && crossCheck.shouldCrossQuestion && crossCheck.responseText) {
+          const followUp = crossCheck.responseText.trim();
+          activeCrossQuestionRef.current = followUp;
+          setActiveCrossQuestion(followUp);
 
-      await speakAiResponse(crossSpeech);
-      return;
+          const aiTurn: VoiceInterviewTurn = {
+            speaker: 'ai',
+            text: followUp,
+            timestamp: new Date().toLocaleTimeString(),
+            isCrossQuestion: true,
+            questionId: currentQ.id
+          };
+          const crossHist = [...updatedHistory, aiTurn];
+          setDialogueHistory(crossHist);
+          dialogueHistoryRef.current = crossHist;
+
+          await speakAiResponse(followUp);
+          return;
+        } else if (crossCheck && crossCheck.responseText) {
+          acknowledgment = crossCheck.responseText;
+        }
+      } catch (crossErr) {
+        console.warn('[AI Agent] Cross-question decision notice:', crossErr);
+      }
     }
 
     // Advance to next question or conclude
@@ -976,12 +1101,34 @@ export const CandidateVoiceInterview: React.FC = () => {
     const endMsg = 'Thank you very much for completing this phone screening call. We have recorded your responses, and our hiring team will review your screening report and be in touch soon. Have a great day!';
     speakAiResponse(endMsg).catch(() => {});
 
-    // 1. Stop call recorder and upload full recording to AWS S3
+    // 1. Stop call recorder, analyze with Deepgram Speech Intelligence, and upload full recording to AWS S3
     let audioRecordingUrl = '';
+    let speechAnalytics: VoiceInterviewResponse['speechAnalytics'] = undefined;
     if (callRecorderRef.current) {
       try {
         const audioBlob = await callRecorderRef.current.stop();
         if (audioBlob && audioBlob.size > 0) {
+          // Deepgram Speech-to-Text intelligence services: sentiment, filler words, confidence
+          try {
+            const dgAnalysis = await transcribeAudioBlobWithDeepgram(audioBlob, {
+              sentiment: true,
+              fillerWords: true,
+              diarize: true,
+            });
+            if (dgAnalysis) {
+              speechAnalytics = {
+                transcriptionEngine: 'Deepgram Nova-3 Speech AI',
+                averageConfidence: Math.round(dgAnalysis.confidence * 100),
+                fillerWordsDetected: dgAnalysis.fillerWordsCount,
+                sentiment: dgAnalysis.sentiment,
+                detectedLanguage: dgAnalysis.detectedLanguage,
+              };
+              console.info('[Voice Interview] Deepgram speech intelligence extracted:', speechAnalytics);
+            }
+          } catch (dgErr) {
+            console.warn('[Voice Interview] Deepgram post-call speech analysis notice:', dgErr);
+          }
+
           console.info(`[Voice Interview] Uploading call audio to AWS S3 (${(audioBlob.size / 1024).toFixed(1)} KB)...`);
           const fileName = `voice_call_${voiceInterviewId || 'screening'}_${Date.now()}.webm`;
           audioRecordingUrl = await uploadToS3(audioBlob, 'auto', fileName);
@@ -1036,6 +1183,7 @@ export const CandidateVoiceInterview: React.FC = () => {
         screeningReport,
         callDurationSeconds: callDuration,
         audioRecordingUrl: audioRecordingUrl || undefined,
+        speechAnalytics,
         status: screeningReport.recommendation === 'Shortlist' ? 'Shortlist' : 'Completed',
         submittedAt: new Date()
       };
@@ -1051,23 +1199,25 @@ export const CandidateVoiceInterview: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#070707] text-white flex flex-col items-center justify-center p-4">
-        <div className="h-10 w-10 border-2 border-white/20 border-t-white rounded-full animate-spin mb-4" />
-        <p className="geist-caption text-[#9ca3af]">Connecting to Voice Interview Screener...</p>
+      <div className="min-h-screen bg-[#F8F9F5] text-[#111215] flex flex-col items-center justify-center p-4">
+        <div className="h-10 w-10 border-3 border-[#E4E7DC] border-t-[#111215] rounded-full animate-spin mb-4" />
+        <p className="geist-caption text-[#575A51] font-medium">Connecting to Voice Interview Screener...</p>
       </div>
     );
   }
 
   if (errorMsg && callState !== 'calling' && callState !== 'completed') {
     return (
-      <div className="min-h-screen bg-[#070707] text-white flex flex-col items-center justify-center p-4">
-        <div className="w-full max-w-md rounded-2xl border border-red-500/30 bg-red-500/10 p-6 text-center space-y-3">
-          <AlertCircle size={32} className="mx-auto text-red-400" />
-          <h2 className="geist-heading text-white">Voice Interview Unavailable</h2>
-          <p className="geist-caption text-red-300">{errorMsg}</p>
+      <div className="min-h-screen bg-[#F8F9F5] text-[#111215] flex flex-col items-center justify-center p-4">
+        <div className="w-full max-w-md rounded-3xl border border-red-200 bg-white p-8 text-center space-y-4 shadow-[0_20px_50px_rgba(0,0,0,0.04)]">
+          <div className="h-12 w-12 rounded-2xl bg-red-50 border border-red-200 flex items-center justify-center text-red-500 mx-auto">
+            <AlertCircle size={26} />
+          </div>
+          <h2 className="geist-heading text-xl font-bold text-[#111215]">Voice Interview Unavailable</h2>
+          <p className="geist-caption text-red-600 text-sm">{errorMsg}</p>
           <Link
             to="/jobs"
-            className="geist-small inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white text-black font-semibold hover:bg-white/90 transition-all mt-2"
+            className="geist-small inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#111215] text-white font-bold hover:bg-black transition-all mt-2"
           >
             Explore Other Jobs
           </Link>
@@ -1081,62 +1231,76 @@ export const CandidateVoiceInterview: React.FC = () => {
     : DEFAULT_SCREENING_QUESTIONS;
 
   return (
-    <div className="min-h-screen bg-[#050505] text-white flex flex-col justify-between selection:bg-white selection:text-black">
-      {/* Top Header */}
-      <header className="border-b border-white/[0.1] bg-[#000]/80 backdrop-blur-md px-4 py-3.5 sm:px-6">
+    <div className="min-h-screen bg-[#F8F9F5] text-[#111215] font-sans selection:bg-[#D4F82C] selection:text-[#111215] flex flex-col justify-between relative overflow-x-hidden">
+      {/* Background Organic Glow & Curve elements (Landing Page signature) */}
+      <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-[#D4F82C]/10 rounded-full blur-3xl pointer-events-none -mr-40 -mt-40 select-none z-0" />
+      <div className="absolute bottom-0 left-0 w-[450px] h-[450px] bg-[#A4D804]/8 rounded-full blur-3xl pointer-events-none -ml-40 -mb-40 select-none z-0" />
+
+      {/* Top Header (Matching Landing Page Header) */}
+      <header className="sticky top-0 z-50 bg-[#F8F9F5]/90 backdrop-blur-md border-b border-[#E4E7DC] px-4 py-3.5 sm:px-8">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="h-9 w-9 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-black font-extrabold shadow-lg shadow-emerald-500/20">
-              <Phone size={18} />
+            <Link to="/" className="group inline-flex items-center" title="hireX - AI Recruitment Platform">
+              <HireXLogo size="sm" variant="full" />
+            </Link>
+            <div className="hidden sm:flex items-center gap-1.5 pl-3 border-l border-[#E4E7DC] text-[11px] font-medium text-[#73766C]">
+              <span>by</span>
+              <span className="font-bold text-[#111215]">SNAB</span>
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="geist-caption font-bold text-white tracking-wide">AI Voice Screener</span>
-                <span className="geist-small px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 font-medium">
-                  Audio Call
-                </span>
-              </div>
-              <p className="geist-small text-[#6b7280]">
-                {voiceInterview?.title || 'Phone Screening'} • {voiceInterview?.companyName || 'SNAB hireX'}
-              </p>
+            <div className="flex items-center gap-1.5 pl-2 text-xs font-semibold">
+              <span className="hidden md:inline-block px-2.5 py-0.5 rounded-full bg-[#D4F82C]/30 text-[#111215] border border-[#D4F82C]/50 font-bold text-[11px]">
+                AI Voice Screener
+              </span>
             </div>
           </div>
-          {callState === 'calling' && (
-            <div className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/25 px-3 py-1 rounded-full text-emerald-400 font-mono text-xs font-bold">
-              <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span>{formatTime(callDuration)}</span>
+
+          <div className="flex items-center gap-2.5">
+            <div className="text-right hidden sm:block">
+              <div className="text-xs font-bold text-[#111215] leading-tight">
+                {voiceInterview?.title || 'Screening Call'}
+              </div>
+              <div className="text-[11px] text-[#73766C] leading-tight">
+                {voiceInterview?.companyName || 'SNAB hireX'}
+              </div>
             </div>
-          )}
+
+            {callState === 'calling' && (
+              <div className="flex items-center gap-2 bg-[#111215] text-[#D4F82C] px-3.5 py-1.5 rounded-full font-mono text-xs font-bold shadow-sm">
+                <span className="h-2 w-2 rounded-full bg-[#D4F82C] animate-pulse" />
+                <span>{formatTime(callDuration)}</span>
+              </div>
+            )}
+          </div>
         </div>
       </header>
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-3xl w-full mx-auto p-4 sm:p-6 flex flex-col justify-center">
+      <main className="flex-1 max-w-3xl w-full mx-auto p-4 sm:p-6 sm:py-10 flex flex-col justify-center relative z-10">
         {/* STEP 1: Candidate Verification & Call Intro */}
         {callState === 'details' && (
-          <div className="w-full rounded-2xl border border-white/[0.12] bg-[#0c0c0c] p-6 sm:p-8 shadow-2xl space-y-6">
+          <div className="w-full rounded-3xl border border-[#E4E7DC] bg-white p-6 sm:p-10 shadow-[0_20px_50px_rgba(0,0,0,0.04)] space-y-6">
             <div className="text-center space-y-2">
-              <div className="inline-flex h-14 w-14 rounded-2xl bg-white/[0.05] border border-white/[0.1] items-center justify-center text-white mb-2 shadow-inner">
-                <Mic size={24} className="text-emerald-400" />
+              <div className="inline-flex h-14 w-14 rounded-2xl bg-[#D4F82C] text-[#111215] items-center justify-center shadow-md shadow-[#D4F82C]/30 mb-2">
+                <Mic size={24} className="text-[#111215]" />
               </div>
-              <h1 className="geist-page-title text-2xl sm:text-3xl font-extrabold text-white">
+              <h1 className="text-2xl sm:text-3xl font-black text-[#111215] tracking-tight">
                 {voiceInterview?.title}
               </h1>
-              <p className="geist-caption text-[#9ca3af] max-w-lg mx-auto">
-                No video required. You will have a brief, conversational phone screening with our AI recruiter to discuss your availability, relocation, and skills.
+              <p className="text-[#575A51] text-sm max-w-lg mx-auto leading-relaxed">
+                No video camera required. You will have a quick, conversational phone screening with our AI recruiter to discuss your experience, relocation, notice period, and skills.
               </p>
             </div>
 
             {dumpFoundNotice && (
-              <div className="rounded-xl bg-emerald-500/10 border border-emerald-500/20 p-3.5 flex items-center gap-2.5 geist-small text-emerald-400">
-                <CheckCircle2 size={16} className="shrink-0" />
+              <div className="rounded-xl bg-[#F0F4E8] border border-[#C5DC8A] p-3.5 flex items-center gap-2.5 text-xs font-semibold text-[#245903]">
+                <CheckCircle2 size={16} className="shrink-0 text-[#245903]" />
                 <span>{dumpFoundNotice}</span>
               </div>
             )}
 
             <form onSubmit={handleStartCall} className="space-y-4">
               {/* Resume Upload Input */}
-              <div className="rounded-xl border border-dashed border-white/[0.18] bg-white/[0.02] p-4 text-center hover:border-emerald-500/50 transition-colors">
+              <div className="rounded-2xl border-2 border-dashed border-[#D5D9CC] bg-[#F8F9F5] p-5 text-center hover:bg-[#F0F2EB] hover:border-[#111215] transition-all">
                 <input
                   type="file"
                   id="voice-resume-file"
@@ -1146,24 +1310,24 @@ export const CandidateVoiceInterview: React.FC = () => {
                   disabled={parsingResume}
                 />
                 {resumeFileName ? (
-                  <div className="flex items-center justify-between bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-3">
+                  <div className="flex items-center justify-between bg-white border border-[#E4E7DC] rounded-xl p-3.5 shadow-sm">
                     <div className="flex items-center gap-3 text-left">
-                      <div className="p-2 rounded bg-emerald-500/20 text-emerald-400">
+                      <div className="p-2 rounded-lg bg-[#D4F82C]/30 text-[#111215]">
                         <FileCheck size={20} />
                       </div>
                       <div>
-                        <div className="geist-caption font-bold text-white text-sm">
+                        <div className="font-bold text-[#111215] text-sm">
                           {resumeFileName}
                         </div>
-                        <span className="geist-small text-emerald-400 text-xs">
-                          Resume uploaded & analyzed • Questions tailored to your profile
+                        <span className="text-[#575A51] text-xs">
+                          Resume parsed • Screening questions customized to your profile
                         </span>
                       </div>
                     </div>
                     <button
                       type="button"
                       onClick={handleRemoveResume}
-                      className="p-1.5 text-[#6b7280] hover:text-red-400 transition-colors"
+                      className="p-1.5 text-[#73766C] hover:text-red-600 transition-colors cursor-pointer"
                       title="Remove resume"
                     >
                       <Trash2 size={16} />
@@ -1171,19 +1335,19 @@ export const CandidateVoiceInterview: React.FC = () => {
                   </div>
                 ) : (
                   <label htmlFor="voice-resume-file" className="cursor-pointer block space-y-2 py-1">
-                    <div className="mx-auto w-11 h-11 rounded-full bg-white/[0.06] border border-white/[0.1] flex items-center justify-center text-white">
+                    <div className="mx-auto w-12 h-12 rounded-2xl bg-white border border-[#E4E7DC] flex items-center justify-center text-[#111215] shadow-sm">
                       {parsingResume ? (
-                        <div className="w-5 h-5 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin" />
+                        <div className="w-5 h-5 border-2 border-[#111215] border-t-transparent rounded-full animate-spin" />
                       ) : (
-                        <UploadCloud size={22} className="text-emerald-400" />
+                        <UploadCloud size={24} className="text-[#111215]" />
                       )}
                     </div>
                     <div>
-                      <span className="geist-caption font-bold text-white text-sm hover:underline">
-                        {parsingResume ? 'Reading and parsing resume...' : 'Upload Resume (PDF / DOCX / TXT)'}
+                      <span className="font-bold text-[#111215] text-sm hover:underline">
+                        {parsingResume ? 'Reading and analyzing resume...' : 'Upload Resume (PDF / DOCX / TXT)'}
                       </span>
-                      <p className="geist-small text-[#6b7280] text-xs mt-0.5">
-                        Optional: Auto-fills your details & personalizes voice screening questions
+                      <p className="text-[#73766C] text-xs mt-0.5">
+                        Optional: Auto-fills your details & tailors conversational screening questions
                       </p>
                     </div>
                   </label>
@@ -1191,15 +1355,15 @@ export const CandidateVoiceInterview: React.FC = () => {
               </div>
 
               {resumeSuccessMsg && (
-                <div className="rounded-xl bg-emerald-500/10 border border-emerald-500/20 p-3 flex items-center gap-2.5 geist-small text-emerald-400">
+                <div className="rounded-xl bg-[#F0F4E8] border border-[#C5DC8A] p-3 flex items-center gap-2.5 text-xs font-semibold text-[#245903]">
                   <CheckCircle2 size={16} className="shrink-0" />
                   <span>{resumeSuccessMsg}</span>
                 </div>
               )}
 
               <div>
-                <label className="geist-small block font-medium text-[#9ca3af] mb-1">
-                  Full Name <span className="text-red-400">*</span>
+                <label className="block text-xs font-bold uppercase tracking-wider text-[#111215] mb-1.5">
+                  Full Name <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -1207,14 +1371,14 @@ export const CandidateVoiceInterview: React.FC = () => {
                   placeholder="e.g. Rahul Sharma"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="geist-copy w-full rounded-lg border border-white/[0.12] bg-[#141414] px-3.5 py-2.5 text-white placeholder-[#6b7280] focus:border-white/[0.35] focus:outline-none transition-colors"
+                  className="w-full rounded-xl border border-[#E4E7DC] bg-white px-4 py-2.5 text-[#111215] placeholder-[#9ca3af] focus:border-[#111215] focus:ring-2 focus:ring-[#111215]/5 outline-none transition-all text-sm font-medium shadow-sm"
                 />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="geist-small block font-medium text-[#9ca3af] mb-1">
-                    Email Address <span className="text-red-400">*</span>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-[#111215] mb-1.5">
+                    Email Address <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="email"
@@ -1222,12 +1386,12 @@ export const CandidateVoiceInterview: React.FC = () => {
                     placeholder="e.g. rahul@example.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="geist-copy w-full rounded-lg border border-white/[0.12] bg-[#141414] px-3.5 py-2.5 text-white placeholder-[#6b7280] focus:border-white/[0.35] focus:outline-none transition-colors"
+                    className="w-full rounded-xl border border-[#E4E7DC] bg-white px-4 py-2.5 text-[#111215] placeholder-[#9ca3af] focus:border-[#111215] focus:ring-2 focus:ring-[#111215]/5 outline-none transition-all text-sm font-medium shadow-sm"
                   />
                 </div>
                 <div>
-                  <label className="geist-small block font-medium text-[#9ca3af] mb-1">
-                    Phone / WhatsApp <span className="text-red-400">*</span>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-[#111215] mb-1.5">
+                    Phone / WhatsApp <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="tel"
@@ -1235,13 +1399,13 @@ export const CandidateVoiceInterview: React.FC = () => {
                     placeholder="e.g. +91 9876543210"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
-                    className="geist-copy w-full rounded-lg border border-white/[0.12] bg-[#141414] px-3.5 py-2.5 text-white placeholder-[#6b7280] focus:border-white/[0.35] focus:outline-none transition-colors"
+                    className="w-full rounded-xl border border-[#E4E7DC] bg-white px-4 py-2.5 text-[#111215] placeholder-[#9ca3af] focus:border-[#111215] focus:ring-2 focus:ring-[#111215]/5 outline-none transition-all text-sm font-medium shadow-sm"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="geist-small block font-medium text-[#9ca3af] mb-1">
+                <label className="block text-xs font-bold uppercase tracking-wider text-[#111215] mb-1.5">
                   Current City / Location (Optional)
                 </label>
                 <input
@@ -1249,26 +1413,26 @@ export const CandidateVoiceInterview: React.FC = () => {
                   placeholder="e.g. Mumbai, Maharashtra"
                   value={currentCity}
                   onChange={(e) => setCurrentCity(e.target.value)}
-                  className="geist-copy w-full rounded-lg border border-white/[0.12] bg-[#141414] px-3.5 py-2.5 text-white placeholder-[#6b7280] focus:border-white/[0.35] focus:outline-none transition-colors"
+                  className="w-full rounded-xl border border-[#E4E7DC] bg-white px-4 py-2.5 text-[#111215] placeholder-[#9ca3af] focus:border-[#111215] focus:ring-2 focus:ring-[#111215]/5 outline-none transition-all text-sm font-medium shadow-sm"
                 />
               </div>
 
-              <div className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.08] text-xs text-[#9ca3af] space-y-1.5 leading-relaxed">
-                <div className="font-semibold text-white flex items-center gap-1.5">
-                  <Shield size={14} className="text-emerald-400" /> Screening Tips:
+              <div className="p-4 rounded-2xl bg-[#F8F9F5] border border-[#E4E7DC] text-xs text-[#575A51] space-y-1.5 leading-relaxed">
+                <div className="font-bold text-[#111215] flex items-center gap-1.5">
+                  <Shield size={14} className="text-[#111215]" /> Screening Tips:
                 </div>
-                <ul className="list-disc list-inside space-y-0.5 text-[#6b7280]">
-                  <li>Ensure your microphone and speaker are enabled.</li>
-                  <li>Speak clearly at your normal speaking speed.</li>
+                <ul className="list-disc list-inside space-y-0.5 text-[#73766C]">
+                  <li>Ensure your microphone and speaker volume are turned on.</li>
+                  <li>Speak clearly at your normal conversational speaking speed.</li>
                   <li>You can say <strong>"repeat question"</strong> or <strong>"skip"</strong> at any time.</li>
                 </ul>
               </div>
 
               <button
                 type="submit"
-                className="w-full geist-caption h-12 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-extrabold flex items-center justify-center gap-2.5 shadow-lg shadow-emerald-500/25 transition-all text-sm cursor-pointer"
+                className="w-full h-13 rounded-xl bg-[#111215] hover:bg-black text-white font-extrabold flex items-center justify-center gap-2.5 shadow-xl shadow-black/10 hover:shadow-black/20 hover:scale-[1.005] active:scale-[0.99] transition-all text-sm cursor-pointer"
               >
-                <Phone size={18} />
+                <Phone size={17} className="text-[#D4F82C]" />
                 <span>Start Voice Screening Call</span>
               </button>
             </form>
@@ -1277,59 +1441,57 @@ export const CandidateVoiceInterview: React.FC = () => {
 
         {/* STEP 2: ACTIVE CALLER SCREEN */}
         {callState === 'calling' && (
-          <div className="w-full rounded-3xl border border-white/[0.12] bg-[#0c0c0c] p-6 sm:p-10 shadow-2xl flex flex-col items-center text-center space-y-8 relative overflow-hidden">
-            {/* Animated Background Glow */}
-            <div className={`absolute -top-32 -left-32 w-80 h-80 rounded-full blur-3xl pointer-events-none transition-opacity duration-700 ${
-              aiSpeaking ? 'bg-blue-500/15 opacity-100' : 'bg-emerald-500/15 opacity-60'
-            }`} />
+          <div className="w-full rounded-3xl border border-[#E4E7DC] bg-white p-6 sm:p-10 shadow-[0_25px_60px_rgba(0,0,0,0.06)] flex flex-col items-center text-center space-y-7 relative overflow-hidden">
+            {/* Subtle Landing Page Ambient Glow */}
+            <div className="absolute -top-32 -right-32 w-80 h-80 rounded-full bg-[#D4F82C]/15 blur-3xl pointer-events-none" />
 
             {/* Caller Header & Active Question Banner */}
             <div className="w-full max-w-xl space-y-3">
-              <div className="flex items-center justify-between geist-small">
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-bold uppercase tracking-wider text-xs">
-                  <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+              <div className="flex items-center justify-between text-xs">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#D4F82C] border border-[#BCE804] text-[#111215] font-black uppercase tracking-wider text-[11px] shadow-sm">
+                  <span className="h-2 w-2 rounded-full bg-[#111215] animate-pulse" />
                   Live Phone Screening
                 </span>
-                <span className="text-[#9ca3af] font-mono text-xs">
+                <span className="text-[#111215] font-mono font-bold text-xs bg-[#F0F2EB] px-3 py-1 rounded-full border border-[#E4E7DC]">
                   {formatTime(callDuration)}
                 </span>
               </div>
 
               {/* Current Question Display Card */}
-              <div className="rounded-2xl border border-white/[0.12] bg-white/[0.04] p-4 text-left space-y-1.5 shadow-lg">
-                <div className="flex items-center justify-between text-xs text-[#9ca3af]">
-                  <span className="font-semibold text-emerald-400 uppercase tracking-wide">
+              <div className="rounded-2xl border border-[#E4E7DC] bg-[#F8F9F5] p-5 text-left space-y-1.5 shadow-sm">
+                <div className="flex items-center justify-between text-xs text-[#73766C]">
+                  <span className="font-extrabold text-[#111215] uppercase tracking-wider text-[11px] bg-[#D4F82C]/40 px-2 py-0.5 rounded border border-[#D4F82C]">
                     {activeCrossQuestion ? 'Clarification Follow-Up' : `Question ${currentQuestionIndex + 1} of ${questions.length}`}
                   </span>
-                  <span className="text-[#6b7280]">
+                  <span className="text-[#73766C] font-medium text-[11px]">
                     {voiceInterview?.title}
                   </span>
                 </div>
-                <h3 className="geist-subheading text-white text-base sm:text-lg font-medium leading-relaxed">
+                <h3 className="text-[#111215] text-base sm:text-lg font-bold leading-relaxed tracking-tight pt-1">
                   {activeCrossQuestion || questions[currentQuestionIndex]?.question || 'Loading question...'}
                 </h3>
               </div>
             </div>
 
             {/* Visual Equalizer / Avatar */}
-            <div className="relative flex items-center justify-center my-2">
-              {/* Pulsing Rings */}
+            <div className="relative flex items-center justify-center my-1">
+              {/* Pulsing Outer Rings */}
               <div className={`absolute w-36 h-36 rounded-full border transition-all duration-700 ${
                 aiSpeaking 
-                  ? 'border-blue-500/30 animate-ping' 
+                  ? 'border-[#111215]/20 animate-ping' 
                   : candidateListening 
-                    ? 'border-emerald-500/30 animate-ping' 
-                    : 'border-white/10'
+                    ? 'border-[#D4F82C] animate-ping' 
+                    : 'border-[#E4E7DC]'
               }`} />
-              <div className={`h-28 w-28 rounded-full border-2 flex items-center justify-center shadow-2xl relative z-10 transition-all ${
+              <div className={`h-28 w-28 rounded-full border-4 flex items-center justify-center shadow-xl relative z-10 transition-all ${
                 aiSpeaking 
-                  ? 'bg-gradient-to-tr from-blue-950 to-blue-900 border-blue-400/40 shadow-blue-500/20' 
-                  : 'bg-gradient-to-tr from-[#181818] to-[#252525] border-white/[0.2] shadow-emerald-500/10'
+                  ? 'bg-[#111215] text-[#D4F82C] border-[#111215] shadow-black/20' 
+                  : 'bg-[#D4F82C] text-[#111215] border-[#111215] shadow-[#D4F82C]/30'
               }`}>
                 {aiSpeaking ? (
-                  <Volume2 size={40} className="text-blue-400 animate-pulse" />
+                  <Volume2 size={40} className="text-[#D4F82C] animate-pulse" />
                 ) : (
-                  <Mic size={40} className={`text-emerald-400 ${candidateListening ? 'animate-bounce' : ''}`} />
+                  <Mic size={40} className={`text-[#111215] ${candidateListening ? 'animate-bounce' : ''}`} />
                 )}
               </div>
             </div>
@@ -1337,84 +1499,85 @@ export const CandidateVoiceInterview: React.FC = () => {
             {/* Realtime Live Spoken Transcript Teleprompter */}
             <div className="w-full max-w-xl space-y-2.5">
               <div className="flex items-center justify-between text-xs px-1">
-                <span className="flex items-center gap-1.5 font-bold uppercase tracking-wider text-xs">
+                <span className="flex items-center gap-1.5 font-bold uppercase tracking-wider text-[11px]">
                   {aiSpeaking ? (
-                    <span className="text-blue-400 flex items-center gap-1.5">
-                      <span className="h-2 w-2 rounded-full bg-blue-400 animate-ping" />
+                    <span className="text-[#111215] bg-[#D4F82C]/30 border border-[#D4F82C] px-2.5 py-0.5 rounded-full flex items-center gap-1.5">
+                      <span className="h-2 w-2 rounded-full bg-[#111215] animate-ping" />
                       AI Recruiter Speaking
                     </span>
                   ) : isProcessingAnswer ? (
-                    <span className="text-amber-400 flex items-center gap-1.5">
-                      <span className="h-3 w-3 border-2 border-amber-400/40 border-t-amber-400 rounded-full animate-spin" />
+                    <span className="text-[#111215] bg-amber-100 border border-amber-300 px-2.5 py-0.5 rounded-full flex items-center gap-1.5">
+                      <span className="h-2.5 w-2.5 border-2 border-[#111215]/40 border-t-[#111215] rounded-full animate-spin" />
                       Processing Response...
                     </span>
                   ) : candidateListening ? (
-                    <span className="text-emerald-400 flex items-center gap-1.5">
-                      <Mic size={14} className="text-emerald-400 animate-pulse" />
+                    <span className="text-[#111215] bg-[#F0F2EB] border border-[#E4E7DC] px-2.5 py-0.5 rounded-full flex items-center gap-1.5">
+                      <Mic size={13} className="text-[#111215] animate-pulse" />
                       Listening to You (Speak Now)
                     </span>
                   ) : (
-                    <span className="text-[#9ca3af] flex items-center gap-1.5">
-                      <Mic size={14} />
+                    <span className="text-[#73766C] flex items-center gap-1.5">
+                      <Mic size={13} />
                       Microphone Ready
                     </span>
                   )}
                 </span>
 
                 {remainingWaitSeconds !== null && !aiSpeaking && !isProcessingAnswer && (
-                  <span className={`text-xs font-mono flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border ${
-                    liveTranscript 
-                      ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/25' 
-                      : 'bg-amber-500/10 text-amber-300 border-amber-500/25 animate-pulse'
-                  }`}>
-                    <Clock size={12} />
-                    <span>{liveTranscript ? `Submitting in ${remainingWaitSeconds}s` : `Waiting for reply (${remainingWaitSeconds}s)`}</span>
-                  </span>
+                  remainingWaitSeconds <= 10 ? (
+                    <span className="text-xs font-mono flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border font-bold bg-amber-50 text-amber-800 border-amber-200 animate-pulse">
+                      <Clock size={12} />
+                      <span>{liveTranscript ? `Submitting in ${remainingWaitSeconds}s` : `Checking in (${remainingWaitSeconds}s)`}</span>
+                    </span>
+                  ) : (
+                    <span className="text-xs font-medium text-[#73766C] flex items-center gap-1.5 bg-[#F0F2EB] px-2.5 py-0.5 rounded-full border border-[#E4E7DC]">
+                      <Clock size={12} />
+                      <span>Take your time to think</span>
+                    </span>
+                  )
                 )}
 
                 {liveTranscript && (
-                  <span className="text-xs text-emerald-400/90 font-mono flex items-center gap-1 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-ping" />
-                    Real-Time Audio Captured
+                  <span className="text-xs text-[#111215] font-mono font-bold flex items-center gap-1 bg-[#D4F82C]/40 px-2.5 py-0.5 rounded-full border border-[#D4F82C]">
+                    <span className="h-1.5 w-1.5 rounded-full bg-[#111215] animate-ping" />
+                    Audio Captured
                   </span>
                 )}
               </div>
 
               {/* Dedicated Realtime Transcript Box */}
-              <div className={`min-h-[90px] p-4 rounded-2xl border transition-all text-left flex flex-col justify-center relative overflow-hidden ${
+              <div className={`min-h-[96px] p-4 sm:p-5 rounded-2xl border-2 transition-all text-left flex flex-col justify-center relative overflow-hidden ${
                 liveTranscript 
-                  ? 'bg-emerald-950/25 border-emerald-500/50 shadow-xl shadow-emerald-500/10' 
-                  : 'bg-white/[0.03] border-white/[0.1]'
+                  ? 'bg-white border-[#111215] shadow-lg shadow-black/5' 
+                  : 'bg-[#F8F9F5] border-[#E4E7DC]'
               }`}>
                 {liveTranscript ? (
                   <div className="space-y-1.5">
-                    <p className="geist-copy text-white text-base sm:text-lg font-medium leading-relaxed">
+                    <p className="text-[#111215] text-base sm:text-lg font-bold leading-relaxed">
                       "{liveTranscript}"
-                      <span className="inline-block w-2 h-4 ml-1 bg-emerald-400 animate-pulse align-middle" />
+                      <span className="inline-block w-2 h-4 ml-1 bg-[#111215] animate-pulse align-middle" />
                     </p>
-                    <p className="text-xs text-emerald-400/90 font-mono flex items-center justify-between">
-                      <span>✓ Captured live</span>
-                      <span>Pause 8s or tap Done Speaking ➔</span>
+                    <p className="text-xs text-[#575A51] font-mono flex items-center justify-between pt-0.5">
+                      <span className="font-bold text-[#111215]">✓ Live speech recorded</span>
+                      <span>Pause or tap 'I am Done Answering' ➔</span>
                     </p>
                   </div>
                 ) : (
                   <div className="text-center py-2 space-y-1.5">
-                    <p className="geist-caption text-[#d4d4d4] text-sm">
+                    <p className="text-[#575A51] text-sm font-medium">
                       {aiSpeaking 
                         ? 'AI recruiter is asking the question. Listen carefully...' 
                         : isProcessingAnswer 
                           ? 'Evaluating your response and preparing the next question...' 
-                          : remainingWaitSeconds !== null
-                            ? `Please speak your answer now. If no reply is detected in ${remainingWaitSeconds}s, AI will move to the next question.`
-                            : 'Speak your answer into your microphone. Your words will appear here in real time.'}
+                          : 'Speak your answer naturally when you are ready. Your words will appear here in real time.'}
                     </p>
                     {!aiSpeaking && !isProcessingAnswer && (
                       <div className="flex items-center justify-center gap-1 pt-1">
-                        <span className="h-3 w-1 bg-emerald-400/40 rounded-full animate-pulse" />
-                        <span className="h-6 w-1 bg-emerald-400/70 rounded-full animate-pulse delay-75" />
-                        <span className="h-8 w-1 bg-emerald-400 rounded-full animate-pulse delay-150" />
-                        <span className="h-5 w-1 bg-emerald-400/70 rounded-full animate-pulse delay-200" />
-                        <span className="h-2 w-1 bg-emerald-400/40 rounded-full animate-pulse delay-300" />
+                        <span className="h-3 w-1 bg-[#111215]/30 rounded-full animate-pulse" />
+                        <span className="h-6 w-1 bg-[#111215]/60 rounded-full animate-pulse delay-75" />
+                        <span className="h-8 w-1 bg-[#111215] rounded-full animate-pulse delay-150" />
+                        <span className="h-5 w-1 bg-[#111215]/60 rounded-full animate-pulse delay-200" />
+                        <span className="h-2 w-1 bg-[#111215]/30 rounded-full animate-pulse delay-300" />
                       </div>
                     )}
                   </div>
@@ -1424,11 +1587,11 @@ export const CandidateVoiceInterview: React.FC = () => {
               {/* Optional Inline Text Input for 100% Reliability */}
               {!aiSpeaking && (
                 <div className="flex items-center justify-between text-xs px-1">
-                  <span className="text-[#6b7280]">Audio auto-detects 1.7s pause</span>
+                  <span className="text-[#73766C]">💡 Speak at a comfortable pace. Tap 'Done Answering' when finished.</span>
                   <button
                     type="button"
                     onClick={() => setShowTextInput(!showTextInput)}
-                    className="text-xs text-[#9ca3af] hover:text-white underline transition-colors cursor-pointer"
+                    className="text-xs text-[#575A51] hover:text-[#111215] font-semibold underline transition-colors cursor-pointer"
                   >
                     {showTextInput ? 'Hide text fallback' : 'Microphone issue? Type answer instead'}
                   </button>
@@ -1452,12 +1615,12 @@ export const CandidateVoiceInterview: React.FC = () => {
                     value={typedAnswer}
                     onChange={(e) => setTypedAnswer(e.target.value)}
                     placeholder="Type your response here..."
-                    className="flex-1 rounded-xl bg-white/[0.05] border border-white/[0.18] px-3.5 py-2.5 text-sm text-white placeholder-[#6b7280] focus:border-emerald-400 focus:outline-none"
+                    className="flex-1 rounded-xl bg-white border border-[#E4E7DC] px-4 py-2.5 text-sm text-[#111215] placeholder-[#9ca3af] focus:border-[#111215] focus:outline-none shadow-sm"
                     autoFocus
                   />
                   <button
                     type="submit"
-                    className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-extrabold text-sm transition-all"
+                    className="px-5 py-2.5 rounded-xl bg-[#111215] hover:bg-black text-white font-extrabold text-sm transition-all cursor-pointer"
                   >
                     Send
                   </button>
@@ -1472,24 +1635,24 @@ export const CandidateVoiceInterview: React.FC = () => {
                   type="button"
                   onClick={() => submitCandidateAnswer()}
                   disabled={isProcessingAnswer}
-                  className="w-full geist-small flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 active:scale-[0.98] text-black font-extrabold text-sm shadow-xl shadow-emerald-500/25 transition-all cursor-pointer disabled:opacity-50"
+                  className="w-full flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-[#111215] hover:bg-black active:scale-[0.98] text-white font-extrabold text-sm shadow-xl shadow-black/10 transition-all cursor-pointer disabled:opacity-50"
                 >
                   <span>{liveTranscript ? 'Done Speaking (Ask Next Question)' : 'I am Done Answering (Next)'}</span>
-                  <ArrowRight size={17} />
+                  <ArrowRight size={17} className="text-[#D4F82C]" />
                 </button>
               </div>
             )}
 
             {/* Secondary Call Controls */}
-            <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4 pt-1">
+            <div className="flex flex-wrap items-center justify-center gap-2.5 sm:gap-3 pt-1">
               <button
                 type="button"
                 onClick={handleManualRepeat}
                 disabled={aiSpeaking || isProcessingAnswer}
-                className="geist-small flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-white/[0.12] bg-white/[0.05] hover:bg-white/[0.1] text-white font-medium transition-colors disabled:opacity-40"
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] hover:bg-[#EAECE3] text-[#111215] font-semibold text-xs transition-colors disabled:opacity-40 cursor-pointer shadow-sm"
                 title="Repeat the question"
               >
-                <RotateCcw size={15} />
+                <RotateCcw size={14} />
                 <span>Repeat Question</span>
               </button>
 
@@ -1497,10 +1660,10 @@ export const CandidateVoiceInterview: React.FC = () => {
                 type="button"
                 onClick={handleManualSkip}
                 disabled={aiSpeaking || isProcessingAnswer}
-                className="geist-small flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-white/[0.12] bg-white/[0.05] hover:bg-white/[0.1] text-white font-medium transition-colors disabled:opacity-40"
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] hover:bg-[#EAECE3] text-[#111215] font-semibold text-xs transition-colors disabled:opacity-40 cursor-pointer shadow-sm"
                 title="Skip this question"
               >
-                <FastForward size={15} />
+                <FastForward size={14} />
                 <span>Skip Question</span>
               </button>
 
@@ -1512,22 +1675,46 @@ export const CandidateVoiceInterview: React.FC = () => {
                   if (nextMute) pauseListening();
                   else resumeListening();
                 }}
-                className={`geist-small flex items-center gap-1.5 px-3.5 py-2 rounded-xl border transition-colors ${
+                className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl border transition-colors text-xs font-semibold cursor-pointer shadow-sm ${
                   isMicMuted 
-                    ? 'border-red-500/30 bg-red-500/10 text-red-400' 
-                    : 'border-white/[0.12] bg-white/[0.05] text-white hover:bg-white/[0.1]'
+                    ? 'border-red-200 bg-red-50 text-red-600' 
+                    : 'border-[#E4E7DC] bg-[#F8F9F5] text-[#111215] hover:bg-[#EAECE3]'
                 }`}
               >
-                {isMicMuted ? <MicOff size={15} /> : <Mic size={15} />}
+                {isMicMuted ? <MicOff size={14} /> : <Mic size={14} />}
                 <span>{isMicMuted ? 'Mic Muted' : 'Mute Mic'}</span>
               </button>
 
               <button
                 type="button"
-                onClick={finishAndSaveCall}
-                className="geist-small flex items-center gap-1.5 px-4 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold transition-all shadow-lg shadow-red-600/30 cursor-pointer"
+                onClick={() => {
+                  const nextAudioMute = !isAudioMuted;
+                  setIsAudioMuted(nextAudioMute);
+                  if (nextAudioMute) {
+                    stopDeepgramAudio();
+                    if (callRecorderRef.current) callRecorderRef.current.stopAiSpeech();
+                    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+                      try { window.speechSynthesis.cancel(); } catch (_) {}
+                    }
+                  }
+                }}
+                className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl border transition-colors text-xs font-semibold cursor-pointer shadow-sm ${
+                  isAudioMuted 
+                    ? 'border-amber-200 bg-amber-50 text-amber-700' 
+                    : 'border-[#E4E7DC] bg-[#F8F9F5] text-[#111215] hover:bg-[#EAECE3]'
+                }`}
+                title="Mute or unmute AI speech voice output"
               >
-                <PhoneOff size={16} />
+                {isAudioMuted ? <VolumeX size={14} /> : <Volume2 size={14} />}
+                <span>{isAudioMuted ? 'Voice Muted' : 'Mute Voice'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={finishAndSaveCall}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs transition-all shadow-md shadow-red-600/20 cursor-pointer"
+              >
+                <PhoneOff size={15} />
                 <span>End Call</span>
               </button>
             </div>
@@ -1536,82 +1723,82 @@ export const CandidateVoiceInterview: React.FC = () => {
 
         {/* STEP 3: CALL COMPLETED SCREEN */}
         {callState === 'completed' && (
-          <div className="w-full rounded-2xl border border-white/[0.12] bg-[#0c0c0c] p-6 sm:p-10 shadow-2xl text-center space-y-6">
-            <div className="inline-flex h-16 w-16 rounded-full bg-emerald-500/15 border-2 border-emerald-500/30 items-center justify-center text-emerald-400 shadow-xl">
+          <div className="w-full rounded-3xl border border-[#E4E7DC] bg-white p-6 sm:p-10 shadow-[0_20px_50px_rgba(0,0,0,0.04)] text-center space-y-6">
+            <div className="inline-flex h-16 w-16 rounded-2xl bg-[#D4F82C] border-2 border-[#A4D804] items-center justify-center text-[#111215] shadow-lg shadow-[#D4F82C]/30">
               <CheckCircle2 size={32} />
             </div>
 
             <div>
-              <h2 className="geist-page-title text-2xl sm:text-3xl font-extrabold text-white">
+              <h2 className="text-2xl sm:text-3xl font-black text-[#111215] tracking-tight">
                 Screening Call Completed!
               </h2>
-              <p className="geist-caption text-[#9ca3af] mt-2 max-w-md mx-auto">
-                Thank you, <span className="text-white font-medium">{name}</span>. Your screening conversation has been recorded and evaluated for the hiring team.
+              <p className="text-[#575A51] mt-2 max-w-md mx-auto text-sm leading-relaxed">
+                Thank you, <span className="text-[#111215] font-bold">{name}</span>. Your screening conversation has been recorded and evaluated for the hiring team.
               </p>
             </div>
 
             {savingReport ? (
-              <div className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.08] flex items-center justify-center gap-3 text-sm text-[#9ca3af]">
-                <span className="h-4 w-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+              <div className="p-5 rounded-2xl bg-[#F8F9F5] border border-[#E4E7DC] flex items-center justify-center gap-3 text-sm font-semibold text-[#111215]">
+                <span className="h-4 w-4 border-2 border-[#111215]/30 border-t-[#111215] rounded-full animate-spin" />
                 <span>Finalizing your screening evaluation report...</span>
               </div>
             ) : completedResponse ? (
-              <div className="rounded-xl border border-white/[0.1] bg-white/[0.02] p-5 text-left space-y-4">
-                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/[0.08] pb-3">
+              <div className="rounded-2xl border border-[#E4E7DC] bg-[#F8F9F5] p-5 sm:p-6 text-left space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#E4E7DC] pb-4">
                   <div>
-                    <span className="geist-label uppercase text-[#6b7280]">Screening Call Score</span>
-                    <div className="geist-heading text-2xl font-extrabold text-white mt-0.5">
-                      {completedResponse.screeningReport.overallScore} / 10
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-[#73766C]">Screening Call Score</span>
+                    <div className="text-3xl font-black text-[#111215] mt-0.5">
+                      {completedResponse.screeningReport.overallScore} <span className="text-base font-bold text-[#73766C]">/ 10</span>
                     </div>
                   </div>
                   <div className="text-right">
-                    <span className="geist-label uppercase text-[#6b7280]">Call Duration</span>
-                    <div className="geist-caption font-mono text-white mt-0.5">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-[#73766C]">Call Duration</span>
+                    <div className="font-mono font-bold text-lg text-[#111215] mt-0.5">
                       {formatTime(completedResponse.callDurationSeconds)}
                     </div>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                  <div className="p-3 rounded-lg bg-white/[0.03] border border-white/[0.06]">
-                    <div className="geist-small text-[#6b7280]">Relocation Readiness</div>
-                    <div className="geist-caption font-semibold text-white mt-0.5">
+                  <div className="p-3.5 rounded-xl bg-white border border-[#E4E7DC]">
+                    <div className="text-xs font-bold text-[#73766C] uppercase tracking-wider">Relocation Readiness</div>
+                    <div className="font-bold text-[#111215] text-sm mt-0.5">
                       {completedResponse.screeningReport.relocationStatus}
                     </div>
                     {completedResponse.screeningReport.relocationDetails && (
-                      <div className="text-[11px] text-[#9ca3af] mt-1 leading-normal">
+                      <div className="text-xs text-[#575A51] mt-1 leading-normal">
                         {completedResponse.screeningReport.relocationDetails}
                       </div>
                     )}
                   </div>
-                  <div className="p-3 rounded-lg bg-white/[0.03] border border-white/[0.06]">
-                    <div className="geist-small text-[#6b7280]">Notice Period & Salary</div>
-                    <div className="geist-caption font-semibold text-white mt-0.5">
+                  <div className="p-3.5 rounded-xl bg-white border border-[#E4E7DC]">
+                    <div className="text-xs font-bold text-[#73766C] uppercase tracking-wider">Notice Period & Salary</div>
+                    <div className="font-bold text-[#111215] text-sm mt-0.5">
                       {completedResponse.screeningReport.noticePeriod || 'Not specified'}
                     </div>
                     {completedResponse.screeningReport.salaryExpectation && (
-                      <div className="text-[11px] text-[#9ca3af] mt-1 leading-normal">
+                      <div className="text-xs text-[#575A51] mt-1 leading-normal">
                         CTC: {completedResponse.screeningReport.salaryExpectation}
                       </div>
                     )}
                   </div>
                 </div>
 
-                <p className="geist-small text-[#9ca3af] italic leading-relaxed pt-1">
+                <p className="text-sm text-[#575A51] italic leading-relaxed pt-1">
                   "{completedResponse.screeningReport.summary}"
                 </p>
 
                 {(completedResponse.audioRecordingUrl || recordedAudioUrl) && (
-                  <div className="rounded-xl border border-emerald-500/25 bg-emerald-950/20 p-4 space-y-2 pt-3">
+                  <div className="rounded-xl border border-[#E4E7DC] bg-white p-4 space-y-2 pt-3 shadow-sm">
                     <div className="flex items-center justify-between text-xs">
-                      <span className="font-bold text-emerald-400 flex items-center gap-1.5 uppercase tracking-wide">
+                      <span className="font-bold text-[#111215] flex items-center gap-1.5 uppercase tracking-wide">
                         <Volume2 size={15} /> Full Call Audio Recording (AWS S3)
                       </span>
                       <a
                         href={completedResponse.audioRecordingUrl || recordedAudioUrl || '#'}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-emerald-400 hover:underline font-mono text-[11px]"
+                        className="text-[#111215] hover:underline font-mono text-[11px] font-bold"
                       >
                         Download Audio ↗
                       </a>
@@ -1619,7 +1806,7 @@ export const CandidateVoiceInterview: React.FC = () => {
                     <audio 
                       controls 
                       src={completedResponse.audioRecordingUrl || recordedAudioUrl || ''} 
-                      className="w-full h-10 mt-1 accent-emerald-500 rounded-lg" 
+                      className="w-full h-10 mt-1 rounded-lg" 
                     />
                   </div>
                 )}
@@ -1631,14 +1818,14 @@ export const CandidateVoiceInterview: React.FC = () => {
                 <Link
                   to={`/voice-report/${completedResponse.id}`}
                   target="_blank"
-                  className="geist-caption inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-extrabold transition-all shadow-md cursor-pointer"
+                  className="inline-flex items-center gap-2 px-6 py-3.5 rounded-xl bg-[#111215] hover:bg-black text-white font-extrabold text-sm transition-all shadow-lg shadow-black/10 cursor-pointer"
                 >
-                  <FileText size={16} />
+                  <FileText size={16} className="text-[#D4F82C]" />
                   <span>View Full Screening Report ↗</span>
                 </Link>
                 <Link
                   to="/jobs"
-                  className="geist-caption inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-white/[0.08] hover:bg-white/[0.14] text-white font-bold transition-all border border-white/[0.12]"
+                  className="inline-flex items-center gap-2 px-6 py-3.5 rounded-xl bg-white hover:bg-[#F8F9F5] text-[#111215] font-bold text-sm transition-all border border-[#E4E7DC] shadow-sm"
                 >
                   <span>Explore Other Open Jobs</span>
                   <Briefcase size={15} />
@@ -1648,7 +1835,7 @@ export const CandidateVoiceInterview: React.FC = () => {
               <div className="pt-2">
                 <Link
                   to="/jobs"
-                  className="geist-caption inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-white text-black font-extrabold hover:bg-white/90 transition-all shadow-md"
+                  className="inline-flex items-center gap-2 px-6 py-3.5 rounded-xl bg-[#111215] hover:bg-black text-white font-extrabold text-sm transition-all shadow-lg shadow-black/10"
                 >
                   <span>Explore Other Open Jobs</span>
                   <Briefcase size={15} />
@@ -1659,9 +1846,9 @@ export const CandidateVoiceInterview: React.FC = () => {
         )}
       </main>
 
-      {/* Footer */}
-      <footer className="border-t border-white/[0.08] py-3 text-center geist-small text-[#6b7280]">
-        Powered by SNAB hireX AI Voice Interviewer • Secure & Audio-Encrypted
+      {/* Footer (Matching Landing Page Footer) */}
+      <footer className="border-t border-[#E4E7DC] py-4 text-center text-xs font-medium text-[#73766C] bg-[#F8F9F5] relative z-10">
+        Powered by SNAB hireX AI Voice Screener • Secure & Audio-Encrypted
       </footer>
     </div>
   );

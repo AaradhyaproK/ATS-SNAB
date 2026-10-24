@@ -61,6 +61,8 @@ import LandingPage from './pages/LandingPage';
 import ClientReviewPortal from './pages/ClientReviewPortal';
 
 import CandidateInterviewFlow from './pages/Interview';
+import { CandidateVoiceInterview } from './pages/CandidateVoiceInterview';
+import { VoiceInterviewReport } from './pages/VoiceInterviewReport';
 
 const DefaultRouteLoader = () => (
   <div className="flex items-center justify-center min-h-screen bg-background text-foreground">
@@ -272,10 +274,12 @@ const App: React.FC = () => {
               </ThemeProvider>
             } />
 
-            {/* Public Candidate Job Application Redirects (Directly to Candidate Portal) */}
+            {/* Public Candidate Job Application Redirects & AI Voice Screener */}
             <Route path="interview/start/:interviewId" element={<JobToCandidatePortalRedirect />} />
-            <Route path="voice-interview/*" element={<Navigate to="/candidate" replace />} />
-            <Route path="voice-report/*" element={<Navigate to="/candidate" replace />} />
+            <Route path="voice-interview/:voiceInterviewId" element={<CandidateVoiceInterview />} />
+            <Route path="voice-interview" element={<Navigate to="/candidate" replace />} />
+            <Route path="voice-report/:responseId" element={<VoiceInterviewReport />} />
+            <Route path="voice-report" element={<Navigate to="/candidate" replace />} />
             
             {/* Candidate & Recruiter Interview Assessment Report */}
             <Route path="report/:interviewId/:submissionId" element={

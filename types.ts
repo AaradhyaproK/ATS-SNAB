@@ -300,4 +300,11 @@ export interface VoiceInterviewResponse {
   candidateResumeFileName?: string;
   status: 'Completed' | 'Terminated' | 'Shortlist' | 'Hold' | 'Reject';
   submittedAt: any;
+  speechAnalytics?: {
+    transcriptionEngine: string;
+    averageConfidence?: number;
+    fillerWordsDetected?: number;
+    sentiment?: 'positive' | 'neutral' | 'negative';
+    detectedLanguage?: string;
+  };
 }
