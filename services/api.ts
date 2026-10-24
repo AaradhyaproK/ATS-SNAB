@@ -499,6 +499,10 @@ export const uploadToCloudinary = async (blob: Blob, resourceType: 'video' | 'im
 
 // ── AssemblyAI ────────────────────────────────────────────────────────────────
 export const requestTranscription = async (audioUrl: string, languageCode: string = 'en') => {
+  if (!ASSEMBLYAI_API_KEY) {
+    console.log("[Transcription]: VITE_ASSEMBLYAI_API_KEY not set. Using LiveKit real-time STT.");
+    return null;
+  }
   try {
     const body: any = { audio_url: audioUrl, language_code: languageCode };
     const response = await fetch(ASSEMBLYAI_TRANSCRIPT_ENDPOINT, {
@@ -510,12 +514,15 @@ export const requestTranscription = async (audioUrl: string, languageCode: strin
     if (!response.ok) throw new Error(data.error || "Transcription request failed");
     return data.id;
   } catch (error: any) {
-    console.error("AssemblyAI Request Error:", error);
-    throw error;
+    console.warn("AssemblyAI Request Warning:", error?.message || error);
+    return null;
   }
 };
 
 export const fetchTranscriptText = async (transcriptId: string) => {
+  if (!ASSEMBLYAI_API_KEY || !transcriptId) {
+    return { status: 'completed', text: null };
+  }
   try {
     const response = await fetch(`${ASSEMBLYAI_TRANSCRIPT_ENDPOINT}/${transcriptId}`, {
       method: 'GET',

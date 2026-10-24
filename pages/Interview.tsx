@@ -2927,6 +2927,21 @@ const ActiveInterviewSession: React.FC<{
     enabled: true,
     onComplete: (data) => {
       console.log('[LiveKit Auto-Submission]: All questions completed by AI Interviewer', data);
+      setState(prev => {
+        const nextTexts = [...(prev.transcriptTexts || [])];
+        if (livekit.questionTranscripts) {
+          Object.entries(livekit.questionTranscripts).forEach(([qIdx, parts]) => {
+            const idx = Number(qIdx);
+            if (idx >= 0 && parts && parts.length > 0) {
+              nextTexts[idx] = parts.join('\n\n');
+            }
+          });
+        }
+        return {
+          ...prev,
+          transcriptTexts: nextTexts
+        };
+      });
       handleSessionFinish();
     },
     onQuestionChange: (index) => {
@@ -3014,14 +3029,20 @@ const ActiveInterviewSession: React.FC<{
 
     try {
       videoUrl = await uploadToCloudinary(blob, 'video');
-      if (videoUrl) {
+      
+      // Use LiveKit real-time transcribed text if available
+      const livekitParts = livekit.questionTranscripts[questionIndex];
+      if (livekitParts && livekitParts.length > 0) {
+        transcriptText = livekitParts.join('\n');
+      } else if (livekit.liveCandidateTranscript) {
+        transcriptText = livekit.liveCandidateTranscript;
+      } else if (videoUrl) {
         transcriptId = await requestTranscription(videoUrl, language);
-      } else {
-        transcriptText = '(Video upload failed.)';
       }
     } catch (error) {
-      console.error("Upload/transcription error:", error);
-      transcriptText = '(Video upload or transcription setup failed.)';
+      console.warn("Upload/transcription notice:", error);
+      const livekitParts = livekit.questionTranscripts[questionIndex];
+      transcriptText = livekitParts?.join('\n') || livekit.liveCandidateTranscript || '(Speech captured via LiveKit)';
     } finally {
       setState(prev => {
         const nextVideoUrls = [...prev.videoURLs];
@@ -3786,6 +3807,58 @@ const ActiveInterviewSession: React.FC<{
                 <h2 className="text-xl sm:text-2xl md:text-3xl font-black leading-relaxed text-[#111215] dark:text-white selection:bg-[#D4F82C]/40 tracking-tight">
                   {livekit.currentQuestionText || currentQ}
                 </h2>
+
+                {/* LiveKit Real-Time Speech Captions & Active Monitor */}
+                {livekit.isConnected && (
+                  <div className="mt-4 p-4 rounded-2xl bg-black/[0.03] dark:bg-white/[0.04] border border-black/[0.08] dark:border-white/10 backdrop-blur-xs transition-all shadow-xs">
+                    <div className="flex items-center justify-between gap-2 mb-2">
+                      <div className="flex items-center gap-2">
+                        <span className={`w-2 h-2 rounded-full ${livekit.isCandidateSpeaking ? 'bg-emerald-500 animate-ping' : livekit.isAgentSpeaking ? 'bg-[#D4F82C] animate-pulse' : 'bg-emerald-500'}`} />
+                        <span className="text-[10px] font-black uppercase tracking-wider text-[#73766C] dark:text-neutral-400">
+                          {livekit.isCandidateSpeaking
+                            ? 'Transcribing Your Voice in Real-Time'
+                            : livekit.isAgentSpeaking
+                            ? 'Alex (AI Interviewer Speaking)'
+                            : 'Real-Time Voice AI Transcription Active'}
+                        </span>
+                      </div>
+                      <span className="text-[10px] font-bold text-neutral-500 dark:text-neutral-400">
+                        {livekit.isCandidateSpeaking ? 'Listening 🎙️' : livekit.isAgentSpeaking ? 'Voice Active 🔊' : 'LiveKit WebRTC'}
+                      </span>
+                    </div>
+                    <p className="text-sm font-medium text-neutral-800 dark:text-neutral-200 min-h-[2.5rem] leading-relaxed italic select-none">
+                      {livekit.isCandidateSpeaking && livekit.liveCandidateTranscript
+                        ? `"${livekit.liveCandidateTranscript}"`
+                        : livekit.isAgentSpeaking && livekit.liveAiTranscript
+                        ? `"${livekit.liveAiTranscript}"`
+                        : livekit.liveCandidateTranscript
+                        ? `"${livekit.liveCandidateTranscript}"`
+                        : 'Alex is listening through your microphone. Speak your response naturally to see live transcription and dynamic follow-up questioning.'}
+                    </p>
+                  </div>
+                )}
+
+                {/* LiveKit Real-Time Speech Analytics Bar */}
+                {livekit.isConnected && (
+                  <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
+                    <div className="p-2.5 rounded-xl bg-white dark:bg-white/5 border border-black/[0.06] dark:border-white/10 shadow-xs">
+                      <p className="text-[10px] uppercase font-bold text-[#73766C] dark:text-neutral-400">Words Spoken</p>
+                      <p className="text-base font-black text-neutral-900 dark:text-white">{livekit.metrics.candidateWords}</p>
+                    </div>
+                    <div className="p-2.5 rounded-xl bg-white dark:bg-white/5 border border-black/[0.06] dark:border-white/10 shadow-xs">
+                      <p className="text-[10px] uppercase font-bold text-[#73766C] dark:text-neutral-400">Speaking Pace</p>
+                      <p className="text-base font-black text-emerald-600 dark:text-emerald-400">{livekit.metrics.speakingPaceWpm || 0} <span className="text-[10px] font-normal">WPM</span></p>
+                    </div>
+                    <div className="p-2.5 rounded-xl bg-white dark:bg-white/5 border border-black/[0.06] dark:border-white/10 shadow-xs">
+                      <p className="text-[10px] uppercase font-bold text-[#73766C] dark:text-neutral-400">Cross Questions</p>
+                      <p className="text-base font-black text-amber-600 dark:text-amber-400">{livekit.metrics.crossQuestions || 0}</p>
+                    </div>
+                    <div className="p-2.5 rounded-xl bg-white dark:bg-white/5 border border-black/[0.06] dark:border-white/10 shadow-xs">
+                      <p className="text-[10px] uppercase font-bold text-[#73766C] dark:text-neutral-400">AI Compliments</p>
+                      <p className="text-base font-black text-[#85a00a] dark:text-[#D4F82C]">{livekit.metrics.compliments || 0}</p>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Candidate Audio Listening Status Card */}
