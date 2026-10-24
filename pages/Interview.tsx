@@ -5,7 +5,18 @@ import { db } from '../services/firebase';
 import { uploadToCloudinary, generateInterviewQuestions, requestTranscription, fetchTranscriptText, generateFeedback, sanitizeQuestionLength } from '../services/api';
 import fixWebmDuration from 'fix-webm-duration';
 import { resolveJobOrInterviewDocument } from '../services/jobResolutionService';
-import { speak, unlockTTSAudio, setMuteTTS, getMuteTTS } from '../lib/tts';
+import { setMuteTTS, getMuteTTS } from '../lib/tts';
+import { 
+  DeepgramRealtimeSession, 
+  fetchDeepgramAudioBlob, 
+  stopDeepgramAudio,
+  synthesizeWithDeepgram
+} from '../services/deepgramService';
+import { 
+  generateCrossQuestionOrAcknowledge, 
+  generateAdaptiveNextQuestion 
+} from '../services/voiceInterviewService';
+import { uploadToS3 } from '../services/s3Service';
 import { Interview, InterviewState } from '../types';
 import { createPortal } from 'react-dom';
 import { LanguageSelector } from './LanguageSelector';
@@ -58,7 +69,8 @@ import {
   Bot,
   Star,
   Globe,
-  BrainCircuit
+  BrainCircuit,
+  Radio
 } from 'lucide-react';
 
 
@@ -1129,10 +1141,12 @@ const InterviewReadinessOnboarding: React.FC<{
       speechTimeoutRef.current = null;
     }
 
-    speak.stop();
+    stopDeepgramAudio();
 
     if (audioContextRef.current) {
-      audioContextRef.current.close().catch(() => undefined);
+      try {
+        void audioContextRef.current.close();
+      } catch (_) {}
       audioContextRef.current = null;
     }
 
@@ -1230,21 +1244,19 @@ const InterviewReadinessOnboarding: React.FC<{
       window.clearTimeout(speechTimeoutRef.current);
     }
 
-    unlockTTSAudio();
-    speak.stop();
+    stopDeepgramAudio();
     setIsSpeaking(true);
 
-    const langMap: Record<string, string> = { en: 'en', hi: 'hi-IN', mr: 'mr-IN' };
-    const ttsLang = langMap[state.language] || 'en';
     const stageText = stages[activeStage].speech.join(' ');
 
     speechTimeoutRef.current = window.setTimeout(() => {
-      speak(stageText, {
-        lang: ttsLang,
+      void synthesizeWithDeepgram(stageText, {
+        voice: 'aura-asteria-en',
+        onStart: () => setIsSpeaking(true),
         onEnd: () => setIsSpeaking(false),
         onError: () => setIsSpeaking(false),
       });
-    }, 800);
+    }, 400);
   };
 
   useEffect(() => {
@@ -1305,7 +1317,12 @@ const InterviewReadinessOnboarding: React.FC<{
 
       if (previewVideoRef.current && hasVideo) {
         previewVideoRef.current.srcObject = stream;
-        await previewVideoRef.current.play().catch(() => undefined);
+        try {
+          const playPromise = previewVideoRef.current.play();
+          if (playPromise && typeof playPromise.catch === 'function') {
+            await playPromise.catch(() => undefined);
+          }
+        } catch (_) {}
       }
 
       const AudioContextCtor = window.AudioContext || (window as any).webkitAudioContext;
@@ -1313,7 +1330,12 @@ const InterviewReadinessOnboarding: React.FC<{
         try {
           const audioContext = new AudioContextCtor();
           if (audioContext.state === 'suspended') {
-            await audioContext.resume().catch(() => undefined);
+            try {
+              const res = audioContext.resume();
+              if (res && typeof res.catch === 'function') {
+                await res.catch(() => undefined);
+              }
+            } catch (_) {}
           }
 
           const analyser = audioContext.createAnalyser();
@@ -1338,7 +1360,12 @@ const InterviewReadinessOnboarding: React.FC<{
 
             // Resume audioContext if browser suspended it
             if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
-              audioContextRef.current.resume().catch(() => undefined);
+              try {
+                const res = audioContextRef.current.resume();
+                if (res && typeof res.catch === 'function') {
+                  res.catch(() => undefined);
+                }
+              } catch (_) {}
             }
 
             analyserRef.current.getByteTimeDomainData(data);
@@ -1404,7 +1431,7 @@ const InterviewReadinessOnboarding: React.FC<{
         window.clearTimeout(speechTimeoutRef.current);
         speechTimeoutRef.current = null;
       }
-      speak.stop();
+      stopDeepgramAudio();
       setIsSpeaking(false);
     };
   }, [activeStage, state.language, interview.title, state.questions.length]);
@@ -1448,6 +1475,10 @@ const InterviewReadinessOnboarding: React.FC<{
 
   const handleStart = () => {
     stopPreview();
+    stopDeepgramAudio();
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      try { window.speechSynthesis.cancel(); } catch (_) {}
+    }
     onStart();
   };
 
@@ -1683,55 +1714,57 @@ const InterviewWelcomeScreen: React.FC<{
 }> = ({ interview, onProceed }) => {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isVoiceMuted, setIsVoiceMuted] = useState(() => getMuteTTS());
+  const hasTriggeredGreetingRef = useRef(false);
 
   const toggleMuteVoice = () => {
     const next = !isVoiceMuted;
     setIsVoiceMuted(next);
     setMuteTTS(next);
     if (next) {
-      speak.stop();
+      stopDeepgramAudio();
       setIsSpeaking(false);
     }
   };
 
-  const playWelcomeVoice = () => {
+  const playWelcomeVoice = (force = false) => {
     if (getMuteTTS()) return;
-    unlockTTSAudio();
-    speak.stop();
+    if (!force && hasTriggeredGreetingRef.current) return;
+    hasTriggeredGreetingRef.current = true;
+
+    stopDeepgramAudio();
     setIsSpeaking(true);
-    const welcomeText = `Hello! Welcome to your AI interview for the role of ${interview.title}. I am your AI Recruiter today. Let me explain the hiring process. First, you will enter your details and upload your resume. Second, you will review the job description. Third, we will verify your hardware including camera, microphone, and internet. Finally, we will begin the interview where I will ask you questions one by one. Let's get started!`;
-    speak(welcomeText, {
+    const welcomeText = `Hello! Welcome to your AI interview for the role of ${interview?.title || 'Candidate'}. I am your AI Recruiter today. Let me explain the hiring process. First, you will enter your details and upload your resume. Second, you will review the job description. Third, we will verify your hardware including camera, microphone, and internet. Finally, we will begin the interview where I will ask you questions one by one. Let's get started!`;
+    void synthesizeWithDeepgram(welcomeText, {
+      voice: 'aura-asteria-en',
+      onStart: () => setIsSpeaking(true),
       onEnd: () => setIsSpeaking(false),
       onError: () => setIsSpeaking(false),
     });
   };
 
   useEffect(() => {
-    // Auto-trigger voice greeting immediately when landing on Welcome screen
+    // Attempt auto-trigger voice greeting once when landing on Welcome screen
     const timeout = setTimeout(() => {
-      playWelcomeVoice();
-    }, 400);
+      playWelcomeVoice(false);
+    }, 500);
 
-    // Also auto-trigger on first mouse movement, touch, or click anywhere on screen
+    // If browser blocks unmuted audio autoplay, start cleanly on first user click or key press
     const autoPlayOnInteraction = () => {
-      playWelcomeVoice();
+      playWelcomeVoice(false);
       window.removeEventListener('pointerdown', autoPlayOnInteraction);
-      window.removeEventListener('pointermove', autoPlayOnInteraction);
       window.removeEventListener('keydown', autoPlayOnInteraction);
     };
 
     window.addEventListener('pointerdown', autoPlayOnInteraction, { once: true });
-    window.addEventListener('pointermove', autoPlayOnInteraction, { once: true });
     window.addEventListener('keydown', autoPlayOnInteraction, { once: true });
 
     return () => {
       clearTimeout(timeout);
       window.removeEventListener('pointerdown', autoPlayOnInteraction);
-      window.removeEventListener('pointermove', autoPlayOnInteraction);
       window.removeEventListener('keydown', autoPlayOnInteraction);
-      speak.stop();
+      stopDeepgramAudio();
     };
-  }, [interview.title]);
+  }, []);
 
   return (
     <div className="w-full max-w-4xl mx-auto px-4 py-4 sm:py-8 text-center animate-in fade-in slide-in-from-bottom-6 duration-500 font-sans">
@@ -1808,7 +1841,7 @@ const InterviewWelcomeScreen: React.FC<{
           <div className="flex flex-wrap items-center justify-center gap-2.5 mt-3.5 z-20">
             <button
               type="button"
-              onClick={playWelcomeVoice}
+              onClick={() => playWelcomeVoice(true)}
               className="px-4 py-2 rounded-full bg-[#D4F82C] hover:bg-[#c7eb22] text-[#111215] text-xs font-black shadow-md shadow-[#D4F82C]/20 flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer"
             >
               <Volume2 className="w-3.5 h-3.5" />
@@ -1835,7 +1868,7 @@ const InterviewWelcomeScreen: React.FC<{
       <div className="block md:hidden mb-6">
         <button 
           onClick={() => {
-            unlockTTSAudio();
+            stopDeepgramAudio();
             onProceed();
           }}
           className="w-full max-w-xs px-6 py-3.5 bg-[#111215] hover:bg-black text-white dark:bg-[#D4F82C] dark:hover:bg-[#c7eb22] dark:text-[#111215] font-black rounded-full shadow-lg shadow-black/10 active:scale-[0.98] transition-all flex items-center justify-center gap-2 mx-auto cursor-pointer"
@@ -2023,7 +2056,7 @@ const InterviewWelcomeScreen: React.FC<{
       {/* Primary CTA Button */}
       <button 
         onClick={() => {
-          unlockTTSAudio();
+          stopDeepgramAudio();
           onProceed();
         }}
         className="px-8 sm:px-10 py-4 sm:py-4.5 rounded-full bg-[#111215] hover:bg-black text-white dark:bg-[#D4F82C] dark:hover:bg-[#c7eb22] dark:text-[#111215] font-black text-sm sm:text-base shadow-xl shadow-black/10 dark:shadow-[#D4F82C]/15 active:scale-95 transition-all flex items-center gap-3 mx-auto cursor-pointer group"
@@ -2396,8 +2429,8 @@ const CandidateInterviewFlow: React.FC = () => {
         resumeUrlToSave = cloudinaryResumeUrl || url;
       } else if (cloudinaryUrl || existingResumeUrl) {
         setLoadingMsg("Fetching uploaded resume for AI...");
+        const remoteResumeUrl = cloudinaryUrl || existingResumeUrl!;
         try {
-          const remoteResumeUrl = cloudinaryUrl || existingResumeUrl!;
           const res = await fetch(remoteResumeUrl);
           if (!res.ok) throw new Error(`Resume download failed (${res.status})`);
           const blob = await res.blob();
@@ -2623,6 +2656,7 @@ const CandidateInterviewFlow: React.FC = () => {
         <InterviewWelcomeScreen 
           interview={interview}
           onProceed={() => {
+            stopDeepgramAudio();
             if (interview?.requiresToken === true) {
               setStep('enter-code');
             } else {
@@ -2812,7 +2846,10 @@ const CandidateInterviewFlow: React.FC = () => {
             </div>
             
             <button 
-              onClick={() => setStep('instructions')}
+              onClick={() => {
+                stopDeepgramAudio();
+                setStep('instructions');
+              }}
               className="w-full sm:w-auto px-8 py-3.5 bg-[#111215] hover:bg-[#202227] text-[#D4F82C] hover:text-white font-black text-xs sm:text-sm rounded-full shadow-lg shadow-black/10 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 group whitespace-nowrap cursor-pointer"
             >
               <span>Proceed to Hardware Check</span>
@@ -2832,6 +2869,7 @@ const CandidateInterviewFlow: React.FC = () => {
             interview={interview}
             state={interviewState}
             onStart={() => {
+              stopDeepgramAudio();
               setInterviewState(prev => ({ ...prev, currentQuestionIndex: prev.currentQuestionIndex || 0 }));
               setStep('interview');
             }}
@@ -2900,37 +2938,515 @@ const ActiveInterviewSession: React.FC<{
   const answerDeadlineRef = useRef<number | null>(null);
   const recordingStartTimeRef = useRef<number | null>(null);
   const hasFinishedRef = useRef(false);
-
-  const handleSessionFinish = (result?: { terminated?: boolean }) => {
-    if (hasFinishedRef.current) return;
-    hasFinishedRef.current = true;
-    onFinish(result);
-  };
+  const deepgramSessionRef = useRef<DeepgramRealtimeSession | null>(null);
+  const confidenceScoresRef = useRef<number[]>([]);
+  const fillerWordsCountRef = useRef<number>(0);
+  const crossQuestionsAccumulatorRef = useRef<Array<{ parentQuestionIndex: number; question: string; answer: string }>>([]);
 
   const [isRecording, setIsRecording] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(QUESTION_TIME_MS / 1000);
-  const [countdown, setCountdown] = useState(QUESTION_PREP_COUNTDOWN_SEC);
-  const [processingVideo, setProcessingVideo] = useState(false);
   const [isStopping, setIsStopping] = useState(false);
-  const [cameraReady, setCameraReady] = useState(false);
-  const [cameraError, setCameraError] = useState<string | null>(null);
+  const isRecordingRef = useRef<boolean>(false);
+  isRecordingRef.current = isRecording;
+
+  const isSubstantialSpeech = (text: string): boolean => {
+    if (!text) return false;
+    const meaningfulWords = text
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, ' ')
+      .replace(/\b(um|uh|erm|ah|like|you know|hmm|oh|well)\b/g, ' ')
+      .trim()
+      .split(/\s+/)
+      .filter(w => w.length > 1);
+    return meaningfulWords.length >= 2;
+  };
+
+  const stopRecording = () => {
+    cancelAutoAdvance();
+    cancelInitialSilenceCheck();
+    cancelPostAnswerCheck();
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      setIsStopping(true);
+      answerDeadlineRef.current = null;
+      isRecordingRef.current = false;
+      setIsRecording(false);
+      mediaRecorderRef.current.stop();
+    }
+  };
+
+  const liveTranscriptRef = useRef<string>('');
+  const [liveTranscript, setLiveTranscript] = useState('');
+  const [isListeningCandidate, setIsListeningCandidate] = useState(false);
+  const [activeCrossQuestion, setActiveCrossQuestion] = useState<{ question: string; answer: string } | null>(null);
+  const [isAskingCrossQuestion, setIsAskingCrossQuestion] = useState(false);
+  const [voiceNotification, setVoiceNotification] = useState<string | null>(null);
+  const voiceNotificationTimerRef = useRef<any>(null);
+  const lastVoiceCommandTimeRef = useRef<number>(0);
+  const isHandlingVoiceCommandRef = useRef<boolean>(false);
+
+  // Real-time AI Compliment & Auto-Advance on Silence
+  const [latestCompliment, setLatestCompliment] = useState<string | null>(null);
+  const [autoAdvanceCountdown, setAutoAdvanceCountdown] = useState<number | null>(null);
+  const autoAdvanceTimerRef = useRef<any>(null);
+  const autoAdvanceCountdownIntervalRef = useRef<any>(null);
+  const postAnswerDebounceTimerRef = useRef<any>(null);
+  const hasSpokenSubstantialAnswerRef = useRef<boolean>(false);
+
+  // Fresh-State References to eliminate stale closure in WebSocket STT listeners
+  const currentQuestionRef = useRef<string>('');
+  const currentQuestionIndexRef = useRef<number>(0);
+  const activeCrossQuestionRef = useRef<{ question: string; answer: string } | null>(null);
+  const questionsRef = useRef<string[]>([]);
+  const isSpeakingRef = useRef<boolean>(false);
+
+  const checkVoiceCommandsRef = useRef<(text: string) => boolean>(() => false);
+  const handleRepeatQuestionRef = useRef<() => Promise<void>>(async () => {});
+  const handleSkipQuestionRef = useRef<() => Promise<void>>(async () => {});
+
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isVoiceMuted, setIsVoiceMuted] = useState(() => getMuteTTS());
-
   const isAiSpeaking = isSpeaking;
+
+  const rawQ = state.questions[state.currentQuestionIndex];
+  const currentQ = rawQ ? sanitizeQuestionLength(rawQ) : '';
+
+  // Synchronize live refs on every render
+  currentQuestionRef.current = currentQ;
+  currentQuestionIndexRef.current = state.currentQuestionIndex;
+  activeCrossQuestionRef.current = activeCrossQuestion;
+  questionsRef.current = state.questions;
+  isSpeakingRef.current = isSpeaking;
+
+  const initialSilenceTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const cancelInitialSilenceCheck = () => {
+    if (initialSilenceTimerRef.current) {
+      clearTimeout(initialSilenceTimerRef.current);
+      initialSilenceTimerRef.current = null;
+    }
+  };
+
+  const cancelPostAnswerCheck = () => {
+    if (postAnswerDebounceTimerRef.current) {
+      clearTimeout(postAnswerDebounceTimerRef.current);
+      postAnswerDebounceTimerRef.current = null;
+    }
+  };
+
+  const cancelAutoAdvance = () => {
+    if (autoAdvanceTimerRef.current) {
+      clearTimeout(autoAdvanceTimerRef.current);
+      autoAdvanceTimerRef.current = null;
+    }
+    if (autoAdvanceCountdownIntervalRef.current) {
+      clearInterval(autoAdvanceCountdownIntervalRef.current);
+      autoAdvanceCountdownIntervalRef.current = null;
+    }
+    setAutoAdvanceCountdown(null);
+  };
+
+  const startVisibleCountdown = (seconds: number, notificationMsg?: string) => {
+    cancelAutoAdvance();
+    if (!isRecordingRef.current || isHandlingVoiceCommandRef.current || isSpeakingRef.current) return;
+
+    if (notificationMsg) {
+      showVoiceNotification(notificationMsg);
+    }
+
+    let secondsRemaining = seconds;
+    setAutoAdvanceCountdown(secondsRemaining);
+
+    autoAdvanceCountdownIntervalRef.current = setInterval(() => {
+      secondsRemaining -= 1;
+      if (secondsRemaining <= 0) {
+        cancelAutoAdvance();
+        cancelInitialSilenceCheck();
+        cancelPostAnswerCheck();
+        if (isRecordingRef.current && mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+          const msg = hasSpokenSubstantialAnswerRef.current
+            ? 'Answer complete • Auto-shifting to next question...'
+            : 'No speech detected • Auto-shifting to next question...';
+          console.log(`[Auto Advance] ${msg}`);
+          showVoiceNotification(msg);
+          stopRecording();
+        }
+      } else {
+        setAutoAdvanceCountdown(secondsRemaining);
+      }
+    }, 1000);
+  };
+
+  const schedulePostAnswerSilenceCheck = (debounceMs: number = 2400) => {
+    cancelPostAnswerCheck();
+    if (!isRecordingRef.current || !hasSpokenSubstantialAnswerRef.current || isHandlingVoiceCommandRef.current || isSpeakingRef.current) {
+      return;
+    }
+
+    postAnswerDebounceTimerRef.current = setTimeout(() => {
+      if (
+        isRecordingRef.current &&
+        hasSpokenSubstantialAnswerRef.current &&
+        !isHandlingVoiceCommandRef.current &&
+        !isSpeakingRef.current
+      ) {
+        console.log('[Auto Advance] Candidate paused for 2.4s after answering, starting 3s countdown');
+        startVisibleCountdown(3, 'Answer complete • Auto-shifting in 3s');
+      }
+    }, debounceMs);
+  };
+
+  const scheduleInitialSilenceCheck = (totalTimeoutMs: number = 10000) => {
+    cancelInitialSilenceCheck();
+    cancelAutoAdvance();
+    cancelPostAnswerCheck();
+
+    if (!isRecordingRef.current || hasSpokenSubstantialAnswerRef.current || isHandlingVoiceCommandRef.current || isSpeakingRef.current) {
+      return;
+    }
+
+    // Give 6s of silent reflection time, then trigger a 4s auto-shift countdown
+    const countdownSec = 4;
+    const initialDelay = Math.max(1000, totalTimeoutMs - (countdownSec * 1000));
+
+    initialSilenceTimerRef.current = setTimeout(() => {
+      if (
+        isRecordingRef.current &&
+        !hasSpokenSubstantialAnswerRef.current &&
+        !isHandlingVoiceCommandRef.current &&
+        !isSpeakingRef.current
+      ) {
+        console.log('[Auto Advance] Initial silence threshold reached (6s), starting 4s countdown');
+        startVisibleCountdown(countdownSec, 'No speech detected • Auto-shifting in 4s');
+      }
+    }, initialDelay);
+  };
+
+  const scheduleAutoAdvance = (silenceMs: number = 2400) => {
+    schedulePostAnswerSilenceCheck(silenceMs);
+  };
+
+  const standaloneAiAudioRef = useRef<HTMLAudioElement | null>(null);
+  const playDeepgramVoiceSeqRef = useRef<number>(0);
+  const lastSpokenQuestionIndexRef = useRef<number>(-1);
+
+  const showVoiceNotification = (msg: string) => {
+    setVoiceNotification(msg);
+    if (voiceNotificationTimerRef.current) clearTimeout(voiceNotificationTimerRef.current);
+    voiceNotificationTimerRef.current = setTimeout(() => setVoiceNotification(null), 4000);
+  };
+
+  /**
+   * Stop all AI voice across all engines immediately (Deepgram, Recorder, Browser Synthesis)
+   */
+  const stopAllAiVoice = () => {
+    playDeepgramVoiceSeqRef.current++;
+    if (standaloneAiAudioRef.current) {
+      try {
+        standaloneAiAudioRef.current.pause();
+        standaloneAiAudioRef.current.currentTime = 0;
+        standaloneAiAudioRef.current.src = '';
+      } catch (_) {}
+      standaloneAiAudioRef.current = null;
+    }
+    stopDeepgramAudio();
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      try { window.speechSynthesis.cancel(); } catch (_) {}
+    }
+    isSpeakingRef.current = false;
+    setIsSpeaking(false);
+  };
 
   const toggleMuteVoice = () => {
     const next = !isVoiceMuted;
     setIsVoiceMuted(next);
     setMuteTTS(next);
     if (next) {
-      speak.stop();
-      setIsSpeaking(false);
+      stopAllAiVoice();
     }
   };
 
-  const rawQ = state.questions[state.currentQuestionIndex];
-  const currentQ = rawQ ? sanitizeQuestionLength(rawQ) : '';
+  /**
+   * Exclusive Deepgram Aura voice player with zero concurrent overlap and video track recording
+   */
+  const playDeepgramVoice = async (text: string, onEnd?: () => void): Promise<boolean> => {
+    if (!text || !text.trim() || isVoiceMuted) {
+      onEnd?.();
+      return false;
+    }
+
+    // 1. Immediately abort any existing audio and bump sequence ID
+    stopAllAiVoice();
+    const currentSeq = playDeepgramVoiceSeqRef.current;
+    isSpeakingRef.current = true;
+    setIsSpeaking(true);
+
+    try {
+      const audioBlob = await fetchDeepgramAudioBlob(text.trim(), 'aura-asteria-en');
+      if (playDeepgramVoiceSeqRef.current !== currentSeq) {
+        // Discard blob if superseded or stopped while fetching
+        return false;
+      }
+      if (!audioBlob || audioBlob.size === 0) {
+        isSpeakingRef.current = false;
+        setIsSpeaking(false);
+        onEnd?.();
+        return false;
+      }
+
+      // Standalone HTML5 player fallback with tracked ref
+      return new Promise<boolean>((resolve) => {
+        if (playDeepgramVoiceSeqRef.current !== currentSeq) {
+          resolve(false);
+          return;
+        }
+        const audioUrl = URL.createObjectURL(audioBlob);
+        const audio = new Audio(audioUrl);
+        audio.volume = isVoiceMuted ? 0 : 1.0;
+        standaloneAiAudioRef.current = audio;
+
+        audio.onended = () => {
+          URL.revokeObjectURL(audioUrl);
+          if (standaloneAiAudioRef.current === audio) {
+            standaloneAiAudioRef.current = null;
+          }
+          isSpeakingRef.current = false;
+          setIsSpeaking(false);
+          onEnd?.();
+          resolve(true);
+        };
+
+        audio.onerror = () => {
+          URL.revokeObjectURL(audioUrl);
+          if (standaloneAiAudioRef.current === audio) {
+            standaloneAiAudioRef.current = null;
+          }
+          isSpeakingRef.current = false;
+          setIsSpeaking(false);
+          onEnd?.();
+          resolve(false);
+        };
+
+        try {
+          const p = audio.play();
+          if (p && typeof p.catch === 'function') {
+            p.catch(() => {
+              URL.revokeObjectURL(audioUrl);
+              isSpeakingRef.current = false;
+              setIsSpeaking(false);
+              onEnd?.();
+              resolve(false);
+            });
+          }
+        } catch (_) {
+          URL.revokeObjectURL(audioUrl);
+          isSpeakingRef.current = false;
+          setIsSpeaking(false);
+          onEnd?.();
+          resolve(false);
+        }
+      });
+    } catch (err) {
+      console.warn('[Deepgram Voice] Playback error:', err);
+      isSpeakingRef.current = false;
+      setIsSpeaking(false);
+      onEnd?.();
+      return false;
+    }
+  };
+
+  const handleRepeatQuestion = async () => {
+    if (isHandlingVoiceCommandRef.current) return;
+    isHandlingVoiceCommandRef.current = true;
+    lastVoiceCommandTimeRef.current = Date.now() + 15000; // 15s lock
+    cancelAutoAdvance();
+    cancelInitialSilenceCheck();
+    cancelPostAnswerCheck();
+    showVoiceNotification('Voice Command: "Repeat Question" • Repeating question once...');
+
+    // Clear transcript display so "repeat question" never sits in candidate's answer box
+    setLiveTranscript('');
+    liveTranscriptRef.current = '';
+
+    // Immediately pause Deepgram STT so computer speaker audio does NOT loop back into mic
+    if (deepgramSessionRef.current) {
+      deepgramSessionRef.current.clearTranscript();
+      deepgramSessionRef.current.pause();
+    }
+
+    // Always fetch live question from ref
+    const targetQuestion = activeCrossQuestionRef.current
+      ? activeCrossQuestionRef.current.question
+      : (currentQuestionRef.current || (questionsRef.current[currentQuestionIndexRef.current] ? sanitizeQuestionLength(questionsRef.current[currentQuestionIndexRef.current]) : ''));
+
+    if (!targetQuestion) {
+      if (deepgramSessionRef.current) deepgramSessionRef.current.resume();
+      isHandlingVoiceCommandRef.current = false;
+      return;
+    }
+
+    try {
+      await playDeepgramVoice(`Sure, repeating the question: ${targetQuestion}`);
+    } catch (err) {
+      console.warn('[Voice Command] Repeat question warning:', err);
+    } finally {
+      // 800ms room decay delay before re-enabling microphone listening to allow speaker audio to decay
+      setTimeout(() => {
+        if (deepgramSessionRef.current) {
+          deepgramSessionRef.current.clearTranscript();
+          deepgramSessionRef.current.resume();
+        }
+        liveTranscriptRef.current = '';
+        setLiveTranscript('');
+        isHandlingVoiceCommandRef.current = false;
+        hasSpokenSubstantialAnswerRef.current = false;
+        // Candidate now has time to answer the repeated question
+        scheduleInitialSilenceCheck(10000);
+      }, 800);
+    }
+  };
+  handleRepeatQuestionRef.current = handleRepeatQuestion;
+
+  const handleSkipQuestion = async () => {
+    if (isHandlingVoiceCommandRef.current) return;
+    isHandlingVoiceCommandRef.current = true;
+    lastVoiceCommandTimeRef.current = Date.now() + 15000;
+    cancelAutoAdvance();
+    cancelInitialSilenceCheck();
+    cancelPostAnswerCheck();
+    showVoiceNotification('Voice Command: "Skip Question" • Advancing...');
+    setLiveTranscript('');
+    liveTranscriptRef.current = '';
+
+    if (deepgramSessionRef.current) {
+      deepgramSessionRef.current.clearTranscript();
+      deepgramSessionRef.current.pause();
+    }
+
+    try {
+      await playDeepgramVoice('Understood, skipping to the next question.');
+    } catch (err) {
+      console.warn('[Voice Command] Skip question warning:', err);
+    } finally {
+      isHandlingVoiceCommandRef.current = false;
+      // Trigger stop on current question recorder
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        mediaRecorderRef.current.stop();
+      }
+    }
+  };
+  handleSkipQuestionRef.current = handleSkipQuestion;
+
+  const checkVoiceCommands = (spokenText: string): boolean => {
+    if (isSpeakingRef.current || isHandlingVoiceCommandRef.current) return false;
+    if (Date.now() < lastVoiceCommandTimeRef.current) return false;
+
+    const lower = spokenText.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').trim();
+    // Ignore if string is part of the AI's own confirmation phrases
+    if (lower.includes('sure repeating') || lower.includes('repeating the question') || lower.includes('skipping to the next')) return false;
+
+    const words = lower.split(/\s+/).filter(Boolean);
+    const tailPhrase = words.slice(-6).join(' ');
+
+    // 1. REPEAT QUESTION detection:
+    const isRepeat = (
+      tailPhrase.includes('repeat question') ||
+      tailPhrase.includes('repeat the question') ||
+      tailPhrase.includes('can you repeat') ||
+      tailPhrase.includes('please repeat') ||
+      tailPhrase.includes('repeat please') ||
+      tailPhrase.includes('say that again') ||
+      tailPhrase.includes('say it again') ||
+      tailPhrase.includes('one more time') ||
+      tailPhrase.includes('pardon me') ||
+      lower === 'repeat question' ||
+      lower === 'repeat the question' ||
+      lower === 'can you repeat' ||
+      lower === 'repeat please' ||
+      lower === 'repeat' ||
+      lower === 'pardon'
+    );
+
+    if (isRepeat) {
+      lastVoiceCommandTimeRef.current = Date.now() + 15000;
+      // Strip command words from answer so transcript stays clean
+      const cleanedAnswer = spokenText
+        .replace(/\b(can you please |please |can you |could you )?(repeat|pardon)( the| this)? question( please)?\b/gi, '')
+        .replace(/\b(repeat please|say that again|say it again|one more time|pardon me|repeat|pardon)\b/gi, '')
+        .trim();
+      liveTranscriptRef.current = cleanedAnswer;
+      setLiveTranscript(cleanedAnswer);
+      if (deepgramSessionRef.current) {
+        deepgramSessionRef.current.setTranscript(cleanedAnswer);
+      }
+      void handleRepeatQuestionRef.current();
+      return true;
+    }
+
+    // 2. SKIP QUESTION detection:
+    const isSkip = (
+      tailPhrase.includes('skip question') ||
+      tailPhrase.includes('skip this question') ||
+      tailPhrase.includes('can we skip') ||
+      tailPhrase.includes('please skip') ||
+      tailPhrase.includes('next question please') ||
+      lower === 'skip question' ||
+      lower === 'skip this question' ||
+      lower === 'skip' ||
+      lower === 'pass'
+    );
+
+    if (isSkip) {
+      lastVoiceCommandTimeRef.current = Date.now() + 15000;
+      const cleanedAnswer = spokenText
+        .replace(/\b(can you please |please |can you |could you )?skip( the| this)? question( please)?\b/gi, '')
+        .replace(/\b(next question please|skip please|skip|pass)\b/gi, '')
+        .trim();
+      liveTranscriptRef.current = cleanedAnswer;
+      setLiveTranscript(cleanedAnswer);
+      if (deepgramSessionRef.current) {
+        deepgramSessionRef.current.setTranscript(cleanedAnswer);
+      }
+      void handleSkipQuestionRef.current();
+      return true;
+    }
+
+    return false;
+  };
+  checkVoiceCommandsRef.current = checkVoiceCommands;
+
+  const handleSessionFinish = async (result?: { terminated?: boolean }) => {
+    if (hasFinishedRef.current) return;
+    hasFinishedRef.current = true;
+
+    // Halt Deepgram STT
+    if (deepgramSessionRef.current) {
+      try {
+        await deepgramSessionRef.current.stop();
+      } catch (_) {}
+    }
+
+    const avgConfidence = confidenceScoresRef.current.length > 0
+      ? Math.round(confidenceScoresRef.current.reduce((a, b) => a + b, 0) / confidenceScoresRef.current.length)
+      : 95;
+
+    setState(prev => ({
+      ...prev,
+      speechAnalytics: {
+        averageConfidence: avgConfidence,
+        fillerWordsDetected: fillerWordsCountRef.current,
+        sentiment: 'positive',
+        detectedLanguage: state.language || 'en'
+      },
+      crossQuestionsSummary: crossQuestionsAccumulatorRef.current
+    }));
+
+    onFinish(result);
+  };
+
+  const [timeLeft, setTimeLeft] = useState(QUESTION_TIME_MS / 1000);
+  const [countdown, setCountdown] = useState(QUESTION_PREP_COUNTDOWN_SEC);
+  const [processingVideo, setProcessingVideo] = useState(false);
+  const [cameraReady, setCameraReady] = useState(false);
+  const [cameraError, setCameraError] = useState<string | null>(null);
 
   const [tabWarning, setTabWarning] = useState<string | null>(null);
   const tabWarningTimerRef = useRef<any>(null);
@@ -2964,14 +3480,6 @@ const ActiveInterviewSession: React.FC<{
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  const stopRecording = () => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-      setIsStopping(true);
-      answerDeadlineRef.current = null;
-      mediaRecorderRef.current.stop();
-      setIsRecording(false);
-    }
-  };
 
   const syncTimeLeftFromDeadline = () => {
     const deadline = answerDeadlineRef.current;
@@ -3169,55 +3677,133 @@ const ActiveInterviewSession: React.FC<{
       const hasVideo = stream.getVideoTracks().length > 0;
       if (videoRef.current && hasVideo) {
         videoRef.current.srcObject = stream;
-        await videoRef.current.play().catch(() => undefined);
+        try {
+          const playPromise = videoRef.current.play();
+          if (playPromise && typeof playPromise.catch === 'function') {
+            await playPromise.catch(() => undefined);
+          }
+        } catch (_) {}
       }
       setCameraReady(true);
+
+
+      // Initialize Deepgram Realtime STT
+      try {
+        const dg = new DeepgramRealtimeSession({
+          onTranscript: (text, _isFinal, _isSpeechFinal, meta) => {
+            if (isSpeakingRef.current || isHandlingVoiceCommandRef.current) return;
+            if (text && text.trim()) {
+              const cleanText = text.trim();
+
+              // Check for candidate voice commands (repeat / skip)
+              const commandHandled = checkVoiceCommandsRef.current(cleanText);
+              if (commandHandled) {
+                return;
+              }
+
+              liveTranscriptRef.current = cleanText;
+              setLiveTranscript(cleanText);
+
+              // Cancel initial silence check only once substantial answer words are spoken
+              if (isSubstantialSpeech(cleanText)) {
+                cancelInitialSilenceCheck();
+                hasSpokenSubstantialAnswerRef.current = true;
+              }
+
+              // Realtime Silence Auto-Advance:
+              // Extend the silence timer as candidate speaks their answer
+              if (isRecordingRef.current && hasSpokenSubstantialAnswerRef.current && !isHandlingVoiceCommandRef.current && !isSpeakingRef.current) {
+                cancelAutoAdvance();
+                schedulePostAnswerSilenceCheck(2400);
+              }
+
+              if (meta?.confidence) {
+                confidenceScoresRef.current.push(Math.round(meta.confidence * 100));
+              }
+              if (meta?.fillerWords && meta.fillerWords.length > 0) {
+                fillerWordsCountRef.current += meta.fillerWords.length;
+              }
+            }
+          },
+          onSpeechStarted: () => {
+            if (isSpeakingRef.current || isHandlingVoiceCommandRef.current) return;
+            // When candidate begins/resumes speaking, cancel visible countdown
+            cancelAutoAdvance();
+            cancelPostAnswerCheck();
+            setIsListeningCandidate(true);
+          },
+          onUtteranceEnd: () => {
+            if (isSpeakingRef.current || isHandlingVoiceCommandRef.current) return;
+            setIsListeningCandidate(false);
+            if (isRecordingRef.current && hasSpokenSubstantialAnswerRef.current && !isHandlingVoiceCommandRef.current && !isSpeakingRef.current) {
+              schedulePostAnswerSilenceCheck(2000);
+            }
+          },
+          onError: (err) => console.warn('[Video Interview] Deepgram STT warning:', err)
+        });
+        await dg.start(stream);
+        deepgramSessionRef.current = dg;
+        console.log('[Video Interview] Deepgram Realtime STT listening');
+      } catch (dgErr) {
+        console.warn('[Video Interview] Deepgram STT init warning:', dgErr);
+      }
     };
     setupCamera();
     return () => {
       isCancelled = true;
+      stopAllAiVoice();
+      if (deepgramSessionRef.current) {
+        try {
+          void deepgramSessionRef.current.stop();
+        } catch (_) {}
+        deepgramSessionRef.current = null;
+      }
       if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
         mediaRecorderRef.current.ondataavailable = null;
         mediaRecorderRef.current.onstop = null;
         mediaRecorderRef.current.stop();
       }
       if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop());
-      speak.stop();
     };
   }, []);
 
-  // TTS auto-play - Kokoro TTS (English) / Web Speech API (Hindi, Marathi)
-  // Reads the current question aloud as soon as it appears on screen.
+  // Deepgram Aura Voice: Reads current question aloud (ONLY ONCE per question index)
   useEffect(() => {
     if (!currentQ || !sessionReady) return;
+    if (lastSpokenQuestionIndexRef.current === state.currentQuestionIndex) return;
 
-    // Map the short language code from candidate selection to BCP-47
-    const langMap: Record<string, string> = { en: 'en', hi: 'hi-IN', mr: 'mr-IN' };
-    const ttsLang = langMap[state.language] || 'en';
+    lastSpokenQuestionIndexRef.current = state.currentQuestionIndex;
 
-    // Small delay so the question text renders before audio starts
-    const timeout = setTimeout(() => {
-      unlockTTSAudio();
-      setIsSpeaking(true);
-      speak(currentQ, {
-        lang: ttsLang,
-        onEnd: () => {
-          setIsSpeaking(false);
-          console.log('[TTS] Finished reading question');
-        },
-        onError: (err) => {
-          setIsSpeaking(false);
-          console.warn('[TTS] Error reading question:', err);
-        },
-      });
-    }, 300);
+
+    let isCancelled = false;
+    const timer = setTimeout(() => {
+      if (!isCancelled) {
+        if (deepgramSessionRef.current) {
+          deepgramSessionRef.current.clearTranscript();
+          deepgramSessionRef.current.pause();
+        }
+        void playDeepgramVoice(currentQ, () => {
+          if (!isCancelled) {
+            setTimeout(() => {
+              if (deepgramSessionRef.current) {
+                deepgramSessionRef.current.clearTranscript();
+                deepgramSessionRef.current.resume();
+              }
+              hasSpokenSubstantialAnswerRef.current = false;
+              // Once AI finishes speaking question, start initial silence detection
+              scheduleInitialSilenceCheck(10000);
+            }, 600);
+          }
+        });
+      }
+    }, 400);
 
     return () => {
-      clearTimeout(timeout);
-      speak.stop();
-      setIsSpeaking(false);
+      isCancelled = true;
+      clearTimeout(timer);
+      stopAllAiVoice();
     };
-  }, [currentQ, state.language, sessionReady]);
+  }, [currentQ, sessionReady, state.currentQuestionIndex]);
 
 
 
@@ -3277,6 +3863,24 @@ const ActiveInterviewSession: React.FC<{
       return;
     }
 
+    isRecordingRef.current = true;
+    setIsRecording(true);
+    cancelAutoAdvance();
+    cancelInitialSilenceCheck();
+    cancelPostAnswerCheck();
+    hasSpokenSubstantialAnswerRef.current = false;
+    liveTranscriptRef.current = '';
+    setLiveTranscript('');
+    if (deepgramSessionRef.current) {
+      deepgramSessionRef.current.clearTranscript();
+      if (!isSpeakingRef.current) {
+        deepgramSessionRef.current.resume();
+        scheduleInitialSilenceCheck(10000);
+      } else {
+        deepgramSessionRef.current.pause();
+      }
+    }
+
     chunksRef.current = [];
     recorder.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
     recorder.onerror = (error) => {
@@ -3288,6 +3892,9 @@ const ActiveInterviewSession: React.FC<{
       setCameraError("Recording failed. Please refresh and try again.");
     };
     recorder.onstop = async () => {
+      cancelAutoAdvance();
+      cancelInitialSilenceCheck();
+      cancelPostAnswerCheck();
       const rawBlob = new Blob(chunksRef.current, { type: recorder.mimeType || 'video/webm' });
       chunksRef.current = [];
       answerDeadlineRef.current = null;
@@ -3308,14 +3915,95 @@ const ActiveInterviewSession: React.FC<{
         }
       }
 
+      // Always read latest spoken words synchronously from ref to avoid closure staleness
+      const candidateSpoken = (
+        liveTranscriptRef.current ||
+        liveTranscript ||
+        deepgramSessionRef.current?.getTranscript() ||
+        ''
+      ).trim();
+      liveTranscriptRef.current = '';
+      setLiveTranscript('');
+      if (deepgramSessionRef.current) {
+        deepgramSessionRef.current.clearTranscript();
+      }
+
+      // Build conversation history of past questions & answers
+      const conversationHistory = state.questions.slice(0, questionIndex).map((q, idx) => ({
+        question: q,
+        answer: state.answers[idx] || ''
+      }));
+      conversationHistory.push({
+        question: activeCrossQuestion ? activeCrossQuestion.question : currentQ,
+        answer: candidateSpoken || 'Spoken answer captured on video.'
+      });
+
+      const nextPlannedQ = state.questions[questionIndex + 1];
+
+      // Dynamic Adaptive AI Evaluation:
+      // Decides whether to ask a deeper cross-question based on what candidate just said,
+      // OR bridge adaptively into a customized next question with a genuine real-time compliment!
+      if (!activeCrossQuestion && state.strictness !== 'Low' && candidateSpoken.split(/\s+/).length >= 2) {
+        try {
+          setIsAskingCrossQuestion(true);
+          const adaptive = await generateAdaptiveNextQuestion({
+            currentQuestion: currentQ,
+            candidateAnswer: candidateSpoken,
+            jobTitle: jobTitle || state.jobTitle || 'Role',
+            jobDescription: state.jobDescription,
+            resumeText: state.candidateResumeText,
+            nextPlannedQuestion: nextPlannedQ,
+            conversationHistory
+          });
+
+          const compliment = (adaptive?.transitionalRemark || 'Great explanation, that was very clear and insightful!').trim();
+          setLatestCompliment(compliment);
+
+          if (adaptive && adaptive.decision === 'cross_question' && adaptive.questionText) {
+            const cqText = adaptive.questionText;
+            const fullSpoken = `${compliment} Let me follow up on that: ${cqText}`.trim();
+            setActiveCrossQuestion({ question: cqText, answer: '' });
+
+
+            await playDeepgramVoice(fullSpoken);
+            setIsAskingCrossQuestion(false);
+            setProcessingVideo(false);
+            setIsStopping(false);
+
+            // Give candidate focused recording window for the cross-question
+            startRecording();
+            return;
+          } else if (adaptive && adaptive.decision === 'next_adaptive_question' && adaptive.questionText && nextPlannedQ) {
+            // Spoken compliment delivered out loud directly as Question 2 begins!
+            state.questions[questionIndex + 1] = `${compliment} Moving to our next question: ${adaptive.questionText}`;
+          } else if (nextPlannedQ) {
+            state.questions[questionIndex + 1] = `${compliment} Next question: ${nextPlannedQ}`;
+          }
+        } catch (adaptiveErr) {
+          console.warn('[Video Interview] Adaptive questioning notice:', adaptiveErr);
+        } finally {
+          setIsAskingCrossQuestion(false);
+        }
+      }
+
+      // If completing an active cross-question, record it
+      if (activeCrossQuestion) {
+        crossQuestionsAccumulatorRef.current.push({
+          parentQuestionIndex: questionIndex,
+          question: activeCrossQuestion.question,
+          answer: candidateSpoken || 'Spoken response captured on video.'
+        });
+        setActiveCrossQuestion(null);
+      }
+
       setState(prev => {
         const nextAnswers = [...prev.answers];
         const nextTranscriptTexts = prev.transcriptTexts
           ? [...prev.transcriptTexts]
           : Array(prev.questions.length).fill(null);
 
-        nextAnswers[questionIndex] = "Answered";
-        nextTranscriptTexts[questionIndex] = null;
+        nextAnswers[questionIndex] = candidateSpoken || "Answered";
+        nextTranscriptTexts[questionIndex] = candidateSpoken || null;
 
         return {
           ...prev,
@@ -3344,6 +4032,9 @@ const ActiveInterviewSession: React.FC<{
       setTimeLeft(QUESTION_TIME_MS / 1000);
       setIsRecording(true);
       setCameraError(null);
+      if (!isSpeakingRef.current) {
+        scheduleInitialSilenceCheck(10000);
+      }
     } catch (error) {
       console.error("Recorder start error:", error);
       setCameraError("Recording could not be started on this browser/device.");
@@ -3408,6 +4099,14 @@ const ActiveInterviewSession: React.FC<{
       style={{ WebkitTouchCallout: 'none', WebkitUserSelect: 'none', userSelect: 'none' }}
     >
       {renderFullscreenOverlay()}
+
+      {/* Spoken Voice Command Notification Overlay */}
+      {voiceNotification && (
+        <div className="absolute top-16 left-1/2 -translate-x-1/2 z-50 px-5 py-2.5 rounded-full bg-[#111215] text-[#D4F82C] border-2 border-[#D4F82C] shadow-2xl flex items-center gap-2.5 text-xs font-black animate-in fade-in slide-in-from-top-4 duration-200">
+          <Sparkles size={15} className="text-[#D4F82C] animate-spin" />
+          <span>{voiceNotification}</span>
+        </div>
+      )}
 
       {/* Subtle blueprint dot-matrix grid overlay */}
       <div 
@@ -3475,8 +4174,13 @@ const ActiveInterviewSession: React.FC<{
           </div>
         </div>
 
-        {/* Right: Proctor Status Badges */}
+        {/* Right: Proctor Status Badges & Voice Commands info */}
         <div className="flex items-center gap-2">
+          <div className="hidden lg:flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#111215] text-[#D4F82C] text-[11px] font-black border border-[#D4F82C]/30 shadow-2xs">
+            <Mic size={12} className="text-[#D4F82C] animate-pulse" />
+            <span>Voice: say "Repeat" or "Skip"</span>
+          </div>
+
           <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-[11px] font-bold">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
             <span className="hidden sm:inline">AI READY</span>
@@ -3729,36 +4433,133 @@ const ActiveInterviewSession: React.FC<{
                     <Mic size={11} className="text-[#D4F82C]" />
                     <span>Speak Your Response Clearly Below</span>
                   </span>
+                  {activeCrossQuestion && (
+                    <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-purple-100 text-purple-900 border border-purple-200 text-[10px] font-black uppercase tracking-wider animate-pulse">
+                      <Sparkles size={11} />
+                      <span>Clarification Cross-Question Active</span>
+                    </span>
+                  )}
+                  {isAskingCrossQuestion && (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20 text-[10px] font-black uppercase tracking-wider animate-pulse">
+                      <RefreshCw size={11} className="animate-spin" />
+                      <span>Analyzing Answer for Adaptive Follow-Up...</span>
+                    </span>
+                  )}
                 </div>
 
-                <h2 className="text-xl sm:text-2xl md:text-3xl font-black leading-relaxed text-[#111215] dark:text-white selection:bg-[#D4F82C]/40 tracking-tight">
+                {/* Primary Question */}
+                <h2 className={`font-black leading-relaxed text-[#111215] dark:text-white selection:bg-[#D4F82C]/40 tracking-tight transition-all ${
+                  activeCrossQuestion ? 'text-lg sm:text-xl opacity-60 mb-3' : 'text-xl sm:text-2xl md:text-3xl'
+                }`}>
                   {currentQ}
                 </h2>
-              </div>
 
-              {/* Candidate Audio Listening Status Card */}
-              <div className="mt-6 pt-4 border-t border-[#E4E7DC]/60 dark:border-white/5">
-                <div className="p-4 rounded-2xl bg-[#F8F9F5] dark:bg-white/[0.03] border border-[#E4E7DC] dark:border-white/10 flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-white dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 flex items-center justify-center text-[#111215] dark:text-[#D4F82C] shrink-0">
-                      <Mic size={16} className={isRecording ? 'text-rose-500 animate-pulse' : 'text-[#73766C] dark:text-neutral-400'} />
+                {/* Dynamic AI Follow-up Cross-Question Callout */}
+                {activeCrossQuestion && (
+                  <div className="p-4 sm:p-5 rounded-2xl bg-[#D4F82C]/15 border-2 border-[#D4F82C] space-y-1.5 shadow-sm animate-in zoom-in-95 duration-200">
+                    <div className="text-[10px] font-black uppercase tracking-widest text-[#111215] flex items-center gap-1.5">
+                      <Sparkles size={12} className="text-[#111215]" />
+                      <span>AI Follow-Up Clarification:</span>
                     </div>
-                    <div>
-                      <p className="text-xs font-bold text-[#111215] dark:text-white">
-                        {isRecording ? 'Listening to your microphone...' : 'Microphone is on standby'}
+                    <p className="text-base sm:text-lg font-black text-[#111215] leading-snug">
+                      "{activeCrossQuestion.question}"
+                    </p>
+                  </div>
+                )}
+                {/* Real-time AI Compliment / Positive Validation Banner */}
+                {latestCompliment && (
+                  <div className="mt-3 p-3.5 rounded-2xl bg-emerald-500/10 dark:bg-emerald-500/15 border border-emerald-500/30 text-emerald-900 dark:text-emerald-100 flex items-center gap-3 shadow-xs animate-in fade-in slide-in-from-top-1">
+                    <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                      <Sparkles size={16} className="animate-spin" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[10px] font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                        Realtime AI Feedback & Praise
                       </p>
-                      <p className="text-[11px] text-[#73766C] dark:text-neutral-400">
-                        {isRecording ? 'Speak clearly at normal pace. AI records both video and audio.' : 'Recording begins automatically when countdown concludes.'}
+                      <p className="text-xs sm:text-sm font-semibold leading-snug">
+                        "{latestCompliment}"
                       </p>
                     </div>
                   </div>
+                )}
+              </div>
 
+              {/* Candidate Audio Listening Status & Real-time Deepgram Transcript Card */}
+              <div className="mt-4 pt-3 border-t border-[#E4E7DC]/60 dark:border-white/5">
+                <div className="p-4 sm:p-5 rounded-2xl bg-[#F8F9F5] dark:bg-white/[0.03] border border-[#E4E7DC] dark:border-white/10 space-y-3 shadow-xs">
+                  {/* Top Bar: Microphone Status & Audio Waveform */}
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-xl bg-white dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 flex items-center justify-center text-[#111215] dark:text-[#D4F82C] shrink-0">
+                        <Mic size={16} className={isRecording ? 'text-rose-500 animate-pulse' : 'text-[#73766C] dark:text-neutral-400'} />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-[#111215] dark:text-white flex items-center gap-2">
+                          <span>{isRecording ? (activeCrossQuestion ? 'Listening to your follow-up answer...' : 'Listening to your microphone...') : 'Microphone is on standby'}</span>
+                          {autoAdvanceCountdown !== null && isRecording && (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#D4F82C] text-[#111215] text-[10px] font-black uppercase tracking-wider animate-pulse shadow-xs">
+                              <Sparkles size={10} /> Auto-shifting in {autoAdvanceCountdown}s
+                            </span>
+                          )}
+                        </p>
+                        <p className="text-[11px] text-[#73766C] dark:text-neutral-400">
+                          {isRecording 
+                            ? (autoAdvanceCountdown !== null 
+                                ? (hasSpokenSubstantialAnswerRef.current 
+                                    ? 'Answer complete. Advancing to next question... (Speak to continue answering)' 
+                                    : 'No response detected. Advancing to next question... (Speak now to answer)') 
+                                : 'Video & audio are being recorded for this answer.') 
+                            : 'Recording begins automatically when countdown concludes.'}
+                        </p>
+                      </div>
+                    </div>
+
+                    {isRecording && (
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-mono font-bold text-emerald-500 uppercase tracking-wider">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                          Deepgram Nova-3
+                        </span>
+                        <div className="flex items-center gap-1">
+                          <span className="w-1 h-3 bg-emerald-500 rounded-full animate-[soundbar_0.6s_ease-in-out_infinite]" />
+                          <span className="w-1 h-5 bg-emerald-500 rounded-full animate-[soundbar_0.5s_ease-in-out_infinite_0.1s]" />
+                          <span className="w-1 h-4 bg-emerald-500 rounded-full animate-[soundbar_0.7s_ease-in-out_infinite_0.2s]" />
+                          <span className="w-1 h-2 bg-emerald-500 rounded-full animate-[soundbar_0.4s_ease-in-out_infinite_0.3s]" />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Real-time Deepgram Speech-to-Text Live Transcript Box */}
                   {isRecording && (
-                    <div className="flex items-center gap-1">
-                      <span className="w-1 h-3 bg-emerald-500 rounded-full animate-[soundbar_0.6s_ease-in-out_infinite]" />
-                      <span className="w-1 h-5 bg-emerald-500 rounded-full animate-[soundbar_0.5s_ease-in-out_infinite_0.1s]" />
-                      <span className="w-1 h-4 bg-emerald-500 rounded-full animate-[soundbar_0.7s_ease-in-out_infinite_0.2s]" />
-                      <span className="w-1 h-2 bg-emerald-500 rounded-full animate-[soundbar_0.4s_ease-in-out_infinite_0.3s]" />
+                    <div className="pt-2">
+                      {liveTranscript ? (
+                        <div className="p-3.5 sm:p-4 rounded-xl bg-[#111215] text-white border border-[#D4F82C]/50 shadow-lg space-y-1.5 animate-in fade-in duration-150">
+                          <div className="flex items-center justify-between text-[10px] font-mono text-[#D4F82C] font-bold">
+                            <span className="flex items-center gap-1.5 uppercase tracking-wider">
+                              <Radio size={11} className="animate-pulse text-[#D4F82C]" /> Real-time Speech Transcript
+                            </span>
+                            <span className="uppercase text-[9px] px-2 py-0.5 rounded-full bg-[#D4F82C]/15 border border-[#D4F82C]/30 text-[#D4F82C] font-semibold">
+                              Live Streaming
+                            </span>
+                          </div>
+                          <p className="text-xs sm:text-sm font-medium text-white leading-relaxed tracking-normal select-text">
+                            "{liveTranscript}"
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="p-3 rounded-xl bg-white/50 dark:bg-white/[0.02] border border-dashed border-[#D4F82C]/40 flex items-center justify-between gap-3 text-xs text-[#73766C] dark:text-neutral-400">
+                          <div className="flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-[#D4F82C] animate-ping shrink-0" />
+                            <span className="text-[11px] font-medium text-[#111215] dark:text-neutral-300">
+                              Speak clearly into your microphone — Deepgram will transcribe your words here in real time.
+                            </span>
+                          </div>
+                          <span className="text-[10px] font-mono font-bold text-[#8FB305] dark:text-[#D4F82C] shrink-0 uppercase tracking-wider">
+                            Ready
+                          </span>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -3766,38 +4567,60 @@ const ActiveInterviewSession: React.FC<{
             </div>
 
             {/* Action Buttons & Voice Controls */}
-            <div className="flex flex-row items-center justify-between gap-3 px-6 md:px-8 py-4 border-t border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5]/70 dark:bg-white/[0.02] shrink-0">
-              <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center justify-between gap-3 px-6 md:px-8 py-3.5 border-t border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5]/70 dark:bg-white/[0.02] shrink-0">
+              <div className="flex flex-wrap items-center gap-2">
+                {/* Repeat Question Button */}
                 <button
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation();
-                    if (getMuteTTS()) return;
-                    unlockTTSAudio();
-                    speak.stop();
-                    setIsSpeaking(true);
-                    const langMap: Record<string, string> = { en: 'en', hi: 'hi-IN', mr: 'mr-IN' };
-                    const ttsLang = langMap[state.language] || 'en';
-                    speak(currentQ, {
-                      lang: ttsLang,
-                      onEnd: () => setIsSpeaking(false),
-                      onError: () => setIsSpeaking(false),
-                    });
+                    void handleRepeatQuestion();
                   }}
-                  className={`px-4 py-2.5 rounded-full border text-xs font-black transition-all flex items-center gap-2 cursor-pointer shadow-xs active:scale-95 ${
+                  disabled={isSpeaking}
+                  className="px-3.5 py-2.5 rounded-full border text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shadow-xs active:scale-95 disabled:opacity-50 bg-white dark:bg-white/5 hover:bg-[#E4E7DC]/50 text-[#111215] dark:text-white border-[#E4E7DC] dark:border-white/10"
+                  title='Speak "Repeat Question" or click here to repeat'
+                >
+                  <RefreshCw size={13} className={isSpeaking ? 'animate-spin' : ''} />
+                  <span>Repeat Question</span>
+                </button>
+
+                {/* Skip Question Button */}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    void handleSkipQuestion();
+                  }}
+                  disabled={isSpeaking}
+                  className="px-3.5 py-2.5 rounded-full border text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shadow-xs active:scale-95 disabled:opacity-50 bg-white dark:bg-white/5 hover:bg-rose-50 text-neutral-700 dark:text-neutral-200 border-[#E4E7DC] dark:border-white/10"
+                  title='Speak "Skip Question" or click here to pass'
+                >
+                  <ArrowRight size={13} className="text-amber-500" />
+                  <span>Skip</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const targetQ = activeCrossQuestion ? activeCrossQuestion.question : currentQ;
+                    if (targetQ) void playDeepgramVoice(targetQ);
+                  }}
+                  className={`px-3.5 py-2.5 rounded-full border text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shadow-xs active:scale-95 ${
                     isSpeaking
                       ? 'bg-[#111215] text-[#D4F82C] border-[#111215] shadow-md animate-pulse'
                       : 'bg-white dark:bg-white/5 hover:bg-[#E4E7DC]/50 text-[#111215] dark:text-white border-[#E4E7DC] dark:border-white/10'
                   }`}
-                  title="Replay Voice Aloud"
+                  title="Replay Question Aloud with Deepgram Voice"
                 >
-                  <Volume2 size={14} className={isSpeaking ? 'text-[#D4F82C]' : ''} />
-                  <span>{isSpeaking ? 'Speaking...' : 'Replay Voice'}</span>
+                  <Volume2 size={13} className={isSpeaking ? 'text-[#D4F82C]' : ''} />
+                  <span className="hidden sm:inline">{isSpeaking ? 'Speaking...' : 'Replay'}</span>
                 </button>
+
                 <button
                   type="button"
                   onClick={toggleMuteVoice}
-                  className={`px-3.5 py-2.5 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-xs border active:scale-95 ${
+                  className={`px-3 py-2.5 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-xs border active:scale-95 ${
                     isVoiceMuted
                       ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
                       : 'bg-white dark:bg-white/5 text-[#73766C] dark:text-neutral-300 border-[#E4E7DC] dark:border-white/10 hover:bg-[#E4E7DC]/50'
@@ -3805,7 +4628,7 @@ const ActiveInterviewSession: React.FC<{
                   title={isVoiceMuted ? "Unmute AI Voice" : "Mute AI Voice"}
                 >
                   <Mic size={13} className={isVoiceMuted ? 'text-rose-500' : ''} />
-                  <span className="hidden sm:inline">{isVoiceMuted ? 'Voice Muted' : 'Mute Voice'}</span>
+                  <span className="hidden sm:inline">{isVoiceMuted ? 'Muted' : 'Mute'}</span>
                 </button>
               </div>
 
@@ -4069,6 +4892,10 @@ const InterviewSubmission: React.FC<{
         setStatus("Saving Report...");
         const attemptData = {
             ...finalState,
+            fullSessionVideoUrl: finalState.fullSessionVideoUrl || null,
+            videoBookmarks: finalState.videoBookmarks || [],
+            speechAnalytics: finalState.speechAnalytics || null,
+            crossQuestionsSummary: finalState.crossQuestionsSummary || [],
             candidateResumeBase64: null, // Do not bloat Firebase storage
             transcriptTexts,
             pendingResponseCount: 0,
@@ -4087,7 +4914,7 @@ const InterviewSubmission: React.FC<{
             jobId: interviewId,
             isMock: state.isMock || false,
             meta: { tabSwitchCount: tabSwitches }
-        }
+        };
         const docRef = doc(collection(db, 'interviews', interviewId, 'attempts'));
         await recordCandidateSubmission('interviews', docRef, attemptData);
 

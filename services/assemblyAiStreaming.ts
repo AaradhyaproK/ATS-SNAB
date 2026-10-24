@@ -87,8 +87,11 @@ export class AssemblyAiRealtimeSession {
       console.warn('[AssemblyAI Stream] Serverless token fetch notice:', serverlessErr);
     }
 
-    // 2. Direct fetch fallback (if called in non-browser or CORS-permissive environment)
+    // 2. Direct fetch fallback (if called in non-browser or CORS-permissive environment with key)
     const apiKey = getAssemblyAiApiKey();
+    if (!apiKey) {
+      throw new Error('AssemblyAI streaming token could not be obtained from serverless endpoint.');
+    }
     const res = await fetch('https://streaming.assemblyai.com/v3/token?expires_in_seconds=600', {
       method: 'GET',
       headers: {
@@ -357,7 +360,9 @@ export class AssemblyAiRealtimeSession {
     }
 
     if (this.audioContext && this.audioContext.state !== 'closed') {
-      this.audioContext.close().catch(() => {});
+      try {
+        void this.audioContext.close();
+      } catch (_) {}
       this.audioContext = null;
     }
 

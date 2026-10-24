@@ -8,12 +8,10 @@
  * 3. Unified turn-taking, pause, resume, and audio playback control
  */
 
-export const DEFAULT_DEEPGRAM_API_KEY = '21eeb969c81602cc79cad2c23ba86fc7702474ff';
-
 export const getDeepgramApiKey = (): string => {
   return (
-    (typeof import.meta !== 'undefined' && import.meta.env?.VITE_DEEPGRAM_API_KEY) ||
-    DEFAULT_DEEPGRAM_API_KEY
+    (typeof import.meta !== 'undefined' && (import.meta.env?.VITE_DEEPGRAM_API_KEY || (import.meta.env as any)?.DEEPGRAM_API_KEY)) ||
+    ''
   );
 };
 
@@ -48,10 +46,13 @@ export interface DeepgramSynthesizeOptions {
 
 let activeDeepgramAudio: HTMLAudioElement | null = null;
 
+let activeDeepgramPlaySequence = 0;
+
 /**
  * Stop any currently playing Deepgram Aura audio stream (Immediate Barge-in)
  */
 export const stopDeepgramAudio = (): void => {
+  activeDeepgramPlaySequence++;
   if (activeDeepgramAudio) {
     try {
       activeDeepgramAudio.pause();
@@ -69,8 +70,7 @@ export const fetchDeepgramAudioBlob = async (
   text: string,
   voice: DeepgramAuraVoice = 'aura-asteria-en'
 ): Promise<Blob | null> => {
-  const apiKey = getDeepgramApiKey();
-  if (!apiKey || !text || !text.trim()) return null;
+  if (!text || !text.trim()) return null;
 
   // Clean text intelligently: keep natural punctuation (. , ? ! :) for expressive cadence
   const cleanText = text
@@ -90,6 +90,32 @@ export const fetchDeepgramAudioBlob = async (
     .trim();
 
   if (!cleanText) return null;
+
+  // 1. Primary: Secure Serverless Backend Proxy — 100% Leakproof, zero client keys needed
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 7000);
+
+    const proxyRes = await fetch('/api/deepgram?action=speak', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ text: cleanText, voice }),
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+
+    if (proxyRes.ok) {
+      return await proxyRes.blob();
+    }
+  } catch (proxyErr) {
+    console.warn('[Deepgram TTS] Server proxy notice (trying direct fallback):', proxyErr);
+  }
+
+  // 2. Direct client fallback (if direct key is provided in dev)
+  const apiKey = getDeepgramApiKey();
+  if (!apiKey) return null;
 
   try {
     const controller = new AbortController();
@@ -127,8 +153,13 @@ export const synthesizeWithDeepgram = async (
   options?: DeepgramSynthesizeOptions
 ): Promise<boolean> => {
   stopDeepgramAudio();
+  const sequenceId = activeDeepgramPlaySequence;
 
   const blob = await fetchDeepgramAudioBlob(text, options?.voice || 'aura-asteria-en');
+  // Discard blob if stopped or superseded by another speech request during fetch
+  if (activeDeepgramPlaySequence !== sequenceId) {
+    return false;
+  }
   if (!blob || blob.size === 0) return false;
 
   return new Promise((resolve) => {
@@ -139,13 +170,20 @@ export const synthesizeWithDeepgram = async (
       if (!finished) {
         finished = true;
         if (url) URL.revokeObjectURL(url);
-        activeDeepgramAudio = null;
+        if (activeDeepgramAudio === audio) {
+          activeDeepgramAudio = null;
+        }
       }
     };
 
+    let audio: HTMLAudioElement;
     try {
+      if (activeDeepgramPlaySequence !== sequenceId) {
+        resolve(false);
+        return;
+      }
       url = URL.createObjectURL(blob);
-      const audio = new Audio(url);
+      audio = new Audio(url);
       activeDeepgramAudio = audio;
 
       if (options?.rate && options.rate > 0.5 && options.rate < 2.0) {
@@ -180,13 +218,24 @@ export const synthesizeWithDeepgram = async (
         resolve(false);
       };
 
-      audio.play().catch((err) => {
-        console.warn('[Deepgram TTS] Direct audio playback prevented:', err);
+      try {
+        const playPromise = audio.play();
+        if (playPromise && typeof playPromise.catch === 'function') {
+          playPromise.catch((err) => {
+            console.warn('[Deepgram TTS] Direct audio playback prevented:', err);
+            clearTimeout(safetyTimer);
+            cleanup();
+            options?.onError?.(err);
+            resolve(false);
+          });
+        }
+      } catch (err) {
+        console.warn('[Deepgram TTS] Direct audio playback error:', err);
         clearTimeout(safetyTimer);
         cleanup();
         options?.onError?.(err);
         resolve(false);
-      });
+      }
     } catch (err) {
       cleanup();
       options?.onError?.(err);
@@ -230,8 +279,31 @@ export const transcribeAudioBlobWithDeepgram = async (
     fillerWords?: boolean;
   }
 ): Promise<DeepgramTranscriptionResult | null> => {
+  if (!audioBlob || audioBlob.size === 0) return null;
+
+  // 1. Primary: Secure Serverless Backend Proxy (/api/deepgram) — 100% Leakproof
+  try {
+    const proxyRes = await fetch('/api/deepgram?action=transcribe', {
+      method: 'POST',
+      headers: {
+        'Content-Type': audioBlob.type || 'audio/webm',
+      },
+      body: audioBlob,
+    });
+
+    if (proxyRes.ok) {
+      const json = await proxyRes.json();
+      if (json.success && json.data) {
+        return parseDeepgramData(json.data);
+      }
+    }
+  } catch (proxyErr) {
+    console.warn('[Deepgram STT REST] Server proxy notice (trying direct fallback):', proxyErr);
+  }
+
+  // 2. Direct client fallback (if direct key is provided in dev)
   const apiKey = getDeepgramApiKey();
-  if (!apiKey || !audioBlob || audioBlob.size === 0) return null;
+  if (!apiKey) return null;
 
   try {
     const model = options?.model || 'nova-3';
@@ -269,55 +341,58 @@ export const transcribeAudioBlobWithDeepgram = async (
     }
 
     const data = await response.json();
-    const alternative = data.results?.channels?.[0]?.alternatives?.[0];
-    if (!alternative) return null;
-
-    const words = alternative.words || [];
-    const fillerWordsCount = words.filter((w: any) => 
-      w.filler_word === true || /^(um|uh|erm|ah|like|you know)$/i.test(w.word || '')
-    ).length;
-
-    // Extract average sentiment if available
-    let sentimentLabel: 'positive' | 'neutral' | 'negative' = 'neutral';
-    const sentiments = data.results?.sentiments?.segments || [];
-    if (sentiments.length > 0) {
-      const avgScore = sentiments.reduce((acc: number, s: any) => acc + (s.sentiment_score || 0), 0) / sentiments.length;
-      if (avgScore > 0.15) sentimentLabel = 'positive';
-      else if (avgScore < -0.15) sentimentLabel = 'negative';
-      else sentimentLabel = 'neutral';
-    }
-
-    // Extract diarized speaker segments
-    const diarizedSegments: Array<{ speaker: number; start: number; end: number; text: string }> = [];
-    const paragraphs = data.results?.channels?.[0]?.alternatives?.[0]?.paragraphs?.paragraphs || [];
-    for (const p of paragraphs) {
-      diarizedSegments.push({
-        speaker: p.speaker ?? 0,
-        start: p.start ?? 0,
-        end: p.end ?? 0,
-        text: p.sentences?.map((s: any) => s.text).join(' ') || '',
-      });
-    }
-
-    return {
-      transcript: alternative.transcript || '',
-      confidence: alternative.confidence ?? 0.95,
-      words,
-      fillerWordsCount,
-      sentiment: sentimentLabel,
-      detectedLanguage: data.results?.channels?.[0]?.detected_language || 'en',
-      paragraphs: alternative.paragraphs?.transcript || alternative.transcript || '',
-      diarizedSegments: diarizedSegments.length > 0 ? diarizedSegments : undefined,
-    };
+    return parseDeepgramData(data);
   } catch (err) {
     console.warn('[Deepgram STT REST] Transcribe notice:', err);
     return null;
   }
 };
 
+function parseDeepgramData(data: any): DeepgramTranscriptionResult | null {
+  const alternative = data?.results?.channels?.[0]?.alternatives?.[0];
+  if (!alternative) return null;
+
+  const words = alternative.words || [];
+  const fillerWordsCount = words.filter((w: any) => 
+    w.filler_word === true || /^(um|uh|erm|ah|like|you know)$/i.test(w.word || '')
+  ).length;
+
+  let sentimentLabel: 'positive' | 'neutral' | 'negative' = 'neutral';
+  const sentiments = data.results?.sentiments?.segments || [];
+  if (sentiments.length > 0) {
+    const avgScore = sentiments.reduce((acc: number, s: any) => acc + (s.sentiment_score || 0), 0) / sentiments.length;
+    if (avgScore > 0.15) sentimentLabel = 'positive';
+    else if (avgScore < -0.15) sentimentLabel = 'negative';
+    else sentimentLabel = 'neutral';
+  }
+
+  const diarizedSegments: Array<{ speaker: number; start: number; end: number; text: string }> = [];
+  const paragraphs = data.results?.channels?.[0]?.alternatives?.[0]?.paragraphs?.paragraphs || [];
+  for (const p of paragraphs) {
+    diarizedSegments.push({
+      speaker: p.speaker ?? 0,
+      start: p.start ?? 0,
+      end: p.end ?? 0,
+      text: p.sentences?.map((s: any) => s.text).join(' ') || '',
+    });
+  }
+
+  return {
+    transcript: alternative.transcript || '',
+    confidence: alternative.confidence ?? 0.95,
+    words,
+    fillerWordsCount,
+    sentiment: sentimentLabel,
+    detectedLanguage: data.results?.channels?.[0]?.detected_language || 'en',
+    paragraphs: alternative.paragraphs?.transcript || alternative.transcript || '',
+    diarizedSegments: diarizedSegments.length > 0 ? diarizedSegments : undefined,
+  };
+}
+
 
 export interface DeepgramRealtimeOptions {
   keywords?: string[];
+  language?: string;
   endpointing?: number;
   utteranceEndMs?: number;
   fillerWords?: boolean;
@@ -349,7 +424,7 @@ export class DeepgramRealtimeSession {
     this.options = options || {};
   }
 
-  public async start(): Promise<void> {
+  public async start(existingStream?: MediaStream): Promise<void> {
     if (this.isStreaming && this.ws && this.ws.readyState === WebSocket.OPEN) {
       this.isPaused = false;
       this.callbacks.onStateChange?.('listening');
@@ -357,63 +432,72 @@ export class DeepgramRealtimeSession {
     }
 
     const apiKey = getDeepgramApiKey();
-    if (!apiKey) {
-      throw new Error('Deepgram API Key is missing.');
-    }
 
     this.callbacks.onStateChange?.('connecting');
 
-    // 1. Request microphone access with professional speech enhancements
-    this.mediaStream = await navigator.mediaDevices.getUserMedia({
-      audio: {
-        echoCancellation: true,
-        noiseSuppression: true,
-        autoGainControl: true,
-        channelCount: 1,
-        sampleRate: 16000,
-      },
-    });
+    // 1. Initialize AudioContext first to detect exact native hardware sample rate (e.g. 48000Hz on Mac, 44100Hz on PC)
+    const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+    if (!this.audioContext || this.audioContext.state === 'closed') {
+      this.audioContext = new AudioContextClass();
+    }
+    const sampleRate = this.audioContext.sampleRate || 16000;
 
-    // 2. Build full Deepgram Live WebSocket URL with Nova-3 Linear16 PCM, Smart Formatting, VAD, Filler Words & Keyterms
+    // 2. Use existing stream if provided, or request microphone access with professional speech enhancements
+    if (existingStream) {
+      this.mediaStream = existingStream;
+    } else {
+      this.mediaStream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+          channelCount: 1,
+        },
+      });
+    }
+
+    // 3. Build full Deepgram Live WebSocket URL with Nova-3 Linear16 PCM, Smart Formatting, VAD, Filler Words & Keyterms
     const baseKeywords = [
-      'relocation:2',
-      'notice period:2',
-      'salary:2',
-      'CTC:2',
-      'experience:2',
-      'skills:2',
-      'immediate:2',
-      'joining:2',
-      'resume:2',
-      'background:2',
-      'leadership:2',
-      'project:2',
-      'architecture:2',
-      'responsibilities:2',
-      'fullstack:2',
-      'frontend:2',
-      'backend:2',
-      'developer:2',
-      'engineer:2',
-      'production:2',
-      'database:2',
-      'cloud:2',
+      'relocation',
+      'notice period',
+      'salary',
+      'CTC',
+      'experience',
+      'skills',
+      'immediate',
+      'joining',
+      'resume',
+      'background',
+      'leadership',
+      'project',
+      'architecture',
+      'responsibilities',
+      'fullstack',
+      'frontend',
+      'backend',
+      'developer',
+      'engineer',
+      'production',
+      'database',
+      'cloud',
+      'repeat question',
+      'skip question'
     ];
 
     // Combine default interview terms with any custom role/skills terms passed in options
-    // NOTE: Deepgram Nova-3 uses `keyterm` parameter (not legacy `keywords`)
-    const customKeywords = (this.options.keywords || []).map(k => k.includes(':') ? k : `${k}:2`);
+    // NOTE: Deepgram Nova-3 uses `keyterm` parameter without weights for ultra-accurate speech recognition
+    const customKeywords = (this.options.keywords || []).map(k => k.replace(/:\d+(\.\d+)?$/, '').trim()).filter(Boolean);
     const allKeywords = Array.from(new Set([...baseKeywords, ...customKeywords]));
     const keytermParam = allKeywords.map(k => `&keyterm=${encodeURIComponent(k)}`).join('');
 
-    const endpointing = this.options.endpointing ?? 300;
-    const utteranceEndMs = this.options.utteranceEndMs ?? 1000;
+    const endpointing = this.options.endpointing ?? 150;
     const fillerWords = this.options.fillerWords !== false;
     const numerals = this.options.numerals !== false;
     const smartFormat = this.options.smartFormat !== false;
+    const lang = this.options.language || 'en';
 
-    // Use Linear16 16kHz PCM: raw audio samples with zero WebM container headers (immune to slice-drop corruption)
-    const wsUrl = `wss://api.deepgram.com/v1/listen?model=nova-3&encoding=linear16&sample_rate=16000&channels=1&smart_format=${smartFormat}&punctuate=true&interim_results=true&endpointing=${endpointing}&vad_events=true&utterance_end_ms=${utteranceEndMs}&filler_words=${fillerWords}&numerals=${numerals}&profanity_filter=false${keytermParam}`;
+    // Use Linear16 PCM matching exact native hardware sample rate for zero-distortion, sub-100ms ultra-accurate transcription
+    const wsUrl = `wss://api.deepgram.com/v1/listen?model=nova-3&encoding=linear16&sample_rate=${sampleRate}&channels=1&language=${lang}&smart_format=${smartFormat}&punctuate=true&interim_results=true&endpointing=${endpointing}&vad_events=true&filler_words=${fillerWords}&numerals=${numerals}&profanity_filter=false${keytermParam}`;
 
     return new Promise((resolve, reject) => {
       let isSettled = false;
@@ -426,7 +510,14 @@ export class DeepgramRealtimeSession {
       }, 6000);
 
       try {
-        this.ws = new WebSocket(wsUrl, ['token', apiKey]);
+        if (apiKey) {
+          this.ws = new WebSocket(wsUrl, ['token', apiKey]);
+        } else {
+          const proto = (typeof window !== 'undefined' && window.location.protocol === 'https:') ? 'wss:' : 'ws:';
+          const host = typeof window !== 'undefined' && window.location.host ? window.location.host : 'localhost:3000';
+          const proxyWsUrl = `${proto}//${host}/deepgram-ws?model=nova-3&encoding=linear16&sample_rate=${sampleRate}&channels=1&language=${lang}&smart_format=${smartFormat}&punctuate=true&interim_results=true&endpointing=${endpointing}&vad_events=true&filler_words=${fillerWords}&numerals=${numerals}&profanity_filter=false${keytermParam}`;
+          this.ws = new WebSocket(proxyWsUrl);
+        }
         this.ws.binaryType = 'arraybuffer';
 
         this.ws.onopen = () => {
@@ -493,14 +584,22 @@ export class DeepgramRealtimeSession {
     if (!this.mediaStream) return;
 
     try {
-      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-      this.audioContext = new AudioContextClass({ sampleRate: 16000 });
-      if (this.audioContext.state === 'suspended') {
-        this.audioContext.resume().catch(() => {});
+      if (this.audioContext && this.audioContext.state === 'suspended') {
+        try {
+          const res = this.audioContext.resume();
+          if (res && typeof res.catch === 'function') {
+            res.catch(() => {});
+          }
+        } catch (_) {}
+      }
+
+      if (!this.audioContext) {
+        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+        this.audioContext = new AudioContextClass();
       }
 
       this.micSourceNode = this.audioContext.createMediaStreamSource(this.mediaStream);
-      // 2048 buffer size = ~128ms slices at 16kHz for real-time responsiveness
+      // 2048 buffer size gives ~42ms slices at 48kHz for sub-100ms real-time responsiveness
       this.processorNode = this.audioContext.createScriptProcessor(2048, 1, 1);
 
       this.processorNode.onaudioprocess = (e) => {
@@ -617,17 +716,41 @@ export class DeepgramRealtimeSession {
     this.callbacks.onStateChange?.('paused');
   }
 
+  public clearTranscript(): void {
+    this.finalizedTranscript = '';
+    this.currentInterim = '';
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      try {
+        this.ws.send(JSON.stringify({ type: 'Finalize' }));
+      } catch (_) {}
+    }
+  }
+
+  public setTranscript(text: string): void {
+    this.finalizedTranscript = (text || '').trim();
+    this.currentInterim = '';
+  }
+
+  public getTranscript(): string {
+    return (this.finalizedTranscript + (this.currentInterim ? ` ${this.currentInterim}` : '')).trim();
+  }
+
   public resume(): void {
     this.isPaused = false;
     this.finalizedTranscript = '';
     this.currentInterim = '';
     if (this.audioContext && this.audioContext.state === 'suspended') {
-      this.audioContext.resume().catch(() => {});
+      try {
+        const res = this.audioContext.resume();
+        if (res && typeof res.catch === 'function') {
+          res.catch(() => {});
+        }
+      } catch (_) {}
     }
     this.callbacks.onStateChange?.('listening');
   }
 
-  public stop(): void {
+  public async stop(): Promise<void> {
     this.isStreaming = false;
     this.isPaused = false;
     this.finalizedTranscript = '';

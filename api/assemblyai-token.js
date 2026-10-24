@@ -21,9 +21,9 @@ export default async function handler(req, res) {
 
   try {
     const apiKey = (
-      process.env.VITE_ASSEMBLYAI_API_KEY ||
       process.env.ASSEMBLYAI_API_KEY ||
-      '4a07d7f7399f447b9ff969c458df945f'
+      process.env.VITE_ASSEMBLYAI_API_KEY ||
+      ''
     ).trim();
 
     if (!apiKey) {

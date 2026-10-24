@@ -30,7 +30,12 @@ export class VoiceCallRecorder {
     }
 
     if (this.audioContext.state === 'suspended') {
-      await this.audioContext.resume().catch(() => {});
+      try {
+        const res = this.audioContext.resume();
+        if (res && typeof res.catch === 'function') {
+          await res.catch(() => {});
+        }
+      } catch (_) {}
     }
 
     // Create destination node where both mic + AI speech will be mixed
@@ -91,7 +96,12 @@ export class VoiceCallRecorder {
     if (this.audioContext && this.mixedDestination) {
       try {
         if (this.audioContext.state === 'suspended') {
-          this.audioContext.resume().catch(() => {});
+          try {
+            const res = this.audioContext.resume();
+            if (res && typeof res.catch === 'function') {
+              res.catch(() => {});
+            }
+          } catch (_) {}
         }
         audioBlob.arrayBuffer().then(async (ab) => {
           if (!this.audioContext || !this.mixedDestination) return;
@@ -237,7 +247,9 @@ export class VoiceCallRecorder {
       this.micSource = null;
     }
     if (this.audioContext && this.audioContext.state !== 'closed') {
-      this.audioContext.close().catch(() => {});
+      try {
+        void this.audioContext.close();
+      } catch (_) {}
       this.audioContext = null;
     }
   }

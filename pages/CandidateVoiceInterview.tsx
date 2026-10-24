@@ -709,28 +709,8 @@ export const CandidateVoiceInterview: React.FC = () => {
       console.warn('[Call Recorder] Deepgram Aura speech notice, triggering native fallback:', deepgramErr);
     }
 
-    // 2. High-Fidelity Fallback using Browser SpeechSynthesis
-    return new Promise((resolve) => {
-      try {
-        unlockTTSAudio();
-        speak(cleanSpeech, {
-          lang: 'en-US',
-          rate: 0.98,
-          onEnd: () => {
-            finishSpeaking();
-            resolve();
-          },
-          onError: () => {
-            finishSpeaking();
-            resolve();
-          }
-        });
-      } catch (err) {
-        console.warn('[Voice AI] TTS fallback error:', err);
-        finishSpeaking();
-        resolve();
-      }
-    });
+    // Strict Single-Voice: Only Deepgram Aura voice (no robotic browser WebSpeech fallback)
+    finishSpeaking();
   };
 
   // Start Call Handler

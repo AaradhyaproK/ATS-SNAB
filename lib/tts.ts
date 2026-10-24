@@ -250,12 +250,22 @@ export const unlockTTSAudio = () => {
     if (AudioContextClass) {
       const ctx = new AudioContextClass();
       if (ctx.state === 'suspended') {
-        ctx.resume().catch(() => undefined);
+        try {
+          const res = ctx.resume();
+          if (res && typeof res.catch === 'function') {
+            res.catch(() => undefined);
+          }
+        } catch (_) {}
       }
     }
     const silentAudio = new Audio("data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=");
     silentAudio.volume = 0.01;
-    silentAudio.play().catch(() => undefined);
+    try {
+      const p = silentAudio.play();
+      if (p && typeof p.catch === 'function') {
+        p.catch(() => undefined);
+      }
+    } catch (_) {}
   } catch (e) {
     console.warn("TTS Audio unlock attempt:", e);
   }
@@ -299,12 +309,22 @@ const playAudioStreamTTS = async (textToSpeak: string, langTag: string, options?
           }
         };
 
-        audio.play().catch(() => {
+        try {
+          const playPromise = audio.play();
+          if (playPromise && typeof playPromise.catch === 'function') {
+            playPromise.catch(() => {
+              if (!finished) {
+                finished = true;
+                resolve(false);
+              }
+            });
+          }
+        } catch (_) {
           if (!finished) {
             finished = true;
             resolve(false);
           }
-        });
+        }
       } catch (e) {
         resolve(false);
       }
@@ -502,7 +522,12 @@ speak.pause = (): void => {
 
 speak.resume = (): void => {
   if (currentAudio) {
-    currentAudio.play().catch(() => undefined);
+    try {
+      const p = currentAudio.play();
+      if (p && typeof p.catch === 'function') {
+        p.catch(() => undefined);
+      }
+    } catch (_) {}
   }
   if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
     try {

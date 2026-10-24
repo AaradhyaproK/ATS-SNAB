@@ -104,12 +104,22 @@ export const synthesizeWithPolly = async (
             options?.onError?.(err);
             resolve(false);
           };
-          audio.play().catch((playErr) => {
+          try {
+            const playPromise = audio.play();
+            if (playPromise && typeof playPromise.catch === 'function') {
+              playPromise.catch((playErr) => {
+                activePollyAudio = null;
+                URL.revokeObjectURL(audioUrl);
+                options?.onError?.(playErr);
+                resolve(false);
+              });
+            }
+          } catch (playErr) {
             activePollyAudio = null;
             URL.revokeObjectURL(audioUrl);
             options?.onError?.(playErr);
             resolve(false);
-          });
+          }
         });
       }
     } else {

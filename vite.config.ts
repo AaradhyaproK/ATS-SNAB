@@ -33,6 +33,8 @@ function localServerlessPlugin(env: Record<string, string>): Plugin {
           handlerModule = await import('./api/jobs.js');
         } else if (pathname === '/api/bedrock' || pathname === '/api/ai') {
           handlerModule = await import('./api/bedrock.js');
+        } else if (pathname === '/api/deepgram' || pathname === '/api/deepgram-tts' || pathname === '/api/deepgram-transcribe') {
+          handlerModule = await import('./api/deepgram.js');
         }
 
         if (!handlerModule || !handlerModule.default) {
@@ -98,12 +100,25 @@ function localServerlessPlugin(env: Record<string, string>): Plugin {
 
 export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, '.', '');
+    const deepgramKey = env.DEEPGRAM_API_KEY || env.VITE_DEEPGRAM_API_KEY || '';
+
     return {
       server: {
         port: 3000,
         host: '0.0.0.0',
         headers: {
           'Permissions-Policy': 'unload=*'
+        },
+        proxy: {
+          '/deepgram-ws': {
+            target: 'https://api.deepgram.com/v1/listen',
+            ws: true,
+            changeOrigin: true,
+            headers: {
+              Authorization: `Token ${deepgramKey}`
+            },
+            rewrite: (pathStr: string) => pathStr.replace(/^\/deepgram-ws/, '')
+          }
         }
       },
       plugins: [tailwindcss(), react(), localServerlessPlugin(env)],

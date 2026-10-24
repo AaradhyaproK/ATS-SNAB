@@ -210,6 +210,25 @@ export interface InterviewState {
   isMock?: boolean;
   terminated?: boolean;
   strictness?: 'Low' | 'Medium' | 'Hard';
+  fullSessionVideoUrl?: string | null;
+  videoBookmarks?: Array<{
+    type: 'question' | 'cross_question' | 'wrapup';
+    questionIndex: number;
+    title: string;
+    timestampSec: number;
+    formattedTime: string;
+  }>;
+  speechAnalytics?: {
+    averageConfidence?: number;
+    fillerWordsDetected?: number;
+    sentiment?: string;
+    detectedLanguage?: string;
+  };
+  crossQuestionsSummary?: Array<{
+    parentQuestionIndex: number;
+    question: string;
+    answer: string;
+  }>;
 }
 
 export interface VoiceInterviewQuestion {

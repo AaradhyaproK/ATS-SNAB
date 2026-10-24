@@ -285,6 +285,107 @@ Return valid JSON:
   };
 }
 
+export interface AdaptiveQuestionResult {
+  decision: 'cross_question' | 'next_adaptive_question';
+  transitionalRemark: string;
+  questionText: string;
+}
+
+/**
+ * Dynamically evaluate candidate's spoken answer and generate either:
+ * 1. A deep targeted cross-question (if answer mentions key tools, metrics, or needs practical proof)
+ * 2. An adaptive, conversationally bridged next question tailored to their specific background
+ */
+export async function generateAdaptiveNextQuestion(params: {
+  currentQuestion: string;
+  candidateAnswer: string;
+  jobTitle: string;
+  jobDescription?: string;
+  resumeText?: string;
+  nextPlannedQuestion?: string;
+  conversationHistory: Array<{ question: string; answer: string }>;
+}): Promise<AdaptiveQuestionResult> {
+  const { currentQuestion, candidateAnswer, jobTitle, jobDescription, resumeText, nextPlannedQuestion, conversationHistory } = params;
+
+  // Fallback default
+  const defaultFallback: AdaptiveQuestionResult = {
+    decision: 'next_adaptive_question',
+    transitionalRemark: 'Great explanation, that was very clear and insightful.',
+    questionText: nextPlannedQuestion || 'Can you walk me through a complex technical problem you solved recently?'
+  };
+
+  if (!candidateAnswer || candidateAnswer.trim().split(/\s+/).length < 2) {
+    return defaultFallback;
+  }
+
+  try {
+    const historySummary = (conversationHistory || [])
+      .slice(-3)
+      .map((h, i) => `Q${i + 1}: "${h.question}"\nCandidate: "${h.answer}"`)
+      .join('\n\n');
+
+    const prompt = `
+You are Alex, an elite Tech Recruiter & Principal Engineering Interviewer conducting a live video interview for "${jobTitle}".
+
+JOB DESCRIPTION CONTEXT:
+${(jobDescription || '').slice(0, 1000)}
+
+CANDIDATE RESUME SUMMARY:
+${(resumeText || '').slice(0, 1000)}
+
+RECENT CONVERSATION HISTORY:
+${historySummary || 'First question of the interview.'}
+
+LATEST QUESTION ASKED:
+"${currentQuestion}"
+
+CANDIDATE'S SPOKEN ANSWER:
+"${candidateAnswer}"
+
+PLANNED UPCOMING TOPIC:
+"${nextPlannedQuestion || 'General problem solving & architectural trade-offs'}"
+
+YOUR TASK:
+Make this interview feel like an authentic, highly engaging conversation—NOT a rigid, robotic script.
+Evaluate the candidate's latest response:
+1. DECISION "cross_question":
+   If they mentioned a specific tool, architecture, metric, deployment, or design decision that warrants verification, OR if their answer was too abstract/theoretical, generate a focused, practical follow-up cross-question.
+2. DECISION "next_adaptive_question":
+   If their answer was solid and sufficient, transition smoothly! Take inspiration from the planned upcoming topic, but tailor the phrasing directly to their background and the technologies they just mentioned.
+
+RULES:
+- Natural Spoken Voice Only: Keep it conversational, encouraging, confident, and professional.
+- "transitionalRemark": 1 short, warm, and genuine real-time compliment or commendation directly praising a specific insight or clarity in what the candidate just explained (e.g., "Excellent breakdown of your caching strategy—that shows great practical architectural thinking.", "I really appreciate your pragmatic take on database indexing under high concurrency.", "That was a wonderfully clear explanation of state management.").
+- "questionText": The question itself (under 30 spoken words). Direct, sharp, and natural.
+
+Return valid JSON:
+{
+  "decision": "cross_question" | "next_adaptive_question",
+  "transitionalRemark": "Warm, genuine compliment referencing their answer",
+  "questionText": "The sharp follow-up or adaptive next question"
+}
+`;
+
+    const result = await geminiGenerateJson<AdaptiveQuestionResult>(
+      'You are a senior tech recruiter and engineering leader speaking live aloud. Return valid JSON only.',
+      prompt,
+      0.35
+    );
+
+    if (result && result.questionText && result.questionText.trim()) {
+      return {
+        decision: result.decision === 'cross_question' ? 'cross_question' : 'next_adaptive_question',
+        transitionalRemark: result.transitionalRemark?.trim() || 'Got it.',
+        questionText: result.questionText.trim()
+      };
+    }
+  } catch (err) {
+    console.warn('[Voice AI] Adaptive question generation notice:', err);
+  }
+
+  return defaultFallback;
+}
+
 /**
  * Generate comprehensive screening report from dialogue history, resume, and JD requirements
  */

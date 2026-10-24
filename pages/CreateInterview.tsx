@@ -649,7 +649,7 @@ const CreateInterview: React.FC = () => {
 
   const handleApplyParsedJdData = (parsed: ParsedJdResult) => {
     let extractedCompanyInfo = parsed.companyProfile || '';
-    let extractedCompanyName = parsed.companyName || (parsed as any).company || '';
+    let extractedCompanyName = (parsed as any).companyName || (parsed as any).company || '';
     let extractedJobNo = parsed.jobNo || '';
     const remainingCustomFields: { key: string; value: string }[] = [];
 
