@@ -18,7 +18,8 @@ import { useMessageBox } from '../components/MessageBox';
 import HireXLogo, { HireXMark } from '../components/HireXLogo';
 
 export const VoiceInterviewReport: React.FC = () => {
-  const { responseId } = useParams<{ responseId: string }>();
+  const { responseId: rawRespId, submissionId: rawSubId } = useParams<{ responseId?: string; submissionId?: string }>();
+  const responseId = rawRespId || rawSubId || '';
   const navigate = useNavigate();
   const messageBox = useMessageBox();
 

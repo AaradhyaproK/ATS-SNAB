@@ -195,7 +195,8 @@ const AiInterviewerTile: React.FC<{
  * Live AI Voice & Video Interview Room
  */
 export const LiveVoiceInterview: React.FC = () => {
-  const { jobId = '' } = useParams<{ jobId: string }>();
+  const { jobId: rawJobId, interviewId: rawInterviewId, voiceInterviewId: rawVoiceId } = useParams<{ jobId?: string; interviewId?: string; voiceInterviewId?: string }>();
+  const jobId = rawJobId || rawInterviewId || rawVoiceId || '';
   const [params] = useSearchParams();
   const [job, setJob] = useState<any>(null);
   const [phase, setPhase] = useState<Phase>('form');

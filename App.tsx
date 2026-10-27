@@ -193,7 +193,7 @@ const App: React.FC = () => {
                 <BlogDetail />
               </ThemeProvider>
             } />
-            <Route path="interview/:interviewId" element={<JobToCandidatePortalRedirect />} />
+            <Route path="interview/:interviewId" element={<LiveVoiceInterview />} />
             <Route path="reviews" element={
               <ThemeProvider>
                 <ReviewsPage />
@@ -296,32 +296,19 @@ const App: React.FC = () => {
               </ThemeProvider>
             } />
 
-            {/* Public Interactive AI Video Interview Room */}
-            <Route path="interview/video/:interviewId" element={
-              <VoiceJobGuard><ThemeProvider>
-                <CandidateInterviewFlow />
-              </ThemeProvider></VoiceJobGuard>
-            } />
-            <Route path="interview/room/:interviewId" element={
-              <VoiceJobGuard><ThemeProvider>
-                <CandidateInterviewFlow />
-              </ThemeProvider></VoiceJobGuard>
-            } />
-
-            {/* Public Candidate Job Application Redirects & AI Voice Screener */}
-            <Route path="interview/start/:interviewId" element={<JobToCandidatePortalRedirect />} />
-            <Route path="voice-interview/:voiceInterviewId" element={<CandidateVoiceInterview />} />
+            {/* Unified AI Interview Room (Single unified experience everywhere) */}
+            <Route path="interview/video/:interviewId" element={<LiveVoiceInterview />} />
+            <Route path="interview/room/:interviewId" element={<LiveVoiceInterview />} />
+            <Route path="interview/start/:interviewId" element={<LiveVoiceInterview />} />
+            <Route path="voice-interview/:voiceInterviewId" element={<LiveVoiceInterview />} />
             <Route path="voice-interview" element={<Navigate to="/candidate" replace />} />
             <Route path="voice/:jobId" element={<LiveVoiceInterview />} />
             <Route path="voice-report/:responseId" element={<VoiceInterviewReport />} />
+            <Route path="interview-report/:responseId" element={<VoiceInterviewReport />} />
             <Route path="voice-report" element={<Navigate to="/candidate" replace />} />
             
             {/* Candidate & Recruiter Interview Assessment Report */}
-            <Route path="report/:interviewId/:submissionId" element={
-              <VoiceReportGuard><ThemeProvider>
-                <Report />
-              </ThemeProvider></VoiceReportGuard>
-            } />
+            <Route path="report/:interviewId/:submissionId" element={<VoiceInterviewReport />} />
             <Route path="report/:interviewId" element={
               <ThemeProvider>
                 <Report />
