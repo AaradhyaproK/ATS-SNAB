@@ -314,6 +314,9 @@ export interface VoiceInterviewResponse {
   };
   callDurationSeconds: number;
   audioRecordingUrl?: string;
+  videoUrl?: string;
+  candidateVideoUrl?: string;
+  videoRecordingUrl?: string;
   recordingStorageKey?: string;
   candidateResumeUrl?: string;
   candidateResumeFileName?: string;

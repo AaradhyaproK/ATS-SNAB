@@ -17,7 +17,7 @@ import { InterviewOverviewSkeleton } from '../components/ui/interview-loading-sk
 import { 
   Phone, Copy, ExternalLink, Sparkles, Plus, Trash2, Edit2, CheckCircle2, 
   Clock, MapPin, User, MessageSquare, ChevronRight, X, Shield, Activity, FileText, Volume2,
-  Share2, Download
+  Share2, Download, Video
 } from 'lucide-react';
 
 export const InterviewVoiceInterview: React.FC = () => {
@@ -779,30 +779,52 @@ export const InterviewVoiceInterview: React.FC = () => {
               </div>
             )}
 
-            {/* Audio Recording Player */}
-            {selectedResponse.audioRecordingUrl && (
-              <div className="rounded-xl border border-emerald-500/25 bg-emerald-950/20 p-4 space-y-2">
-                <div className="flex items-center justify-between">
-                  <h4 className="geist-caption font-bold text-white flex items-center gap-2">
-                    <Volume2 size={15} className="text-emerald-400" /> Full Call Audio Recording (AWS S3)
-                  </h4>
-                  <a 
-                    href={selectedResponse.audioRecordingUrl} 
-                    target="_blank" 
-                    rel="noopener noreferrer" 
-                    download={`voice-interview-${selectedResponse.id}.webm`}
-                    className="text-xs text-emerald-400 hover:underline font-mono inline-flex items-center gap-1"
-                  >
-                    Download Audio ↗
-                  </a>
-                </div>
-                <audio 
-                  controls 
-                  src={selectedResponse.audioRecordingUrl} 
-                  className="w-full h-10 mt-1 accent-emerald-500 rounded-lg" 
-                  preload="metadata"
-                />
-              </div>
+            {/* Audio / Video Recording Player */}
+            {(selectedResponse.videoUrl || selectedResponse.videoRecordingUrl || selectedResponse.candidateVideoUrl || selectedResponse.audioRecordingUrl) && (
+              (() => {
+                const mediaUrl = selectedResponse.videoUrl || selectedResponse.videoRecordingUrl || selectedResponse.candidateVideoUrl || selectedResponse.audioRecordingUrl;
+                const isVideo = Boolean(
+                  selectedResponse.videoUrl || 
+                  selectedResponse.videoRecordingUrl || 
+                  selectedResponse.candidateVideoUrl || 
+                  (mediaUrl && (mediaUrl.includes('/videos/') || mediaUrl.includes('video') || mediaUrl.endsWith('.webm') || mediaUrl.endsWith('.mp4')))
+                );
+                return (
+                  <div className="rounded-xl border border-emerald-500/25 bg-emerald-950/20 p-4 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <h4 className="geist-caption font-bold text-white flex items-center gap-2">
+                        {isVideo ? <Video size={16} className="text-emerald-400" /> : <Volume2 size={15} className="text-emerald-400" />}
+                        {isVideo ? 'Full Video Recording (AWS S3)' : 'Full Call Audio Recording (AWS S3)'}
+                      </h4>
+                      <a 
+                        href={mediaUrl} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        download={`voice-interview-${selectedResponse.id}.${isVideo ? 'webm' : 'webm'}`}
+                        className="text-xs text-emerald-400 hover:underline font-mono inline-flex items-center gap-1"
+                      >
+                        {isVideo ? 'Download Video ↗' : 'Download Audio ↗'}
+                      </a>
+                    </div>
+                    {isVideo ? (
+                      <video 
+                        controls 
+                        playsInline
+                        src={mediaUrl} 
+                        className="w-full max-h-[360px] mt-2 rounded-lg bg-black object-contain" 
+                        preload="metadata"
+                      />
+                    ) : (
+                      <audio 
+                        controls 
+                        src={mediaUrl} 
+                        className="w-full h-10 mt-1 accent-emerald-500 rounded-lg" 
+                        preload="metadata"
+                      />
+                    )}
+                  </div>
+                );
+              })()
             )}
 
             {/* Dialogue Transcript */}

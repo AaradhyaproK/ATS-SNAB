@@ -49,8 +49,24 @@ export default async function handler(req, res) {
     const [job, voice] = await Promise.all([getDoc(`interviews/${jobId}`), getDoc(`voiceInterviews/${jobId}`)]);
     if (!job) return res.status(404).json({ error: 'This job no longer exists.' });
     if (job.isActive === false || /closed|inactive/i.test(job.status || '')) return res.status(410).json({ error: 'This job is no longer accepting interviews.' });
-    const questions = (voice?.questions || []).map((q) => (typeof q === 'string' ? q : q?.question)).filter(Boolean).slice(0, 15);
-    if (!questions.length) return res.status(409).json({ error: 'This job has no voice interview questions yet.' });
+    const customQuestions = Array.isArray(body.questions)
+      ? body.questions.filter((q) => typeof q === 'string' && q.trim()).map((q) => q.trim().slice(0, 300)).slice(0, 15)
+      : [];
+    const resumeSummary = String(body.resumeSummary || body.resumeText || '').trim().slice(0, 2500);
+
+    let questions = customQuestions.length > 0
+      ? customQuestions
+      : (voice?.questions || job?.questions || []).map((q) => (typeof q === 'string' ? q : q?.question)).filter(Boolean).slice(0, 15);
+
+    if (!questions.length) {
+      questions = [
+        `Please introduce yourself and tell me about your background relevant to the ${job.title || 'role'}.`,
+        `What practical experience do you have with the key skills required for this position?`,
+        `Can you describe a key project you worked on and the main challenges you solved?`,
+        `Why are you interested in this position at ${job.companyName || job.company || 'our company'}?`,
+        `Do you have any questions for us regarding the role or the team?`
+      ];
+    }
 
     // ~1.5 min per question, 5 to 15 minutes
     const seconds = Math.min(900, Math.max(300, questions.length * 90));
@@ -64,7 +80,7 @@ export default async function handler(req, res) {
         description: String(job.description || '').slice(0, 2000),
         location: job.location || job.city || '',
       },
-      candidate: { name, city },
+      candidate: { name, city, resumeSummary },
       questions,
       keyterms: String(job.skills || '').split(/[,;\n]/).map((s) => s.trim()).filter(Boolean).slice(0, 60),
     });

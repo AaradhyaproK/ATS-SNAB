@@ -5,7 +5,7 @@ export type Meta = {
   sessionId: string;
   seconds: number;
   job: { title: string; company: string; description: string; location: string };
-  candidate: { name: string; city: string };
+  candidate: { name: string; city: string; resumeSummary?: string };
   questions: string[];
   keyterms?: string[]; // the JD's skills, for speech-to-text
 };
@@ -33,6 +33,7 @@ export function createInterviewer(meta: Meta, endCall: () => Promise<void>) {
       running a short screening interview for the ${job.title} role.
 
       The candidate is based in ${c.city || 'an unknown city'}. The job is located in ${job.location || 'a location not given'}.
+      ${c.resumeSummary ? `\nCandidate resume context:\n${c.resumeSummary}\n` : ''}
 
       Ask these questions in this order, one at a time:
       ${questions.map((q, i) => `${i + 1}. ${q}`).join('\n')}
