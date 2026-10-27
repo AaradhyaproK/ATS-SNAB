@@ -939,6 +939,13 @@ export default function PublicJobSeekerUpload() {
       if (field === 'education') {
         updated.highestEducation = value;
       }
+      if (field === 'institution' || field === 'college') {
+        updated.institution = value;
+      }
+      if (field === 'passingYear' || field === 'graduationYear') {
+        updated.passingYear = value;
+        updated.graduationYear = value;
+      }
       if (field === 'domains' || field === 'domain') {
         if (Array.isArray(value)) {
           updated.domains = value;
@@ -2626,15 +2633,43 @@ export default function PublicJobSeekerUpload() {
                     </div>
 
                     {/* Highest Qualification */}
-                    <div>
+                    <div className="sm:col-span-2">
                       <label className="block text-[11px] font-bold uppercase tracking-wider text-[#575A51] mb-1">
-                        Highest Education
+                        Highest Degree / Qualification
                       </label>
                       <EducationInput
                         value={submittedCandidateData.highestEducation || submittedCandidateData.education || ''}
                         onChange={(val) => handleUpdateCandidateCriteria('education', val)}
                         placeholder="Select degree..."
                         className="w-full rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] p-2.5 text-xs text-[#111215] outline-none focus:border-[#111215] focus:bg-white font-semibold"
+                      />
+                    </div>
+
+                    {/* College / University */}
+                    <div>
+                      <label className="block text-[11px] font-bold uppercase tracking-wider text-[#575A51] mb-1">
+                        College / University
+                      </label>
+                      <input
+                        type="text"
+                        value={submittedCandidateData.institution || ''}
+                        onChange={(e) => handleUpdateCandidateCriteria('institution', e.target.value)}
+                        placeholder="e.g. Pune University / COEP"
+                        className="w-full px-3 py-2.5 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] text-xs font-semibold text-[#111215] outline-none focus:border-[#111215] focus:bg-white"
+                      />
+                    </div>
+
+                    {/* Passing Year */}
+                    <div>
+                      <label className="block text-[11px] font-bold uppercase tracking-wider text-[#575A51] mb-1">
+                        Passing Year
+                      </label>
+                      <input
+                        type="text"
+                        value={submittedCandidateData.passingYear || submittedCandidateData.graduationYear || ''}
+                        onChange={(e) => handleUpdateCandidateCriteria('passingYear', e.target.value)}
+                        placeholder="e.g. 2024"
+                        className="w-full px-3 py-2.5 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] text-xs font-semibold text-[#111215] outline-none focus:border-[#111215] focus:bg-white"
                       />
                     </div>
                   </div>

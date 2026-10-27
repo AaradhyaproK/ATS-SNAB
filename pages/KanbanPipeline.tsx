@@ -49,6 +49,7 @@ import {
   Mail,
   Phone,
   Award,
+  Archive,
 } from 'lucide-react';
 
 export interface PipelineCandidate {
@@ -188,6 +189,9 @@ export default function KanbanPipeline() {
   // Drag & Drop State
   const [draggedCandidateId, setDraggedCandidateId] = useState<string | null>(null);
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
+
+  // Archived / Rejected Column Visibility Toggle (fits 4 core stages cleanly on screen by default)
+  const [showArchived, setShowArchived] = useState<boolean>(false);
 
   // Sideway Candidate Detail Drawer State
   const [selectedDrawerCandidate, setSelectedDrawerCandidate] = useState<PipelineCandidate | null>(null);
@@ -867,6 +871,11 @@ export default function KanbanPipeline() {
     };
   }, [roleCandidates]);
 
+  // Stages displayed on Kanban: 4 active pipeline stages by default (perfect fit on all laptop/desktop screens), or all 5 when Archived is toggled
+  const displayedStages = useMemo(() => {
+    return showArchived ? STAGES : STAGES.filter((s) => s.key !== 'Rejected');
+  }, [showArchived]);
+
   // ── 3. Candidate Stage Update Action ──
   const handleUpdateCandidateStage = async (
     candidateId: string,
@@ -1271,6 +1280,32 @@ export default function KanbanPipeline() {
               </select>
             </div>
 
+            {/* Archived / Rejected Column Toggle */}
+            <button
+              type="button"
+              onClick={() => setShowArchived((prev) => !prev)}
+              className={`h-9 inline-flex items-center gap-1.5 rounded-full border px-3 text-xs font-semibold transition-all cursor-pointer shadow-xs shrink-0 ${
+                showArchived
+                  ? 'border-[#111215] bg-[#111215] text-white hover:bg-[#202227]'
+                  : 'border-[#E4E7DC] bg-white text-[#575A51] hover:text-[#111215] hover:bg-[#F8F9F5]'
+              }`}
+              title={showArchived ? 'Hide Archived Column' : 'Show Archived / Rejected Column'}
+            >
+              <Archive className="size-3.5" />
+              <span>{showArchived ? 'Hide Archived' : 'Archived'}</span>
+              {stageStats.rejected > 0 && (
+                <span
+                  className={`text-[10px] font-mono px-1.5 py-0.5 rounded-full font-bold leading-none ${
+                    showArchived
+                      ? 'bg-white/20 text-white'
+                      : 'bg-rose-50 text-rose-700 border border-rose-200'
+                  }`}
+                >
+                  {stageStats.rejected}
+                </span>
+              )}
+            </button>
+
             {/* Reset Filters */}
             {hasActiveFilters && (
               <button
@@ -1352,17 +1387,42 @@ export default function KanbanPipeline() {
         </section>
       )}
 
-      {/* ── 5. Kanban Board Grid with Horizontal Scroll and High-Fidelity Cards ── */}
-      <main className="flex-1 px-4 sm:px-6 lg:px-8 py-5 overflow-hidden flex flex-col">
+      {/* ── 5. Kanban Board Grid with Responsive Columns (Fits Screen Cleanly) ── */}
+      <main className="flex-1 px-4 sm:px-6 lg:px-8 py-5 flex flex-col w-full">
+        {/* Subtle drop banner to archive candidate during drag when Archived column is hidden */}
+        {draggedCandidateId && !showArchived && (
+          <div
+            onDragOver={(e) => handleDragOver(e, 'Rejected')}
+            onDragLeave={handleDragLeave}
+            onDrop={(e) => handleDrop(e, 'Rejected')}
+            className={`mb-4 rounded-2xl border-2 border-dashed p-3 text-center transition-all flex items-center justify-center gap-2 ${
+              dragOverColumn === 'Rejected'
+                ? 'border-rose-600 bg-rose-50 text-rose-700 ring-2 ring-rose-400'
+                : 'border-rose-200 bg-rose-50/60 text-rose-600 hover:bg-rose-50'
+            }`}
+          >
+            <XCircle className="size-4 text-rose-600 shrink-0" />
+            <span className="text-xs font-bold">
+              Drop here to Archive / Reject Candidate
+            </span>
+          </div>
+        )}
+
         {loading ? (
           <div className="flex flex-col items-center justify-center min-h-[400px] text-center">
             <div className="size-10 border-2 border-[#111215] border-t-transparent rounded-full animate-spin mb-3" />
             <p className="text-xs text-[#575A51]">Loading pipeline candidates & sync state...</p>
           </div>
         ) : (
-          <div className="overflow-x-auto pb-6 scrollbar-thin">
-            <div className="flex items-start gap-4 min-w-full w-max">
-              {STAGES.map((stage) => {
+          <div className="w-full">
+            <div
+              className={`w-full ${
+                !showArchived
+                  ? 'grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3.5 sm:gap-4 items-start'
+                  : 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5 gap-3.5 items-start overflow-x-auto pb-6 scrollbar-thin pr-2'
+              }`}
+            >
+              {displayedStages.map((stage) => {
                 const columnCandidates = filteredCandidates.filter((c) => c.status === stage.key);
                 const isDragOver = dragOverColumn === stage.key;
                 const percentOfTotal =
@@ -1376,7 +1436,7 @@ export default function KanbanPipeline() {
                     onDragOver={(e) => handleDragOver(e, stage.key)}
                     onDragLeave={handleDragLeave}
                     onDrop={(e) => handleDrop(e, stage.key)}
-                    className={`rounded-3xl border transition-all duration-200 flex flex-col min-h-[640px] w-[315px] min-w-[295px] shrink-0 p-3.5 bg-[#F8F9F5] ${
+                    className={`rounded-3xl border transition-all duration-200 flex flex-col min-h-[640px] w-full min-w-0 p-3.5 bg-[#F8F9F5] shadow-xs ${
                       isDragOver
                         ? 'ring-2 ring-[#111215] border-[#111215] bg-white'
                         : 'border-[#E4E7DC]'
@@ -1448,6 +1508,10 @@ export default function KanbanPipeline() {
                               key={cand.id}
                               draggable={true}
                               onDragStart={(e) => handleDragStart(e, cand.id)}
+                              onDragEnd={() => {
+                                setDraggedCandidateId(null);
+                                setDragOverColumn(null);
+                              }}
                               onClick={() => {
                                 setSelectedDrawerCandidate(cand);
                                 setDrawerActiveTab('profile');
