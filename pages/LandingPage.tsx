@@ -455,6 +455,10 @@ export default function LandingPage() {
   });
 
   useEffect(() => {
+    document.title = 'InterviewXpert | #1 AI Applicant Tracking System (ATS) & Autonomous Voice Video Interview Platform';
+  }, []);
+
+  useEffect(() => {
     let ticking = false;
 
     const handleScroll = () => {
@@ -916,12 +920,12 @@ export default function LandingPage() {
               </div>
 
               <h1 className="text-3xl xs:text-4xl sm:text-6xl lg:text-[72px] font-black tracking-tight text-[#111215] leading-[1.08] sm:leading-[1.05]">
-                Less busywork.<br />
-                More possibility.
+                Autonomous AI Interviews.<br />
+                <span className="text-[#8FB305]">High-Velocity ATS.</span>
               </h1>
 
               <p className="text-sm sm:text-lg text-[#575A51] max-w-xl leading-relaxed font-normal">
-                Hire smarter, faster. The intelligent ATS for lean teams, applicants and hiring managers — a streamlined, transparent process.
+                InterviewXpert is the all-in-one AI Applicant Tracking System for modern recruiters. Automate 2-way voice &amp; video screening, parse resumes instantly, and shortlist top talent 10x faster.
               </p>
 
               <div className="flex flex-col sm:flex-row sm:items-center gap-3 pt-1 sm:pt-2">
@@ -3111,7 +3115,7 @@ export default function LandingPage() {
                   Corporate Office
                 </div>
                 <div className="font-bold text-xs text-[#111215]">
-                  SNAB Technologies Pvt. Ltd.
+                  SNAB Innovation LLP
                 </div>
                 <div className="text-[11px] text-[#575A51] leading-snug">
                   Nashik, Maharashtra, India
@@ -3121,18 +3125,18 @@ export default function LandingPage() {
 
           </div>
 
-          {/* Giant Typographic Wordmark with hover glow */}
+          {/* Giant Typographic Wordmark with hover glow (responsive clamped to fit without truncation) */}
           <div className="py-6 sm:py-8 border-b border-[#E4E7DC] select-none overflow-hidden">
-            <div className="text-[12vw] sm:text-[14vw] font-black tracking-tighter leading-none text-[#111215] flex items-center justify-between group cursor-default">
-              <span>InterviewXpert</span>
-              <span className="text-[#8FB305] group-hover:translate-x-3 group-hover:-translate-y-3 transition-transform duration-300">↗</span>
+            <div className="text-[clamp(1.75rem,7vw,6.8rem)] font-black tracking-tight leading-none text-[#111215] flex items-center justify-between group cursor-default w-full">
+              <span className="whitespace-nowrap">InterviewXpert</span>
+              <span className="text-[#8FB305] ml-2 sm:ml-4 group-hover:translate-x-2 group-hover:-translate-y-2 transition-transform duration-300">↗</span>
             </div>
           </div>
 
           {/* Copyright & Legal Compliance Bar */}
           <div className="pt-6 sm:pt-8 flex flex-col md:flex-row items-center justify-between text-xs text-[#73766C] gap-4">
             <div className="flex flex-wrap items-center gap-2 text-center md:text-left">
-              <span>© {new Date().getFullYear()} SNAB Technologies Private Limited. All rights reserved.</span>
+              <span>© {new Date().getFullYear()} SNAB Innovation LLP. All rights reserved.</span>
             </div>
 
             <div className="flex flex-wrap items-center justify-center gap-2 text-xs font-semibold">

@@ -1,0 +1,24 @@
+{
+  "short_name": "InterviewXpert",
+  "name": "InterviewXpert - AI ATS & Autonomous Interview Platform",
+  "description": "High-velocity AI Applicant Tracking System (ATS) and autonomous voice & video interview platform for recruiters, hiring teams, and staffing agencies.",
+  "icons": [
+    {
+      "src": "/logo-theme-lime-squircle.png",
+      "type": "image/png",
+      "sizes": "500x500",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/favicon.png",
+      "type": "image/png",
+      "sizes": "500x500"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#111215",
+  "theme_color": "#111215",
+  "display": "standalone",
+  "orientation": "portrait",
+  "categories": ["business", "productivity", "utilities"]
+}

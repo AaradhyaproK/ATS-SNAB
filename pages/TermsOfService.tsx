@@ -41,10 +41,10 @@ export default function TermsOfService() {
               Terms of Service
             </h1>
             <p className="text-sm text-[#575A51] leading-relaxed">
-              These terms govern access to and use of hireX software, APIs, candidate portals, and recruitment services provided by SNAB Technologies Private Limited.
+              These terms govern access to and use of hireX software, APIs, candidate portals, and recruitment services provided by SNAB Innovation LLP.
             </p>
             <div className="text-xs text-[#73766C]">
-              Effective Date: January 1, 2026 • Published by SNAB Technologies Private Limited, Nashik, Maharashtra, India
+              Effective Date: January 1, 2026 • Published by SNAB Innovation LLP, Nashik, Maharashtra, India
             </div>
           </div>
 
@@ -60,7 +60,7 @@ export default function TermsOfService() {
             <section className="space-y-2">
               <h2 className="text-base font-black text-[#111215]">2. Company Information</h2>
               <p>
-                hireX is owned and operated by <strong>SNAB Technologies Private Limited</strong>, an incorporated Indian company with its corporate office located in <strong>Nashik, Maharashtra, India</strong>.
+                hireX is owned and operated by <strong>SNAB Innovation LLP</strong>, an incorporated Indian company with its corporate office located in <strong>Nashik, Maharashtra, India</strong>.
               </p>
             </section>
 
@@ -87,14 +87,14 @@ export default function TermsOfService() {
             <section className="space-y-2">
               <h2 className="text-base font-black text-[#111215]">5. Intellectual Property Rights</h2>
               <p>
-                All software, algorithms, designs, trademarks, and documentation related to hireX remain the exclusive intellectual property of SNAB Technologies Private Limited. All resumes and company candidate databases uploaded by recruiters remain the property of their respective owners.
+                All software, algorithms, designs, trademarks, and documentation related to hireX remain the exclusive intellectual property of SNAB Innovation LLP. All resumes and company candidate databases uploaded by recruiters remain the property of their respective owners.
               </p>
             </section>
 
             <section className="space-y-2">
               <h2 className="text-base font-black text-[#111215]">6. Limitation of Liability</h2>
               <p>
-                InterviewXpert provides AI recommendations, fit scores, and screening transcriptions as decision-support tools. Final hiring, interview, and employment decisions are made entirely by employers. SNAB Technologies Private Limited shall not be liable for any indirect, incidental, or consequential damages resulting from employment outcomes.
+                InterviewXpert provides AI recommendations, fit scores, and screening transcriptions as decision-support tools. Final hiring, interview, and employment decisions are made entirely by employers. SNAB Innovation LLP shall not be liable for any indirect, incidental, or consequential damages resulting from employment outcomes.
               </p>
             </section>
 
@@ -111,7 +111,7 @@ export default function TermsOfService() {
                 For questions regarding these Terms:
               </p>
               <div className="p-4 rounded-xl bg-[#F8F9F5] border border-[#E4E7DC] space-y-1 text-xs">
-                <div className="font-bold text-[#111215]">SNAB Technologies Private Limited</div>
+                <div className="font-bold text-[#111215]">SNAB Innovation LLP</div>
                 <div>Nashik, Maharashtra, India</div>
                 <div>Email: <a href="mailto:hello@snab.co.in" className="underline font-bold text-[#111215]">hello@snab.co.in</a></div>
               </div>
@@ -124,7 +124,7 @@ export default function TermsOfService() {
       {/* Simple Footer */}
       <footer className="border-t border-[#E4E7DC] bg-[#F8F9F5] py-8 text-center text-xs text-[#73766C]">
         <div className="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div>© {new Date().getFullYear()} SNAB Technologies Private Limited. All rights reserved.</div>
+          <div>© {new Date().getFullYear()} SNAB Innovation LLP. All rights reserved.</div>
           <div className="flex items-center gap-4">
             <Link to="/privacy-policy" className="hover:text-[#111215]">Privacy Policy</Link>
             <span>•</span>

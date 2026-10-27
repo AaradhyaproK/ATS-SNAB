@@ -44,7 +44,7 @@ export default function SecurityWhitepaper() {
               Technical documentation detailing how InterviewXpert protects candidate information, access controls, encrypted transport, and platform resilience.
             </p>
             <div className="text-xs text-[#73766C]">
-              Version 2.8 • Published by SNAB Technologies Private Limited, Nashik, Maharashtra, India
+              Version 2.8 • Published by SNAB Innovation LLP, Nashik, Maharashtra, India
             </div>
           </div>
 
@@ -122,7 +122,7 @@ export default function SecurityWhitepaper() {
             <section className="space-y-2">
               <h2 className="text-base font-black text-[#111215]">4. Compliance & Legal Status</h2>
               <p>
-                SNAB Technologies Private Limited is an incorporated Indian entity registered with the Ministry of Corporate Affairs (MCA). We operate within the legal framework of:
+                SNAB Innovation LLP is an incorporated Indian entity registered with the Ministry of Corporate Affairs (MCA). We operate within the legal framework of:
               </p>
               <ul className="list-disc pl-5 space-y-1">
                 <li>The Information Technology Act, 2000 and Reasonable Security Practices Rules.</li>
@@ -138,7 +138,7 @@ export default function SecurityWhitepaper() {
               </p>
               <div className="p-4 rounded-xl bg-[#F8F9F5] border border-[#E4E7DC] space-y-1 text-xs">
                 <div className="font-bold text-[#111215]">Security & Engineering Team</div>
-                <div>SNAB Technologies Private Limited</div>
+                <div>SNAB Innovation LLP</div>
                 <div>Nashik, Maharashtra, India</div>
                 <div>Direct Security Contact: <a href="mailto:security@snab.co.in" className="underline font-bold text-[#111215]">security@snab.co.in</a></div>
               </div>
@@ -151,7 +151,7 @@ export default function SecurityWhitepaper() {
       {/* Simple Footer */}
       <footer className="border-t border-[#E4E7DC] bg-[#F8F9F5] py-8 text-center text-xs text-[#73766C]">
         <div className="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div>© {new Date().getFullYear()} SNAB Technologies Private Limited. All rights reserved.</div>
+          <div>© {new Date().getFullYear()} SNAB Innovation LLP. All rights reserved.</div>
           <div className="flex items-center gap-4">
             <Link to="/privacy-policy" className="hover:text-[#111215]">Privacy Policy</Link>
             <span>•</span>

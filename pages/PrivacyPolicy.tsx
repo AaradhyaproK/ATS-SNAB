@@ -41,10 +41,10 @@ export default function PrivacyPolicy() {
               Privacy Policy
             </h1>
             <p className="text-sm text-[#575A51] leading-relaxed">
-              This Privacy Policy explains how SNAB Technologies Private Limited collects, uses, shares, and protects personal information through hireX.
+              This Privacy Policy explains how SNAB Innovation LLP collects, uses, shares, and protects personal information through hireX.
             </p>
             <div className="text-xs text-[#73766C]">
-              Last Updated: January 2026 • Published by SNAB Technologies Private Limited, Nashik, Maharashtra, India
+              Last Updated: January 2026 • Published by SNAB Innovation LLP, Nashik, Maharashtra, India
             </div>
           </div>
 
@@ -53,7 +53,7 @@ export default function PrivacyPolicy() {
             <section className="space-y-2">
               <h2 className="text-base font-black text-[#111215]">1. Introduction & Company Identity</h2>
               <p>
-                SNAB Technologies Private Limited ("SNAB", "hireX", "we", "our", or "us") is an Indian registered company having its registered office in <strong>Nashik, Maharashtra, India</strong>. We provide an AI-powered recruitment operating system (hireX) for hiring teams, recruiters, and candidates.
+                SNAB Innovation LLP ("SNAB", "hireX", "we", "our", or "us") is an Indian registered company having its registered office in <strong>Nashik, Maharashtra, India</strong>. We provide an AI-powered recruitment operating system (hireX) for hiring teams, recruiters, and candidates.
               </p>
               <p>
                 We are committed to handling all personal and professional data ethically, transparently, and in strict alignment with the Information Technology Act, 2000 and the Digital Personal Data Protection (DPDP) Act, 2023.
@@ -114,7 +114,7 @@ export default function PrivacyPolicy() {
                 For questions, concerns, or grievance redressal regarding this Privacy Policy:
               </p>
               <div className="p-4 rounded-xl bg-[#F8F9F5] border border-[#E4E7DC] space-y-1 text-xs">
-                <div className="font-bold text-[#111215]">SNAB Technologies Private Limited</div>
+                <div className="font-bold text-[#111215]">SNAB Innovation LLP</div>
                 <div>Headquarters: Nashik, Maharashtra, India</div>
                 <div>Email: <a href="mailto:hello@snab.co.in" className="underline font-bold text-[#111215]">hello@snab.co.in</a> / <a href="mailto:privacy@snab.co.in" className="underline font-bold text-[#111215]">privacy@snab.co.in</a></div>
               </div>
@@ -127,7 +127,7 @@ export default function PrivacyPolicy() {
       {/* Simple Footer */}
       <footer className="border-t border-[#E4E7DC] bg-[#F8F9F5] py-8 text-center text-xs text-[#73766C]">
         <div className="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div>© {new Date().getFullYear()} SNAB Technologies Private Limited. All rights reserved.</div>
+          <div>© {new Date().getFullYear()} SNAB Innovation LLP. All rights reserved.</div>
           <div className="flex items-center gap-4">
             <Link to="/terms-of-service" className="hover:text-[#111215]">Terms of Service</Link>
             <span>•</span>

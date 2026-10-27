@@ -1,0 +1,32 @@
+# Robots.txt for InterviewXpert
+# https://interviewxpert.com
+
+User-agent: *
+Allow: /
+Allow: /active-jobs
+Allow: /upload
+Allow: /candidate
+Allow: /reviews
+Allow: /career
+Allow: /whitepaper
+Allow: /data-charter
+Allow: /terms
+Allow: /privacy
+Allow: /contact
+Allow: /blogs
+Allow: /status
+
+# Disallow private dashboards, candidate reports and backend APIs
+Disallow: /admin
+Disallow: /admin/*
+Disallow: /admin-dashboard
+Disallow: /recruiter
+Disallow: /recruiter/*
+Disallow: /profile
+Disallow: /api/*
+Disallow: /voice-report/*
+Disallow: /interview/room/*
+
+# Host & Sitemap
+Host: https://interviewxpert.com
+Sitemap: https://interviewxpert.com/sitemap.xml

@@ -44,7 +44,7 @@ export default function CandidateDataCharter() {
               Our solemn commitment to every applicant, professional, and job seeker on how your personal data, resumes, contact details, and evaluations are safeguarded.
             </p>
             <div className="text-xs text-[#73766C]">
-              Effective Date: January 1, 2026 • Published by SNAB Technologies Private Limited, Nashik, Maharashtra, India
+              Effective Date: January 1, 2026 • Published by SNAB Innovation LLP, Nashik, Maharashtra, India
             </div>
           </div>
 
@@ -86,7 +86,7 @@ export default function CandidateDataCharter() {
               </div>
               <h3 className="font-bold text-sm text-[#111215]">Legally Registered Accountability</h3>
               <p className="text-xs text-[#575A51] leading-relaxed">
-                Operated by SNAB Technologies Private Limited, an Indian registered private limited company governed under the laws of India and the DPDP Act, 2023.
+                Operated by SNAB Innovation LLP, an Indian registered Limited Liability Partnership (LLP) governed under the laws of India and the DPDP Act, 2023.
               </p>
             </div>
           </div>
@@ -144,7 +144,7 @@ export default function CandidateDataCharter() {
               </p>
               <div className="p-4 rounded-xl bg-[#F8F9F5] border border-[#E4E7DC] space-y-1 text-xs">
                 <div className="font-bold text-[#111215]">Data Protection Officer (DPO)</div>
-                <div>SNAB Technologies Private Limited</div>
+                <div>SNAB Innovation LLP</div>
                 <div>Nashik, Maharashtra, India</div>
                 <div>Email: <a href="mailto:privacy@snab.co.in" className="underline font-bold text-[#111215]">privacy@snab.co.in</a> / <a href="mailto:hello@snab.co.in" className="underline font-bold text-[#111215]">hello@snab.co.in</a></div>
               </div>
@@ -157,7 +157,7 @@ export default function CandidateDataCharter() {
       {/* Simple Footer */}
       <footer className="border-t border-[#E4E7DC] bg-[#F8F9F5] py-8 text-center text-xs text-[#73766C]">
         <div className="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div>© {new Date().getFullYear()} SNAB Technologies Private Limited. All rights reserved.</div>
+          <div>© {new Date().getFullYear()} SNAB Innovation LLP. All rights reserved.</div>
           <div className="flex items-center gap-4">
             <Link to="/privacy-policy" className="hover:text-[#111215]">Privacy Policy</Link>
             <span>•</span>
