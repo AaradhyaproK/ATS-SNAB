@@ -477,18 +477,58 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
 
     const mergeJobs = () => {
       const allRaw = [...activeInterviewsList, ...activeJobsList];
+      const seenCodes = new Set<string>();
       const seenIds = new Set<string>();
+      const seenSigs = new Set<string>();
       const combined: any[] = [];
 
       for (const item of allRaw) {
-        if (!item || !item.id || seenIds.has(item.id)) continue;
-        seenIds.add(item.id);
+        if (!item || !item.id) continue;
+        if (item.isMock) continue;
 
         const statusLower = String(item.status || '').trim().toLowerCase();
         if (['inactive', 'expired', 'closed', 'disabled', 'deactivated', 'draft'].includes(statusLower)) {
           continue;
         }
-        if (item.isMock) continue;
+
+        const idClean = (item.id || '').trim();
+        const codeClean = (item.accessCode || item.jobNo || '').trim().toUpperCase();
+        const titleClean = (item.title || '').trim().toLowerCase().replace(/\s+/g, ' ');
+        const locationClean = (item.location || item.city || '').trim().toLowerCase().replace(/\s+/g, ' ');
+        const recruiterClean = (item.recruiterName || item.entryBy || '').trim().toLowerCase().replace(/\s+/g, ' ');
+        const deptClean = (item.department || '').trim().toLowerCase().replace(/\s+/g, ' ');
+        const compositeSig = (titleClean && locationClean) ? `${titleClean}__${locationClean}__${deptClean || recruiterClean}` : '';
+
+        const isDuplicate =
+          (codeClean && seenCodes.has(codeClean)) ||
+          (idClean && seenIds.has(idClean)) ||
+          (compositeSig && seenSigs.has(compositeSig));
+
+        if (isDuplicate) {
+          const existingIdx = combined.findIndex(j => 
+            (codeClean && (j.accessCode || j.jobNo || '').trim().toUpperCase() === codeClean) ||
+            (idClean && j.id === idClean) ||
+            (compositeSig && (j.title || '').trim().toLowerCase().replace(/\s+/g, ' ') === titleClean && (j.location || j.city || '').trim().toLowerCase().replace(/\s+/g, ' ') === locationClean)
+          );
+          if (existingIdx >= 0) {
+            const existing = combined[existingIdx];
+            combined[existingIdx] = {
+              ...item,
+              ...existing,
+              description: existing.description || item.description,
+              skills: (existing.skills && existing.skills.length > 0) ? existing.skills : item.skills,
+              qualification: existing.qualification || item.qualification,
+              education: existing.education || item.education,
+              experience: existing.experience || item.experience,
+              accessCode: existing.accessCode || item.accessCode || codeClean,
+            };
+          }
+          continue;
+        }
+
+        if (codeClean) seenCodes.add(codeClean);
+        if (idClean) seenIds.add(idClean);
+        if (compositeSig) seenSigs.add(compositeSig);
 
         combined.push(item);
       }

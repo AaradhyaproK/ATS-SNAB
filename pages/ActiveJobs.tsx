@@ -164,34 +164,68 @@ const ActiveJobsPage: React.FC = () => {
     let jobsList: ActiveJobItem[] = [];
 
     const mergeAndSetJobs = () => {
-      const map = new Map<string, ActiveJobItem>();
-      interviewsList.forEach((job) => {
-        const key = job.jobNo || job.accessCode || job.id;
-        map.set(key, job);
-        map.set(job.id, job);
-      });
-      jobsList.forEach((job) => {
-        const key = job.jobNo || job.accessCode || job.id;
-        const existing = map.get(key) || map.get(job.id);
-        if (existing) {
-          map.set(key, { ...existing, ...job, id: existing.id || job.id });
-        } else {
-          map.set(key, job);
-        }
-      });
+      const allRaw = [...interviewsList, ...jobsList];
+      const seenCodes = new Set<string>();
+      const seenIds = new Set<string>();
+      const seenSigs = new Set<string>();
+      const deduplicated: ActiveJobItem[] = [];
 
-      const uniqueFetched = Array.from(new Set(map.values()));
-      const now = Date.now();
-      const activeOnly = uniqueFetched.filter((job) => {
-        if (job.isMock) return false;
+      for (const job of allRaw) {
+        if (!job) continue;
+        if (job.isMock) continue;
+
         const statusLower = String((job as any).status || '').trim().toLowerCase();
         if (['inactive', 'expired', 'closed', 'disabled', 'deactivated', 'draft'].includes(statusLower)) {
-          return false;
+          continue;
         }
-        return true;
-      });
 
-      setJobs(activeOnly);
+        const idClean = (job.id || '').trim();
+        const codeClean = (job.accessCode || job.jobNo || '').trim().toUpperCase();
+        const titleClean = (job.title || '').trim().toLowerCase().replace(/\s+/g, ' ');
+        const locationClean = (job.location || job.city || '').trim().toLowerCase().replace(/\s+/g, ' ');
+        const recruiterClean = (job.entryBy || job.recruiterName || job.contactPerson || '').trim().toLowerCase().replace(/\s+/g, ' ');
+        const deptClean = (job.department || '').trim().toLowerCase().replace(/\s+/g, ' ');
+        
+        // Composite signature: title + location + (dept or recruiter)
+        const compositeSig = (titleClean && locationClean) ? `${titleClean}__${locationClean}__${deptClean || recruiterClean}` : '';
+
+        // Check if this job has already been registered
+        const isDuplicate =
+          (codeClean && seenCodes.has(codeClean)) ||
+          (idClean && seenIds.has(idClean)) ||
+          (compositeSig && seenSigs.has(compositeSig));
+
+        if (isDuplicate) {
+          // If already in list, merge any richer non-empty details into the existing entry
+          const existingIdx = deduplicated.findIndex(j => 
+            (codeClean && (j.accessCode || j.jobNo || '').trim().toUpperCase() === codeClean) ||
+            (idClean && j.id === idClean) ||
+            (compositeSig && (j.title || '').trim().toLowerCase().replace(/\s+/g, ' ') === titleClean && (j.location || j.city || '').trim().toLowerCase().replace(/\s+/g, ' ') === locationClean)
+          );
+          if (existingIdx >= 0) {
+            const existing = deduplicated[existingIdx];
+            deduplicated[existingIdx] = {
+              ...job,
+              ...existing,
+              description: existing.description || job.description,
+              skills: (existing.skills && existing.skills.length > 0) ? existing.skills : job.skills,
+              qualification: existing.qualification || job.qualification,
+              education: existing.education || job.education,
+              experience: existing.experience || job.experience,
+              accessCode: existing.accessCode || job.accessCode || codeClean,
+            };
+          }
+          continue;
+        }
+
+        if (codeClean) seenCodes.add(codeClean);
+        if (idClean) seenIds.add(idClean);
+        if (compositeSig) seenSigs.add(compositeSig);
+
+        deduplicated.push(job);
+      }
+
+      setJobs(deduplicated);
       setLoading(false);
     };
 

@@ -178,6 +178,19 @@ export default function PublicJobSeekerUpload() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [extraBioText, setExtraBioText] = useState('');
 
+  // Live Profile Completion Meter for Sidebar
+  const profileCompletionScore = useMemo(() => {
+    let score = 0;
+    if (selectedFile) score += 30;
+    if (candidateName.trim() && candidateEmail.trim()) score += 25;
+    else if (candidateName.trim() || candidateEmail.trim()) score += 12;
+    if (candidatePhone.trim()) score += 15;
+    if (candidateLocation.trim() && candidateExp.trim()) score += 15;
+    else if (candidateLocation.trim() || candidateExp.trim()) score += 8;
+    if (candidateEducation.trim()) score += 15;
+    return Math.min(100, score);
+  }, [selectedFile, candidateName, candidateEmail, candidatePhone, candidateLocation, candidateExp, candidateEducation]);
+
   // Email Autocheck State for existing candidates
   const [existingEmailCandidate, setExistingEmailCandidate] = useState<any | null>(null);
   const [isCheckingEmailBlur, setIsCheckingEmailBlur] = useState(false);
@@ -221,6 +234,18 @@ export default function PublicJobSeekerUpload() {
   const [applyEmail, setApplyEmail] = useState('');
   const [applyPhone, setApplyPhone] = useState('');
   const [isSubmittingApplication, setIsSubmittingApplication] = useState(false);
+
+  // Prevent background page scrolling when any modal popup is open
+  useEffect(() => {
+    const isAnyModalOpen = Boolean(selectedJobForModal || showCriteriaEditor || applyingJobModal || showEmailLookup);
+    if (isAnyModalOpen) {
+      const originalOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = originalOverflow;
+      };
+    }
+  }, [selectedJobForModal, showCriteriaEditor, applyingJobModal, showEmailLookup]);
 
   // Auto-Restore Draft Form State & Submitted Match Results on Page Refresh
   useEffect(() => {
@@ -532,18 +557,58 @@ export default function PublicJobSeekerUpload() {
 
     const mergeJobs = () => {
       const allRaw = [...activeInterviewsList, ...activeJobsList];
+      const seenCodes = new Set<string>();
       const seenIds = new Set<string>();
+      const seenSigs = new Set<string>();
       const combined: any[] = [];
 
       for (const item of allRaw) {
-        if (!item || !item.id || seenIds.has(item.id)) continue;
-        seenIds.add(item.id);
+        if (!item || !item.id) continue;
+        if (item.isMock) continue;
 
         const statusLower = String(item.status || '').trim().toLowerCase();
         if (['inactive', 'expired', 'closed', 'disabled', 'deactivated', 'draft'].includes(statusLower)) {
           continue;
         }
-        if (item.isMock) continue;
+
+        const idClean = (item.id || '').trim();
+        const codeClean = (item.accessCode || item.jobNo || '').trim().toUpperCase();
+        const titleClean = (item.title || '').trim().toLowerCase().replace(/\s+/g, ' ');
+        const locationClean = (item.location || item.city || '').trim().toLowerCase().replace(/\s+/g, ' ');
+        const recruiterClean = (item.recruiterName || item.entryBy || '').trim().toLowerCase().replace(/\s+/g, ' ');
+        const deptClean = (item.department || '').trim().toLowerCase().replace(/\s+/g, ' ');
+        const compositeSig = (titleClean && locationClean) ? `${titleClean}__${locationClean}__${deptClean || recruiterClean}` : '';
+
+        const isDuplicate =
+          (codeClean && seenCodes.has(codeClean)) ||
+          (idClean && seenIds.has(idClean)) ||
+          (compositeSig && seenSigs.has(compositeSig));
+
+        if (isDuplicate) {
+          const existingIdx = combined.findIndex(j => 
+            (codeClean && (j.accessCode || j.jobNo || '').trim().toUpperCase() === codeClean) ||
+            (idClean && j.id === idClean) ||
+            (compositeSig && (j.title || '').trim().toLowerCase().replace(/\s+/g, ' ') === titleClean && (j.location || j.city || '').trim().toLowerCase().replace(/\s+/g, ' ') === locationClean)
+          );
+          if (existingIdx >= 0) {
+            const existing = combined[existingIdx];
+            combined[existingIdx] = {
+              ...item,
+              ...existing,
+              description: existing.description || item.description,
+              skills: (existing.skills && existing.skills.length > 0) ? existing.skills : item.skills,
+              qualification: existing.qualification || item.qualification,
+              education: existing.education || item.education,
+              experience: existing.experience || item.experience,
+              accessCode: existing.accessCode || item.accessCode || codeClean,
+            };
+          }
+          continue;
+        }
+
+        if (codeClean) seenCodes.add(codeClean);
+        if (idClean) seenIds.add(idClean);
+        if (compositeSig) seenSigs.add(compositeSig);
 
         combined.push(item);
       }
@@ -790,7 +855,10 @@ export default function PublicJobSeekerUpload() {
   const [isSavingCriteria, setIsSavingCriteria] = useState(false);
 
   const handleSaveUpdatedCriteriaToResumeDump = async () => {
-    if (!submittedCandidateData) return;
+    if (!submittedCandidateData) {
+      setShowCriteriaEditor(false);
+      return;
+    }
     setIsSavingCriteria(true);
     try {
       const activeDoms = submittedCandidateData.domains || candidateDomains;
@@ -847,6 +915,7 @@ export default function PublicJobSeekerUpload() {
       sessionStorage.setItem('snab_hirex_candidate_submitted_data', JSON.stringify(submittedCandidateData));
 
       messageBox.showSuccess(`Updated domains (${targetDomainStr || 'Selected'}) & criteria saved to your profile and resume dump!`);
+      setShowCriteriaEditor(false);
     } catch (err: any) {
       console.error("Save updated criteria error:", err);
       messageBox.showError("Failed to save updated criteria. Please try again.");
@@ -1382,13 +1451,18 @@ export default function PublicJobSeekerUpload() {
         )}
       </header>
 
-      {/* Main Single-Page Responsive Container */}
-      <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 w-full flex-1">
+      {/* Main Single-Page Responsive Container - 2-Column Laptop Layout */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 w-full flex-1 transition-all duration-300">
 
         {/* Existing Submitted Candidate Email Lookup Modal Popup */}
         {showEmailLookup && (
-          <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-200">
-            <div className="border border-[#E4E7DC] rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl space-y-5 relative bg-white text-[#111215]">
+          <div 
+            className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto overscroll-contain animate-in fade-in duration-200"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setShowEmailLookup(false);
+            }}
+          >
+            <div className="border border-[#E4E7DC] rounded-2xl sm:rounded-3xl max-w-lg w-full p-4 sm:p-8 shadow-2xl space-y-4 sm:space-y-5 relative bg-white text-[#111215] max-h-[92vh] overflow-y-auto overscroll-contain my-auto">
               {/* Modal Header */}
               <div className="flex items-start justify-between border-b border-[#E4E7DC] pb-4">
                 <div className="flex items-center gap-3">
@@ -1486,6 +1560,12 @@ export default function PublicJobSeekerUpload() {
               <p className="text-xs sm:text-base max-w-2xl mx-auto text-[#575A51] leading-relaxed">
                 Our AI resume parser extracts your skills, experience, location, and qualification fit, pre-fills your profile, and matches you against live hiring requisitions.
               </p>
+              <div className="pt-1 flex items-center justify-center">
+                <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#D4F82C]/30 border border-[#8FB305]/40 text-[#111215] text-xs font-bold shadow-2xs">
+                  <Sparkles className="w-3.5 h-3.5 text-[#8FB305]" />
+                  <span>{candidateName ? `Hello, ${candidateName}! ` : ''}These jobs are personalized & suggested by our AI</span>
+                </div>
+              </div>
             </div>
 
             {/* Existing Email Live Alert Banner inside Form */}
@@ -1515,596 +1595,964 @@ export default function PublicJobSeekerUpload() {
               </div>
             )}
 
-            {/* SINGLE-PAGE ALL-IN-ONE RESPONSIVE FORM */}
-            <form
-              onSubmit={handleSubmit}
-              className="space-y-4 sm:space-y-6"
-            >
-              {/* CARD BLOCK 1: RESUME FILE UPLOAD & SKILLS EXTRACTION */}
-              <div className="rounded-3xl p-5 sm:p-7 border border-[#E4E7DC] bg-white shadow-2xs space-y-4">
-                <div className="flex items-center justify-between border-b border-[#E4E7DC] pb-3">
-                  <label className="text-xs sm:text-sm font-bold uppercase tracking-wider flex items-center gap-2 text-[#111215]">
-                    <Upload className="w-4 h-4 text-[#8FB305]" />
-                    <span>1. Resume File & AI Skills Extraction <span className="text-rose-500">*</span></span>
-                  </label>
-                  {isParsingResume && (
-                    <span className="text-xs text-[#8FB305] font-semibold flex items-center gap-1.5 animate-pulse">
-                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                      <span>AI Parsing...</span>
-                    </span>
-                  )}
-                </div>
-
-                <div
-                  className={`relative flex flex-col items-center justify-center p-6 sm:p-8 border-2 border-dashed rounded-2xl transition-all cursor-pointer text-center ${
-                    selectedFile
-                      ? 'border-[#8FB305] bg-[#D4F82C]/10'
-                      : 'border-[#E4E7DC] hover:border-[#111215] bg-[#F8F9F5] hover:bg-white'
-                  }`}
-                  onClick={() => document.getElementById('public-resume-input')?.click()}
+            {/* 2-Column Responsive Layout for Laptop/Desktop */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
+              {/* Left Column: Streamlined Form (Smaller, compact, proper aligned) */}
+              <div className="lg:col-span-7 xl:col-span-8">
+                <form
+                  onSubmit={handleSubmit}
+                  className="space-y-4 sm:space-y-5"
                 >
-                  <input
-                    id="public-resume-input"
-                    type="file"
-                    accept=".pdf,.docx,.txt"
-                    className="hidden"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) handleFileSelection(file);
-                    }}
-                  />
-                  <div className="h-12 w-12 rounded-full flex items-center justify-center mb-2 bg-white text-[#111215] border border-[#E4E7DC] shadow-2xs">
-                    {isParsingResume ? <RefreshCw className="w-5 h-5 animate-spin text-[#8FB305]" /> : <Upload className="w-5 h-5" />}
-                  </div>
-
-                  {selectedFile ? (
-                    <div className="space-y-1">
-                      <span className="font-bold text-xs sm:text-sm text-[#111215] block">
-                        ✓ File Attached: {selectedFile.name}
-                      </span>
-                      <span className="text-xs text-[#73766C] block">
-                        Size: {(selectedFile.size / 1024).toFixed(1)} KB (Skills auto-parsed below)
-                      </span>
-                    </div>
-                  ) : (
-                    <div className="space-y-1">
-                      <span className="font-bold text-xs sm:text-sm text-[#111215] block">
-                        Click or tap to upload resume file (PDF, DOCX, TXT)
-                      </span>
-                      <span className="text-xs text-[#73766C] block">
-                        Auto-extracts skills, location, experience & qualification fit!
-                      </span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Auto-Fetched Skills Tags Roster */}
-                {(extractedSkills.length > 0 || selectedFile) && (
-                  <div className="p-4 rounded-2xl border border-[#E4E7DC] bg-[#F8F9F5] space-y-3">
-                    <div className="flex items-center justify-between flex-wrap gap-2">
-                      <div className="flex items-center gap-1.5">
-                        <Tag className="w-3.5 h-3.5 text-[#8FB305]" />
-                        <span className="font-bold text-xs uppercase tracking-wider text-[#111215]">
-                          Extracted Technical Skills ({extractedSkills.length})
+                  {/* CARD BLOCK 1: RESUME FILE UPLOAD & SKILLS EXTRACTION */}
+                  <div className="rounded-2xl sm:rounded-3xl p-5 sm:p-6 border border-[#E4E7DC] bg-white shadow-xs hover:border-[#111215]/30 transition-all duration-200 space-y-4">
+                    <div className="flex items-center justify-between border-b border-[#E4E7DC] pb-3.5">
+                      <div className="flex items-center gap-2.5">
+                        <span className="h-7 w-7 rounded-xl bg-[#111215] text-[#D4F82C] font-black text-xs flex items-center justify-center shadow-xs">
+                          1
                         </span>
+                        <div>
+                          <h3 className="text-sm sm:text-base font-black tracking-tight text-[#111215]">
+                            Resume File & Skills Extraction <span className="text-rose-500">*</span>
+                          </h3>
+                          <p className="text-[11px] text-[#73766C]">
+                            Upload your resume to automatically extract verified skills and experience
+                          </p>
+                        </div>
                       </div>
-                      <span className="text-[11px] text-[#73766C]">
-                        * Auto-extracted from your resume. Add or remove skills below.
-                      </span>
+
+                      {isParsingResume && (
+                        <span className="text-xs text-[#8FB305] font-bold flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#D4F82C]/20 border border-[#8FB305]/30 animate-pulse">
+                          <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                          <span>AI Parsing...</span>
+                        </span>
+                      )}
                     </div>
 
-                    <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto pr-1">
-                      {extractedSkills.map((skill) => (
-                        <span
-                          key={skill}
-                          className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border border-[#E4E7DC] bg-white text-[#111215] shadow-2xs"
-                        >
-                          <span>{skill}</span>
+                    {/* Modern Compact Dropzone */}
+                    <div
+                      className={`relative flex flex-col items-center justify-center p-6 sm:p-7 border-2 border-dashed rounded-2xl transition-all cursor-pointer text-center group ${
+                        selectedFile
+                          ? 'border-[#8FB305] bg-gradient-to-b from-[#D4F82C]/10 via-[#F6FCF1] to-white shadow-xs'
+                          : 'border-[#D8ECD0] hover:border-[#111215] bg-gradient-to-b from-[#FAFDF7] via-white to-[#FAFDF7] hover:bg-[#F8F9F5] hover:shadow-xs'
+                      }`}
+                      onClick={() => document.getElementById('public-resume-input')?.click()}
+                    >
+                      <input
+                        id="public-resume-input"
+                        type="file"
+                        accept=".pdf,.docx,.txt"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleFileSelection(file);
+                        }}
+                      />
+                      <div className="h-12 w-12 rounded-xl flex items-center justify-center mb-2.5 bg-[#111215] text-[#D4F82C] shadow-xs group-hover:scale-105 transition-all">
+                        {isParsingResume ? (
+                          <RefreshCw className="w-5 h-5 animate-spin text-[#D4F82C]" />
+                        ) : (
+                          <Upload className="w-5 h-5 text-[#D4F82C]" />
+                        )}
+                      </div>
+
+                      {selectedFile ? (
+                        <div className="space-y-1">
+                          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-white border border-[#8FB305] text-[#111215] font-bold text-xs shadow-xs">
+                            <Check className="w-3.5 h-3.5 text-[#8FB305] stroke-[3]" />
+                            <span className="truncate max-w-xs">{selectedFile.name}</span>
+                          </div>
+                          <p className="text-[11px] text-[#73766C]">
+                            Size: {(selectedFile.size / 1024).toFixed(1)} KB • Click to change file
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="space-y-1 max-w-sm">
+                          <p className="font-bold text-xs sm:text-sm text-[#111215]">
+                            Drag & drop resume, or <span className="text-[#8FB305] underline underline-offset-4">browse files</span>
+                          </p>
+                          <p className="text-[11px] text-[#73766C]">
+                            PDF, DOCX, TXT • Auto-extracts skills, location, exp & degrees
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Auto-Fetched Skills Tags Roster */}
+                    {(extractedSkills.length > 0 || selectedFile) && (
+                      <div className="p-3.5 sm:p-4 rounded-2xl border border-[#E4E7DC] bg-[#F8F9F5] space-y-3">
+                        <div className="flex items-center justify-between flex-wrap gap-2">
+                          <div className="flex items-center gap-1.5">
+                            <Tag className="w-3.5 h-3.5 text-[#8FB305]" />
+                            <span className="font-bold text-xs uppercase tracking-wider text-[#111215]">
+                              Extracted Skills ({extractedSkills.length})
+                            </span>
+                          </div>
+                          <span className="text-[10px] text-[#73766C]">
+                            Click X to remove, or add custom below
+                          </span>
+                        </div>
+
+                        <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto pr-1">
+                          {extractedSkills.map((skill) => (
+                            <span
+                              key={skill}
+                              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border border-[#8FB305]/30 bg-white text-[#111215] shadow-2xs hover:border-[#8FB305] transition-all"
+                            >
+                              <span>{skill}</span>
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveSkill(skill)}
+                                className="hover:text-rose-600 transition-colors ml-0.5 p-0.5 cursor-pointer text-[#73766C]"
+                                title="Remove Skill"
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            </span>
+                          ))}
+                        </div>
+
+                        <div className="flex items-center gap-2 pt-0.5">
+                          <div className="relative flex-1">
+                            <Tag className="w-3.5 h-3.5 absolute left-3 top-2.5 text-[#73766C]" />
+                            <input
+                              type="text"
+                              value={newSkillInput}
+                              onChange={(e) => setNewSkillInput(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault();
+                                  handleAddSkill();
+                                }
+                              }}
+                              placeholder="Add custom skill (e.g. React, Python, Sales)..."
+                              className="w-full pl-8 pr-3 py-2 rounded-xl text-xs outline-none focus:ring-2 focus:ring-[#8FB305]/30 focus:border-[#111215] border border-[#E4E7DC] bg-white text-[#111215] placeholder-[#73766C] transition-all"
+                            />
+                          </div>
                           <button
                             type="button"
-                            onClick={() => handleRemoveSkill(skill)}
-                            className="hover:text-rose-600 transition-colors ml-0.5 p-0.5 cursor-pointer text-[#73766C]"
-                            title="Remove Skill"
+                            onClick={handleAddSkill}
+                            className="px-4 py-2 rounded-xl bg-[#111215] hover:bg-[#202227] text-white font-bold text-xs flex items-center gap-1 shrink-0 cursor-pointer shadow-xs transition-all"
                           >
-                            <X className="w-3 h-3" />
+                            <Plus className="w-3.5 h-3.5 text-[#D4F82C]" />
+                            <span>Add</span>
                           </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* CARD BLOCK 2: PERSONAL INFORMATION & CONTACT */}
+                  <div className="rounded-2xl sm:rounded-3xl p-5 sm:p-6 border border-[#E4E7DC] bg-white shadow-xs hover:border-[#111215]/30 transition-all duration-200 space-y-4">
+                    <div className="flex items-center justify-between border-b border-[#E4E7DC] pb-3.5">
+                      <div className="flex items-center gap-2.5">
+                        <span className="h-7 w-7 rounded-xl bg-[#111215] text-[#D4F82C] font-black text-xs flex items-center justify-center shadow-xs">
+                          2
                         </span>
-                      ))}
+                        <div>
+                          <h3 className="text-sm sm:text-base font-black tracking-tight text-[#111215]">
+                            Personal Details & Contact <span className="text-rose-500">*</span>
+                          </h3>
+                          <p className="text-[11px] text-[#73766C]">
+                            Contact info used by hiring recruiters to reach out
+                          </p>
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-bold text-rose-500 uppercase tracking-wider px-2 py-0.5 rounded-full bg-rose-50 border border-rose-200">
+                        Mandatory
+                      </span>
                     </div>
 
-                    <div className="flex items-center gap-2 pt-1">
-                      <input
-                        type="text"
-                        value={newSkillInput}
-                        onChange={(e) => setNewSkillInput(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault();
-                            handleAddSkill();
-                          }
-                        }}
-                        placeholder="Add key skill (e.g. React, Java, AutoCAD)..."
-                        className="flex-1 px-3.5 py-2 rounded-full text-xs outline-none focus:border-[#111215] border border-[#E4E7DC] bg-white text-[#111215] placeholder-[#73766C]"
-                      />
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                      {/* Full Name */}
+                      <div className="space-y-1">
+                        <label className="block text-[11px] font-bold uppercase tracking-wider text-[#353831]">
+                          Full Name <span className="text-rose-500">*</span>
+                        </label>
+                        <div className="relative">
+                          <User className="w-3.5 h-3.5 absolute left-3 top-3 text-[#73766C]" />
+                          <input
+                            type="text"
+                            required
+                            value={candidateName}
+                            onChange={(e) => setCandidateName(e.target.value)}
+                            placeholder="e.g. Rahul Sharma"
+                            className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] text-xs font-semibold text-[#111215] outline-none focus:ring-2 focus:ring-[#8FB305]/30 focus:border-[#111215] focus:bg-white transition-all placeholder-[#73766C]"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Email Address */}
+                      <div className="space-y-1">
+                        <label className="block text-[11px] font-bold uppercase tracking-wider text-[#353831]">
+                          Email Address <span className="text-rose-500">*</span>
+                        </label>
+                        <div className="relative">
+                          <Mail className="w-3.5 h-3.5 absolute left-3 top-3 text-[#73766C]" />
+                          <input
+                            type="email"
+                            required
+                            value={candidateEmail}
+                            onChange={(e) => {
+                              setCandidateEmail(e.target.value);
+                              handleCheckEmailExists(e.target.value);
+                            }}
+                            onBlur={(e) => handleCheckEmailExists(e.target.value)}
+                            placeholder="e.g. rahul@example.com"
+                            className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] text-xs font-semibold text-[#111215] outline-none focus:ring-2 focus:ring-[#8FB305]/30 focus:border-[#111215] focus:bg-white transition-all placeholder-[#73766C]"
+                          />
+                        </div>
+                      </div>
+
+                      {/* WhatsApp Phone */}
+                      <div className="space-y-1">
+                        <label className="block text-[11px] font-bold uppercase tracking-wider text-[#353831]">
+                          WhatsApp Phone <span className="text-rose-500">*</span>
+                        </label>
+                        <div className="relative">
+                          <Phone className="w-3.5 h-3.5 absolute left-3 top-3 text-[#73766C]" />
+                          <input
+                            type="tel"
+                            required
+                            value={candidatePhone}
+                            onChange={(e) => setCandidatePhone(e.target.value)}
+                            placeholder="e.g. +91 9876543210"
+                            className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] text-xs font-semibold text-[#111215] outline-none focus:ring-2 focus:ring-[#8FB305]/30 focus:border-[#111215] focus:bg-white transition-all placeholder-[#73766C]"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-1">
+                      {/* Gender Switch */}
+                      <div className="space-y-1">
+                        <label className="block text-[11px] font-bold uppercase tracking-wider text-[#353831]">
+                          Gender <span className="text-rose-500">*</span>
+                        </label>
+                        <div className="grid grid-cols-3 gap-1 p-1 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5]">
+                          {['Male', 'Female', 'Other'].map(g => (
+                            <button
+                              key={g}
+                              type="button"
+                              onClick={() => setCandidateGender(g)}
+                              className={`py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                                candidateGender === g
+                                  ? 'bg-[#111215] text-[#D4F82C] shadow-xs'
+                                  : 'text-[#575A51] hover:text-[#111215] hover:bg-white'
+                              }`}
+                            >
+                              {g}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Marital Status Switch */}
+                      <div className="space-y-1">
+                        <label className="block text-[11px] font-bold uppercase tracking-wider text-[#353831]">
+                          Marital Status
+                        </label>
+                        <div className="grid grid-cols-2 gap-1 p-1 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5]">
+                          {['Single / Unmarried', 'Married'].map(m => (
+                            <button
+                              key={m}
+                              type="button"
+                              onClick={() => setCandidateMaritalStatus(m)}
+                              className={`py-2 rounded-lg text-xs font-bold transition-all cursor-pointer truncate px-1 ${
+                                candidateMaritalStatus === m
+                                  ? 'bg-[#111215] text-[#D4F82C] shadow-xs'
+                                  : 'text-[#575A51] hover:text-[#111215] hover:bg-white'
+                              }`}
+                              title={m}
+                            >
+                              {m === 'Single / Unmarried' ? 'Single' : 'Married'}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* CARD BLOCK 3: TARGET LOCATION, EXPERIENCE & QUALIFICATION */}
+                  <div className="rounded-2xl sm:rounded-3xl p-5 sm:p-6 border border-[#E4E7DC] bg-white shadow-xs hover:border-[#111215]/30 transition-all duration-200 space-y-4">
+                    <div className="flex items-center justify-between border-b border-[#E4E7DC] pb-3.5">
+                      <div className="flex items-center gap-2.5">
+                        <span className="h-7 w-7 rounded-xl bg-[#111215] text-[#D4F82C] font-black text-xs flex items-center justify-center shadow-xs">
+                          3
+                        </span>
+                        <div>
+                          <h3 className="text-sm sm:text-base font-black tracking-tight text-[#111215]">
+                            Location, Experience & Education <span className="text-rose-500">*</span>
+                          </h3>
+                          <p className="text-[11px] text-[#73766C]">
+                            Critical factors used by AI to compute opening compatibility
+                          </p>
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-bold text-rose-500 uppercase tracking-wider px-2 py-0.5 rounded-full bg-rose-50 border border-rose-200">
+                        Mandatory
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                      {/* Location / City */}
+                      <div className="space-y-1">
+                        <label className="block text-[11px] font-bold uppercase tracking-wider text-[#353831]">
+                          Target City <span className="text-rose-500">*</span>
+                        </label>
+                        <LocationCityInput
+                          value={candidateLocation}
+                          onChange={setCandidateLocation}
+                          selectedState={candidateState}
+                          onStateChange={setCandidateState}
+                          placeholder="Search city (e.g. Nashik, Pune)..."
+                          className="w-full rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] p-2.5 text-xs text-[#111215] font-semibold outline-none focus:ring-2 focus:ring-[#8FB305]/30 focus:border-[#111215] focus:bg-white placeholder-[#73766C]"
+                        />
+
+                        {/* Quick Fast Feed City Presets */}
+                        <div className="flex flex-wrap gap-1 pt-1">
+                          {['Nashik', 'Pune', 'Mumbai', 'Thane', 'Nagpur'].map(city => (
+                            <button
+                              key={city}
+                              type="button"
+                              onClick={() => {
+                                setCandidateLocation(city);
+                                setCandidateState('Maharashtra');
+                              }}
+                              className={`px-2 py-0.5 rounded-full text-[10px] font-bold border transition-all cursor-pointer inline-flex items-center gap-0.5 ${
+                                candidateLocation.toLowerCase().includes(city.toLowerCase())
+                                  ? 'bg-[#111215] text-[#D4F82C] border-[#111215] shadow-xs'
+                                  : 'bg-white border-[#E4E7DC] text-[#575A51] hover:border-[#111215] hover:text-[#111215]'
+                              }`}
+                            >
+                              <MapPin className="w-2.5 h-2.5 text-[#8FB305]" />
+                              <span>{city}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Experience */}
+                      <div className="space-y-1">
+                        <label className="block text-[11px] font-bold uppercase tracking-wider text-[#353831]">
+                          Experience (Yrs) <span className="text-rose-500">*</span>
+                        </label>
+                        <div className="relative">
+                          <Briefcase className="w-3.5 h-3.5 absolute left-3 top-3 text-[#73766C]" />
+                          <input
+                            type="number"
+                            step="0.1"
+                            min="0"
+                            max="60"
+                            required
+                            value={candidateExp}
+                            onChange={(e) => setCandidateExp(e.target.value)}
+                            placeholder="0 or 2.5 Yrs"
+                            className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] text-xs text-[#111215] font-semibold outline-none focus:ring-2 focus:ring-[#8FB305]/30 focus:border-[#111215] focus:bg-white transition-all placeholder-[#73766C]"
+                          />
+                        </div>
+                        {/* Quick Experience Pills */}
+                        <div className="flex flex-wrap gap-1 pt-1">
+                          {['0', '1', '2', '3', '5'].map(yr => (
+                            <button
+                              key={yr}
+                              type="button"
+                              onClick={() => setCandidateExp(yr)}
+                              className={`px-2 py-0.5 rounded-full text-[10px] font-bold border transition-all cursor-pointer ${
+                                candidateExp === yr
+                                  ? 'bg-[#111215] text-[#D4F82C] border-[#111215] shadow-xs'
+                                  : 'bg-white border-[#E4E7DC] text-[#575A51] hover:border-[#111215] hover:text-[#111215]'
+                              }`}
+                            >
+                              {yr === '0' ? 'Fresher' : `${yr} Yr`}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Education Qualification */}
+                      <div className="space-y-1">
+                        <label className="block text-[11px] font-bold uppercase tracking-wider text-[#353831]">
+                          Highest Degree <span className="text-rose-500">*</span>
+                        </label>
+                        <EducationInput
+                          value={candidateEducation}
+                          onChange={setCandidateEducation}
+                          placeholder="Select degree..."
+                          className="w-full rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] p-2.5 text-xs text-[#111215] font-semibold outline-none focus:ring-2 focus:ring-[#8FB305]/30 focus:border-[#111215] focus:bg-white placeholder-[#73766C]"
+                        />
+                        {/* Quick Education Pills */}
+                        <div className="flex flex-wrap gap-1 pt-1">
+                          {['B.Tech', 'Diploma', 'MBA', 'BCA', 'Graduate'].map(deg => (
+                            <button
+                              key={deg}
+                              type="button"
+                              onClick={() => setCandidateEducation(deg)}
+                              className={`px-2 py-0.5 rounded-full text-[10px] font-bold border transition-all cursor-pointer ${
+                                candidateEducation.toLowerCase().includes(deg.toLowerCase())
+                                  ? 'bg-[#111215] text-[#D4F82C] border-[#111215] shadow-xs'
+                                  : 'bg-white border-[#E4E7DC] text-[#575A51] hover:border-[#111215] hover:text-[#111215]'
+                              }`}
+                            >
+                              {deg}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* CARD BLOCK 4: EMPLOYMENT STATUS, NOTICE PERIOD & SALARY */}
+                  <div className="rounded-2xl sm:rounded-3xl p-5 sm:p-6 border border-[#E4E7DC] bg-white shadow-xs hover:border-[#111215]/30 transition-all duration-200 space-y-4">
+                    <div className="flex items-center justify-between border-b border-[#E4E7DC] pb-3.5">
+                      <div className="flex items-center gap-2.5">
+                        <span className="h-7 w-7 rounded-xl bg-[#111215] text-[#D4F82C] font-black text-xs flex items-center justify-center shadow-xs">
+                          4
+                        </span>
+                        <div>
+                          <h3 className="text-sm sm:text-base font-black tracking-tight text-[#111215]">
+                            Employment & Salary <span className="text-rose-500">*</span>
+                          </h3>
+                          <p className="text-[11px] text-[#73766C]">
+                            Availability and compensation expectations for salary matching
+                          </p>
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-bold text-rose-500 uppercase tracking-wider px-2 py-0.5 rounded-full bg-rose-50 border border-rose-200">
+                        Mandatory
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                      {/* 1. Working Status */}
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between">
+                          <label className="block text-[11px] font-bold uppercase tracking-wider text-[#353831]">
+                            Working Status <span className="text-rose-500">*</span>
+                          </label>
+                          <span className="text-[10px] text-[#73766C]">Current</span>
+                        </div>
+                        <select
+                          required
+                          value={candidateEmploymentStatus}
+                          onChange={(e) => setCandidateEmploymentStatus(e.target.value)}
+                          className="w-full px-3 py-2.5 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] text-xs text-[#111215] outline-none focus:ring-2 focus:ring-[#8FB305]/30 focus:border-[#111215] focus:bg-white font-bold cursor-pointer transition-all"
+                        >
+                          <option value="Working">Currently Working (Employed)</option>
+                          <option value="Not Working">Not Working (Unemployed)</option>
+                          <option value="Serving Notice">Serving Notice Period</option>
+                        </select>
+                      </div>
+
+                      {/* 2. Notice Period */}
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between">
+                          <label className="block text-[11px] font-bold uppercase tracking-wider text-[#353831]">
+                            Notice Period <span className="text-rose-500">*</span>
+                          </label>
+                          <div className="flex items-center gap-1">
+                            {['0', '15', '30', '60'].map(d => (
+                              <button
+                                key={d}
+                                type="button"
+                                onClick={() => {
+                                  setCandidateNoticePeriodVal(d);
+                                  setCandidateNoticePeriodUnit('Days');
+                                }}
+                                className={`px-1.5 py-0.5 rounded text-[9px] font-bold border transition-all cursor-pointer ${
+                                  candidateNoticePeriodVal === d && candidateNoticePeriodUnit === 'Days'
+                                    ? 'bg-[#111215] text-[#D4F82C] border-[#111215]'
+                                    : 'bg-[#F8F9F5] text-[#575A51] border-[#E4E7DC] hover:text-[#111215]'
+                                }`}
+                              >
+                                {d === '0' ? 'Imm' : `${d}d`}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="relative flex-1">
+                            <Clock className="w-3.5 h-3.5 absolute left-3 top-3 text-[#73766C]" />
+                            <input
+                              type="number"
+                              min="0"
+                              max="365"
+                              required
+                              value={candidateNoticePeriodVal}
+                              onChange={(e) => setCandidateNoticePeriodVal(e.target.value)}
+                              placeholder="30"
+                              className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] text-xs font-semibold text-[#111215] outline-none focus:ring-2 focus:ring-[#8FB305]/30 focus:border-[#111215] focus:bg-white placeholder-[#73766C] transition-all"
+                            />
+                          </div>
+                          <select
+                            value={candidateNoticePeriodUnit}
+                            onChange={(e) => setCandidateNoticePeriodUnit(e.target.value as 'Days' | 'Months')}
+                            className="px-3 py-2.5 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] text-xs font-bold text-[#111215] outline-none cursor-pointer"
+                          >
+                            <option value="Days">Days</option>
+                            <option value="Months">Months</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      {/* 3. Current Salary */}
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between">
+                          <label className="block text-[11px] font-bold uppercase tracking-wider text-[#353831]">
+                            Current Salary <span className="text-rose-500">*</span>
+                          </label>
+                          <span className="text-[10px] text-[#73766C]">0 if Fresher</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <div className="relative flex-1 min-w-0">
+                            <IndianRupee className="w-3.5 h-3.5 absolute left-3 top-3 text-[#73766C]" />
+                            <input
+                              type="text"
+                              required
+                              value={candidateCurrentSalaryVal}
+                              onChange={(e) => setCandidateCurrentSalaryVal(e.target.value)}
+                              placeholder="e.g. 4.5 or 35,000"
+                              className="w-full pl-8 pr-2.5 py-2.5 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] text-xs font-semibold text-[#111215] outline-none focus:ring-2 focus:ring-[#8FB305]/30 focus:border-[#111215] focus:bg-white transition-all placeholder-[#73766C]"
+                            />
+                          </div>
+                          <select
+                            value={candidateCurrentSalaryPeriod}
+                            onChange={(e) => setCandidateCurrentSalaryPeriod(e.target.value as any)}
+                            className="px-2 py-2.5 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] text-[11px] font-bold text-[#111215] outline-none cursor-pointer shrink-0"
+                          >
+                            <option value="Per Month">/ Month</option>
+                            <option value="Per Year">/ Year</option>
+                          </select>
+                          <select
+                            value={candidateCurrentSalaryType}
+                            onChange={(e) => setCandidateCurrentSalaryType(e.target.value as any)}
+                            className="px-2 py-2.5 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] text-[11px] font-bold text-[#111215] outline-none cursor-pointer shrink-0"
+                          >
+                            <option value="In-Hand">In-Hand</option>
+                            <option value="CTC">CTC</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      {/* 4. Expected Salary */}
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between">
+                          <label className="block text-[11px] font-bold uppercase tracking-wider text-[#353831]">
+                            Expected Salary <span className="text-rose-500">*</span>
+                          </label>
+                          <span className="text-[10px] text-[#73766C]">Target</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <div className="relative flex-1 min-w-0">
+                            <IndianRupee className="w-3.5 h-3.5 absolute left-3 top-3 text-[#73766C]" />
+                            <input
+                              type="text"
+                              required
+                              value={candidateExpectedSalaryVal}
+                              onChange={(e) => setCandidateExpectedSalaryVal(e.target.value)}
+                              placeholder="e.g. 6.5 or 50,000"
+                              className="w-full pl-8 pr-2.5 py-2.5 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] text-xs font-semibold text-[#111215] outline-none focus:ring-2 focus:ring-[#8FB305]/30 focus:border-[#111215] focus:bg-white transition-all placeholder-[#73766C]"
+                            />
+                          </div>
+                          <select
+                            value={candidateExpectedSalaryPeriod}
+                            onChange={(e) => setCandidateExpectedSalaryPeriod(e.target.value as any)}
+                            className="px-2 py-2.5 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] text-[11px] font-bold text-[#111215] outline-none cursor-pointer shrink-0"
+                          >
+                            <option value="Per Month">/ Month</option>
+                            <option value="Per Year">/ Year</option>
+                          </select>
+                          <select
+                            value={candidateExpectedSalaryType}
+                            onChange={(e) => setCandidateExpectedSalaryType(e.target.value as any)}
+                            className="px-2 py-2.5 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] text-[11px] font-bold text-[#111215] outline-none cursor-pointer shrink-0"
+                          >
+                            <option value="In-Hand">In-Hand</option>
+                            <option value="CTC">CTC</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      {/* 5. Employment Type Preferences */}
+                      <div className="sm:col-span-2 space-y-1 pt-1">
+                        <label className="block text-[11px] font-bold uppercase tracking-wider text-[#353831]">
+                          Employment Type Preferences <span className="text-rose-500">*</span>
+                        </label>
+                        <EmploymentTypeMultiSelect
+                          values={candidateEmploymentTypes}
+                          onChange={setCandidateEmploymentTypes}
+                          variant="dropdown"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* CARD BLOCK 5: NOTES & PREFERRED DOMAIN ROLES */}
+                  <div className="rounded-2xl sm:rounded-3xl p-5 sm:p-6 border border-[#E4E7DC] bg-white shadow-xs hover:border-[#111215]/30 transition-all duration-200 space-y-3">
+                    <div className="flex items-center gap-2.5 border-b border-[#E4E7DC] pb-3">
+                      <span className="h-7 w-7 rounded-xl bg-[#111215] text-[#D4F82C] font-black text-xs flex items-center justify-center shadow-xs">
+                        5
+                      </span>
+                      <div>
+                        <h3 className="text-sm sm:text-base font-black tracking-tight text-[#111215]">
+                          Target Role & Notes (Optional)
+                        </h3>
+                        <p className="text-[11px] text-[#73766C]">
+                          Mention specific roles, target companies, or availability notes
+                        </p>
+                      </div>
+                    </div>
+
+                    <textarea
+                      rows={2.5}
+                      value={extraBioText}
+                      onChange={(e) => setExtraBioText(e.target.value)}
+                      placeholder="e.g. Looking for Full Stack Developer roles, open to hybrid or remote work..."
+                      className="w-full p-3 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] text-xs font-medium text-[#111215] outline-none focus:ring-2 focus:ring-[#8FB305]/30 focus:border-[#111215] focus:bg-white transition-all placeholder-[#73766C]"
+                    />
+                  </div>
+
+                  {/* Sticky Floating Action Bar while scrolling - In Platform Lime/Light Theme */}
+                  <div className="sticky bottom-3 sm:bottom-4 z-30 pt-2">
+                    <div className="p-3 sm:p-3.5 rounded-2xl sm:rounded-3xl bg-white/95 backdrop-blur-md text-[#111215] border-2 border-[#8FB305]/40 shadow-2xl flex flex-col sm:flex-row items-center justify-between gap-3">
+                      {/* Left: Live candidate & progress info */}
+                      <div className="flex items-center gap-2.5 w-full sm:w-auto min-w-0">
+                        <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-xl bg-[#D4F82C] text-[#111215] font-black text-xs flex items-center justify-center shrink-0 border border-[#8FB305]/40 shadow-xs">
+                          {profileCompletionScore}%
+                        </div>
+                        <div className="min-w-0 flex-1 sm:flex-initial">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-xs font-bold text-[#111215] truncate block">
+                              {candidateName.trim() ? candidateName : 'Fast-Track Profile'}
+                            </span>
+                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#D4F82C]/30 text-[#2E7D32] font-bold border border-[#8FB305]/40 shrink-0">
+                              {profileCompletionScore >= 80 ? 'Ready to Match' : 'In Progress'}
+                            </span>
+                          </div>
+                          <p className="text-[10px] text-[#73766C] truncate font-medium">
+                            {selectedFile ? `✓ ${selectedFile.name}` : 'Attach resume or complete details'}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Right: Primary Create Profile & Match Button in Theme */}
                       <button
-                        type="button"
-                        onClick={handleAddSkill}
-                        className="px-4 py-2 rounded-full bg-[#111215] hover:bg-[#202227] text-white font-bold text-xs flex items-center gap-1 shrink-0 cursor-pointer shadow-2xs"
+                        type="submit"
+                        disabled={isSubmitting || isParsingResume}
+                        className="w-full sm:w-auto py-3 px-6 rounded-full bg-[#D4F82C] hover:bg-[#c2e424] active:scale-[0.98] text-[#111215] font-black text-xs sm:text-sm flex items-center justify-center gap-2 transition-all shadow-md hover:shadow-lg cursor-pointer disabled:opacity-50 shrink-0 border border-[#8FB305]/50"
                       >
-                        <Plus className="w-3.5 h-3.5" />
-                        <span>Add</span>
+                        {isSubmitting ? (
+                          <>
+                            <RefreshCw className="w-4 h-4 animate-spin text-[#111215]" />
+                            <span>Creating Profile & Matching...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="w-4 h-4 text-[#8FB305]" />
+                            <span>Create Profile & Get Personalized AI Matches</span>
+                            <span className="text-[#111215] font-black">↗</span>
+                          </>
+                        )}
                       </button>
                     </div>
                   </div>
-                )}
+                </form>
               </div>
 
-              {/* CARD BLOCK 2: PERSONAL INFORMATION & CONTACT */}
-              <div className="rounded-3xl p-5 sm:p-7 border border-[#E4E7DC] bg-white shadow-2xs space-y-4">
-                <div className="flex items-center justify-between border-b border-[#E4E7DC] pb-3 font-bold text-xs sm:text-sm uppercase tracking-wider text-[#111215]">
-                  <div className="flex items-center gap-2">
-                    <User className="w-4 h-4 text-[#8FB305]" />
-                    <span>2. Personal Details & Contact</span>
-                  </div>
-                  <span className="text-[11px] text-rose-500 font-semibold">* Mandatory</span>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-                  <div>
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-[#575A51] mb-1.5">
-                      Full Name <span className="text-rose-500">*</span>
-                    </label>
-                    <div className="relative">
-                      <User className="w-4 h-4 absolute left-3 top-3 text-[#73766C]" />
-                      <input
-                        type="text"
-                        required
-                        value={candidateName}
-                        onChange={(e) => setCandidateName(e.target.value)}
-                        placeholder="e.g. Rahul Sharma"
-                        className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] text-xs sm:text-sm text-[#111215] outline-none focus:border-[#111215] focus:bg-white transition-all placeholder-[#73766C]"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-[#575A51] mb-1.5">
-                      Email Address <span className="text-rose-500">*</span>
-                    </label>
-                    <div className="relative">
-                      <Mail className="w-4 h-4 absolute left-3 top-3 text-[#73766C]" />
-                      <input
-                        type="email"
-                        required
-                        value={candidateEmail}
-                        onChange={(e) => {
-                          setCandidateEmail(e.target.value);
-                          handleCheckEmailExists(e.target.value);
-                        }}
-                        onBlur={(e) => handleCheckEmailExists(e.target.value)}
-                        placeholder="e.g. rahul.sharma@example.com"
-                        className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] text-xs sm:text-sm text-[#111215] outline-none focus:border-[#111215] focus:bg-white transition-all placeholder-[#73766C]"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-[#575A51] mb-1.5">
-                      WhatsApp Phone <span className="text-rose-500">*</span>
-                    </label>
-                    <div className="relative">
-                      <Phone className="w-4 h-4 absolute left-3 top-3 text-[#73766C]" />
-                      <input
-                        type="tel"
-                        required
-                        value={candidatePhone}
-                        onChange={(e) => setCandidatePhone(e.target.value)}
-                        placeholder="e.g. +91 9876543210"
-                        className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] text-xs sm:text-sm text-[#111215] outline-none focus:border-[#111215] focus:bg-white transition-all placeholder-[#73766C]"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-[#575A51] mb-1.5">
-                      Gender <span className="text-rose-500">*</span>
-                    </label>
-                    <div className="grid grid-cols-3 gap-1.5">
-                      {['Male', 'Female', 'Other'].map(g => (
-                        <button
-                          key={g}
-                          type="button"
-                          onClick={() => setCandidateGender(g)}
-                          className={`py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
-                            candidateGender === g
-                              ? 'bg-[#111215] text-white border-[#111215] shadow-2xs'
-                              : 'bg-[#F8F9F5] text-[#575A51] border-[#E4E7DC] hover:border-[#111215] hover:text-[#111215]'
-                          }`}
-                        >
-                          {g}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-[#575A51] mb-1.5">
-                      Marital Status
-                    </label>
-                    <div className="grid grid-cols-2 gap-1.5">
-                      {['Single / Unmarried', 'Married'].map(m => (
-                        <button
-                          key={m}
-                          type="button"
-                          onClick={() => setCandidateMaritalStatus(m)}
-                          className={`py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
-                            candidateMaritalStatus === m
-                              ? 'bg-[#111215] text-white border-[#111215] shadow-2xs'
-                              : 'bg-[#F8F9F5] text-[#575A51] border-[#E4E7DC] hover:border-[#111215] hover:text-[#111215]'
-                          }`}
-                        >
-                          {m}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* CARD BLOCK 3: TARGET LOCATION, EXPERIENCE & QUALIFICATION */}
-              <div className="rounded-3xl p-5 sm:p-7 border border-[#E4E7DC] bg-white shadow-2xs space-y-4">
-                <div className="flex items-center justify-between border-b border-[#E4E7DC] pb-3 font-bold text-xs sm:text-sm uppercase tracking-wider text-[#111215]">
-                  <div className="flex items-center gap-2">
-                    <MapPin className="w-4 h-4 text-[#8FB305]" />
-                    <span>3. Target Location & Qualification</span>
-                  </div>
-                  <span className="text-[11px] text-rose-500 font-semibold">* Mandatory</span>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-[#575A51] mb-1.5">
-                      Location / Target City <span className="text-rose-500">*</span>
-                    </label>
-                    <LocationCityInput
-                      value={candidateLocation}
-                      onChange={setCandidateLocation}
-                      selectedState={candidateState}
-                      onStateChange={setCandidateState}
-                      placeholder="Search city (e.g. Nashik, Pune, Mumbai)..."
-                      className="w-full rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] p-2.5 text-xs sm:text-sm text-[#111215] outline-none focus:border-[#111215] focus:bg-white placeholder-[#73766C]"
-                    />
-
-                    {/* Quick Fast Feed City Presets */}
-                    <div className="flex flex-wrap gap-1.5 pt-2">
-                      {['Nashik', 'Pune', 'Mumbai', 'Thane', 'Nagpur', 'Chhatrapati Sambhajinagar'].map(city => (
-                        <button
-                          key={city}
-                          type="button"
-                          onClick={() => {
-                            setCandidateLocation(city);
-                            setCandidateState('Maharashtra');
-                          }}
-                          className={`px-2.5 py-1 rounded-full text-[11px] font-semibold border transition-all cursor-pointer inline-flex items-center gap-1 ${
-                            candidateLocation.toLowerCase().includes(city.toLowerCase())
-                              ? 'bg-[#111215] text-white border-[#111215] shadow-2xs'
-                              : 'bg-white border-[#E4E7DC] text-[#575A51] hover:border-[#111215] hover:text-[#111215]'
-                          }`}
-                        >
-                          <MapPin className="w-3 h-3 text-[#8FB305]" />
-                          <span>{city}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-[#575A51] mb-1.5">
-                      Experience (Years) <span className="text-rose-500">*</span>
-                    </label>
-                    <div className="relative">
-                      <Briefcase className="w-4 h-4 absolute left-3 top-3 text-[#73766C]" />
-                      <input
-                        type="number"
-                        step="0.1"
-                        min="0"
-                        max="60"
-                        required
-                        value={candidateExp}
-                        onChange={(e) => setCandidateExp(e.target.value)}
-                        placeholder="e.g. 0 (Fresher) or 2.5 Yrs"
-                        className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] text-xs sm:text-sm text-[#111215] outline-none focus:border-[#111215] focus:bg-white transition-all placeholder-[#73766C]"
-                      />
-                    </div>
-                    {/* Quick Experience Pills */}
-                    <div className="flex flex-wrap gap-1.5 pt-2">
-                      {['0', '1', '2', '3', '5'].map(yr => (
-                        <button
-                          key={yr}
-                          type="button"
-                          onClick={() => setCandidateExp(yr)}
-                          className={`px-3 py-1 rounded-full text-[11px] font-semibold border transition-all cursor-pointer ${
-                            candidateExp === yr
-                              ? 'bg-[#111215] text-white border-[#111215] shadow-2xs'
-                              : 'bg-white border-[#E4E7DC] text-[#575A51] hover:border-[#111215] hover:text-[#111215]'
-                          }`}
-                        >
-                          {yr === '0' ? 'Fresher' : `${yr} Yr`}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-[#575A51] mb-1.5">
-                      Highest Education Qualification <span className="text-rose-500">*</span>
-                    </label>
-                    <EducationInput
-                      value={candidateEducation}
-                      onChange={setCandidateEducation}
-                      placeholder="Select degree (B.Tech, Diploma, BCA)..."
-                      className="w-full rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] p-2.5 text-xs sm:text-sm text-[#111215] outline-none focus:border-[#111215] focus:bg-white placeholder-[#73766C]"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* CARD BLOCK 4: EMPLOYMENT STATUS, NOTICE PERIOD & SALARY */}
-              <div className="rounded-3xl p-5 sm:p-7 border border-[#E4E7DC] bg-white shadow-2xs space-y-4">
-                <div className="flex items-center justify-between border-b border-[#E4E7DC] pb-3 font-bold text-xs sm:text-sm uppercase tracking-wider text-[#111215]">
-                  <div className="flex items-center gap-2">
-                    <UserCheck className="w-4 h-4 text-[#8FB305]" />
-                    <span>4. Employment Status, Notice Period & Salary</span>
-                  </div>
-                  <span className="text-[11px] text-rose-500 font-semibold">* Mandatory</span>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
-                  {/* 1. Working Status */}
-                  <div>
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-[#575A51] mb-1.5">
-                      Working Status <span className="text-rose-500">*</span>
-                    </label>
-                    <select
-                      required
-                      value={candidateEmploymentStatus}
-                      onChange={(e) => setCandidateEmploymentStatus(e.target.value)}
-                      className="w-full px-3 py-2.5 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] text-xs sm:text-sm text-[#111215] outline-none focus:border-[#111215] focus:bg-white font-semibold cursor-pointer"
-                    >
-                      <option value="Working">Currently Working (Employed)</option>
-                      <option value="Not Working">Not Working (Unemployed)</option>
-                      <option value="Serving Notice">Serving Notice Period</option>
-                    </select>
-                  </div>
-
-                  {/* 2. Notice Period */}
-                  <div>
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-[#575A51] mb-1.5">
-                      Notice Period <span className="text-rose-500">*</span>
-                    </label>
+              {/* Right Column: Sticky Side Box for Laptop/Desktop */}
+              <div className="lg:col-span-5 xl:col-span-4 space-y-4 lg:sticky lg:top-24">
+                {/* 1. Dynamic Live Profile Strength Card */}
+                <div className="rounded-3xl p-5 border border-[#E4E7DC] bg-white shadow-xs space-y-4">
+                  <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <div className="relative flex-1">
-                        <Clock className="w-4 h-4 absolute left-3 top-3 text-[#73766C]" />
-                        <input
-                          type="number"
-                          min="0"
-                          max="365"
-                          required
-                          value={candidateNoticePeriodVal}
-                          onChange={(e) => setCandidateNoticePeriodVal(e.target.value)}
-                          placeholder="30"
-                          className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] text-xs sm:text-sm text-[#111215] outline-none focus:border-[#111215] focus:bg-white placeholder-[#73766C]"
-                        />
+                      <div className="h-8 w-8 rounded-xl bg-[#111215] text-[#D4F82C] flex items-center justify-center text-xs font-bold shadow-xs">
+                        <Sparkles className="w-4 h-4 text-[#D4F82C]" />
                       </div>
-                      <select
-                        value={candidateNoticePeriodUnit}
-                        onChange={(e) => setCandidateNoticePeriodUnit(e.target.value as 'Days' | 'Months')}
-                        className="px-3.5 py-2.5 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] text-xs font-bold text-[#111215] outline-none cursor-pointer"
-                      >
-                        <option value="Days">Days</option>
-                        <option value="Months">Months</option>
-                      </select>
+                      <div>
+                        <span className="text-xs font-black tracking-tight text-[#111215] block">Profile Strength</span>
+                        <span className="text-[10px] text-[#73766C]">Real-Time AI Readiness</span>
+                      </div>
+                    </div>
+                    <span className={`px-2.5 py-0.5 rounded-full text-xs font-black ${
+                      profileCompletionScore >= 80 
+                        ? 'bg-[#D4F82C] text-[#111215] border border-[#8FB305]/30' 
+                        : profileCompletionScore >= 50
+                        ? 'bg-amber-100 text-amber-900 border border-amber-300'
+                        : 'bg-[#F8F9F5] text-[#575A51] border border-[#E4E7DC]'
+                    }`}>
+                      {profileCompletionScore}%
+                    </span>
+                  </div>
+
+                  {/* Progress Bar */}
+                  <div className="w-full bg-[#F8F9F5] h-2.5 rounded-full overflow-hidden border border-[#E4E7DC]">
+                    <div 
+                      className="bg-[#111215] h-full rounded-full transition-all duration-500 relative"
+                      style={{ width: `${Math.max(8, profileCompletionScore)}%` }}
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[#D4F82C] to-[#D4F82C] opacity-80" />
                     </div>
                   </div>
 
-                  {/* 3. Current Salary */}
-                  <div>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <label className="block text-xs font-semibold uppercase tracking-wider text-[#575A51]">
-                        Current Salary <span className="text-rose-500">*</span>
-                      </label>
-                      <span className="text-[11px] text-[#73766C]">(0 if Fresher)</span>
+                  {/* Checklist */}
+                  <div className="space-y-2 pt-1 text-xs">
+                    <div className="flex items-center justify-between py-1 border-b border-[#F0F2EB]">
+                      <span className="text-[#575A51] flex items-center gap-1.5 text-[11px]">
+                        {selectedFile ? <CheckCircle2 className="w-3.5 h-3.5 text-[#8FB305]" /> : <div className="w-3.5 h-3.5 rounded-full border border-[#C5C9BC]" />}
+                        <span>Resume Document</span>
+                      </span>
+                      <span className={`text-[10px] font-bold ${selectedFile ? 'text-[#8FB305]' : 'text-[#73766C]'}`}>
+                        {selectedFile ? 'Attached' : 'Pending'}
+                      </span>
                     </div>
-                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                      <div className="relative flex-1 min-w-0">
-                        <IndianRupee className="w-4 h-4 absolute left-3 top-3 text-[#73766C]" />
-                        <input
-                          type="text"
-                          required
-                          value={candidateCurrentSalaryVal}
-                          onChange={(e) => setCandidateCurrentSalaryVal(e.target.value)}
-                          placeholder="e.g. 4.5 or 35,000"
-                          className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] text-xs sm:text-sm text-[#111215] outline-none focus:border-[#111215] focus:bg-white transition-all placeholder-[#73766C]"
-                        />
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <select
-                          value={candidateCurrentSalaryPeriod}
-                          onChange={(e) => setCandidateCurrentSalaryPeriod(e.target.value as any)}
-                          className="flex-1 sm:flex-initial px-3 py-2.5 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] text-xs font-bold text-[#111215] outline-none cursor-pointer"
-                          title="Salary Period"
-                        >
-                          <option value="Per Month">Per Month</option>
-                          <option value="Per Year">Per Year</option>
-                        </select>
-                        <select
-                          value={candidateCurrentSalaryType}
-                          onChange={(e) => setCandidateCurrentSalaryType(e.target.value as any)}
-                          className="flex-1 sm:flex-initial px-3 py-2.5 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] text-xs font-bold text-[#111215] outline-none cursor-pointer"
-                          title="Salary Structure"
-                        >
-                          <option value="In-Hand">In-Hand</option>
-                          <option value="CTC">CTC</option>
-                        </select>
-                      </div>
+
+                    <div className="flex items-center justify-between py-1 border-b border-[#F0F2EB]">
+                      <span className="text-[#575A51] flex items-center gap-1.5 text-[11px]">
+                        {candidateName.trim() && candidateEmail.trim() ? <CheckCircle2 className="w-3.5 h-3.5 text-[#8FB305]" /> : <div className="w-3.5 h-3.5 rounded-full border border-[#C5C9BC]" />}
+                        <span>Contact & Identity</span>
+                      </span>
+                      <span className={`text-[10px] font-bold ${candidateName.trim() && candidateEmail.trim() ? 'text-[#8FB305]' : 'text-[#73766C]'}`}>
+                        {candidateName.trim() && candidateEmail.trim() ? 'Verified' : 'Required'}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between py-1 border-b border-[#F0F2EB]">
+                      <span className="text-[#575A51] flex items-center gap-1.5 text-[11px]">
+                        {candidateLocation.trim() && candidateExp.trim() ? <CheckCircle2 className="w-3.5 h-3.5 text-[#8FB305]" /> : <div className="w-3.5 h-3.5 rounded-full border border-[#C5C9BC]" />}
+                        <span>Location & Experience</span>
+                      </span>
+                      <span className={`text-[10px] font-bold ${candidateLocation.trim() && candidateExp.trim() ? 'text-[#8FB305]' : 'text-[#73766C]'}`}>
+                        {candidateLocation.trim() && candidateExp.trim() ? 'Configured' : 'Required'}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between py-1">
+                      <span className="text-[#575A51] flex items-center gap-1.5 text-[11px]">
+                        {candidateEducation.trim() ? <CheckCircle2 className="w-3.5 h-3.5 text-[#8FB305]" /> : <div className="w-3.5 h-3.5 rounded-full border border-[#C5C9BC]" />}
+                        <span>Education & Salary</span>
+                      </span>
+                      <span className={`text-[10px] font-bold ${candidateEducation.trim() ? 'text-[#8FB305]' : 'text-[#73766C]'}`}>
+                        {candidateEducation.trim() ? 'Configured' : 'Required'}
+                      </span>
                     </div>
                   </div>
 
-                  {/* 4. Expected Salary */}
-                  <div>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <label className="block text-xs font-semibold uppercase tracking-wider text-[#575A51]">
-                        Expected Salary <span className="text-rose-500">*</span>
-                      </label>
-                      <span className="text-[11px] text-[#73766C]">Target Range</span>
-                    </div>
-                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                      <div className="relative flex-1 min-w-0">
-                        <IndianRupee className="w-4 h-4 absolute left-3 top-3 text-[#73766C]" />
-                        <input
-                          type="text"
-                          required
-                          value={candidateExpectedSalaryVal}
-                          onChange={(e) => setCandidateExpectedSalaryVal(e.target.value)}
-                          placeholder="e.g. 6.5 or 50,000"
-                          className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] text-xs sm:text-sm text-[#111215] outline-none focus:border-[#111215] focus:bg-white transition-all placeholder-[#73766C]"
-                        />
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <select
-                          value={candidateExpectedSalaryPeriod}
-                          onChange={(e) => setCandidateExpectedSalaryPeriod(e.target.value as any)}
-                          className="flex-1 sm:flex-initial px-3 py-2.5 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] text-xs font-bold text-[#111215] outline-none cursor-pointer"
-                          title="Salary Period"
-                        >
-                          <option value="Per Month">Per Month</option>
-                          <option value="Per Year">Per Year</option>
-                        </select>
-                        <select
-                          value={candidateExpectedSalaryType}
-                          onChange={(e) => setCandidateExpectedSalaryType(e.target.value as any)}
-                          className="flex-1 sm:flex-initial px-3 py-2.5 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] text-xs font-bold text-[#111215] outline-none cursor-pointer"
-                          title="Salary Structure"
-                        >
-                          <option value="In-Hand">In-Hand</option>
-                          <option value="CTC">CTC</option>
-                        </select>
-                      </div>
-                    </div>
+                  <div className="p-2.5 rounded-xl bg-[#F8F9F5] border border-[#E4E7DC] text-[11px] text-[#575A51] flex items-center gap-2">
+                    <ShieldCheck className="w-4 h-4 text-[#8FB305] shrink-0" />
+                    <span>80%+ strength profiles receive direct recruiter interview invites.</span>
                   </div>
 
-                  {/* 5. Employment Type Preferences */}
-                  <div className="pt-0.5 md:col-span-2">
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-[#575A51] mb-1.5">
-                      Employment Type Preferences <span className="text-rose-500">*</span>
-                    </label>
-                    <EmploymentTypeMultiSelect
-                      values={candidateEmploymentTypes}
-                      onChange={setCandidateEmploymentTypes}
-                      variant="dropdown"
-                    />
+                  {/* Sidebar Quick-Submit CTA */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const form = document.querySelector('form');
+                      if (form) form.requestSubmit();
+                    }}
+                    disabled={isSubmitting || isParsingResume}
+                    className="w-full py-2.5 px-4 rounded-xl bg-[#D4F82C] hover:bg-[#c2e424] text-[#111215] border border-[#8FB305]/50 font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-xs hover:scale-[1.01] active:scale-[0.99] cursor-pointer disabled:opacity-50"
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#111215]" />
+                        <span>Creating Profile...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-3.5 h-3.5 text-[#8FB305]" />
+                        <span>Create Profile & Match Jobs</span>
+                        <span className="text-[#111215] font-bold">↗</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {/* 2. Fast-Track Matching Explainer Card */}
+                <div className="rounded-3xl p-5 border border-[#E4E7DC] bg-gradient-to-br from-[#111215] to-[#202227] text-white shadow-md space-y-3.5">
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#D4F82C]/20 border border-[#D4F82C]/30 text-[#D4F82C] text-[10px] font-bold uppercase tracking-wider">
+                    <Sparkles className="w-3 h-3 text-[#D4F82C]" />
+                    <span>Instant AI Fast-Track</span>
+                  </div>
+                  <h4 className="text-sm font-bold text-white">How Candidate Matching Works</h4>
+                  
+                  <ul className="space-y-2.5 text-xs text-[#E4E7DC]/85">
+                    <li className="flex items-start gap-2">
+                      <span className="h-5 w-5 rounded-full bg-[#D4F82C] text-[#111215] font-black text-[10px] flex items-center justify-center shrink-0 mt-0.5">1</span>
+                      <span><strong>Instant AI Extraction:</strong> Auto-detects your technical skills, experience and degrees.</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="h-5 w-5 rounded-full bg-[#D4F82C] text-[#111215] font-black text-[10px] flex items-center justify-center shrink-0 mt-0.5">2</span>
+                      <span><strong>Opening Compatibility:</strong> Scores your profile against live verified employer requisitions.</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="h-5 w-5 rounded-full bg-[#D4F82C] text-[#111215] font-black text-[10px] flex items-center justify-center shrink-0 mt-0.5">3</span>
+                      <span><strong>1-Click Pre-Interview:</strong> Directly initiate your assessment entry with zero recruiter middleman delays.</span>
+                    </li>
+                  </ul>
+                </div>
+
+                {/* 3. Quick Saved Profile Lookup Card */}
+                <div className="rounded-3xl p-4 sm:p-5 border border-[#E4E7DC] bg-white shadow-xs space-y-2.5">
+                  <div className="flex items-center gap-2">
+                    <Search className="w-4 h-4 text-[#8FB305]" />
+                    <h4 className="text-xs font-bold text-[#111215] uppercase tracking-wider">Already Uploaded Resume?</h4>
+                  </div>
+                  <p className="text-[11px] text-[#73766C]">
+                    Retrieve your saved profile recommendations and previously matched openings anytime.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setShowEmailLookup(true)}
+                    className="w-full py-2.5 px-4 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] hover:bg-[#111215] hover:text-white hover:border-[#111215] text-[#111215] font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                  >
+                    <Search className="w-3.5 h-3.5 text-[#8FB305]" />
+                    <span>Lookup Saved Profile ↗</span>
+                  </button>
+                </div>
+
+                {/* 4. Trending Hiring Sectors */}
+                <div className="rounded-3xl p-4 sm:p-5 border border-[#E4E7DC] bg-white shadow-xs space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold text-[#575A51] uppercase tracking-wider">Trending Hiring Sectors</span>
+                    <span className="inline-flex items-center gap-1 text-[10px] text-[#8FB305] font-bold">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#8FB305] animate-pulse" />
+                      Live
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {['Software Engg', 'AutoCAD / Design', 'Sales & BD', 'QA / Testing', 'Accounts & Tally', 'Operations'].map((s) => (
+                      <span key={s} className="px-2.5 py-1 rounded-full text-[10px] font-semibold border border-[#E4E7DC] bg-[#F8F9F5] text-[#575A51]">
+                        {s}
+                      </span>
+                    ))}
                   </div>
                 </div>
               </div>
-
-              {/* CARD BLOCK 5: NOTES & PREFERRED DOMAIN ROLES */}
-              <div className="rounded-3xl p-5 sm:p-7 border border-[#E4E7DC] bg-white shadow-2xs space-y-2.5">
-                <label className="block text-xs font-semibold uppercase tracking-wider text-[#575A51]">
-                  5. Preferred Domain Roles & Additional Notes (Optional)
-                </label>
-                <textarea
-                  rows={2}
-                  value={extraBioText}
-                  onChange={(e) => setExtraBioText(e.target.value)}
-                  placeholder="Mention preferred job roles, expected CTC, or work availability..."
-                  className="w-full p-3.5 rounded-2xl border border-[#E4E7DC] bg-[#F8F9F5] text-xs sm:text-sm text-[#111215] outline-none focus:border-[#111215] focus:bg-white transition-all placeholder-[#73766C]"
-                />
-              </div>
-
-              {/* Single Primary Action Submit Button */}
-              <button
-                type="submit"
-                disabled={isSubmitting || isParsingResume}
-                className="w-full py-4 px-6 rounded-full bg-[#111215] hover:bg-[#202227] text-white font-bold text-sm sm:text-base flex items-center justify-center gap-2.5 transition-all shadow-sm disabled:opacity-50 cursor-pointer"
-              >
-                {isSubmitting ? (
-                  <>
-                    <RefreshCw className="w-5 h-5 animate-spin" />
-                    <span>Processing Profile & Matching Active Jobs...</span>
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="w-4 h-4 text-[#D4F82C]" />
-                    <span>Submit Resume & Get Matched Jobs</span>
-                    <span className="text-[#D4F82C]">↗</span>
-                  </>
-                )}
-              </button>
-            </form>
+            </div>
           </div>
         ) : (
           /* Post-Submission / Email Lookup Results View */
           <div className="space-y-6 sm:space-y-8 animate-in zoom-in-95 duration-300">
-            {/* Compact Profile Matched Bar */}
-            <div className="border border-[#E4E7DC] rounded-3xl p-4 sm:p-5 shadow-2xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 animate-in fade-in duration-200 bg-white">
-              <div className="flex items-center gap-3 truncate">
-                <div className="h-10 w-10 rounded-2xl bg-[#111215] text-[#D4F82C] flex items-center justify-center shrink-0 font-bold text-sm shadow-2xs">
-                  {submittedCandidateData?.name ? submittedCandidateData.name.charAt(0).toUpperCase() : <User className="w-4 h-4" />}
-                </div>
-                <div className="truncate text-xs space-y-0.5">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[11px] uppercase tracking-wider font-bold text-[#8FB305]">
-                      Profile Matched:
-                    </span>
-                    <span className="font-bold text-sm text-[#111215]">
-                      {submittedCandidateData?.name}
-                    </span>
-                  </div>
-                  <div className="text-[11px] flex flex-wrap items-center gap-2">
-                    <span className="inline-flex items-center gap-1 font-semibold text-[#575A51]">
-                      <MapPin className="w-3 h-3 text-[#8FB305]" />
-                      <span>{submittedCandidateData?.location || 'Nashik'}</span>
-                    </span>
-                    <span className="text-[#E4E7DC]">•</span>
-                    <span className="inline-flex items-center gap-1 font-semibold text-[#575A51]">
-                      <Briefcase className="w-3 h-3 text-[#8FB305]" />
-                      <span>{submittedCandidateData?.experience || 0} Yrs Exp</span>
-                    </span>
-                    <span className="text-[#E4E7DC]">•</span>
-                    <span className="inline-flex items-center gap-1 font-bold text-[#111215]">
-                      <GraduationCap className="w-3 h-3 text-[#8FB305]" />
-                      <span>{submittedCandidateData?.highestEducation || 'Graduate'}</span>
-                    </span>
-                  </div>
-                </div>
-              </div>
+            {/* Top Executive Welcome Hero Banner (Matching User Reference Frame) */}
+            <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl p-4 sm:p-8 lg:p-10 bg-gradient-to-br from-[#EEF8E6] via-[#F6FCF1] to-[#E5F5D9] border border-[#D8ECD0] shadow-sm transition-all duration-300">
+              {/* Decorative soft organic ambient elements */}
+              <div className="absolute -right-12 -top-12 w-64 h-64 rounded-full bg-[#D4F82C]/20 blur-3xl pointer-events-none" />
+              <div className="absolute right-1/3 -bottom-16 w-56 h-56 rounded-full bg-[#8FB305]/15 blur-2xl pointer-events-none" />
+              <div className="absolute -left-10 -bottom-10 w-48 h-48 rounded-full bg-[#D4F82C]/15 blur-3xl pointer-events-none" />
 
-              <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto justify-end">
-                <button
-                  type="button"
-                  onClick={() => setShowCriteriaEditor(true)}
-                  className="px-4 py-2 rounded-full font-bold text-xs transition-all cursor-pointer flex items-center gap-1.5 bg-[#111215] hover:bg-[#202227] text-white shadow-2xs"
-                >
-                  <SlidersHorizontal className="w-3.5 h-3.5 text-[#D4F82C]" />
-                  <span>Edit Criteria</span>
-                </button>
+              {/* Main Content Layout */}
+              <div className="relative z-10 flex flex-col xl:flex-row xl:items-center justify-between gap-5 sm:gap-8">
+                {/* Left Side: Welcome, AI Verified Badge, Subtitle & Metadata Chips */}
+                <div className="space-y-3 sm:space-y-4 max-w-2xl">
+                  {/* AI VERIFIED PROFILE pill */}
+                  <div className="inline-flex items-center gap-1.5 sm:gap-2 px-3 py-1 sm:px-3.5 sm:py-1.5 rounded-full bg-white/95 backdrop-blur-xs border border-[#8FB305] text-[#2E7D32] shadow-2xs text-[11px] sm:text-xs font-bold uppercase tracking-wider">
+                    <Sparkles className="w-3.5 h-3.5 text-[#8FB305]" />
+                    <span>AI VERIFIED PROFILE</span>
+                  </div>
 
-                <button
-                  type="button"
-                  onClick={handleResetForm}
-                  className="px-4 py-2 rounded-full font-bold text-xs border border-[#E4E7DC] bg-[#F8F9F5] hover:bg-white text-[#575A51] hover:text-[#111215] transition-all cursor-pointer"
-                >
-                  Change Resume
-                </button>
+                  {/* Headline: Welcome, [Name]! */}
+                  <h1 className="text-2xl sm:text-4xl lg:text-5xl font-black text-[#111215] tracking-tight leading-tight">
+                    Welcome, <span className="capitalize">{submittedCandidateData?.name || candidateName || 'Candidate'}</span>!
+                  </h1>
+
+                  {/* Subtitle */}
+                  <p className="text-xs sm:text-base text-[#575A51] font-medium leading-relaxed">
+                    Your skills, experience and goals are analyzed by our <strong className="text-[#111215] font-bold">AI</strong> to find the best job matches for you.
+                  </p>
+
+                  {/* Metadata Chips */}
+                  <div className="flex flex-wrap items-center gap-1.5 sm:gap-2.5 pt-0.5 sm:pt-1">
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full bg-white border border-[#E4E7DC]/80 shadow-2xs text-[11px] sm:text-xs md:text-sm font-bold text-[#111215]">
+                      <MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#8FB305]" />
+                      <span>{submittedCandidateData?.location || candidateLocation || 'Nashik'}</span>
+                    </div>
+
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full bg-white border border-[#E4E7DC]/80 shadow-2xs text-[11px] sm:text-xs md:text-sm font-bold text-[#111215]">
+                      <Briefcase className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#8FB305]" />
+                      <span>{submittedCandidateData?.experience || candidateExp || 0} Yrs Experience</span>
+                    </div>
+
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full bg-white border border-[#E4E7DC]/80 shadow-2xs text-[11px] sm:text-xs md:text-sm font-bold text-[#111215]">
+                      <GraduationCap className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#8FB305]" />
+                      <span>{submittedCandidateData?.highestEducation || candidateEducation || 'Graduate'}</span>
+                    </div>
+
+                    {((submittedCandidateData?.domains || candidateDomains || []) as string[]).length > 0 && (
+                      <div className="inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full bg-white border border-[#E4E7DC]/80 shadow-2xs text-[11px] sm:text-xs md:text-sm font-bold text-[#111215]">
+                        <Layers className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#8FB305]" />
+                        <span>{((submittedCandidateData?.domains || candidateDomains || []) as string[]).length} Target Sectors</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Right Side: Floating "Your profile is a great match!" Card Frame & Actions */}
+                <div className="flex flex-col sm:flex-row xl:flex-col items-stretch sm:items-center xl:items-end gap-3 shrink-0 pt-1 sm:pt-0">
+                  {/* Floating White Card Matching Reference Image */}
+                  <div className="bg-white/95 backdrop-blur-md rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-lg sm:shadow-xl border border-white/90 flex items-center justify-between gap-3 sm:gap-4 w-full xl:w-[380px] hover:shadow-2xl transition-all duration-300">
+                    {/* Glowing Sparkle Icon */}
+                    <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-xl sm:rounded-2xl bg-[#D4F82C]/30 text-[#8FB305] flex items-center justify-center shrink-0 border border-[#8FB305]/30 shadow-xs">
+                      <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 text-[#8FB305]" />
+                    </div>
+
+                    {/* Middle Text */}
+                    <div className="min-w-0 flex-1 space-y-0.5 sm:space-y-1">
+                      <h4 className="text-xs sm:text-base font-black text-[#111215] tracking-tight">
+                        Your profile is a great match!
+                      </h4>
+                      <p className="text-[11px] sm:text-xs text-[#575A51] font-medium leading-snug">
+                        We found <strong className="text-[#1da02b] font-bold">{matchedJobsList.length}+ opportunities</strong> that fit your skills and career goals.
+                      </p>
+                    </div>
+
+                    {/* Green Arrow Action Button */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const target = document.getElementById('matched-openings-section');
+                        target?.scrollIntoView({ behavior: 'smooth' });
+                      }}
+                      className="h-9 w-9 sm:h-11 sm:w-11 rounded-full bg-[#1da02b] hover:bg-[#188824] text-white flex items-center justify-center shrink-0 shadow-md transition-all hover:scale-105 cursor-pointer group"
+                      title="View Matched Openings"
+                    >
+                      <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 transition-transform group-hover:translate-x-0.5" />
+                    </button>
+                  </div>
+
+                  {/* Edit Criteria & Change Resume Buttons */}
+                  <div className="flex items-center gap-2 w-full justify-between sm:justify-end">
+                    <button
+                      type="button"
+                      onClick={() => setShowCriteriaEditor(true)}
+                      className="flex-1 sm:flex-initial px-4 py-2.5 rounded-full font-bold text-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 bg-[#111215] hover:bg-[#202227] text-white shadow-xs hover:scale-[1.02]"
+                    >
+                      <SlidersHorizontal className="w-3.5 h-3.5 text-[#D4F82C]" />
+                      <span>Edit Criteria</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleResetForm}
+                      className="flex-1 sm:flex-initial px-4 py-2.5 rounded-full font-bold text-xs border border-[#E4E7DC] bg-white hover:bg-[#F8F9F5] text-[#575A51] hover:text-[#111215] transition-all cursor-pointer flex items-center justify-center gap-1.5 hover:scale-[1.02] shadow-2xs"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" />
+                      <span>Change Resume</span>
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
 
             {/* Live Preferences Customizer Modal Popup */}
             {showCriteriaEditor && submittedCandidateData && (
-              <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 overflow-y-auto animate-in fade-in duration-200">
-                <div className="border border-[#E4E7DC] rounded-3xl max-w-3xl w-full p-5 sm:p-7 shadow-xl space-y-5 relative max-h-[92vh] overflow-y-auto bg-white text-[#111215]">
+              <div 
+                className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 overflow-y-auto overscroll-contain animate-in fade-in duration-200"
+                onClick={(e) => {
+                  if (e.target === e.currentTarget) setShowCriteriaEditor(false);
+                }}
+              >
+                <div className="border border-[#E4E7DC] rounded-3xl max-w-3xl w-full shadow-2xl relative max-h-[92vh] flex flex-col bg-white text-[#111215] overflow-hidden my-auto">
                   {/* Modal Header */}
-                  <div className="flex items-start justify-between border-b border-[#E4E7DC] pb-4 relative">
+                  <div className="flex items-start justify-between border-b border-[#E4E7DC] p-5 sm:p-7 pb-4 relative shrink-0 bg-white">
                     <div className="flex items-center gap-3">
                       <div className="h-10 w-10 rounded-2xl bg-[#D4F82C]/20 border border-[#8FB305]/30 text-[#111215] flex items-center justify-center shrink-0">
                         <SlidersHorizontal className="w-5 h-5 text-[#8FB305]" />
@@ -2127,6 +2575,9 @@ export default function PublicJobSeekerUpload() {
                       <X className="w-5 h-5" />
                     </button>
                   </div>
+
+                  {/* Scrollable Body */}
+                  <div className="p-5 sm:p-7 pt-4 overflow-y-auto overscroll-contain space-y-5 flex-1">
 
                   <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
                     {/* Location Selector */}
@@ -2231,35 +2682,34 @@ export default function PublicJobSeekerUpload() {
                       <span>Add</span>
                     </button>
                   </div>
+                </div>
 
-                  {/* Modal Action Footer */}
-                  <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-[#E4E7DC]">
+                  {/* Modal Action Footer - Pinned at bottom */}
+                  <div className="p-3.5 sm:p-5 border-t border-[#E4E7DC] bg-white flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2 sm:gap-3 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setShowCriteriaEditor(false)}
+                      className="w-full sm:w-auto px-5 py-2.5 rounded-full border border-[#E4E7DC] font-bold text-xs text-[#575A51] hover:text-[#111215] bg-[#F8F9F5] hover:bg-white transition-colors cursor-pointer text-center"
+                    >
+                      Cancel
+                    </button>
                     <button
                       type="button"
                       disabled={isSavingCriteria}
                       onClick={handleSaveUpdatedCriteriaToResumeDump}
-                      className="w-full sm:w-auto px-4 py-2.5 rounded-full bg-[#F8F9F5] hover:bg-white text-[#575A51] hover:text-[#111215] font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50 border border-[#E4E7DC]"
+                      className="w-full sm:w-auto px-8 py-2.5 rounded-full bg-[#111215] hover:bg-[#202227] text-white font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-sm cursor-pointer disabled:opacity-50"
                     >
                       {isSavingCriteria ? (
                         <>
-                          <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                          <span>Saving to Resume Dump...</span>
+                          <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#D4F82C]" />
+                          <span>Saving Criteria...</span>
                         </>
                       ) : (
                         <>
-                          <Save className="w-3.5 h-3.5" />
-                          <span>Save to Resume Dump</span>
+                          <Check className="w-3.5 h-3.5 text-[#D4F82C]" />
+                          <span>Save & Re-match</span>
                         </>
                       )}
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setShowCriteriaEditor(false)}
-                      className="w-full sm:w-auto px-6 py-2.5 rounded-full bg-[#111215] hover:bg-[#202227] text-white font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-sm cursor-pointer"
-                    >
-                      <span>Done & View Matches</span>
-                      <span className="text-[#D4F82C]">↗</span>
                     </button>
                   </div>
                 </div>
@@ -2267,7 +2717,7 @@ export default function PublicJobSeekerUpload() {
             )}
 
             {/* Recommended Jobs Header & Filter Tabs */}
-            <div className="space-y-4">
+            <div id="matched-openings-section" className="space-y-4 scroll-mt-6">
               <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
                 <div>
                   <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider mb-2 border shadow-2xs ${
@@ -2287,21 +2737,34 @@ export default function PublicJobSeekerUpload() {
                       </>
                     )}
                   </div>
-                  <h3 className="text-2xl sm:text-3xl font-bold tracking-tight text-[#111215] flex items-center gap-2">
-                    <span>{isCandidateBanned ? 'Account Banned' : 'Top Matched Openings'}</span>
+                  <div className="space-y-1">
+                    <h3 className="text-2xl sm:text-3xl font-black tracking-tight text-[#111215] flex items-center gap-2.5 flex-wrap">
+                      <span>{isCandidateBanned ? 'Account Banned' : 'Top Matched Openings'}</span>
+                      {!isCandidateBanned && (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#D4F82C] border border-[#8FB305]/40 text-[#111215] text-xs font-black shadow-2xs tracking-wide">
+                          <Sparkles className="w-3.5 h-3.5 text-[#111215]" />
+                          <span>Only For You</span>
+                        </span>
+                      )}
+                      {!isCandidateBanned && (
+                        <span className="text-base font-normal text-[#73766C]">({matchedJobsList.length})</span>
+                      )}
+                    </h3>
                     {!isCandidateBanned && (
-                      <span className="text-base font-normal text-[#73766C]">({matchedJobsList.length})</span>
+                      <p className="text-xs sm:text-sm text-[#575A51] font-medium">
+                        Curated requisitions matched specifically to your profile and preferences.
+                      </p>
                     )}
-                  </h3>
+                  </div>
                 </div>
 
                 {/* Segmented Filter Tabs */}
                 {!isCandidateBanned && (
-                  <div className="inline-flex items-center gap-1 p-1 rounded-full border border-[#E4E7DC] bg-[#F8F9F5] shadow-2xs overflow-x-auto">
+                  <div className="flex items-center gap-1.5 p-1 rounded-full border border-[#E4E7DC] bg-[#F8F9F5] shadow-2xs overflow-x-auto max-w-full no-scrollbar scroll-smooth">
                     <button
                       type="button"
                       onClick={() => setMatchFilter('EligibleOnly')}
-                      className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all shrink-0 cursor-pointer ${
+                      className={`px-3.5 sm:px-4 py-1.5 rounded-full text-[11px] sm:text-xs font-bold transition-all shrink-0 cursor-pointer ${
                         matchFilter === 'EligibleOnly' 
                           ? 'bg-[#111215] text-white shadow-2xs' 
                           : 'text-[#575A51] hover:text-[#111215]'
@@ -2312,7 +2775,7 @@ export default function PublicJobSeekerUpload() {
                     <button
                       type="button"
                       onClick={() => setMatchFilter('HighMatch')}
-                      className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all shrink-0 cursor-pointer ${
+                      className={`px-3.5 sm:px-4 py-1.5 rounded-full text-[11px] sm:text-xs font-bold transition-all shrink-0 cursor-pointer ${
                         matchFilter === 'HighMatch' 
                           ? 'bg-[#111215] text-white shadow-2xs' 
                           : 'text-[#575A51] hover:text-[#111215]'
@@ -2323,7 +2786,7 @@ export default function PublicJobSeekerUpload() {
                     <button
                       type="button"
                       onClick={() => setMatchFilter('LocalCity')}
-                      className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all shrink-0 cursor-pointer inline-flex items-center gap-1.5 ${
+                      className={`px-3.5 sm:px-4 py-1.5 rounded-full text-[11px] sm:text-xs font-bold transition-all shrink-0 cursor-pointer inline-flex items-center gap-1.5 ${
                         matchFilter === 'LocalCity' 
                           ? 'bg-[#111215] text-white shadow-2xs' 
                           : 'text-[#575A51] hover:text-[#111215]'
@@ -2335,7 +2798,7 @@ export default function PublicJobSeekerUpload() {
                     <button
                       type="button"
                       onClick={() => setMatchFilter('All')}
-                      className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all shrink-0 cursor-pointer ${
+                      className={`px-3.5 sm:px-4 py-1.5 rounded-full text-[11px] sm:text-xs font-bold transition-all shrink-0 cursor-pointer ${
                         matchFilter === 'All' 
                           ? 'bg-[#111215] text-white shadow-2xs' 
                           : 'text-[#575A51] hover:text-[#111215]'
@@ -2384,88 +2847,103 @@ export default function PublicJobSeekerUpload() {
                 </button>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-5 items-stretch">
                 {matchedJobsList.map((matchItem) => {
                   const { job, overallScore, matchGrade, skillMatch, locationMatch, genderMatch, expMatch, eduMatch, failReasons } = matchItem;
                   const isDisqualified = !expMatch.isMatch || !genderMatch.isMatch || overallScore === 0;
 
+                  const rawEduOptions = (eduMatch.allOptions && eduMatch.allOptions.length > 0
+                    ? eduMatch.allOptions
+                    : splitEducationRequirements(job.qualification || job.education || 'Diploma / Graduate'));
+
+                  const skillsToDisplay = skillMatch.matchedSkills.length > 0 ? skillMatch.matchedSkills : skillMatch.missingSkills;
+
                   return (
                     <div
                       key={job.id}
-                      className={`group relative flex flex-col justify-between rounded-3xl border border-[#E4E7DC] bg-white p-5 sm:p-7 transition-all duration-300 hover:border-[#111215] shadow-2xs ${
+                      className={`group relative flex flex-col justify-between h-full rounded-2xl sm:rounded-3xl border border-[#E4E7DC] bg-white p-4 sm:p-6 transition-all duration-300 hover:border-[#111215] hover:shadow-xl shadow-2xs ${
                         isDisqualified ? 'opacity-85' : ''
                       }`}
                     >
-                      <div className="space-y-4">
+                      <div className="space-y-3 sm:space-y-3.5 flex-1 flex flex-col">
                         {/* Top Header Badge Row */}
-                        <div className="flex items-start justify-between gap-2">
-                          <span className={`px-3 py-1 rounded-full text-xs font-bold shadow-2xs flex items-center gap-1.5 ${
+                        <div className="flex items-center justify-between gap-2">
+                          <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold shadow-2xs flex items-center gap-1.5 shrink-0 ${
                             isDisqualified 
                               ? 'bg-rose-50 text-rose-700 border border-rose-200' 
                               : 'bg-[#D4F82C] text-[#111215] border border-[#8FB305]/30'
                           }`}>
-                            {isDisqualified ? <Ban className="w-3.5 h-3.5" /> : <Sparkles className="w-3.5 h-3.5 text-[#8FB305]" />}
+                            {isDisqualified ? <Ban className="w-3.5 h-3.5 text-rose-600" /> : <Sparkles className="w-3.5 h-3.5 text-[#8FB305]" />}
                             <span>{overallScore}% Match • {matchGrade}</span>
                           </span>
 
-                          <span className="text-[11px] font-mono font-bold px-2.5 py-1 rounded-full border border-[#E4E7DC] bg-[#F8F9F5] text-[#575A51]">
+                          <span className="text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full border border-[#E4E7DC] bg-[#F8F9F5] text-[#575A51] shrink-0">
                             Code: {job.accessCode}
                           </span>
                         </div>
 
                         {/* Title & Recruiter / Department */}
                         <div>
-                          <h4 className="text-lg sm:text-xl font-bold tracking-tight line-clamp-1 text-[#111215] group-hover:text-[#8FB305] transition-colors">
+                          <h4 
+                            className="text-base sm:text-lg font-black tracking-tight line-clamp-2 text-[#111215] group-hover:text-[#8FB305] transition-colors min-h-[auto] sm:min-h-[2.85rem] flex items-center leading-snug"
+                            title={job.title}
+                          >
                             {job.title}
                           </h4>
-                          <div className="flex items-center gap-2 text-xs font-medium text-[#575A51] mt-1">
-                            <span className="inline-flex items-center gap-1">
+                          <div className="flex items-center gap-1.5 text-xs font-medium text-[#575A51] mt-1 truncate">
+                            <span className="inline-flex items-center gap-1 shrink-0">
                               <User className="w-3.5 h-3.5 text-[#73766C]" />
-                              <span>{job.entryBy || job.recruiterName || 'Recruiter'}</span>
+                              <span className="truncate max-w-[120px]">{job.entryBy || job.recruiterName || 'Recruiter'}</span>
                             </span>
                             <span className="text-[#E4E7DC] select-none">•</span>
-                            <span className="font-semibold text-[#111215] inline-flex items-center gap-1">
-                              <Briefcase className="w-3.5 h-3.5 text-[#8FB305]" />
-                              <span>{job.department}</span>
+                            <span className="font-semibold text-[#111215] inline-flex items-center gap-1 truncate">
+                              <Briefcase className="w-3.5 h-3.5 text-[#8FB305] shrink-0" />
+                              <span className="truncate">{job.department}</span>
                             </span>
                           </div>
                         </div>
 
+                        {/* Personalized AI Suggestion (Clean, Unboxed) */}
+                        <div className="flex items-center gap-1.5 text-[11px] font-medium text-[#575A51] pt-0.5">
+                          <Sparkles className="w-3.5 h-3.5 text-[#8FB305] shrink-0" />
+                          <span>Personalized & suggested by <strong className="text-[#111215] font-bold">our AI</strong></span>
+                        </div>
+
                         {/* 3-Column Attribute Badges */}
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-0.5">
+                        <div className="grid grid-cols-3 gap-1 sm:gap-1.5 pt-0.5">
                           {/* Location Badge */}
-                          <div className={`p-2.5 rounded-2xl border text-[11px] flex items-center gap-2 ${
+                          <div className={`p-1.5 sm:p-2 rounded-xl border text-[9.5px] sm:text-[10.5px] flex items-center gap-1 sm:gap-1.5 min-w-0 ${
                             locationMatch.isMatch 
                               ? 'bg-[#F8F9F5] border-[#E4E7DC] text-[#111215] font-semibold'
                               : 'bg-amber-50 border-amber-200 text-amber-900 font-semibold'
                           }`}>
-                            <MapPin className="w-3.5 h-3.5 text-[#8FB305] shrink-0" />
-                            <span className="truncate">{job.location}</span>
+                            <MapPin className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[#8FB305] shrink-0" />
+                            <span className="truncate" title={job.location}>{job.location}</span>
                           </div>
 
                           {/* Experience Badge */}
-                          <div className={`p-2.5 rounded-2xl border text-[11px] flex items-center gap-2 ${
+                          <div className={`p-1.5 sm:p-2 rounded-xl border text-[9.5px] sm:text-[10.5px] flex items-center gap-1 sm:gap-1.5 min-w-0 ${
                             expMatch.isMatch 
                               ? 'bg-[#F8F9F5] border-[#E4E7DC] text-[#111215] font-semibold'
                               : 'bg-rose-50 border-rose-200 text-rose-800 font-semibold'
                           }`}>
                             {expMatch.isMatch ? (
-                              <Briefcase className="w-3.5 h-3.5 text-[#8FB305] shrink-0" />
+                              <Briefcase className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[#8FB305] shrink-0" />
                             ) : (
-                              <Ban className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+                              <Ban className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-rose-500 shrink-0" />
                             )}
-                            <span className="truncate">
-                              {expMatch.isMatch ? `Req: ${expMatch.requiredExp}` : `Min ${expMatch.requiredExp} Req`}
+                            <span className="truncate" title={expMatch.requiredExp}>
+                              {expMatch.isMatch ? `${expMatch.requiredExp}` : `Min ${expMatch.requiredExp}`}
                             </span>
                           </div>
 
                           {/* Gender Badge */}
-                          <div className={`p-2.5 rounded-2xl border text-[11px] flex items-center gap-2 ${
+                          <div className={`p-1.5 sm:p-2 rounded-xl border text-[9.5px] sm:text-[10.5px] flex items-center gap-1 sm:gap-1.5 min-w-0 ${
                             genderMatch.isMatch 
                               ? 'bg-[#F8F9F5] border-[#E4E7DC] text-[#111215] font-semibold'
                               : 'bg-rose-50 border-rose-200 text-rose-800 font-semibold'
                           }`}>
-                            <User className="w-3.5 h-3.5 text-[#8FB305] shrink-0" />
+                            <User className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[#8FB305] shrink-0" />
                             <span className="truncate font-semibold">
                               {genderMatch.requiredGender === 'Any' ? 'Gender: Any' : `${genderMatch.requiredGender}`}
                             </span>
@@ -2473,106 +2951,90 @@ export default function PublicJobSeekerUpload() {
                         </div>
 
                         {/* Education Qualification */}
-                        <div className="p-3 rounded-2xl border border-[#E4E7DC] bg-[#F8F9F5] text-[11px] space-y-2">
+                        <div className="p-2.5 rounded-2xl border border-[#E4E7DC] bg-[#F8F9F5] text-[10.5px] space-y-1.5">
                           <div className="flex items-center justify-between gap-1.5">
-                            <div className="flex items-center gap-1.5 text-[#73766C] font-bold text-[10px] uppercase tracking-wider">
+                            <div className="flex items-center gap-1 text-[#73766C] font-bold text-[9.5px] uppercase tracking-wider">
                               <GraduationCap className="w-3.5 h-3.5 text-[#8FB305] shrink-0" />
                               <span>Required Qualification</span>
                             </div>
                             {eduMatch.isMatch ? (
-                              <span className="text-[9px] font-bold px-2.5 py-0.5 rounded-full border border-[#8FB305]/30 bg-[#D4F82C]/30 text-[#111215] shrink-0 inline-flex items-center gap-1">
+                              <span className="text-[9px] font-bold px-2 py-0.5 rounded-full border border-[#8FB305]/30 bg-[#D4F82C]/30 text-[#111215] shrink-0 inline-flex items-center gap-0.5">
                                 <Check className="w-2.5 h-2.5 stroke-[3]" />
                                 <span>Fit</span>
                               </span>
                             ) : (
-                              <span className="text-[9px] font-bold px-2.5 py-0.5 rounded-full border border-amber-200 bg-amber-50 text-amber-800 shrink-0">
+                              <span className="text-[9px] font-bold px-2 py-0.5 rounded-full border border-amber-200 bg-amber-50 text-amber-800 shrink-0">
                                 Mismatch
                               </span>
                             )}
                           </div>
 
-                          <div className="flex flex-wrap items-center gap-1.5">
-                            {(eduMatch.allOptions && eduMatch.allOptions.length > 0
-                              ? eduMatch.allOptions
-                              : splitEducationRequirements(job.qualification || job.education || 'Any Qualification')
-                            ).map((option, idx, arr) => {
+                          <div className="flex flex-wrap items-center gap-1">
+                            {rawEduOptions.slice(0, 3).map((option, idx) => {
                               const isOptionMatched = eduMatch.matchedOptions?.includes(option) ||
                                 (submittedCandidateData?.highestEducation && checkSingleRequirementMatch(submittedCandidateData.highestEducation, option));
                               
                               return (
-                                <React.Fragment key={option + idx}>
-                                  <span className={`px-2.5 py-1 rounded-full text-[11px] font-semibold border transition-all inline-flex items-center gap-1 ${
-                                    isOptionMatched
-                                      ? 'bg-white border-[#8FB305] text-[#111215] font-bold shadow-2xs'
-                                      : 'bg-white border-[#E4E7DC] text-[#73766C]'
-                                  }`}>
-                                    {isOptionMatched && <Check className="w-3 h-3 text-[#8FB305] stroke-[3]" />}
-                                    <span>{option}</span>
-                                  </span>
-                                  {idx < arr.length - 1 && (
-                                    <span className="text-[11px] font-bold text-[#E4E7DC] select-none px-0.5">
-                                      •
-                                    </span>
-                                  )}
-                                </React.Fragment>
+                                <span key={option + idx} className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border transition-all inline-flex items-center gap-1 ${
+                                  isOptionMatched
+                                    ? 'bg-white border-[#8FB305] text-[#111215] font-bold shadow-2xs'
+                                    : 'bg-white border-[#E4E7DC] text-[#73766C]'
+                                }`}>
+                                  {isOptionMatched && <Check className="w-2.5 h-2.5 text-[#8FB305] stroke-[3]" />}
+                                  <span className="truncate max-w-[120px]">{option}</span>
+                                </span>
                               );
                             })}
+                            {rawEduOptions.length > 3 && (
+                              <span className="text-[9.5px] font-semibold text-[#73766C] px-1">
+                                +{rawEduOptions.length - 3} more
+                              </span>
+                            )}
                           </div>
                         </div>
 
-                        {/* Skills Display */}
-                        {skillMatch.matchedSkills.length > 0 ? (
-                          <div className="space-y-1.5 pt-0.5">
-                            <div className="flex items-center gap-1.5 text-[11px] font-bold text-[#575A51] uppercase tracking-wider">
-                              <Tag className="w-3 h-3 text-[#8FB305]" />
-                              <span>Matched Skills</span>
-                            </div>
-                            <div className="flex flex-wrap gap-1.5">
-                              {skillMatch.matchedSkills.map(s => (
-                                <span key={s} className="px-2.5 py-0.5 rounded-full text-[10px] font-bold border border-[#8FB305]/30 bg-[#D4F82C]/20 text-[#111215] flex items-center gap-1">
-                                  <Check className="w-2.5 h-2.5 stroke-[3] text-[#8FB305]" />
-                                  <span>{s}</span>
-                                </span>
-                              ))}
-                            </div>
+                        {/* Skills Display - Uniform max items with +N */}
+                        <div className="space-y-1 pt-0.5">
+                          <div className="flex items-center gap-1.5 text-[10.5px] font-bold text-[#575A51] uppercase tracking-wider">
+                            <Tag className="w-3 h-3 text-[#8FB305] shrink-0" />
+                            <span>{skillMatch.matchedSkills.length > 0 ? 'Matched Skills' : 'Key Job Skills'}</span>
                           </div>
-                        ) : skillMatch.missingSkills.length > 0 && (
-                          <div className="space-y-1.5 pt-0.5">
-                            <div className="flex items-center gap-1.5 text-[11px] font-bold text-[#73766C] uppercase tracking-wider">
-                              <Tag className="w-3 h-3 text-[#73766C]" />
-                              <span>Key Job Skills</span>
-                            </div>
-                            <div className="flex flex-wrap gap-1.5">
-                              {skillMatch.missingSkills.slice(0, 3).map(s => (
-                                <span key={s} className="px-2.5 py-0.5 rounded-full text-[10px] border border-[#E4E7DC] bg-[#F8F9F5] text-[#575A51] font-medium">
-                                  {s}
-                                </span>
-                              ))}
-                            </div>
+                          <div className="flex flex-wrap gap-1 min-h-[1.75rem] items-center">
+                            {skillsToDisplay.slice(0, 4).map(s => (
+                              <span key={s} className="px-2 py-0.5 rounded-md text-[9.5px] font-bold border border-[#8FB305]/30 bg-[#D4F82C]/20 text-[#111215] flex items-center gap-1">
+                                <Check className="w-2.5 h-2.5 stroke-[3] text-[#8FB305]" />
+                                <span className="truncate max-w-[110px]">{s}</span>
+                              </span>
+                            ))}
+                            {skillsToDisplay.length > 4 && (
+                              <span className="px-1.5 py-0.5 rounded-md text-[9.5px] font-bold text-[#73766C] bg-[#F8F9F5] border border-[#E4E7DC]">
+                                +{skillsToDisplay.length - 4}
+                              </span>
+                            )}
                           </div>
-                        )}
+                        </div>
 
                         {/* Fail Reasons if strict criteria fail */}
                         {failReasons.length > 0 && (
-                          <div className={`p-2.5 rounded-2xl border text-[11px] space-y-0.5 ${
+                          <div className={`p-2 rounded-xl border text-[10px] space-y-0.5 mt-auto ${
                             isDisqualified 
                               ? 'bg-rose-50 border-rose-200 text-rose-900' 
                               : 'bg-amber-50 border-amber-200 text-amber-900'
                           }`}>
                             <span className="font-semibold block flex items-center gap-1">
-                              <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                              <span>{isDisqualificationReason(failReasons[0]) ? 'Reason: ' : 'Note: '} {failReasons[0]}</span>
+                              <AlertCircle className="w-3 h-3 shrink-0" />
+                              <span className="truncate">{isDisqualificationReason(failReasons[0]) ? 'Reason: ' : 'Note: '} {failReasons[0]}</span>
                             </span>
                           </div>
                         )}
                       </div>
 
-                      {/* Card Action Footer */}
-                      <div className="pt-4 border-t border-[#E4E7DC] flex items-center justify-between gap-2.5 mt-4">
+                      {/* Card Action Footer - Equal Alignment */}
+                      <div className="pt-3.5 border-t border-[#E4E7DC] flex items-center justify-between gap-2 mt-4">
                         <button
                           type="button"
                           onClick={() => setSelectedJobForModal(matchItem)}
-                          className="flex-1 py-2.5 px-4 rounded-full font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer border border-[#E4E7DC] bg-[#F8F9F5] text-[#111215] hover:bg-white"
+                          className="flex-1 py-2 px-3 rounded-full font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer border border-[#E4E7DC] bg-[#F8F9F5] text-[#111215] hover:bg-white hover:border-[#111215]"
                         >
                           <Eye className="w-3.5 h-3.5 text-[#73766C]" />
                           <span>View Details</span>
@@ -2582,7 +3044,7 @@ export default function PublicJobSeekerUpload() {
                           type="button"
                           onClick={() => handleOpenApplyModal(matchItem)}
                           disabled={isDisqualified}
-                          className={`flex-1 py-2.5 px-4 rounded-full font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                          className={`flex-1 py-2 px-3 rounded-full font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                             isDisqualified 
                               ? 'bg-[#F8F9F5] text-[#73766C] cursor-not-allowed border border-[#E4E7DC]' 
                               : 'bg-[#111215] hover:bg-[#202227] text-white shadow-sm'
@@ -2603,146 +3065,159 @@ export default function PublicJobSeekerUpload() {
 
       {/* Modal Dialog for View Job Details */}
       {selectedJobForModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-200">
-          <div className="border border-[#E4E7DC] rounded-3xl max-w-2xl w-full p-5 sm:p-8 shadow-xl space-y-5 relative max-h-[90vh] overflow-y-auto bg-white text-[#111215]">
-            <button
-              onClick={() => setSelectedJobForModal(null)}
-              className="absolute right-4 top-4 text-[#73766C] hover:text-[#111215] p-2 rounded-xl hover:bg-[#F8F9F5] transition-colors cursor-pointer"
-            >
-              <X className="w-5 h-5" />
-            </button>
+        <div 
+          className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 overflow-y-auto overscroll-contain animate-in fade-in duration-200"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setSelectedJobForModal(null);
+          }}
+        >
+          <div className="border border-[#E4E7DC] rounded-3xl max-w-2xl w-full shadow-2xl relative max-h-[90vh] flex flex-col bg-white text-[#111215] overflow-hidden my-auto">
+            {/* Modal Top Match Header - Pinned at top */}
+            <div className="p-5 sm:p-7 border-b border-[#E4E7DC] relative shrink-0 bg-white">
+              <button
+                type="button"
+                onClick={() => setSelectedJobForModal(null)}
+                className="absolute right-4 top-4 text-[#73766C] hover:text-[#111215] p-2 rounded-xl hover:bg-[#F8F9F5] transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
 
-            {/* Modal Top Match Header */}
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <span className="px-3 py-1 rounded-full text-xs font-bold bg-[#D4F82C] text-[#111215] border border-[#8FB305]/30">
-                  {selectedJobForModal.overallScore}% Match • {selectedJobForModal.matchGrade}
-                </span>
-                <span className="text-xs font-mono font-bold px-2.5 py-1 rounded-full border border-[#E4E7DC] bg-[#F8F9F5] text-[#575A51]">
-                  Code: {selectedJobForModal.job.accessCode}
-                </span>
-              </div>
-
-              <h3 className="text-xl sm:text-2xl font-bold text-[#111215]">
-                {selectedJobForModal.job.title}
-              </h3>
-              <p className="text-xs text-[#73766C] font-semibold">
-                Posted by: {selectedJobForModal.job.recruiterName} • {selectedJobForModal.job.department}
-              </p>
-            </div>
-
-            {/* Breakdown Highlights */}
-            <div className="grid grid-cols-3 gap-2.5 p-3 rounded-2xl text-xs border border-[#E4E7DC] bg-[#F8F9F5]">
-              <div>
-                <span className="text-[#73766C] block text-[11px]">Location</span>
-                <strong className="block truncate text-[#111215]">{selectedJobForModal.job.location}</strong>
-              </div>
-              <div>
-                <span className="text-[#73766C] block text-[11px]">Experience</span>
-                <strong className="block truncate text-[#111215]">{selectedJobForModal.expMatch.requiredExp}</strong>
-              </div>
-              <div>
-                <span className="text-[#73766C] block text-[11px]">Gender Req.</span>
-                <strong className="block truncate text-[#111215]">{selectedJobForModal.genderMatch.requiredGender}</strong>
-              </div>
-            </div>
-
-            {/* Strict Disqualification Warning */}
-            {(!selectedJobForModal.expMatch.isMatch || !selectedJobForModal.genderMatch.isMatch) && (
-              <div className="p-3.5 rounded-2xl border border-rose-200 bg-rose-50 text-xs font-semibold space-y-1 text-rose-900">
-                <div className="font-bold text-rose-700 flex items-center gap-1">
-                  <Ban className="w-4 h-4 text-rose-600" />
-                  <span>Not Recommended due to Criteria Mismatch</span>
-                </div>
-                <p className="text-[11px] text-rose-800">
-                  {!selectedJobForModal.expMatch.isMatch && (
-                    <span>Requires minimum <strong>{selectedJobForModal.expMatch.requiredExp}</strong> experience (Your experience is <strong>{selectedJobForModal.expMatch.candidateExp} Yrs</strong>). </span>
-                  )}
-                  {!selectedJobForModal.genderMatch.isMatch && (
-                    <span>Requires <strong>{selectedJobForModal.genderMatch.requiredGender}</strong> (Candidate gender is <strong>{selectedJobForModal.genderMatch.candidateGender}</strong>).</span>
-                  )}
-                </p>
-              </div>
-            )}
-
-            {/* Full Job Description */}
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-[#73766C]">Job Description & Responsibilities</h4>
-                <ListenJDButton
-                  title={selectedJobForModal.job.title}
-                  description={selectedJobForModal.job.description || ''}
-                  size="sm"
-                />
-              </div>
-              <div className="p-4 rounded-2xl border border-[#E4E7DC] bg-[#F8F9F5] max-h-56 overflow-y-auto text-xs text-[#575A51]">
-                <FormattedJobDescription
-                  description={selectedJobForModal.job.description}
-                  className="max-w-full text-xs"
-                />
-              </div>
-            </div>
-
-            {/* Education & Qualification */}
-            <div className="space-y-1.5">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-[#73766C]">Qualification & Education Requirements</h4>
-              <div className="p-3.5 rounded-2xl border border-[#E4E7DC] bg-[#F8F9F5] text-xs space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-[11px] text-[#73766C] font-bold uppercase tracking-wider">Accepted Degrees / Trades:</span>
-                  <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${
-                    selectedJobForModal.eduMatch.isMatch
-                      ? 'bg-[#D4F82C]/30 border-[#8FB305]/30 text-[#111215]'
-                      : 'bg-amber-50 border-amber-200 text-amber-800'
-                  }`}>
-                    {selectedJobForModal.eduMatch.isMatch ? '✓ Qualification Fits' : 'Mismatch'}
+              <div className="space-y-2 pr-8">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="px-3 py-1 rounded-full text-xs font-bold bg-[#D4F82C] text-[#111215] border border-[#8FB305]/30">
+                    {selectedJobForModal.overallScore}% Match • {selectedJobForModal.matchGrade}
+                  </span>
+                  <span className="text-xs font-mono font-bold px-2.5 py-1 rounded-full border border-[#E4E7DC] bg-[#F8F9F5] text-[#575A51]">
+                    Code: {selectedJobForModal.job.accessCode}
                   </span>
                 </div>
-                <div className="flex flex-wrap items-center gap-1.5">
-                  {(selectedJobForModal.eduMatch.allOptions && selectedJobForModal.eduMatch.allOptions.length > 0
-                    ? selectedJobForModal.eduMatch.allOptions
-                    : splitEducationRequirements(selectedJobForModal.job.qualification || selectedJobForModal.job.education || 'Any Qualification')
-                  ).map((option, idx, arr) => {
-                    const isOptionMatched = selectedJobForModal.eduMatch.matchedOptions?.includes(option) ||
-                      (submittedCandidateData?.highestEducation && checkSingleRequirementMatch(submittedCandidateData.highestEducation, option));
 
-                    return (
-                      <React.Fragment key={option + idx}>
-                        <span className={`px-2.5 py-1 rounded-full text-xs font-semibold border transition-all inline-flex items-center gap-1 ${
-                          isOptionMatched
-                            ? 'bg-white border-[#8FB305] text-[#111215] font-bold shadow-2xs'
-                            : 'bg-white border-[#E4E7DC] text-[#73766C]'
-                        }`}>
-                          {isOptionMatched && <Check className="w-3.5 h-3.5 text-[#8FB305] stroke-[3]" />}
-                          <span>{option}</span>
-                        </span>
-                        {idx < arr.length - 1 && (
-                          <span className="text-xs font-bold text-[#E4E7DC] select-none px-0.5">
-                            •
+                <h3 className="text-xl sm:text-2xl font-bold text-[#111215]">
+                  {selectedJobForModal.job.title}
+                </h3>
+                <p className="text-xs text-[#73766C] font-semibold">
+                  Posted by: {selectedJobForModal.job.recruiterName} • {selectedJobForModal.job.department}
+                </p>
+              </div>
+            </div>
+
+            {/* Scrollable Modal Content */}
+            <div className="p-5 sm:p-7 overflow-y-auto overscroll-contain space-y-5 flex-1 text-xs text-[#575A51]">
+              {/* Breakdown Highlights */}
+              <div className="grid grid-cols-3 gap-2.5 p-3 rounded-2xl text-xs border border-[#E4E7DC] bg-[#F8F9F5]">
+                <div>
+                  <span className="text-[#73766C] block text-[11px]">Location</span>
+                  <strong className="block truncate text-[#111215]">{selectedJobForModal.job.location}</strong>
+                </div>
+                <div>
+                  <span className="text-[#73766C] block text-[11px]">Experience</span>
+                  <strong className="block truncate text-[#111215]">{selectedJobForModal.expMatch.requiredExp}</strong>
+                </div>
+                <div>
+                  <span className="text-[#73766C] block text-[11px]">Gender Req.</span>
+                  <strong className="block truncate text-[#111215]">{selectedJobForModal.genderMatch.requiredGender}</strong>
+                </div>
+              </div>
+
+              {/* Strict Disqualification Warning */}
+              {(!selectedJobForModal.expMatch.isMatch || !selectedJobForModal.genderMatch.isMatch) && (
+                <div className="p-3.5 rounded-2xl border border-rose-200 bg-rose-50 text-xs font-semibold space-y-1 text-rose-900">
+                  <div className="font-bold text-rose-700 flex items-center gap-1">
+                    <Ban className="w-4 h-4 text-rose-600" />
+                    <span>Not Recommended due to Criteria Mismatch</span>
+                  </div>
+                  <p className="text-[11px] text-rose-800">
+                    {!selectedJobForModal.expMatch.isMatch && (
+                      <span>Requires minimum <strong>{selectedJobForModal.expMatch.requiredExp}</strong> experience (Your experience is <strong>{selectedJobForModal.expMatch.candidateExp} Yrs</strong>). </span>
+                    )}
+                    {!selectedJobForModal.genderMatch.isMatch && (
+                      <span>Requires <strong>{selectedJobForModal.genderMatch.requiredGender}</strong> (Candidate gender is <strong>{selectedJobForModal.genderMatch.candidateGender}</strong>).</span>
+                    )}
+                  </p>
+                </div>
+              )}
+
+              {/* Full Job Description */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-[#73766C]">Job Description & Responsibilities</h4>
+                  <ListenJDButton
+                    title={selectedJobForModal.job.title}
+                    description={selectedJobForModal.job.description || ''}
+                    size="sm"
+                  />
+                </div>
+                <div className="p-4 rounded-2xl border border-[#E4E7DC] bg-[#F8F9F5] text-xs text-[#575A51]">
+                  <FormattedJobDescription
+                    description={selectedJobForModal.job.description}
+                    className="max-w-full text-xs"
+                  />
+                </div>
+              </div>
+
+              {/* Education & Qualification */}
+              <div className="space-y-1.5">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-[#73766C]">Qualification & Education Requirements</h4>
+                <div className="p-3.5 rounded-2xl border border-[#E4E7DC] bg-[#F8F9F5] text-xs space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] text-[#73766C] font-bold uppercase tracking-wider">Accepted Degrees / Trades:</span>
+                    <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${
+                      selectedJobForModal.eduMatch.isMatch
+                        ? 'bg-[#D4F82C]/30 border-[#8FB305]/30 text-[#111215]'
+                        : 'bg-amber-50 border-amber-200 text-amber-800'
+                    }`}>
+                      {selectedJobForModal.eduMatch.isMatch ? '✓ Qualification Fits' : 'Mismatch'}
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {(selectedJobForModal.eduMatch.allOptions && selectedJobForModal.eduMatch.allOptions.length > 0
+                      ? selectedJobForModal.eduMatch.allOptions
+                      : splitEducationRequirements(selectedJobForModal.job.qualification || selectedJobForModal.job.education || 'Any Qualification')
+                    ).map((option, idx, arr) => {
+                      const isOptionMatched = selectedJobForModal.eduMatch.matchedOptions?.includes(option) ||
+                        (submittedCandidateData?.highestEducation && checkSingleRequirementMatch(submittedCandidateData.highestEducation, option));
+
+                      return (
+                        <React.Fragment key={option + idx}>
+                          <span className={`px-2.5 py-1 rounded-full text-xs font-semibold border transition-all inline-flex items-center gap-1 ${
+                            isOptionMatched
+                              ? 'bg-white border-[#8FB305] text-[#111215] font-bold shadow-2xs'
+                              : 'bg-white border-[#E4E7DC] text-[#73766C]'
+                          }`}>
+                            {isOptionMatched && <Check className="w-3.5 h-3.5 text-[#8FB305] stroke-[3]" />}
+                            <span>{option}</span>
                           </span>
-                        )}
-                      </React.Fragment>
-                    );
-                  })}
+                          {idx < arr.length - 1 && (
+                            <span className="text-xs font-bold text-[#E4E7DC] select-none px-0.5">
+                              •
+                            </span>
+                          )}
+                        </React.Fragment>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Modal Actions */}
-            <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-[#E4E7DC]">
+            {/* Modal Actions - Pinned at bottom */}
+            <div className="p-3.5 sm:p-5 border-t border-[#E4E7DC] bg-white flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2 sm:gap-2.5 shrink-0">
               <button
+                type="button"
                 onClick={() => setSelectedJobForModal(null)}
-                className="px-5 py-2.5 rounded-full border border-[#E4E7DC] font-bold text-xs text-[#575A51] hover:text-[#111215] bg-[#F8F9F5] hover:bg-white transition-colors cursor-pointer"
+                className="w-full sm:w-auto px-5 py-2.5 rounded-full border border-[#E4E7DC] font-bold text-xs text-[#575A51] hover:text-[#111215] bg-[#F8F9F5] hover:bg-white transition-colors cursor-pointer text-center"
               >
                 Close
               </button>
               <button
+                type="button"
                 onClick={() => {
                   const match = selectedJobForModal;
                   setSelectedJobForModal(null);
                   handleOpenApplyModal(match);
                 }}
                 disabled={!selectedJobForModal.expMatch.isMatch || !selectedJobForModal.genderMatch.isMatch}
-                className={`px-6 py-2.5 rounded-full font-bold text-xs transition-all cursor-pointer flex items-center gap-1.5 ${
+                className={`w-full sm:w-auto px-6 py-2.5 rounded-full font-bold text-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                   (!selectedJobForModal.expMatch.isMatch || !selectedJobForModal.genderMatch.isMatch)
                     ? 'bg-[#F8F9F5] text-[#73766C] cursor-not-allowed border border-[#E4E7DC]'
                     : 'bg-[#111215] hover:bg-[#202227] text-white shadow-sm'
@@ -2758,9 +3233,15 @@ export default function PublicJobSeekerUpload() {
 
       {/* Apply & Start Pre-Interview Confirmation Modal */}
       {applyingJobModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="border border-[#E4E7DC] rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-xl space-y-5 relative bg-white text-[#111215]">
+        <div 
+          className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto overscroll-contain animate-in fade-in duration-200"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setApplyingJobModal(null);
+          }}
+        >
+          <div className="border border-[#E4E7DC] rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl space-y-5 relative bg-white text-[#111215] max-h-[90vh] overflow-y-auto overscroll-contain my-auto">
             <button
+              type="button"
               onClick={() => setApplyingJobModal(null)}
               className="absolute right-4 top-4 text-[#73766C] hover:text-[#111215] p-2 rounded-xl hover:bg-[#F8F9F5] transition-colors cursor-pointer"
             >
@@ -2871,7 +3352,7 @@ export default function PublicJobSeekerUpload() {
       )}
 
       {/* ── Signature hireX Footer ── */}
-      <footer className="relative z-[95] w-full bg-[#F8F9F5] border-t border-[#E4E7DC] mt-16">
+      <footer className="relative z-10 w-full bg-[#F8F9F5] border-t border-[#E4E7DC] mt-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-8 lg:px-12 pt-12 pb-10">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 pb-12">
             <div>
@@ -2906,16 +3387,19 @@ export default function PublicJobSeekerUpload() {
             </div>
           </div>
 
-          {/* Giant Typographic Wordmark */}
-          <div className="py-4 border-t border-[#E4E7DC] select-none overflow-hidden">
-            <div className="text-[14vw] font-black tracking-tighter leading-none text-[#111215] flex items-center">
-              InterviewXpert<span className="text-[#8FB305]">↗</span>
+          {/* Giant Typographic Wordmark with hover glow (responsive clamped to fit without truncation) */}
+          <div className="py-6 sm:py-8 border-b border-[#E4E7DC] select-none overflow-hidden">
+            <div className="text-[clamp(1.75rem,7vw,6.8rem)] font-black tracking-tight leading-none text-[#111215] flex items-center justify-between group cursor-default w-full">
+              <span className="whitespace-nowrap">InterviewXpert</span>
+              <span className="text-[#8FB305] ml-2 sm:ml-4 group-hover:translate-x-2 group-hover:-translate-y-2 transition-transform duration-300">↗</span>
             </div>
           </div>
 
           {/* Copyright Bar */}
-          <div className="pt-4 border-t border-[#E4E7DC] flex flex-wrap items-center justify-between text-xs text-[#73766C] gap-3">
-            <div>© {new Date().getFullYear()} SNAB Technologies. All rights reserved.</div>
+          <div className="pt-6 sm:pt-8 flex flex-col md:flex-row items-center justify-between text-xs text-[#73766C] gap-4">
+            <div className="flex flex-wrap items-center gap-2 text-center md:text-left">
+              <span>© {new Date().getFullYear()} SNAB Innovation LLP. All rights reserved.</span>
+            </div>
             <div className="flex items-center gap-4">
               <span>GST Registered</span>
               <span>•</span>
