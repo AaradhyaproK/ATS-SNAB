@@ -63,6 +63,11 @@ import ClientReviewPortal from './pages/ClientReviewPortal';
 import CandidateInterviewFlow from './pages/Interview';
 import { CandidateVoiceInterview } from './pages/CandidateVoiceInterview';
 import { VoiceInterviewReport } from './pages/VoiceInterviewReport';
+import LiveVoiceInterview from './pages/LiveVoiceInterview';
+import { resolveJobOrInterviewDocument } from './services/jobResolutionService';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from './services/firebase';
+import InterviewVoiceInterview from './pages/InterviewVoiceInterview';
 
 const DefaultRouteLoader = () => (
   <div className="flex items-center justify-center min-h-screen bg-background text-foreground">
@@ -100,6 +105,35 @@ const JobToCandidatePortalRedirect: React.FC = () => {
     return <Navigate to={`/interview/video/${interviewId}${search}`} replace />;
   }
   return <Navigate to={interviewId ? `/candidate?job=${interviewId}${search ? `&${search.replace(/^\?/, '')}` : ''}` : '/candidate'} replace />;
+};
+
+/** Voice-only jobs never run the video interview: every link that lands on the video room goes to the voice page instead. */
+const VoiceJobGuard: React.FC<{ children: React.ReactElement }> = ({ children }) => {
+  const { interviewId } = useParams<{ interviewId: string }>();
+  const location = useLocation();
+  const [mode, setMode] = React.useState<string | null>(null);
+  useEffect(() => {
+    resolveJobOrInterviewDocument(interviewId || '')
+      .then((r) => setMode(r?.data?.interviewMode || 'video'))
+      .catch(() => setMode('video'));
+  }, [interviewId]);
+  if (!mode) return <DefaultRouteLoader />;
+  if (mode === 'voice') return <Navigate to={`/voice/${interviewId}${location.search}`} replace />;
+  return children;
+};
+
+/** Voice attempts live next to video attempts, so every /report/{job}/{attempt} link sends them to the voice report. */
+const VoiceReportGuard: React.FC<{ children: React.ReactElement }> = ({ children }) => {
+  const { interviewId, submissionId } = useParams<{ interviewId: string; submissionId: string }>();
+  const [type, setType] = React.useState<string | null>(null);
+  useEffect(() => {
+    getDoc(doc(db, 'interviews', interviewId || '_', 'attempts', submissionId || '_'))
+      .then((s) => setType(s.data()?.interviewType || 'video'))
+      .catch(() => setType('video'));
+  }, [interviewId, submissionId]);
+  if (!type) return <DefaultRouteLoader />;
+  if (type === 'voice') return <Navigate to={`/voice-report/${submissionId}`} replace />;
+  return children;
 };
 
 const DashboardRedirect: React.FC = () => {
@@ -264,28 +298,29 @@ const App: React.FC = () => {
 
             {/* Public Interactive AI Video Interview Room */}
             <Route path="interview/video/:interviewId" element={
-              <ThemeProvider>
+              <VoiceJobGuard><ThemeProvider>
                 <CandidateInterviewFlow />
-              </ThemeProvider>
+              </ThemeProvider></VoiceJobGuard>
             } />
             <Route path="interview/room/:interviewId" element={
-              <ThemeProvider>
+              <VoiceJobGuard><ThemeProvider>
                 <CandidateInterviewFlow />
-              </ThemeProvider>
+              </ThemeProvider></VoiceJobGuard>
             } />
 
             {/* Public Candidate Job Application Redirects & AI Voice Screener */}
             <Route path="interview/start/:interviewId" element={<JobToCandidatePortalRedirect />} />
             <Route path="voice-interview/:voiceInterviewId" element={<CandidateVoiceInterview />} />
             <Route path="voice-interview" element={<Navigate to="/candidate" replace />} />
+            <Route path="voice/:jobId" element={<LiveVoiceInterview />} />
             <Route path="voice-report/:responseId" element={<VoiceInterviewReport />} />
             <Route path="voice-report" element={<Navigate to="/candidate" replace />} />
             
             {/* Candidate & Recruiter Interview Assessment Report */}
             <Route path="report/:interviewId/:submissionId" element={
-              <ThemeProvider>
+              <VoiceReportGuard><ThemeProvider>
                 <Report />
-              </ThemeProvider>
+              </ThemeProvider></VoiceReportGuard>
             } />
             <Route path="report/:interviewId" element={
               <ThemeProvider>
@@ -340,6 +375,7 @@ const App: React.FC = () => {
               <Route path="recruiter/interview/:interviewId" element={<ProtectedRoute role="recruiter" loadingFallback={<InterviewOverviewSkeleton />}><InterviewOverview /></ProtectedRoute>} />
               <Route path="recruiter/interview/:interviewId/overview" element={<ProtectedRoute role="recruiter" loadingFallback={<InterviewOverviewSkeleton />}><InterviewOverview /></ProtectedRoute>} />
               <Route path="recruiter/interview/:interviewId/responses" element={<ProtectedRoute role="recruiter" loadingFallback={<InterviewResponsesSkeleton />}><InterviewResponses /></ProtectedRoute>} />
+              <Route path="recruiter/interview/:interviewId/voice-interview" element={<ProtectedRoute role="recruiter" loadingFallback={<InterviewOverviewSkeleton />}><InterviewVoiceInterview /></ProtectedRoute>} />
               <Route path="recruiter/interview/:interviewId/candidates" element={<ProtectedRoute role="recruiter" loadingFallback={<InterviewCandidatesSkeleton />}><InterviewCandidates /></ProtectedRoute>} />
               <Route path="recruiter/interview/responses/:interviewId" element={<ProtectedRoute role="recruiter" loadingFallback={<InterviewResponsesSkeleton />}><InterviewResponses /></ProtectedRoute>} />
               <Route path="recruiter/interview/create" element={<ProtectedRoute role="recruiter" loadingFallback={<CreateInterviewSkeleton />}><CreateInterview /></ProtectedRoute>} />

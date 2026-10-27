@@ -30,8 +30,11 @@ import {
   ArrowRight,
   ShieldCheck,
   Clock,
-  ChevronDown
+  ChevronDown,
+  Video,
+  Mic
 } from 'lucide-react';
+import { DEFAULT_SCREENING_QUESTIONS, generateScreeningQuestionsFromJd, saveVoiceInterview } from '../services/voiceInterviewService';
 import { LocationCityInput } from '../components/LocationCityInput';
 import { EDUCATION_QUALIFICATIONS, EDUCATION_SPECIALIZATIONS, EducationQualification } from '../data/allEducationDegrees';
 import { resolveStrictListedCity } from '../data/maharashtraCities';
@@ -299,6 +302,9 @@ const CreateInterview: React.FC = () => {
   const [sendingEmails, setSendingEmails] = useState(false);
   const [manualQuestions, setManualQuestions] = useState<string[]>([DEFAULT_FIRST_QUESTION]);
   const [currentManualQuestion, setCurrentManualQuestion] = useState('');
+  const [interviewMode, setInterviewMode] = useState<'video' | 'voice'>('video');
+  const [voiceQuestions, setVoiceQuestions] = useState<string[]>(() => DEFAULT_SCREENING_QUESTIONS.map((q) => q.question));
+  const [generatingVoiceQuestions, setGeneratingVoiceQuestions] = useState(false);
   interface CustomField { id: number; key: string; value: string; }
   const [customFields, setCustomFields] = useState<CustomField[]>([]);
   const [tempCustomField, setTempCustomField] = useState({ key: '', value: '' });
@@ -967,12 +973,20 @@ const CreateInterview: React.FC = () => {
       return;
     }
 
+    const cleanVoiceQuestions = voiceQuestions.map((q) => q.trim()).filter(Boolean);
+    if (interviewMode === 'voice' && !cleanVoiceQuestions.length) {
+      alert("❌ Add at least one voice interview question.");
+      return;
+    }
+
     setLoading(true);
 
     try {
       // 1. Generate Job ID, Link, and Access Code locally
       const newRand = Math.random().toString(36).substring(2, 15);
-      const newInterviewLink = `${window.location.origin}/candidate?job=${newRand}`;
+      const newInterviewLink = interviewMode === 'voice'
+        ? `${window.location.origin}/voice/${newRand}`
+        : `${window.location.origin}/candidate?job=${newRand}`;
       const newAccessCode = Math.random().toString(36).substring(2, 8).toUpperCase();
 
       // 2. Save to Firestore
@@ -1007,7 +1021,28 @@ const CreateInterview: React.FC = () => {
         createdBy: creatorInfo,
         createdAt: serverTimestamp(),
         isMock: false,
+        interviewMode,
+        ...(interviewMode === 'voice' ? { isAiVideoInterview: false } : {}),
       });
+
+      // Voice jobs: the questions the AI interviewer asks (editable later in the job's Voice Interview tab)
+      if (interviewMode === 'voice') {
+        await saveVoiceInterview({
+          id: newRand,
+          jobId: newRand,
+          interviewId: newRand,
+          title: formData.title,
+          jobTitle: formData.title,
+          jobDescription: formData.description,
+          companyName: formData.companyName || '',
+          location: formData.location || formData.city || '',
+          recruiterUID: user.uid,
+          teamId,
+          questions: cleanVoiceQuestions.map((question, i) => ({ id: `q_${i}`, question, category: 'skills' })),
+          status: 'active',
+          createdAt: serverTimestamp(),
+        });
+      }
 
       // Also mirror to jobs collection for ATS consistency
       await setDoc(doc(db, 'jobs', newRand), {
@@ -1028,6 +1063,7 @@ const CreateInterview: React.FC = () => {
         teamId,
         createdBy: creatorInfo,
         createdAt: serverTimestamp(),
+        interviewMode,
       }, { merge: true });
 
       // Log audit trail event
@@ -1883,6 +1919,86 @@ const CreateInterview: React.FC = () => {
                 )}
               </div>
 
+            </section>
+
+            {/* Interview Format: video (existing flow) or real-time AI voice interview */}
+            <section className="rounded-3xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] p-6 sm:p-8 shadow-xs space-y-6">
+              <div className="flex items-center justify-between pb-4 border-b border-[#E4E7DC] dark:border-white/10">
+                <div className="flex items-center gap-2.5">
+                  <span className="px-2.5 py-1 rounded-full bg-[#111215] text-[#D4F82C] dark:bg-[#D4F82C] dark:text-[#111215] text-[10px] font-mono font-black">
+                    04
+                  </span>
+                  <div>
+                    <h2 className="text-base font-black text-[#111215] dark:text-[#F8F9F5]">Interview Format</h2>
+                    <p className="text-xs text-[#73766C] dark:text-neutral-400">How candidates are screened for this job</p>
+                  </div>
+                </div>
+                <Mic size={16} className="text-[#8FB305] dark:text-[#D4F82C]" />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {([
+                  { mode: 'video', Icon: Video, title: 'Video Interview', desc: 'Recorded AI video interview (current flow)' },
+                  { mode: 'voice', Icon: Mic, title: 'Voice Interview', desc: 'Live two-way call with an AI interviewer' },
+                ] as const).map(({ mode, Icon, title, desc }) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    onClick={() => setInterviewMode(mode)}
+                    className={`text-left rounded-2xl border p-4 transition-all cursor-pointer ${interviewMode === mode ? 'border-[#111215] dark:border-[#D4F82C] bg-[#F8F9F5] dark:bg-[#101114]' : 'border-[#E4E7DC] dark:border-white/10'}`}
+                  >
+                    <Icon size={18} className="text-[#8FB305] dark:text-[#D4F82C]" />
+                    <div className="mt-2 text-sm font-black text-[#111215] dark:text-white">{title}</div>
+                    <div className="text-xs text-[#73766C] dark:text-neutral-400">{desc}</div>
+                  </button>
+                ))}
+              </div>
+
+              {interviewMode === 'voice' && (
+                <div className="space-y-2.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <label className={labelClass}>Questions the AI interviewer asks, in order</label>
+                    <button
+                      type="button"
+                      disabled={generatingVoiceQuestions || !formData.description.trim()}
+                      onClick={async () => {
+                        setGeneratingVoiceQuestions(true);
+                        try {
+                          const qs = await generateScreeningQuestionsFromJd(formData.title, formData.description, formData.location || formData.city);
+                          if (qs.length) setVoiceQuestions(qs.map((q) => q.question));
+                        } catch (err) {
+                          console.error('Voice question generation failed:', err);
+                        } finally {
+                          setGeneratingVoiceQuestions(false);
+                        }
+                      }}
+                      className={secondaryButtonClass}
+                    >
+                      <Wand2 size={14} className="mr-1.5" />
+                      {generatingVoiceQuestions ? 'Generating…' : 'Generate from JD'}
+                    </button>
+                  </div>
+                  {voiceQuestions.map((q, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        className={inputClass}
+                        value={q}
+                        onChange={(e) => setVoiceQuestions(voiceQuestions.map((x, j) => (j === i ? e.target.value : x)))}
+                      />
+                      <button type="button" onClick={() => setVoiceQuestions(voiceQuestions.filter((_, j) => j !== i))} className="p-2 text-red-600 dark:text-red-400 cursor-pointer">
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  ))}
+                  <button type="button" onClick={() => setVoiceQuestions([...voiceQuestions, ''])} className={secondaryButtonClass}>
+                    <Plus size={14} className="mr-1.5" /> Add question
+                  </button>
+                  <p className="text-[11px] text-[#73766C] dark:text-neutral-400">
+                    About 1.5 minutes per question (5–15 minute call). The interviewer may ask one short follow-up per answer.
+                  </p>
+                </div>
+              )}
             </section>
 
             {/* Sticky Submission Bar */}

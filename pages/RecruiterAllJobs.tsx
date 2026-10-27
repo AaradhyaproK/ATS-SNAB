@@ -411,6 +411,7 @@ const RecruiterAllJobs: React.FC = () => {
       } catch {
         isChecked = true;
       }
+      if ((invitingJob as any).interviewMode === 'voice') isChecked = false; // voice-only job: never a video link
       setIsAiVideoInterview(isChecked);
       setInviteMode(isChecked ? 'ai_suggest' : 'bulk');
     }
@@ -557,7 +558,7 @@ const RecruiterAllJobs: React.FC = () => {
 
   const handleSendEmailReminder = async (candidateEmail: string) => {
     if (!invitingJob) return;
-    const isVideo = isAiVideoInterview || Boolean((invitingJob as any).isAiVideoInterview);
+    const isVideo = (invitingJob as any).interviewMode !== 'voice' && (isAiVideoInterview || Boolean((invitingJob as any).isAiVideoInterview)); // voice jobs use their /voice/ interviewLink
     const targetLink = isVideo
       ? `${window.location.origin}/interview/video/${invitingJob.id}`
       : ((invitingJob.interviewLink && !invitingJob.interviewLink.includes('/interview/'))
@@ -631,7 +632,7 @@ const RecruiterAllJobs: React.FC = () => {
 
     const targetCandidateName = candData?.name && candData.name.trim() !== '' ? candData.name.trim() : (candidateEmail.split('@')[0] || 'Candidate');
 
-    const isVideo = isAiVideoInterview || Boolean((invitingJob as any).isAiVideoInterview);
+    const isVideo = (invitingJob as any).interviewMode !== 'voice' && (isAiVideoInterview || Boolean((invitingJob as any).isAiVideoInterview)); // voice jobs use their /voice/ interviewLink
     let targetLink = isVideo
       ? `${window.location.origin}/interview/video/${invitingJob.id}`
       : ((invitingJob.interviewLink && !invitingJob.interviewLink.includes('/interview/'))
@@ -685,7 +686,7 @@ const RecruiterAllJobs: React.FC = () => {
   };
   const handleSendRosterBulkEmailReminders = async () => {
     if (!invitingJob || !invitingJob.candidateEmails || invitingJob.candidateEmails.length === 0) return;
-    const isVideo = isAiVideoInterview || Boolean((invitingJob as any).isAiVideoInterview);
+    const isVideo = (invitingJob as any).interviewMode !== 'voice' && (isAiVideoInterview || Boolean((invitingJob as any).isAiVideoInterview)); // voice jobs use their /voice/ interviewLink
     const targetLink = isVideo
       ? `${window.location.origin}/interview/video/${invitingJob.id}`
       : ((invitingJob.interviewLink && !invitingJob.interviewLink.includes('/interview/'))
@@ -735,7 +736,7 @@ const RecruiterAllJobs: React.FC = () => {
       return;
     }
 
-    const isVideo = isAiVideoInterview || Boolean((invitingJob as any).isAiVideoInterview);
+    const isVideo = (invitingJob as any).interviewMode !== 'voice' && (isAiVideoInterview || Boolean((invitingJob as any).isAiVideoInterview)); // voice jobs use their /voice/ interviewLink
     const targetLink = isVideo
       ? `${window.location.origin}/interview/video/${invitingJob.id}`
       : ((invitingJob.interviewLink && !invitingJob.interviewLink.includes('/interview/'))
@@ -777,7 +778,7 @@ const RecruiterAllJobs: React.FC = () => {
       return { email, phone: match?.phone, name: match?.name || email.split('@')[0] };
     });
 
-    const isVideo = isAiVideoInterview || Boolean((invitingJob as any).isAiVideoInterview);
+    const isVideo = (invitingJob as any).interviewMode !== 'voice' && (isAiVideoInterview || Boolean((invitingJob as any).isAiVideoInterview)); // voice jobs use their /voice/ interviewLink
     const targetLink = isVideo
       ? `${window.location.origin}/interview/video/${invitingJob.id}`
       : ((invitingJob.interviewLink && !invitingJob.interviewLink.includes('/interview/'))

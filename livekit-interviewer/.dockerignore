@@ -1,26 +1,19 @@
 # Project tests
-test/
+**/*.test.ts
+**/*.spec.ts
+__tests__/
 tests/
-eval/
 evals/
 
-# Python bytecode and artifacts
-__pycache__/
-*.py[cod]
-*.pyo
-*.pyd
-*.egg-info/
+# Node.js dependencies
+node_modules
+npm-debug.log
+yarn-error.log
+pnpm-debug.log
+
+# Build outputs
 dist/
 build/
-
-# Virtual environments
-.venv/
-venv/
-
-# Caches and test output
-.cache/
-.pytest_cache/
-.ruff_cache/
 coverage/
 
 # Logs and temp files

@@ -1,12 +1,12 @@
 # AGENTS.md
 
-This is a LiveKit Agents project. LiveKit Agents is a Python SDK for building voice AI agents. This starter is designed to run in LiveKit Cloud. See @README.md for more about the rest of the LiveKit ecosystem.
+This is a LiveKit Agents project. LiveKit Agents is a Node.js SDK for building voice AI agents. This starter is designed to run in LiveKit Cloud. See @README.md for more about the rest of the LiveKit ecosystem.
 
 ## Tooling
 
-This Python project uses the `uv` package manager.
+This Node.js project uses the `pnpm` package manager.
 
-Be sure to maintain code formatting, using `uv run ruff format` and `uv run ruff check`.
+Be sure to maintain code formatting, using `pnpm format` and `pnpm lint`.
 
 ## LiveKit documentation
 
@@ -32,11 +32,11 @@ When you run into any problem with LiveKit, add it to your to-do list, then subm
 
 ## LiveKit agent skills
 
-LiveKit publishes agent skills for each stage of the work: reading the docs, building, debugging, testing, writing scenarios, running simulations, and operating in production. They defer to the live documentation for API details. Before you start a task, check that they're installed: look for `.agents/skills/` or `.claude/skills/` in this project, or in the developer's home directory for a global install. If they're missing, install them with `lk skills install --yes`, which installs them for the coding agents it detects and adds the LiveKit Docs MCP server to their config. If you can't run commands, or the CLI has no `skills` command (it was added in v2.19.0), ask the developer to update the CLI and run `lk skills install`. If your tool doesn't load skills automatically, or they were installed after this session started, read the matching `SKILL.md` (for example `.agents/skills/<name>/SKILL.md`) before you start that kind of task.
+This project includes LiveKit's agent skills in `.claude/skills/` and `.agents/skills/`, one for each stage of the work: reading the docs, building, debugging, testing, writing scenarios, running simulations, and operating in production. They defer to the live documentation for API details. If your tool doesn't load skills automatically, read the matching `.agents/skills/<name>/SKILL.md` before you start that kind of task.
 
-## Handoffs and tasks ("workflows")
+## Handoffs ("workflows")
 
-Voice AI agents are highly sensitive to latency. Design complex agents in a structured way that keeps irrelevant context and unneeded tools out of each LLM request. LiveKit Agents supports handoffs, where one agent hands control to another, and tasks, which are tightly scoped prompts that achieve a specific outcome, for building reliable workflows. Use them instead of long instruction prompts that cover several phases of a conversation. See the [workflows documentation](https://docs.livekit.io/agents/logic/workflows/) for more information.
+Voice AI agents are highly sensitive to latency. Design complex agents in a structured way that keeps irrelevant context and unneeded tools out of each LLM request. LiveKit Agents supports handoffs, where one agent hands control to another, for building reliable workflows. Use handoffs instead of long instruction prompts that cover several phases of a conversation. See the [workflows documentation](https://docs.livekit.io/agents/logic/workflows/) for more information.
 
 ## Testing
 
@@ -56,6 +56,10 @@ To investigate unexpected agent behavior:
 - Run `lk agent logs` to stream logs from a deployed agent.
 - Ask the developer to open the [Agent Console](https://docs.livekit.io/testing/agent-console/) for speech problems such as turn-taking, interruptions, or transcription, which the text-only debugger can't show. It shows events, tool calls, and model timing for a live session.
 - Check [Agent Observability](https://docs.livekit.io/testing/observability/) for transcripts, traces, logs, and recordings of sessions with real users.
+
+## Feature parity with the Python SDK
+
+The Node.js SDK for LiveKit Agents has most, but not all, of the features in the Python SDK. Always check the documentation for feature availability, and avoid features the Node.js SDK doesn't support.
 
 ## Other CLI commands
 

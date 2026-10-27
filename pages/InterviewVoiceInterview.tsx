@@ -42,7 +42,7 @@ export const InterviewVoiceInterview: React.FC = () => {
   const [selectedResponse, setSelectedResponse] = useState<VoiceInterviewResponse | null>(null);
 
   // Candidate Link
-  const candidateLink = `${window.location.origin}/voice-interview/${interviewId}`;
+  const candidateLink = `${window.location.origin}/voice/${interviewId}`;
 
   // Load Job / Interview details
   useEffect(() => {
