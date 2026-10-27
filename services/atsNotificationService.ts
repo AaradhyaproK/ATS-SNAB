@@ -158,7 +158,7 @@ export const generateAtsStatusEmailHtml = (params: AtsStatusEmailParams): string
                 <tr>
                   <td>
                     <h2 style="color:#ffffff; margin:0; font-size:20px; font-weight:800; letter-spacing:-0.5px;">
-                      ${companyName || 'SNAB hireX'}
+                      ${companyName || 'InterviewXpert'}
                     </h2>
                     <p style="color:#a1a1aa; margin:4px 0 0 0; font-size:12px; text-transform:uppercase; letter-spacing:1px; font-weight:600;">
                       Applicant Tracking System • Status Notification
@@ -224,7 +224,7 @@ export const generateAtsStatusEmailHtml = (params: AtsStatusEmailParams): string
           <tr>
             <td style="background-color:#f8fafc; border-top:1px solid #e2e8f0; padding:18px 32px; text-align:center;">
               <p style="color:#94a3b8; font-size:11px; margin:0; line-height:1.4;">
-                This automated update was sent via ${companyName || 'SNAB hireX'} ATS Recruitment System.<br/>
+                This automated update was sent via ${companyName || 'InterviewXpert'} ATS Recruitment System.<br/>
                 Please do not reply directly to this automated email.
               </p>
             </td>

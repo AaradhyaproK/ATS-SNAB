@@ -8,12 +8,12 @@ interface LogoProps {
     style?: React.CSSProperties;
 }
 
-const lightLogoSrc = '/assets/logo-cropped-day.png';
-const darkLogoSrc = '/assets/logo-cropped-night.png';
+const lightLogoSrc = '/logo-theme-lime-squircle.png';
+const darkLogoSrc = '/logo-theme-lime-squircle.png';
 
 const Logo: React.FC<LogoProps> = ({
     className = '',
-    alt = 'SNAB hireX',
+    alt = 'InterviewXpert',
     isDark: explicitIsDark,
     style
 }) => {

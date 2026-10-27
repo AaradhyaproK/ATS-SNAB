@@ -1818,7 +1818,7 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
               SNAB Innovations
             </a>
           </div>
-          <p>© {new Date().getFullYear()} SNAB hireX • Candidate Portal. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} InterviewXpert • Candidate Portal. All rights reserved.</p>
         </footer>
       </div>
     );

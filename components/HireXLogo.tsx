@@ -16,41 +16,14 @@ export const HireXMark: React.FC<{ size?: number; className?: string; isDark?: b
   isDark = false,
 }) => {
   return (
-    <svg
+    <img
+      src="/logo-theme-lime-squircle.png"
+      alt="InterviewXpert"
       width={size}
       height={size}
-      viewBox="0 0 100 100"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      className={`shrink-0 transition-transform duration-200 hover:scale-105 ${className}`}
-    >
-      {/* Lime Squircle Background */}
-      <rect width="100" height="100" rx="24" fill="#D4F82C" />
-
-      {/* Modern Bold 'hx' Monogram with Growth Arrow */}
-      {/* Letter 'h' */}
-      <path
-        d="M20 25H32V45.5C34.2 40.5 38.8 38 45 38C52 38 56 42.5 56 50.5V75H44V52.5C44 48.5 42 46.5 38.5 46.5C34.5 46.5 32 49 32 54.5V75H20V25Z"
-        fill="#111215"
-      />
-
-      {/* Diagonal Backslash of 'X' */}
-      <path
-        d="M48 39H60L74 61V75L56 48L48 39Z"
-        fill="#111215"
-      />
-
-      {/* Upward Growth Arrow of 'X' */}
-      <path
-        d="M50 75L68 47V52L72 45L65 49H70L54 75H50Z"
-        fill="#111215"
-      />
-      {/* Arrowhead */}
-      <polygon
-        points="65,22 83,22 83,40 76,33 58,60 52,54 70,27"
-        fill="#111215"
-      />
-    </svg>
+      style={{ width: size, height: size }}
+      className={`shrink-0 object-contain rounded-xl transition-transform duration-200 hover:scale-105 select-none ${className}`}
+    />
   );
 };
 
@@ -63,10 +36,10 @@ export const HireXLogo: React.FC<HireXLogoProps> = ({
   isDark = false,
 }) => {
   const sizeMap = {
-    sm: { icon: 26, text: 'text-base', arrow: 'text-xs' },
-    md: { icon: 34, text: 'text-xl', arrow: 'text-sm' },
-    lg: { icon: 44, text: 'text-2xl', arrow: 'text-base' },
-    xl: { icon: 56, text: 'text-4xl', arrow: 'text-2xl' },
+    sm: { icon: 26, text: 'text-base' },
+    md: { icon: 34, text: 'text-xl' },
+    lg: { icon: 44, text: 'text-2xl' },
+    xl: { icon: 56, text: 'text-4xl' },
   };
 
   const currentSize = sizeMap[size];
@@ -83,10 +56,7 @@ export const HireXLogo: React.FC<HireXLogoProps> = ({
             isDark ? 'text-white' : 'text-[#111215]'
           }`}
         >
-          hireX
-          <span className="text-[#8FB305] ml-0.5 inline-block transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5">
-            ↗
-          </span>
+          Interview<span className="text-[#8FB305] dark:text-[#D4F82C]">Xpert</span>
         </span>
       )}
     </div>

@@ -1352,7 +1352,7 @@ export default function ClientReviewPortal() {
           {/* Bottom Copyright & Disclaimer */}
           <div className="mt-12 pt-8 border-t border-[#E4E7DC] dark:border-white/10 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-[#73766C] dark:text-neutral-400">
             <p>
-              © 2026 SNAB hireX. All rights reserved. Curated for <strong>{shortlist.clientName}</strong>.
+              © 2026 InterviewXpert. All rights reserved. Curated for <strong>{shortlist.clientName}</strong>.
             </p>
             <p className="text-[11px] text-center md:text-right max-w-xl">
               Confidential Talent Review Document. Protected under enterprise recruitment Non-Disclosure Agreement.

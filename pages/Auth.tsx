@@ -119,7 +119,7 @@ const AuthPage: React.FC = () => {
       if (userRole !== 'recruiter' && userRole !== 'admin') {
         await signOut(auth);
         setError(
-          'This SNAB hireX portal is only for recruiters and admins. Candidates should use the interview or assessment link sent to them.'
+          'This InterviewXpert portal is only for recruiters and admins. Candidates should use the interview or assessment link sent to them.'
         );
         return;
       }
@@ -714,7 +714,7 @@ const AuthPage: React.FC = () => {
                       </>
                     ) : (
                       <>
-                        Already registered with hireX?{' '}
+                        Already registered with InterviewXpert?{' '}
                         <button
                           type="button"
                           onClick={() => switchMode('login')}
@@ -781,7 +781,7 @@ const AuthPage: React.FC = () => {
             SNAB Innovations
           </a>
         </div>
-        <p>© {new Date().getFullYear()} SNAB hireX. All rights reserved.</p>
+        <p>© {new Date().getFullYear()} InterviewXpert. All rights reserved.</p>
       </footer>
 
       {/* ── Modals for Verification Notices ── */}

@@ -62,7 +62,7 @@ export default function PublicJobSeekerUpload() {
   const { isDark, toggleTheme } = useTheme();
 
   useEffect(() => {
-    document.title = "Upload Resume | SNAB hireX - AI Recruitment Platform";
+    document.title = "Upload Resume | InterviewXpert - AI Recruitment Platform";
     const setMetaTag = (attr: string, value: string, content: string) => {
       let element = document.querySelector(`meta[${attr}='${value}']`) as HTMLMetaElement;
       if (!element) {
@@ -2909,7 +2909,7 @@ export default function PublicJobSeekerUpload() {
           {/* Giant Typographic Wordmark */}
           <div className="py-4 border-t border-[#E4E7DC] select-none overflow-hidden">
             <div className="text-[14vw] font-black tracking-tighter leading-none text-[#111215] flex items-center">
-              hireX<span className="text-[#8FB305]">↗</span>
+              InterviewXpert<span className="text-[#8FB305]">↗</span>
             </div>
           </div>
 

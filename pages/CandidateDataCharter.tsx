@@ -5,7 +5,7 @@ import HireXLogo from '../components/HireXLogo';
 
 export default function CandidateDataCharter() {
   useEffect(() => {
-    document.title = "Candidate Data Charter | hireX by SNAB";
+    document.title = "Candidate Data Charter | InterviewXpert";
     window.scrollTo(0, 0);
   }, []);
 
@@ -96,7 +96,7 @@ export default function CandidateDataCharter() {
             <section className="space-y-2">
               <h2 className="text-base font-black text-[#111215]">1. Data Collected from Candidates</h2>
               <p>
-                When you apply for a job or register on the hireX platform, we collect:
+                When you apply for a job or register on the InterviewXpert platform, we collect:
               </p>
               <ul className="list-disc pl-5 space-y-1">
                 <li>Basic identity details: Full Name, Email Address, Contact Number.</li>
@@ -121,7 +121,7 @@ export default function CandidateDataCharter() {
             <section className="space-y-2">
               <h2 className="text-base font-black text-[#111215]">3. Anti-Poaching and Privacy Redaction</h2>
               <p>
-                To protect job seekers from spam and predatory poaching, hireX provides employers and agencies with PII-masking tools. During initial client reviews, your personal phone numbers and direct email addresses can remain hidden until formal interview confirmation.
+                To protect job seekers from spam and predatory poaching, InterviewXpert provides employers and agencies with PII-masking tools. During initial client reviews, your personal phone numbers and direct email addresses can remain hidden until formal interview confirmation.
               </p>
             </section>
 

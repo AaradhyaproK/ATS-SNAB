@@ -234,8 +234,8 @@ const MOCKUP_CANDIDATES = [
 // ── FAQ Items ──
 const FAQ_ITEMS = [
   {
-    q: 'What is hireX?',
-    a: 'hireX is an intelligent, high-velocity recruitment operating system designed for modern hiring teams and staffing agencies. It combines deep AI resume parsing, candidate scoring, visual Kanban pipelines, automated voice screening, 1-click WhatsApp outreach, and secure live client review links into a single, cohesive workspace.',
+    q: 'What is InterviewXpert?',
+    a: 'InterviewXpert is an intelligent, high-velocity recruitment operating system designed for modern hiring teams and staffing agencies. It combines deep AI resume parsing, candidate scoring, visual Kanban pipelines, automated voice screening, 1-click WhatsApp outreach, and secure live client review links into a single, cohesive workspace.',
   },
   {
     q: 'Can clients review candidates without an account?',
@@ -247,7 +247,7 @@ const FAQ_ITEMS = [
   },
   {
     q: 'How does direct WhatsApp outreach function?',
-    a: 'hireX connects directly with WhatsApp so you can trigger instant candidate outreach, interview invitations, and screening links with 98% open rates compared to 15% for traditional email. Candidates can reply instantly and book time slots on your calendar.',
+    a: 'InterviewXpert connects directly with WhatsApp so you can trigger instant candidate outreach, interview invitations, and screening links with 98% open rates compared to 15% for traditional email. Candidates can reply instantly and book time slots on your calendar.',
   },
   {
     q: 'What is included in the 1-month free trial?',
@@ -259,7 +259,7 @@ const FAQ_ITEMS = [
   },
   {
     q: 'How is candidate data secured and privacy preserved?',
-    a: 'hireX provides built-in anti-poaching blind masking to hide candidate contact numbers and personal emails when sharing shortlists with external clients. All data is encrypted in transit and at rest with enterprise-grade security protocols.',
+    a: 'InterviewXpert provides built-in anti-poaching blind masking to hide candidate contact numbers and personal emails when sharing shortlists with external clients. All data is encrypted in transit and at rest with enterprise-grade security protocols.',
   },
 ];
 
@@ -571,7 +571,7 @@ export default function LandingPage() {
           
           {/* Logo & Product Badge */}
           <div className="flex items-center gap-2.5 sm:gap-3">
-            <Link to="/" className="group inline-flex items-center" title="hireX - AI Recruitment Platform">
+            <Link to="/" className="group inline-flex items-center" title="InterviewXpert - AI Recruitment Platform">
               <HireXLogo size="md" variant="full" />
             </Link>
             <div className="hidden sm:flex items-center gap-1.5 pl-3 border-l border-[#E4E7DC] text-[11px] font-medium text-[#73766C]">
@@ -1054,7 +1054,7 @@ export default function LandingPage() {
                   <span className="size-2.5 rounded-full bg-emerald-500"></span>
                 </div>
                 <div className="text-xs font-semibold text-slate-300 pl-3 border-l border-white/10 truncate max-w-[170px] sm:max-w-none">
-                  hireX Recruitment OS
+                  InterviewXpert Recruitment OS
                 </div>
               </div>
               <div className="flex items-center gap-2 text-xs">
@@ -1070,7 +1070,7 @@ export default function LandingPage() {
                 <div className="space-y-3">
                   <div className="flex items-center gap-2 text-white font-bold pb-2.5 border-b border-white/10">
                     <HireXMark size={22} />
-                    <span>hireX ATS</span>
+                    <span>InterviewXpert ATS</span>
                   </div>
                   <div className="space-y-1">
                     <div className="px-2.5 py-1.5 rounded-lg bg-white/10 text-white font-semibold flex items-center gap-2">
@@ -1624,10 +1624,10 @@ export default function LandingPage() {
             </div>
             <h2 className="text-2xl sm:text-4xl lg:text-5xl font-black text-[#111215] tracking-tight leading-[1.08]">
               Traditional ATS Creates Work.<br />
-              <span className="text-[#8FB305]">HireX Snab Does It.</span>
+              <span className="text-[#8FB305]">InterviewXpert Does It.</span>
             </h2>
             <p className="text-xs sm:text-sm text-[#575A51] max-w-2xl mx-auto leading-relaxed">
-              See why legacy recruiting software slows hiring teams down, and how HireX Snab automates the repetitive busywork from requisition to signed offer.
+              See why legacy recruiting software slows hiring teams down, and how InterviewXpert automates the repetitive busywork from requisition to signed offer.
             </p>
           </div>
 
@@ -1675,7 +1675,7 @@ export default function LandingPage() {
               </div>
             </div>
 
-            {/* Right Card: HireX Snab ATS (Autonomous Intelligence) */}
+            {/* Right Card: InterviewXpert ATS (Autonomous Intelligence) */}
             <div className="rounded-2xl border border-[#111215] bg-[#111215] text-white p-5 sm:p-6 shadow-2xl space-y-4 relative overflow-hidden">
               <div className="absolute top-0 right-0 size-32 bg-[#D4F82C]/10 rounded-full blur-2xl pointer-events-none"></div>
               <div className="flex items-center justify-between pb-3 border-b border-white/10 relative z-10">
@@ -1683,7 +1683,7 @@ export default function LandingPage() {
                   <div className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#D4F82C]">
                     Autonomous Intelligence
                   </div>
-                  <h3 className="text-base sm:text-lg font-black text-white">HireX Snab ATS</h3>
+                  <h3 className="text-base sm:text-lg font-black text-white">InterviewXpert ATS</h3>
                 </div>
                 <span className="px-2.5 py-1 rounded-full bg-[#D4F82C] text-[#111215] text-[10px] font-black tracking-wide">
                   AI does heavy lifting
@@ -1789,7 +1789,7 @@ export default function LandingPage() {
                       <tr className="border-b border-[#E4E7DC] bg-white">
                         <th className="py-3 px-4 font-bold text-[#73766C] uppercase tracking-wider text-[10px] w-1/4">Capability</th>
                         <th className="py-3 px-4 font-bold text-rose-600 uppercase tracking-wider text-[10px] w-3/8">Traditional ATS</th>
-                        <th className="py-3 px-4 font-bold text-[#111215] uppercase tracking-wider text-[10px] w-3/8 bg-[#F8F9F5]">HireX Snab ATS</th>
+                        <th className="py-3 px-4 font-bold text-[#111215] uppercase tracking-wider text-[10px] w-3/8 bg-[#F8F9F5]">InterviewXpert ATS</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[#E4E7DC]">
@@ -1881,7 +1881,7 @@ export default function LandingPage() {
                 <div className="lg:col-span-7 bg-white rounded-2xl border border-[#E4E7DC] p-5 space-y-4 shadow-sm">
                   <div className="flex items-center justify-between pb-3 border-b border-[#E4E7DC]">
                     <div>
-                      <h3 className="text-sm sm:text-base font-bold text-[#111215]">Time Saved with HireX Snab</h3>
+                      <h3 className="text-sm sm:text-base font-bold text-[#111215]">Time Saved with InterviewXpert</h3>
                       <p className="text-xs text-[#575A51]">Estimates per hiring round, based on typical manual recruiter effort.</p>
                     </div>
                     <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-[#F8F9F5] text-[#111215] border border-[#E4E7DC]">
@@ -1893,7 +1893,7 @@ export default function LandingPage() {
                     <div className="py-3 flex items-center justify-between text-xs">
                       <div className="space-y-0.5">
                         <div className="font-bold text-[#111215]">Create a job post</div>
-                        <div className="text-[11px] text-[#73766C]">Traditional: 30 min → HireX: Seconds</div>
+                        <div className="text-[11px] text-[#73766C]">Traditional: 30 min → InterviewXpert: Seconds</div>
                       </div>
                       <span className="px-2 py-1 rounded-md bg-[#F1F3EB] text-[#111215] font-black font-mono">
                         ~30 min saved
@@ -1903,7 +1903,7 @@ export default function LandingPage() {
                     <div className="py-3 flex items-center justify-between text-xs">
                       <div className="space-y-0.5">
                         <div className="font-bold text-[#111215]">Screen 100 resumes</div>
-                        <div className="text-[11px] text-[#73766C]">Traditional: 5 hrs → HireX: 10 min AI scoring</div>
+                        <div className="text-[11px] text-[#73766C]">Traditional: 5 hrs → InterviewXpert: 10 min AI scoring</div>
                       </div>
                       <span className="px-2 py-1 rounded-md bg-[#D4F82C] text-[#111215] font-black font-mono">
                         ~4.5 hrs saved
@@ -1913,7 +1913,7 @@ export default function LandingPage() {
                     <div className="py-3 flex items-center justify-between text-xs">
                       <div className="space-y-0.5">
                         <div className="font-bold text-[#111215]">Write candidate ads</div>
-                        <div className="text-[11px] text-[#73766C]">Traditional: 45 min → HireX: 1 min AI ads</div>
+                        <div className="text-[11px] text-[#73766C]">Traditional: 45 min → InterviewXpert: 1 min AI ads</div>
                       </div>
                       <span className="px-2 py-1 rounded-md bg-[#F1F3EB] text-[#111215] font-black font-mono">
                         ~44 min saved
@@ -1923,7 +1923,7 @@ export default function LandingPage() {
                     <div className="py-3 flex items-center justify-between text-xs">
                       <div className="space-y-0.5">
                         <div className="font-bold text-[#111215]">Candidate follow-ups</div>
-                        <div className="text-[11px] text-[#73766C]">Traditional: 3 hrs → HireX: Auto WhatsApp alerts</div>
+                        <div className="text-[11px] text-[#73766C]">Traditional: 3 hrs → InterviewXpert: Auto WhatsApp alerts</div>
                       </div>
                       <span className="px-2 py-1 rounded-md bg-[#D4F82C] text-[#111215] font-black font-mono">
                         ~3 hrs saved
@@ -2634,7 +2634,7 @@ export default function LandingPage() {
                     <span className="line-through text-rose-600 font-bold">₹{aiInterviewCalc.manualScreeningCost.toLocaleString('en-IN')}</span>
                   </div>
                   <div className="flex items-center justify-between text-xs">
-                    <span className="text-[#73766C]">hireX Dynamic AI Screening:</span>
+                    <span className="text-[#73766C]">InterviewXpert Dynamic AI Screening:</span>
                     <span className="text-emerald-700 font-black text-sm">₹{aiInterviewCalc.totalCost.toLocaleString('en-IN')} INR</span>
                   </div>
                   <div className="pt-2 border-t border-[#E4E7DC] flex items-center justify-between text-xs font-bold text-[#111215]">
@@ -2899,7 +2899,7 @@ export default function LandingPage() {
                 clarity.
               </h2>
               <p className="text-xs sm:text-sm text-[#575A51] leading-relaxed">
-                Everything you need to know about hireX, setup time, and pricing.
+                Everything you need to know about InterviewXpert, setup time, and pricing.
               </p>
             </div>
 
@@ -2987,7 +2987,7 @@ export default function LandingPage() {
             {/* Col 1: Brand & Enterprise Trust Architecture (2 cols on large) */}
             <div className="sm:col-span-2 lg:col-span-2 space-y-4">
               <div className="mb-2">
-                <Link to="/" className="inline-block" title="hireX Home">
+                <Link to="/" className="inline-block" title="InterviewXpert Home">
                   <HireXLogo size="md" variant="full" />
                 </Link>
               </div>
@@ -3124,7 +3124,7 @@ export default function LandingPage() {
           {/* Giant Typographic Wordmark with hover glow */}
           <div className="py-6 sm:py-8 border-b border-[#E4E7DC] select-none overflow-hidden">
             <div className="text-[12vw] sm:text-[14vw] font-black tracking-tighter leading-none text-[#111215] flex items-center justify-between group cursor-default">
-              <span>hireX</span>
+              <span>InterviewXpert</span>
               <span className="text-[#8FB305] group-hover:translate-x-3 group-hover:-translate-y-3 transition-transform duration-300">↗</span>
             </div>
           </div>
@@ -3230,7 +3230,7 @@ export default function LandingPage() {
                   <div className="p-4 rounded-xl bg-[#F8F9F5] border border-[#E4E7DC] space-y-2">
                     <div className="flex items-center gap-2 text-xs font-bold text-[#111215]">
                       <Brain className="size-4 text-[#8FB305]" />
-                      <span>HireX AI Match Reasoning</span>
+                      <span>InterviewXpert AI Match Reasoning</span>
                     </div>
                     <p className="text-xs text-[#575A51] leading-relaxed">
                       Candidate has strong proficiency in {demoActiveCandidate.skills} with {demoActiveCandidate.experience}. High cultural alignment and short notice period.
@@ -3360,7 +3360,7 @@ export default function LandingPage() {
 
             {/* Drawer Footer Actions */}
             <div className="p-4 border-t border-[#E4E7DC] bg-[#F8F9F5] flex items-center justify-between">
-              <span className="text-xs text-[#73766C]">hireX ATS Live Candidate Preview</span>
+              <span className="text-xs text-[#73766C]">InterviewXpert ATS Live Candidate Preview</span>
               <button
                 type="button"
                 onClick={() => setDemoDrawerOpen(false)}
@@ -3419,7 +3419,7 @@ export default function LandingPage() {
                 </p>
 
                 <form onSubmit={handleLeadSubmit} className="space-y-4">
-                  <input type="hidden" name="_subject" value="New 1-Month Free Demo Inquiry - HireX Snab" />
+                  <input type="hidden" name="_subject" value="New 1-Month Free Demo Inquiry - InterviewXpert" />
 
                   <div>
                     <label className="block text-[11px] font-bold text-[#111215] mb-1">Your Name *</label>

@@ -312,8 +312,8 @@ const LayoutContent: React.FC<{ children?: React.ReactNode }> = ({ children }) =
             </div>
 
             <div className={`geist-small text-center font-medium md:text-right ${showRecruiterSidebar ? 'text-[#6b7280]' : 'text-gray-400 dark:text-gray-600'}`}>
-              <div>&copy; 2026 SNAB hireX. All rights reserved.</div>
-              <div className="text-[10px] opacity-75">Developed by <a href="https://snab.co.in" target="_blank" rel="noopener noreferrer" className={showRecruiterSidebar ? 'text-[#a1a1a1] hover:text-white' : 'text-primary hover:underline'}>SNAB Innovations</a></div>
+              <div>&copy; 2026 InterviewXpert. All rights reserved.</div>
+              <div className="text-[10px] opacity-75">Powered by <a href="https://snab.co.in" target="_blank" rel="noopener noreferrer" className={showRecruiterSidebar ? 'text-[#a1a1a1] hover:text-white' : 'text-primary hover:underline'}>SNAB Innovations</a></div>
             </div>
           </div>
             </div>

@@ -5,7 +5,7 @@ import HireXLogo from '../components/HireXLogo';
 
 export default function SecurityWhitepaper() {
   useEffect(() => {
-    document.title = "Security Architecture & Whitepaper | hireX by SNAB";
+    document.title = "Security Architecture & Whitepaper | InterviewXpert";
     window.scrollTo(0, 0);
   }, []);
 
@@ -41,7 +41,7 @@ export default function SecurityWhitepaper() {
               Security Architecture & Practices
             </h1>
             <p className="text-sm text-[#575A51] leading-relaxed">
-              Technical documentation detailing how hireX protects candidate information, access controls, encrypted transport, and platform resilience.
+              Technical documentation detailing how InterviewXpert protects candidate information, access controls, encrypted transport, and platform resilience.
             </p>
             <div className="text-xs text-[#73766C]">
               Version 2.8 • Published by SNAB Technologies Private Limited, Nashik, Maharashtra, India
@@ -86,7 +86,7 @@ export default function SecurityWhitepaper() {
             <section className="space-y-2">
               <h2 className="text-base font-black text-[#111215]">1. Data Encryption Standards</h2>
               <p>
-                hireX implements end-to-end security protections across the entire application lifecycle:
+                InterviewXpert implements end-to-end security protections across the entire application lifecycle:
               </p>
               <ul className="list-disc pl-5 space-y-1">
                 <li><strong>Encryption in Transit:</strong> HTTPS with strict HSTS policies. All HTTP connections are automatically redirected to TLS encrypted channels.</li>

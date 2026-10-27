@@ -1220,7 +1220,7 @@ export const CandidateVoiceInterview: React.FC = () => {
       <header className="sticky top-0 z-50 bg-[#F8F9F5]/90 backdrop-blur-md border-b border-[#E4E7DC] px-4 py-3.5 sm:px-8">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Link to="/" className="group inline-flex items-center" title="hireX - AI Recruitment Platform">
+            <Link to="/" className="group inline-flex items-center" title="InterviewXpert - AI Recruitment Platform">
               <HireXLogo size="sm" variant="full" />
             </Link>
             <div className="hidden sm:flex items-center gap-1.5 pl-3 border-l border-[#E4E7DC] text-[11px] font-medium text-[#73766C]">
@@ -1240,7 +1240,7 @@ export const CandidateVoiceInterview: React.FC = () => {
                 {voiceInterview?.title || 'Screening Call'}
               </div>
               <div className="text-[11px] text-[#73766C] leading-tight">
-                {voiceInterview?.companyName || 'SNAB hireX'}
+                {voiceInterview?.companyName || 'InterviewXpert'}
               </div>
             </div>
 
@@ -1828,7 +1828,7 @@ export const CandidateVoiceInterview: React.FC = () => {
 
       {/* Footer (Matching Landing Page Footer) */}
       <footer className="border-t border-[#E4E7DC] py-4 text-center text-xs font-medium text-[#73766C] bg-[#F8F9F5] relative z-10">
-        Powered by SNAB hireX AI Voice Screener • Secure & Audio-Encrypted
+        Powered by InterviewXpert AI Voice Screener • Secure & Audio-Encrypted
       </footer>
     </div>
   );

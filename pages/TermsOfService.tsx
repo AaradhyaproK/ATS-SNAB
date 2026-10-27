@@ -5,7 +5,7 @@ import HireXLogo from '../components/HireXLogo';
 
 export default function TermsOfService() {
   useEffect(() => {
-    document.title = "Terms of Service | hireX by SNAB";
+    document.title = "Terms of Service | InterviewXpert";
     window.scrollTo(0, 0);
   }, []);
 
@@ -67,7 +67,7 @@ export default function TermsOfService() {
             <section className="space-y-2">
               <h2 className="text-base font-black text-[#111215]">3. Authorized Use of Platform</h2>
               <p>
-                hireX provides recruitment automation, applicant tracking, candidate scoring, and communication tools. You agree:
+                InterviewXpert provides recruitment automation, applicant tracking, candidate scoring, and communication tools. You agree:
               </p>
               <ul className="list-disc pl-5 space-y-1">
                 <li>To use the platform solely for lawful recruiting, hiring, and employment purposes.</li>
@@ -94,7 +94,7 @@ export default function TermsOfService() {
             <section className="space-y-2">
               <h2 className="text-base font-black text-[#111215]">6. Limitation of Liability</h2>
               <p>
-                hireX provides AI recommendations, fit scores, and screening transcriptions as decision-support tools. Final hiring, interview, and employment decisions are made entirely by employers. SNAB Technologies Private Limited shall not be liable for any indirect, incidental, or consequential damages resulting from employment outcomes.
+                InterviewXpert provides AI recommendations, fit scores, and screening transcriptions as decision-support tools. Final hiring, interview, and employment decisions are made entirely by employers. SNAB Technologies Private Limited shall not be liable for any indirect, incidental, or consequential damages resulting from employment outcomes.
               </p>
             </section>
 

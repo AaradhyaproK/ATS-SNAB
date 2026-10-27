@@ -583,7 +583,7 @@ export function buildWhatsAppInviteText(params: {
   const context: Record<string, string> = {
     candidate_name: candidateName,
     job_title: jobTitle,
-    company_name: options?.companyName || 'SNAB hireX',
+    company_name: options?.companyName || 'InterviewXpert',
     interview_link: interviewLink,
     access_code: accessCode,
     interview_deadline: '',

@@ -129,7 +129,7 @@ export function getDesignerEmailTemplate(
   const context: Record<string, string> = {
     candidate_name: candidateName,
     job_title: jobTitle,
-    company_name: options?.companyName || 'SNAB hireX',
+    company_name: options?.companyName || 'InterviewXpert',
     interview_link: interviewLink,
     access_code: accessCode,
     interview_deadline: '',
@@ -157,8 +157,8 @@ export function getDesignerEmailTemplate(
   const bodyText = custom?.body
     ? renderTemplateText(custom.body, context)
     : (isReminder
-        ? `This is a friendly reminder that you have been <strong>shortlisted for ${jobTitle}</strong> at <strong>${options?.companyName || 'SNAB hireX'}</strong>, but your AI Video Interview is still pending.<br/><br/>Please complete your interview at your convenience to move forward in the selection process.`
-        : `Congratulations! 🎉<br/><br/>We are excited to inform you that your profile has been <strong>shortlisted for this interview round</strong> for the <strong>${jobTitle}</strong> role at <strong>${options?.companyName || 'SNAB hireX'}</strong>.<br/><br/>You can complete your 15-minute AI Video Interview anytime from your phone or laptop at your convenience.`);
+        ? `This is a friendly reminder that you have been <strong>shortlisted for ${jobTitle}</strong> at <strong>${options?.companyName || 'InterviewXpert'}</strong>, but your AI Video Interview is still pending.<br/><br/>Please complete your interview at your convenience to move forward in the selection process.`
+        : `Congratulations! 🎉<br/><br/>We are excited to inform you that your profile has been <strong>shortlisted for this interview round</strong> for the <strong>${jobTitle}</strong> role at <strong>${options?.companyName || 'InterviewXpert'}</strong>.<br/><br/>You can complete your 15-minute AI Video Interview anytime from your phone or laptop at your convenience.`);
 
   const ctaText = custom?.ctaButtonText
     ? renderTemplateText(custom.ctaButtonText, context)
@@ -220,7 +220,7 @@ export function getDesignerEmailTemplate(
           <tr>
             <td style="padding:24px 32px;background-color:#ffffff;border-bottom:1px solid #e2e8f0;text-align:left;">
               <div style="display:flex;align-items:center;justify-content:space-between;">
-                <span style="font-size:22px;font-weight:900;color:#0f172a;letter-spacing:-0.5px;font-family:sans-serif;">SNAB hireX</span>
+                <span style="font-size:22px;font-weight:900;color:#0f172a;letter-spacing:-0.5px;font-family:sans-serif;">InterviewXpert</span>
                 <span style="display:inline-block;padding:4px 10px;background-color:#f8fafc;border:1px solid #cbd5e1;border-radius:4px;font-size:11px;font-weight:700;letter-spacing:0.5px;color:#334155;text-transform:uppercase;float:right;margin-top:6px;">
                   ${badgeText}
                 </span>
@@ -314,7 +314,7 @@ export function getDesignerEmailTemplate(
                 ${footerText}
               </p>
               <p style="margin:0;font-size:11px;color:#94a3b8;">
-                &copy; ${new Date().getFullYear()} SNAB hireX Recruitment Platform. All rights reserved.
+                &copy; ${new Date().getFullYear()} InterviewXpert Recruitment Platform. All rights reserved.
               </p>
             </td>
           </tr>
@@ -445,7 +445,7 @@ export async function sendInterviewInvitations(
       candidate_name: candidateName,
       candidate_email: email,
       job_title: jobTitle,
-      company_name: options?.companyName || 'SNAB hireX',
+      company_name: options?.companyName || 'InterviewXpert',
       interview_link: candidateLink,
       access_code: accessCode,
       location: options?.location || 'As specified in Job Description',
@@ -461,7 +461,7 @@ export async function sendInterviewInvitations(
 
     const subject = activeTemplate?.subject
       ? renderTemplateText(activeTemplate.subject, context)
-      : `${isReminder ? 'Reminder: ' : ''}Interview Invitation — ${jobTitle} | ${options?.companyName || 'SNAB hireX'}`;
+      : `${isReminder ? 'Reminder: ' : ''}Interview Invitation — ${jobTitle} | ${options?.companyName || 'InterviewXpert'}`;
 
     const result = await sendSingleEmail(email, candidateName, subject, htmlContent);
 

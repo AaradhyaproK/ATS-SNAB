@@ -345,7 +345,7 @@ export const VoiceInterviewReport: React.FC = () => {
             <HireXLogo size="md" variant="full" />
             <div>
               <h1 className="text-xl font-black text-black tracking-tight uppercase">AI Interview Assessment Dossier</h1>
-              <p className="text-[11px] text-neutral-600 font-mono">Confidential Candidate Evaluation Report · Verified by HireX Autonomous Recruiter</p>
+              <p className="text-[11px] text-neutral-600 font-mono">Confidential Candidate Evaluation Report · Verified by InterviewXpert Autonomous Recruiter</p>
             </div>
           </div>
           <div className="text-right text-[11px] font-mono text-neutral-700">
@@ -463,7 +463,7 @@ export const VoiceInterviewReport: React.FC = () => {
                 </h2>
                 <div className="text-xs text-[#575A51] font-medium flex items-center gap-1.5 mt-1">
                   <Building size={13} className="text-[#73766C]" />
-                  <span>{interview?.companyName || 'SNAB HireX'}</span>
+                  <span>{interview?.companyName || 'InterviewXpert'}</span>
                   {interview?.location && (
                     <span className="text-[#73766C]">• {interview.location}</span>
                   )}
@@ -1044,7 +1044,7 @@ export const VoiceInterviewReport: React.FC = () => {
         <div className="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2 font-bold text-[#111215]">
             <HireXMark className="h-5 w-auto" />
-            <span>SNAB HireX Automated Interview Intelligence</span>
+            <span>InterviewXpert Automated Interview Intelligence</span>
           </div>
           <div className="flex items-center gap-4 text-xs font-mono font-medium text-[#73766C]">
             <span>Report ID: {response.id}</span>

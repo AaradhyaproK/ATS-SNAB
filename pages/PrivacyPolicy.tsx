@@ -5,7 +5,7 @@ import HireXLogo from '../components/HireXLogo';
 
 export default function PrivacyPolicy() {
   useEffect(() => {
-    document.title = "Privacy Policy | hireX by SNAB";
+    document.title = "Privacy Policy | InterviewXpert";
     window.scrollTo(0, 0);
   }, []);
 

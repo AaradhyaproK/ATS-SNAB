@@ -82,7 +82,7 @@ export const DYNAMIC_VARIABLES = [
   { tag: '{{candidate_email}}', label: 'Candidate Email', example: 'rahul.sharma@example.com' },
   { tag: '{{candidate_phone}}', label: 'Candidate Phone', example: '+91 9876543210' },
   { tag: '{{job_title}}', label: 'Job Title / Post', example: 'Senior Software Engineer' },
-  { tag: '{{company_name}}', label: 'Company / Client Name', example: 'SNAB hireX' },
+  { tag: '{{company_name}}', label: 'Company / Client Name', example: 'InterviewXpert' },
   { tag: '{{interview_link}}', label: 'Assessment Link', example: 'https://app.snabhirex.com/interview/inv-12345' },
   { tag: '{{access_code}}', label: 'Access Code', example: 'SH-8921' },
   { tag: '{{interview_code}}', label: 'Interview Code (Alias)', example: 'SH-8921' },
@@ -313,7 +313,7 @@ export function renderTemplateText(templateText: string, context: Record<string,
     .replace(/\{\{candidate_email\}\}/gi, cleanContext.candidate_email || '')
     .replace(/\{\{candidate_phone\}\}/gi, cleanContext.candidate_phone || '')
     .replace(/\{\{job_title\}\}/gi, cleanContext.job_title || 'Position')
-    .replace(/\{\{company_name\}\}/gi, cleanContext.company_name || 'SNAB hireX')
+    .replace(/\{\{company_name\}\}/gi, cleanContext.company_name || 'InterviewXpert')
     .replace(/\{\{interview_link\}\}/gi, cleanContext.interview_link || '#')
     .replace(/\{\{access_code\}\}/gi, cleanContext.access_code || cleanContext.interview_code || 'DX-8921')
     .replace(/\{\{interview_code\}\}/gi, cleanContext.interview_code || cleanContext.access_code || 'DX-8921')
