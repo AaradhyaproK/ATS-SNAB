@@ -149,6 +149,15 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
   const [autofetchError, setAutofetchError] = useState<string | null>(null);
   const [autofetchNotFound, setAutofetchNotFound] = useState(false);
   const [targetJobData, setTargetJobData] = useState<any | null>(null);
+  const targetJobId = useMemo(() => {
+    try {
+      const hashPart = window.location.hash.includes('?') ? window.location.hash.split('?')[1] : '';
+      const params = new URLSearchParams(location.search || hashPart || window.location.search);
+      return params.get('job') || params.get('jobId') || '';
+    } catch {
+      return '';
+    }
+  }, [location.search]);
   const [targetJobLoading, setTargetJobLoading] = useState(false);
   const [showTargetJdModal, setShowTargetJdModal] = useState(false);
   const [isJdExpanded, setIsJdExpanded] = useState(false);
@@ -1272,9 +1281,6 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
     if (hasDismissedJobModalRef.current) return;
     if (!candidate) return;
 
-    const hashPart = window.location.hash.includes('?') ? window.location.hash.split('?')[1] : '';
-    const params = new URLSearchParams(location.search || hashPart || window.location.search);
-    const targetJobId = params.get('job') || params.get('jobId');
     if (!targetJobId) return;
 
     if (selectedJobModal?.job?.id === targetJobId) return;
@@ -2318,7 +2324,6 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
   if (!candidate) {
     const hashPart = window.location.hash.includes('?') ? window.location.hash.split('?')[1] : '';
     const urlParams = new URLSearchParams(location.search || hashPart || window.location.search);
-    const targetJobId = urlParams.get('job') || urlParams.get('jobId');
 
     return (
       <div className="min-h-screen bg-[#F8F9F5] dark:bg-[#0D0E11] text-[#111215] dark:text-[#F8F9F5] flex flex-col justify-between selection:bg-[#D4F82C] selection:text-[#111215] relative overflow-hidden transition-colors duration-300 font-sans">
