@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { addDoc, collection, doc, getDoc, getDocs, orderBy, query, serverTimestamp, updateDoc } from 'firebase/firestore';
 import { db, auth } from '../services/firebase';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
@@ -21,12 +21,21 @@ import {
   Target,
   Layers,
   CheckCircle,
-  ArrowRight
+  ArrowRight,
+  Sliders,
+  Lightbulb,
+  ChevronDown,
+  ChevronUp,
+  Settings2,
+  Paperclip,
+  X,
+  FileUp
 } from 'lucide-react';
 import { grokGenerateJson } from '../services/grokService';
 import { useMessageBox } from '../components/MessageBox';
 import { useCompanyRateLimits } from '../hooks/useRecruiterRateLimits';
 import { getRateLimitReachedMessage, isRateLimitReached, RateLimitResource } from '../services/rateLimitService';
+import { readResumeText } from '../services/resumeService';
 
 const CreateTest: React.FC = () => {
   const navigate = useNavigate();
@@ -57,8 +66,79 @@ const CreateTest: React.FC = () => {
   const activeLimitResource: RateLimitResource = type === 'coding' ? 'codingAssessments' : 'assessments';
   const activeLimitReached = !isEditing && isRateLimitReached(rateLimitStatus, activeLimitResource);
 
-  const [manualQ, setManualQ] = useState({ question: '', options: ['', '', '', ''], correct: 0 });
-  const [manualCodeQ, setManualCodeQ] = useState({ title: '', description: '', testCases: '' });
+  // AI Question Generator Controls & Customization
+  const [aiDifficulty, setAiDifficulty] = useState<'mixed' | 'easy' | 'medium' | 'hard'>('mixed');
+  const [aiQuestionType, setAiQuestionType] = useState<string>('mixed');
+  const [aiSeniority, setAiSeniority] = useState<'entry' | 'mid' | 'senior' | 'lead'>('mid');
+  const [aiCount, setAiCount] = useState<number>(initialType === 'coding' ? 1 : 5);
+  const [aiCustomNotes, setAiCustomNotes] = useState<string>('');
+  const [aiCodingLang, setAiCodingLang] = useState<string>('Any');
+  const [showAdvancedAi, setShowAdvancedAi] = useState<boolean>(true);
+
+  // Attached PDF / Reference Document for AI Generation
+  const pdfInputRef = useRef<HTMLInputElement>(null);
+  const [pdfFile, setPdfFile] = useState<File | null>(null);
+  const [pdfName, setPdfName] = useState<string>('');
+  const [pdfText, setPdfText] = useState<string>('');
+  const [parsingPdf, setParsingPdf] = useState<boolean>(false);
+
+  const handlePdfUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const lowerName = file.name.toLowerCase();
+    if (!lowerName.endsWith('.pdf') && !lowerName.endsWith('.docx') && !lowerName.endsWith('.txt')) {
+      showError('Please upload a PDF (.pdf), Word document (.docx), or text file (.txt).');
+      return;
+    }
+
+    if (file.size > 20 * 1024 * 1024) {
+      showError('File size exceeds 20MB limit.');
+      return;
+    }
+
+    setParsingPdf(true);
+    try {
+      const extracted = await readResumeText(file, file.name);
+      if (!extracted || extracted.trim().length < 15) {
+        throw new Error('No readable text found in document. Please verify the PDF is not a scanned image.');
+      }
+      setPdfFile(file);
+      setPdfName(file.name);
+      setPdfText(extracted);
+      showSuccess(`Attached "${file.name}" (~${Math.round(extracted.length / 5)} words extracted). AI will strictly generate questions from this document.`);
+    } catch (err: any) {
+      console.error('Document parse error:', err);
+      showError(err?.message || 'Failed to extract text from document. Please try another file.');
+    } finally {
+      setParsingPdf(false);
+      if (pdfInputRef.current) pdfInputRef.current.value = '';
+    }
+  };
+
+  const handleRemovePdf = () => {
+    setPdfFile(null);
+    setPdfName('');
+    setPdfText('');
+    if (pdfInputRef.current) pdfInputRef.current.value = '';
+  };
+
+  const [manualQ, setManualQ] = useState({
+    question: '',
+    options: ['', '', '', ''],
+    correct: 0,
+    difficulty: 'medium',
+    questionType: 'theoretical',
+    explanation: '',
+  });
+  const [manualCodeQ, setManualCodeQ] = useState({
+    title: '',
+    description: '',
+    testCases: '',
+    difficulty: 'medium',
+    questionType: 'dsa',
+    hints: '',
+  });
 
   useEffect(() => {
     if (!editId) {
@@ -139,37 +219,153 @@ const CreateTest: React.FC = () => {
     if (nextType === type) return;
     setType(nextType);
     setQuestions([]);
-    setManualQ({ question: '', options: ['', '', '', ''], correct: 0 });
-    setManualCodeQ({ title: '', description: '', testCases: '' });
+    setManualQ({
+      question: '',
+      options: ['', '', '', ''],
+      correct: 0,
+      difficulty: 'medium',
+      questionType: 'theoretical',
+      explanation: '',
+    });
+    setManualCodeQ({
+      title: '',
+      description: '',
+      testCases: '',
+      difficulty: 'medium',
+      questionType: 'dsa',
+      hints: '',
+    });
+    setAiCount(nextType === 'coding' ? 1 : 5);
+    setAiQuestionType('mixed');
   };
 
   const handleAiGenerate = async () => {
     const trimmedPrompt = aiPrompt.trim();
     if (!trimmedPrompt) {
-      showError('Please enter a topic or subject prompt.');
+      showError('Please enter a role, topic, or tech stack.');
       return;
     }
 
     setGenerating(true);
     try {
-      const prompt = type === 'aptitude'
-        ? `Generate 5 aptitude multiple choice questions about "${trimmedPrompt}". Return ONLY a JSON object. Schema: {"questions":[{"question":"string","options":["string","string","string","string"],"correctIndex":number}]}`
-        : `Generate 1 coding problem about "${trimmedPrompt}". Return ONLY a JSON object. Schema: {"questions":[{"title":"string","description":"string","testCases":"string"}]}`;
+      const count = Math.max(1, Math.min(aiCount, type === 'coding' ? 5 : 20));
+
+      const difficultyDesc = {
+        mixed: 'Diverse difficulty mix (~30% easy fundamentals, ~50% medium problem solving, ~20% hard tricky/advanced)',
+        easy: 'Difficulty: Easy (Foundations, syntax, core definitions, basic logic)',
+        medium: 'Difficulty: Medium (Real-world usage, edge cases, intermediate problem solving)',
+        hard: 'Difficulty: Hard (Advanced internal mechanisms, corner cases, deep optimization, tricky pitfalls)',
+      }[aiDifficulty];
+
+      const seniorityDesc = {
+        entry: 'Target Candidate: Junior / Entry-Level (0-2 years experience)',
+        mid: 'Target Candidate: Mid-Level Engineer (2-5 years experience)',
+        senior: 'Target Candidate: Senior Engineer (5-8 years experience)',
+        lead: 'Target Candidate: Principal / Staff / Tech Lead (8+ years experience)',
+      }[aiSeniority];
+
+      const typeDescAptitude = {
+        mixed: 'Question Style: Balanced combination of conceptual/theoretical questions, code output/debugging questions, and scenario-based architecture questions',
+        theoretical: 'Question Style: Theoretical concepts, terminology, language specifications, and architecture theory',
+        practical: 'Question Style: Practical code analysis, "What is the output?", bug identification, and snippet debugging',
+        scenario: 'Question Style: Real-world engineering scenarios, design decisions, performance bottlenecks, and architectural trade-offs',
+        aptitude: 'Question Style: Analytical logic, quantitative aptitude, algorithmic reasoning, and problem solving',
+      }[aiQuestionType] || 'Question Style: High-quality technical assessment';
+
+      const typeDescCoding = {
+        mixed: 'Problem Style: Balanced practical and algorithmic programming challenges',
+        dsa: 'Problem Style: Classic Data Structures & Algorithms (Arrays, Trees, Graphs, Dynamic Programming, Sorting)',
+        practical: 'Problem Style: Practical data transformation, API payload validation, business logic implementation',
+        bugfix: 'Problem Style: Refactoring and fixing broken algorithms or subtle logic flaws',
+        system_design: 'Problem Style: Low-level Object-Oriented design / in-memory data store (e.g., LRU Cache, Rate Limiter)',
+      }[aiQuestionType] || 'Problem Style: Practical coding challenges';
+
+      const strictNotes = aiCustomNotes.trim()
+        ? `\nCRITICAL MANDATORY INSTRUCTION FROM RECRUITER (STRICT CONSTRAINT): Only generate questions that strictly satisfy these requirements: "${aiCustomNotes.trim()}". Do NOT deviate from or ask anything outside these instructions.`
+        : '';
+
+      const pdfConstraint = pdfText.trim()
+        ? `\nCRITICAL REFERENCE MATERIAL (${pdfName || 'Attached Document / Syllabus'}):
+The recruiter has attached a reference syllabus / specification document. You MUST formulate questions directly from the concepts, APIs, topics, and curriculum detailed in this source material:
+"""
+${pdfText.slice(0, 4500)}
+"""
+Prioritize the topics in this attached material. Do NOT ask questions on topics that contradict or fall outside this provided material.`
+        : '';
+
+      const codingLangConstraint =
+        type === 'coding' && aiCodingLang !== 'Any'
+          ? `\nLanguage focus: Formulate problems and sample test cases tailored to ${aiCodingLang}.`
+          : '';
+
+      const prompt =
+        type === 'aptitude'
+          ? `Generate exactly ${count} multiple choice questions about "${trimmedPrompt}".
+Requirements:
+- ${difficultyDesc}
+- ${seniorityDesc}
+- ${typeDescAptitude}${codingLangConstraint}${strictNotes}${pdfConstraint}
+- Provide 4 distinct options per question. Only ONE must be correct.
+- Ensure options are plausible and prevent obvious giveaways.
+- Keep question text and explanations concise and direct (1-2 sentences max).
+- Do NOT use unescaped double quotes or raw newlines inside JSON strings.
+
+Return ONLY a valid JSON object matching this schema:
+{
+  "questions": [
+    {
+      "question": "string",
+      "options": ["string", "string", "string", "string"],
+      "correctIndex": 0,
+      "difficulty": "easy" | "medium" | "hard",
+      "questionType": "theoretical" | "practical" | "scenario" | "aptitude",
+      "explanation": "string"
+    }
+  ]
+}`
+          : `Generate exactly ${count} coding problem(s) about "${trimmedPrompt}".
+Requirements:
+- ${difficultyDesc}
+- ${seniorityDesc}
+- ${typeDescCoding}${codingLangConstraint}${strictNotes}${pdfConstraint}
+- Include a clear title, complete problem statement with constraints and expected complexity, and formatted sample test cases with inputs and outputs.
+- Keep problem description and hints concise and direct.
+- Do NOT use unescaped double quotes or raw newlines inside JSON strings.
+
+Return ONLY a valid JSON object matching this schema:
+{
+  "questions": [
+    {
+      "title": "string",
+      "description": "string",
+      "testCases": "string",
+      "difficulty": "easy" | "medium" | "hard",
+      "questionType": "dsa" | "practical" | "bugfix" | "system_design",
+      "hints": "string"
+    }
+  ]
+}`;
+
+      const tokenBudget = Math.min(8192, Math.max(2048, count * (type === 'aptitude' ? 450 : 1200)));
 
       const parsed = await grokGenerateJson<{ questions?: any[]; problems?: any[] }>(
-        'You are an expert assessment generator. Return only valid JSON.',
+        'You are a world-class technical assessment author and principal interviewer. Return only clean, valid JSON without markdown wrapping. Never leave strings unterminated.',
         prompt,
-        0.6,
-        type === 'aptitude' ? 1200 : 800
+        0.5,
+        tokenBudget
       );
+
       const generated: any[] = parsed.questions || parsed.problems || [];
-      if (!Array.isArray(generated) || generated.length === 0) throw new Error('No questions returned');
+      if (!Array.isArray(generated) || generated.length === 0) {
+        throw new Error('No valid questions could be generated. Please try again with a more specific topic.');
+      }
+
       setQuestions((currentQuestions) => [...currentQuestions, ...generated]);
-      showSuccess(`Successfully generated ${generated.length} question(s).`);
-      setAiPrompt('');
-    } catch (error) {
+      showSuccess(`Successfully generated ${generated.length} question(s) into your Question Bank.`);
+    } catch (error: any) {
       console.error('AI Error:', error);
-      showError('Failed to generate questions. Please try again.');
+      const errorMsg = error?.message || 'Failed to generate questions. Please try again.';
+      showError(errorMsg);
     } finally {
       setGenerating(false);
     }
@@ -190,9 +386,19 @@ const CreateTest: React.FC = () => {
           question: manualQ.question.trim(),
           options: manualQ.options.map(option => option.trim()),
           correctIndex: Number(manualQ.correct),
+          difficulty: manualQ.difficulty || 'medium',
+          questionType: manualQ.questionType || 'theoretical',
+          explanation: manualQ.explanation?.trim() || '',
         },
       ]);
-      setManualQ({ question: '', options: ['', '', '', ''], correct: 0 });
+      setManualQ({
+        question: '',
+        options: ['', '', '', ''],
+        correct: 0,
+        difficulty: 'medium',
+        questionType: 'theoretical',
+        explanation: '',
+      });
       showSuccess('Question added to bank.');
       return;
     }
@@ -208,9 +414,19 @@ const CreateTest: React.FC = () => {
         title: manualCodeQ.title.trim(),
         description: manualCodeQ.description.trim(),
         testCases: manualCodeQ.testCases.trim(),
+        difficulty: manualCodeQ.difficulty || 'medium',
+        questionType: manualCodeQ.questionType || 'dsa',
+        hints: manualCodeQ.hints?.trim() || '',
       },
     ]);
-    setManualCodeQ({ title: '', description: '', testCases: '' });
+    setManualCodeQ({
+      title: '',
+      description: '',
+      testCases: '',
+      difficulty: 'medium',
+      questionType: 'dsa',
+      hints: '',
+    });
     showSuccess('Coding problem added to bank.');
   };
 
@@ -681,24 +897,45 @@ const CreateTest: React.FC = () => {
               </div>
             </section>
 
-            {/* SECTION 3: AI Question Generation */}
+            {/* SECTION 3: AI Question Generator */}
             <section className="rounded-3xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] p-6 sm:p-8 shadow-xs space-y-6">
-              <div className="flex items-center justify-between pb-4 border-b border-[#E4E7DC] dark:border-white/10">
-                <div className="flex items-center gap-2.5">
-                  <div className="size-8 rounded-xl bg-[#D4F82C] text-[#111215] flex items-center justify-center font-black shadow-2xs">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-[#E4E7DC] dark:border-white/10 gap-3">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="size-8 rounded-xl bg-[#D4F82C] text-[#111215] flex items-center justify-center font-black shadow-2xs shrink-0">
                     <Wand2 size={16} />
                   </div>
-                  <div>
-                    <h2 className="text-base font-bold text-[#111215] dark:text-[#F8F9F5]">AI Question Generator</h2>
-                    <p className="text-xs text-[#73766C] dark:text-neutral-400">Instant generation tailored to role tech stack or skills</p>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h2 className="text-base font-bold text-[#111215] dark:text-[#F8F9F5]">AI Question Generator</h2>
+                      <span className="px-2 py-0.5 rounded-full bg-[#D4F82C]/20 border border-[#D4F82C]/40 text-[10px] font-mono font-bold text-[#111215] dark:text-[#D4F82C]">
+                        Smart Engine
+                      </span>
+                    </div>
+                    <p className="text-xs text-[#73766C] dark:text-neutral-400">
+                      Tailored generation with difficulty, question types, seniority & strict custom notes
+                    </p>
                   </div>
                 </div>
-                <span className="px-2.5 py-1 rounded-full bg-[#F1F3EB] dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 text-[10px] font-mono font-bold text-[#8FB305] dark:text-[#D4F82C]">
-                  Smart Draft
-                </span>
+                <button
+                  type="button"
+                  onClick={() => setShowAdvancedAi(!showAdvancedAi)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#F1F3EB] dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 text-xs font-bold text-[#575A51] dark:text-neutral-300 hover:text-[#111215] dark:hover:text-white transition-all cursor-pointer self-start sm:self-auto shrink-0"
+                >
+                  <Sliders size={13} />
+                  <span>{showAdvancedAi ? 'Hide Settings' : 'Customize AI'}</span>
+                  {showAdvancedAi ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                </button>
               </div>
 
-              <div className="space-y-4">
+              {/* Primary Search / Topic Input Bar */}
+              <div className="space-y-3">
+                <label className={labelClass}>
+                  <span className="flex items-center gap-1.5">
+                    <Bot size={14} className="text-[#8FB305] dark:text-[#D4F82C]" />
+                    <span>Role, Tech Stack, or Topic Prompt</span>
+                  </span>
+                  <span className="text-[11px] text-[#73766C] font-normal">Core skill to assess</span>
+                </label>
                 <div className="flex flex-col sm:flex-row gap-2.5">
                   <div className="relative flex-1">
                     <Bot size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#73766C]" />
@@ -706,7 +943,11 @@ const CreateTest: React.FC = () => {
                       type="text"
                       value={aiPrompt}
                       onChange={event => setAiPrompt(event.target.value)}
-                      placeholder={type === 'aptitude' ? 'e.g. React 19 hooks, rendering cycle, TypeScript generics' : 'e.g. Binary Search & Tree Traversal in Python'}
+                      placeholder={
+                        type === 'aptitude'
+                          ? 'e.g. React 19 Hooks & Server Components, TypeScript Generics, or SQL Optimization'
+                          : 'e.g. Two Pointers, Dynamic Programming, Tree Traversal, or LRU Cache'
+                      }
                       className={`${inputClass} pl-11`}
                       onKeyDown={e => {
                         if (e.key === 'Enter') {
@@ -725,31 +966,34 @@ const CreateTest: React.FC = () => {
                     {generating ? (
                       <>
                         <div className="size-4 rounded-full border-2 border-white dark:border-[#111215] border-t-transparent animate-spin" />
-                        <span>Generating...</span>
+                        <span>Generating {aiCount}...</span>
                       </>
                     ) : (
                       <>
                         <Sparkles size={15} />
-                        <span>Generate with AI</span>
+                        <span>Generate {aiCount} {type === 'aptitude' ? 'MCQ(s)' : 'Problem(s)'}</span>
                       </>
                     )}
                   </button>
                 </div>
 
-                {/* Quick Prompts Suggestions */}
+                {/* Quick Topic Suggestions */}
                 <div className="flex items-center flex-wrap gap-1.5 pt-1">
                   <span className="text-[11px] font-bold text-[#73766C] mr-1">Suggestions:</span>
                   {(type === 'aptitude' ? [
-                    'React Hooks & Virtual DOM',
-                    'JavaScript ES6+ & Async/Await',
-                    'Logical Aptitude & Problem Solving',
-                    'SQL Joins & Indexing',
-                    'RESTful API Architecture',
+                    'React 19 & Next.js App Router',
+                    'JavaScript ES6+ & Event Loop',
+                    'TypeScript Types & Generics',
+                    'Python & FastAPI / Django',
+                    'SQL Indexing & Query Tuning',
+                    'System Architecture & REST',
                   ] : [
-                    'Array Two-Pointer Problems',
-                    'String Parsing & Regex',
-                    'Dynamic Programming Basics',
-                    'Stack & Queue Implementation',
+                    'Two Pointers & Sliding Window',
+                    'Binary Search & Tree Traversals',
+                    'Dynamic Programming & Memoization',
+                    'LRU Cache & Low-Level Design',
+                    'String Parsing & Regex Matrix',
+                    'Graph BFS / DFS & Shortest Path',
                   ]).map((suggestion) => (
                     <button
                       key={suggestion}
@@ -762,6 +1006,329 @@ const CreateTest: React.FC = () => {
                   ))}
                 </div>
               </div>
+
+              {/* Granular Generator Controls Section */}
+              {/* Granular Generator Controls Section */}
+              {showAdvancedAi && (
+                <div className="p-5 sm:p-6 rounded-2xl bg-[#F8F9F5] dark:bg-[#101114] border border-[#E4E7DC] dark:border-white/10 space-y-6 animate-in fade-in duration-200">
+                  {/* Section Title */}
+                  <div className="flex items-center justify-between pb-3.5 border-b border-[#E4E7DC] dark:border-white/10">
+                    <div className="flex items-center gap-2.5">
+                      <div className="size-6 rounded-lg bg-white dark:bg-white/10 border border-[#E4E7DC] dark:border-white/10 flex items-center justify-center text-[#8FB305] dark:text-[#D4F82C] shrink-0">
+                        <Sliders size={13} />
+                      </div>
+                      <div>
+                        <h3 className="text-xs font-bold text-[#111215] dark:text-[#F8F9F5] tracking-tight">
+                          Generation Parameters
+                        </h3>
+                        <p className="text-[11px] text-[#73766C] dark:text-neutral-400">
+                          Tailor question challenge depth, evaluation style, and target level
+                        </p>
+                      </div>
+                    </div>
+                    <span className="px-2.5 py-0.5 rounded-full bg-white dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 text-[10px] font-mono font-bold uppercase tracking-wider text-[#73766C] dark:text-neutral-400">
+                      Tuning
+                    </span>
+                  </div>
+
+                  {/* 1. Difficulty Level (Segmented Button Group) */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-[#111215] dark:text-[#F8F9F5]">
+                        Difficulty Level
+                      </label>
+                      <span className="text-[10px] text-[#73766C] dark:text-neutral-400 font-medium">
+                        {aiDifficulty === 'mixed' && 'Balanced (~30% Easy, ~50% Med, ~20% Hard)'}
+                        {aiDifficulty === 'easy' && 'Foundations & direct syntax'}
+                        {aiDifficulty === 'medium' && 'Practical problem-solving'}
+                        {aiDifficulty === 'hard' && 'Advanced nuances & corner cases'}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      {[
+                        { id: 'mixed', label: 'Balanced Mix', desc: 'Mixed Depths' },
+                        { id: 'easy', label: 'Easy', desc: 'Foundations' },
+                        { id: 'medium', label: 'Medium', desc: 'Intermediate' },
+                        { id: 'hard', label: 'Hard', desc: 'Advanced' },
+                      ].map(d => {
+                        const isSelected = aiDifficulty === d.id;
+                        return (
+                          <button
+                            key={d.id}
+                            type="button"
+                            onClick={() => setAiDifficulty(d.id as any)}
+                            className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                              isSelected
+                                ? 'bg-[#111215] text-[#D4F82C] border-[#111215] dark:bg-[#D4F82C] dark:text-[#111215] dark:border-[#D4F82C] shadow-xs'
+                                : 'bg-white dark:bg-white/5 border-[#E4E7DC] dark:border-white/10 text-[#575A51] dark:text-neutral-300 hover:border-[#111215]/30 dark:hover:border-white/30 hover:text-[#111215] dark:hover:text-white'
+                            }`}
+                          >
+                            <span className="text-xs font-bold truncate">{d.label}</span>
+                            <span className={`text-[10px] truncate ${isSelected ? 'opacity-80' : 'text-[#73766C] dark:text-neutral-400'}`}>
+                              {d.desc}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* 2. Question Style / Category (Interactive Pill Grid) */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-[#111215] dark:text-[#F8F9F5]">
+                        Question Style
+                      </label>
+                      <span className="text-[10px] text-[#73766C] dark:text-neutral-400 font-medium">
+                        Targeted assessment format
+                      </span>
+                    </div>
+                    <div className="flex items-center flex-wrap gap-1.5">
+                      {(type === 'aptitude' ? [
+                        { id: 'mixed', label: 'All Formats (Balanced)' },
+                        { id: 'theoretical', label: 'Theory & Architecture' },
+                        { id: 'practical', label: 'Code Output & Debugging' },
+                        { id: 'scenario', label: 'Production Scenarios' },
+                        { id: 'aptitude', label: 'Logical & Quantitative' },
+                      ] : [
+                        { id: 'mixed', label: 'All Formats (Balanced)' },
+                        { id: 'dsa', label: 'DSA & Algorithms' },
+                        { id: 'practical', label: 'Business & App Logic' },
+                        { id: 'bugfix', label: 'Bug-Fixing & Edge Cases' },
+                        { id: 'system_design', label: 'Low-Level Design (OOP)' },
+                      ]).map(styleItem => {
+                        const isSelected = aiQuestionType === styleItem.id;
+                        return (
+                          <button
+                            key={styleItem.id}
+                            type="button"
+                            onClick={() => setAiQuestionType(styleItem.id)}
+                            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all cursor-pointer border ${
+                              isSelected
+                                ? 'bg-[#111215] text-[#D4F82C] border-[#111215] dark:bg-[#D4F82C] dark:text-[#111215] dark:border-[#D4F82C] font-bold shadow-2xs'
+                                : 'bg-white dark:bg-white/5 border-[#E4E7DC] dark:border-white/10 text-[#575A51] dark:text-neutral-300 hover:border-[#111215]/30 dark:hover:border-white/30 hover:text-[#111215] dark:hover:text-white'
+                            }`}
+                          >
+                            {styleItem.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* 3. Seniority & Batch Quantity (Responsive 2-column layout) */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
+                    {/* Target Seniority */}
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold text-[#111215] dark:text-[#F8F9F5]">
+                        Candidate Seniority
+                      </label>
+                      <div className="grid grid-cols-2 gap-1.5">
+                        {[
+                          { id: 'entry', label: 'Junior', exp: '0–2 yrs' },
+                          { id: 'mid', label: 'Mid-Level', exp: '2–5 yrs' },
+                          { id: 'senior', label: 'Senior', exp: '5–8 yrs' },
+                          { id: 'lead', label: 'Staff / Lead', exp: '8+ yrs' },
+                        ].map(lvl => {
+                          const isSelected = aiSeniority === lvl.id;
+                          return (
+                            <button
+                              key={lvl.id}
+                              type="button"
+                              onClick={() => setAiSeniority(lvl.id as any)}
+                              className={`px-3 py-2 rounded-xl text-left border transition-all cursor-pointer flex items-center justify-between ${
+                                isSelected
+                                  ? 'bg-[#111215] text-[#D4F82C] border-[#111215] dark:bg-[#D4F82C] dark:text-[#111215] dark:border-[#D4F82C] font-bold shadow-2xs'
+                                  : 'bg-white dark:bg-white/5 border-[#E4E7DC] dark:border-white/10 text-[#575A51] dark:text-neutral-300 hover:border-[#111215]/30 dark:hover:border-white/30'
+                              }`}
+                            >
+                              <span className="text-xs">{lvl.label}</span>
+                              <span className={`text-[10px] font-mono ${isSelected ? 'opacity-80' : 'text-[#73766C] dark:text-neutral-400'}`}>
+                                {lvl.exp}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Batch Quantity */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-bold text-[#111215] dark:text-[#F8F9F5]">
+                          Batch Quantity
+                        </label>
+                        <span className="text-[10px] font-mono font-bold text-[#8FB305] dark:text-[#D4F82C]">
+                          {aiCount} {type === 'aptitude' ? 'Questions' : 'Problems'}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-4 gap-1.5">
+                        {(type === 'aptitude' ? [3, 5, 10, 15] : [1, 2, 3, 5]).map(cnt => {
+                          const isSelected = aiCount === cnt;
+                          return (
+                            <button
+                              key={cnt}
+                              type="button"
+                              onClick={() => setAiCount(cnt)}
+                              className={`h-[42px] rounded-xl text-xs font-mono font-bold transition-all cursor-pointer border flex items-center justify-center ${
+                                isSelected
+                                  ? 'bg-[#111215] text-[#D4F82C] border-[#111215] dark:bg-[#D4F82C] dark:text-[#111215] dark:border-[#D4F82C] shadow-2xs'
+                                  : 'bg-white dark:bg-white/5 border-[#E4E7DC] dark:border-white/10 text-[#575A51] dark:text-neutral-300 hover:border-[#111215]/30 dark:hover:border-white/30'
+                              }`}
+                            >
+                              {cnt}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 4. Target Language (Coding mode only) */}
+                  {type === 'coding' && (
+                    <div className="space-y-2 pt-1 border-t border-[#E4E7DC] dark:border-white/10">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-bold text-[#111215] dark:text-[#F8F9F5]">
+                          Target Language Focus
+                        </label>
+                        <span className="text-[10px] text-[#73766C] dark:text-neutral-400 font-medium">
+                          Problems & test cases will be tailored to this language
+                        </span>
+                      </div>
+                      <div className="flex items-center flex-wrap gap-1.5">
+                        {['Any', 'JavaScript', 'TypeScript', 'Python', 'Java', 'C++', 'Go', 'SQL'].map(lang => {
+                          const isSelected = aiCodingLang === lang;
+                          return (
+                            <button
+                              key={lang}
+                              type="button"
+                              onClick={() => setAiCodingLang(lang)}
+                              className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all cursor-pointer border ${
+                                isSelected
+                                  ? 'bg-[#111215] text-[#D4F82C] border-[#111215] dark:bg-[#D4F82C] dark:text-[#111215] dark:border-[#D4F82C] font-bold shadow-2xs'
+                                  : 'bg-white dark:bg-white/5 border-[#E4E7DC] dark:border-white/10 text-[#575A51] dark:text-neutral-300 hover:border-[#111215]/30 dark:hover:border-white/30'
+                              }`}
+                            >
+                              {lang === 'Any' ? 'Any Language' : lang}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 5. Special Focus Notes & Strict Rules (Clean Theme, Zero Emojis) */}
+                  <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#15161A] border border-[#E4E7DC] dark:border-white/10 space-y-3">
+                    <input
+                      ref={pdfInputRef}
+                      type="file"
+                      accept=".pdf,.docx,.txt,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain"
+                      onChange={handlePdfUpload}
+                      className="hidden"
+                    />
+
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <label className="text-xs font-bold text-[#111215] dark:text-[#F8F9F5] flex items-center gap-2">
+                        <Sliders size={13} className="text-[#8FB305] dark:text-[#D4F82C]" />
+                        <span>Special Focus Notes & Mandatory Constraints</span>
+                      </label>
+                      <div className="flex items-center gap-2">
+                        {!pdfFile && (
+                          <button
+                            type="button"
+                            onClick={() => pdfInputRef.current?.click()}
+                            disabled={parsingPdf}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold text-[#111215] dark:text-[#F8F9F5] bg-[#F1F3EB] dark:bg-white/5 hover:bg-[#E4E7DC] dark:hover:bg-white/10 border border-[#E4E7DC] dark:border-white/10 transition-colors cursor-pointer disabled:opacity-50"
+                          >
+                            <Paperclip size={12} className="text-[#8FB305] dark:text-[#D4F82C]" />
+                            <span>{parsingPdf ? 'Extracting text...' : 'Attach PDF / Syllabus'}</span>
+                          </button>
+                        )}
+                        <span className="px-2 py-0.5 rounded-full bg-[#F1F3EB] dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 text-[9px] font-mono font-bold uppercase tracking-wider text-[#73766C] dark:text-neutral-400">
+                          Strict Directive
+                        </span>
+                      </div>
+                    </div>
+
+                    {pdfFile && (
+                      <div className="flex items-center justify-between gap-3 p-3 rounded-xl bg-[#8FB305]/10 dark:bg-[#D4F82C]/10 border border-[#8FB305]/30 dark:border-[#D4F82C]/30 text-xs">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className="w-8 h-8 rounded-lg bg-[#8FB305]/20 dark:bg-[#D4F82C]/20 flex items-center justify-center shrink-0">
+                            <FileText size={15} className="text-[#657E00] dark:text-[#D4F82C]" />
+                          </div>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                              <p className="font-bold text-[#111215] dark:text-[#F8F9F5] truncate max-w-[220px] sm:max-w-xs">
+                                {pdfName}
+                              </p>
+                              <span className="px-1.5 py-0.5 rounded bg-white dark:bg-black/40 text-[9px] font-mono font-bold text-[#657E00] dark:text-[#D4F82C] border border-[#8FB305]/20 dark:border-[#D4F82C]/20 shrink-0">
+                                ~{Math.round(pdfText.length / 5)} words
+                              </span>
+                            </div>
+                            <p className="text-[10px] text-[#73766C] dark:text-neutral-400 truncate">
+                              AI will strictly formulate questions from this syllabus / reference material
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => pdfInputRef.current?.click()}
+                            disabled={parsingPdf}
+                            className="text-[11px] font-semibold text-[#657E00] dark:text-[#D4F82C] hover:underline px-1.5 py-1 cursor-pointer disabled:opacity-50"
+                          >
+                            Replace
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleRemovePdf}
+                            className="p-1 rounded-lg text-[#73766C] hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors cursor-pointer"
+                            title="Remove document"
+                          >
+                            <X size={15} />
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    <textarea
+                      rows={2}
+                      value={aiCustomNotes}
+                      onChange={e => setAiCustomNotes(e.target.value)}
+                      placeholder={
+                        pdfFile
+                          ? 'Optional additional instructions (e.g. Focus specifically on Section 3 of the attached syllabus. Include at least 2 tricky edge case questions)...'
+                          : type === 'aptitude'
+                          ? 'e.g. Focus exclusively on React 19 Server Components and actions. Do not ask about legacy classes. Include at least 2 questions testing tricky re-rendering behavior.'
+                          : 'e.g. Problems must require O(N) time and O(1) auxiliary space. Test cases must strictly cover negative numbers and array bounds.'
+                      }
+                      className={textareaClass}
+                    />
+
+                    <div className="flex items-center justify-between flex-wrap gap-2 text-[11px] text-[#73766C] dark:text-neutral-400">
+                      <div className="flex items-start sm:items-center gap-2">
+                        <span className="px-1.5 py-0.5 rounded bg-[#F1F3EB] dark:bg-white/10 font-mono font-bold text-[9px] uppercase tracking-wider text-[#111215] dark:text-[#D4F82C] shrink-0">
+                          Notice
+                        </span>
+                        <span>
+                          Specify exact sub-topics or rules. If a PDF/doc is attached, questions are drawn directly from it.
+                        </span>
+                      </div>
+                      {!pdfFile && (
+                        <button
+                          type="button"
+                          onClick={() => pdfInputRef.current?.click()}
+                          disabled={parsingPdf}
+                          className="inline-flex items-center gap-1 font-semibold text-[#8FB305] dark:text-[#D4F82C] hover:underline cursor-pointer disabled:opacity-50"
+                        >
+                          <FileUp size={12} />
+                          <span>{parsingPdf ? 'Extracting...' : 'Upload PDF/DOCX (Max 20MB)'}</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
             </section>
 
             {/* SECTION 4: Add Manual Question */}
@@ -798,6 +1365,38 @@ const CreateTest: React.FC = () => {
                     />
                   </div>
 
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    <div>
+                      <label className="text-[11px] font-bold text-[#111215] dark:text-white mb-1.5 block">
+                        Difficulty
+                      </label>
+                      <select
+                        value={manualQ.difficulty}
+                        onChange={e => setManualQ({ ...manualQ, difficulty: e.target.value })}
+                        className={selectClass}
+                      >
+                        <option value="easy">Easy (Foundations)</option>
+                        <option value="medium">Medium (Intermediate)</option>
+                        <option value="hard">Hard (Advanced)</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-[11px] font-bold text-[#111215] dark:text-white mb-1.5 block">
+                        Question Style
+                      </label>
+                      <select
+                        value={manualQ.questionType}
+                        onChange={e => setManualQ({ ...manualQ, questionType: e.target.value })}
+                        className={selectClass}
+                      >
+                        <option value="theoretical">Theoretical Concepts</option>
+                        <option value="practical">Code Output / Tracing</option>
+                        <option value="scenario">Architecture Scenarios</option>
+                        <option value="aptitude">Analytical / Quantitative</option>
+                      </select>
+                    </div>
+                  </div>
+
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-1">
                     {manualQ.options.map((option, index) => (
                       <div key={index}>
@@ -830,6 +1429,20 @@ const CreateTest: React.FC = () => {
                     ))}
                   </div>
 
+                  <div>
+                    <label className={labelClass}>
+                      <span>Answer Explanation</span>
+                      <span className="text-[10px] text-[#73766C] font-normal">Optional</span>
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. useEffect runs asynchronously after render and commit phases."
+                      value={manualQ.explanation}
+                      onChange={event => setManualQ({ ...manualQ, explanation: event.target.value })}
+                      className={inputClass}
+                    />
+                  </div>
+
                   <div className="flex items-center justify-between pt-2">
                     <span className="text-xs text-[#73766C] dark:text-neutral-400">
                       Currently marked correct: <strong className="text-[#111215] dark:text-white">Option {manualQ.correct + 1}</strong>
@@ -858,6 +1471,39 @@ const CreateTest: React.FC = () => {
                       className={inputClass}
                     />
                   </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    <div>
+                      <label className="text-[11px] font-bold text-[#111215] dark:text-white mb-1.5 block">
+                        Problem Difficulty
+                      </label>
+                      <select
+                        value={manualCodeQ.difficulty}
+                        onChange={e => setManualCodeQ({ ...manualCodeQ, difficulty: e.target.value })}
+                        className={selectClass}
+                      >
+                        <option value="easy">Easy (Basic Algorithms)</option>
+                        <option value="medium">Medium (Intermediate)</option>
+                        <option value="hard">Hard (Advanced)</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-[11px] font-bold text-[#111215] dark:text-white mb-1.5 block">
+                        Problem Style / Category
+                      </label>
+                      <select
+                        value={manualCodeQ.questionType}
+                        onChange={e => setManualCodeQ({ ...manualCodeQ, questionType: e.target.value })}
+                        className={selectClass}
+                      >
+                        <option value="dsa">Core DSA & Algorithms</option>
+                        <option value="practical">Business Logic & Data Processing</option>
+                        <option value="bugfix">Bug-Fixing & Edge Cases</option>
+                        <option value="system_design">Low-Level System Design (OOP)</option>
+                      </select>
+                    </div>
+                  </div>
+
                   <div>
                     <label className={labelClass}>
                       <span>Problem Description & Constraints</span>
@@ -870,6 +1516,7 @@ const CreateTest: React.FC = () => {
                       rows={4}
                     />
                   </div>
+
                   <div>
                     <label className={labelClass}>
                       <span>Sample Test Cases & Expected Output</span>
@@ -882,6 +1529,21 @@ const CreateTest: React.FC = () => {
                       rows={3}
                     />
                   </div>
+
+                  <div>
+                    <label className={labelClass}>
+                      <span>Algorithmic Hints / Edge Cases</span>
+                      <span className="text-[10px] text-[#73766C] font-normal">Optional</span>
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Sort intervals by start time first before merging."
+                      value={manualCodeQ.hints}
+                      onChange={event => setManualCodeQ({ ...manualCodeQ, hints: event.target.value })}
+                      className={inputClass}
+                    />
+                  </div>
+
                   <div className="flex justify-end pt-2">
                     <button
                       type="button"
@@ -933,16 +1595,36 @@ const CreateTest: React.FC = () => {
                       className="p-5 rounded-2xl border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-[#101114] space-y-3.5 transition-all hover:border-[#111215]/30 dark:hover:border-white/20"
                     >
                       <div className="flex items-start justify-between gap-4">
-                        <div className="flex items-start gap-3">
+                        <div className="flex items-start gap-3 min-w-0 flex-1">
                           <span className="size-6 rounded-lg bg-white dark:bg-white/10 border border-[#E4E7DC] dark:border-white/10 text-xs font-mono font-black flex items-center justify-center text-[#73766C] dark:text-neutral-400 shrink-0 mt-0.5">
                             {index + 1}
                           </span>
-                          <div>
+                          <div className="min-w-0 flex-1">
+                            {/* Badges for Difficulty & Question Style */}
+                            <div className="flex items-center flex-wrap gap-1.5 mb-1.5">
+                              {question.difficulty && (
+                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold capitalize border ${
+                                  question.difficulty === 'easy'
+                                    ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                                    : question.difficulty === 'hard'
+                                    ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
+                                    : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
+                                }`}>
+                                  {question.difficulty}
+                                </span>
+                              )}
+                              {question.questionType && (
+                                <span className="px-2 py-0.5 rounded-full text-[10px] font-mono uppercase bg-white dark:bg-white/5 text-[#575A51] dark:text-neutral-300 border border-[#E4E7DC] dark:border-white/10">
+                                  {question.questionType.replace('_', ' ')}
+                                </span>
+                              )}
+                            </div>
+
                             <h3 className="text-sm font-bold text-[#111215] dark:text-white leading-snug">
                               {type === 'aptitude' ? question.question : question.title}
                             </h3>
                             {type === 'coding' && (
-                              <p className="text-xs text-[#575A51] dark:text-neutral-400 mt-1.5 leading-relaxed">
+                              <p className="text-xs text-[#575A51] dark:text-neutral-400 mt-1.5 leading-relaxed whitespace-pre-wrap">
                                 {question.description}
                               </p>
                             )}
@@ -966,28 +1648,50 @@ const CreateTest: React.FC = () => {
                             return (
                               <div
                                 key={optIndex}
-                                className={`px-3 py-2 rounded-xl text-xs flex items-center gap-2 border ${
+                                className={`px-3 py-2.5 rounded-xl text-xs flex items-start gap-2 border ${
                                   isCorrect
                                     ? 'bg-[#EAF7E8] dark:bg-emerald-950/30 border-[#BCE4B8] dark:border-emerald-800/40 text-emerald-900 dark:text-emerald-300 font-bold'
                                     : 'bg-white dark:bg-white/5 border-[#E4E7DC] dark:border-white/10 text-[#575A51] dark:text-neutral-300'
                                 }`}
                               >
-                                <span className={`size-4 rounded-full flex items-center justify-center text-[10px] font-mono ${
+                                <span className={`size-4 rounded-full flex items-center justify-center text-[10px] font-mono shrink-0 mt-0.5 ${
                                   isCorrect ? 'bg-emerald-600 text-white font-bold' : 'bg-gray-100 dark:bg-white/10 text-gray-500'
                                 }`}>
                                   {isCorrect ? '✓' : String.fromCharCode(65 + optIndex)}
                                 </span>
-                                <span className="truncate">{option}</span>
+                                <span className="leading-relaxed break-words flex-1">{option}</span>
                               </div>
                             );
                           })}
                         </div>
                       )}
 
+                      {/* Explanation Callout for Aptitude */}
+                      {type === 'aptitude' && question.explanation && (
+                        <div className="ml-9 p-3 rounded-xl bg-[#F4F9EB] dark:bg-emerald-950/20 border border-[#D2E7B3] dark:border-emerald-800/30 text-xs text-emerald-900 dark:text-emerald-300 flex items-start gap-2">
+                          <Lightbulb size={14} className="shrink-0 mt-0.5 text-emerald-600 dark:text-emerald-400" />
+                          <div className="leading-relaxed">
+                            <span className="font-bold">Explanation: </span>
+                            {question.explanation}
+                          </div>
+                        </div>
+                      )}
+
                       {type === 'coding' && question.testCases && (
-                        <div className="pl-9 pt-1">
+                        <div className="pl-9 pt-1 space-y-2">
                           <div className="p-3 rounded-xl bg-white dark:bg-black/40 border border-[#E4E7DC] dark:border-white/10 text-xs font-mono text-[#575A51] dark:text-neutral-400 whitespace-pre-wrap">
                             {question.testCases}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Hints Callout for Coding */}
+                      {type === 'coding' && question.hints && (
+                        <div className="ml-9 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-900 dark:text-amber-300 flex items-start gap-2">
+                          <Lightbulb size={14} className="shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
+                          <div className="leading-relaxed">
+                            <span className="font-bold">Hints / Edge Cases: </span>
+                            {question.hints}
                           </div>
                         </div>
                       )}

@@ -1598,10 +1598,28 @@ export const TakeTest: React.FC = () => {
             <div className="rounded-3xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] p-6 sm:p-8 shadow-xs flex flex-col justify-between h-full space-y-6">
               <div className="space-y-6">
                 {/* Question Header Pill */}
-                <div className="flex items-center justify-between">
-                  <span className="px-3 py-1 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider bg-[#111215] text-[#D4F82C] dark:bg-[#D4F82C] dark:text-[#111215]">
-                    Question {currentQ + 1} of {test.questions.length}
-                  </span>
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="px-3 py-1 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider bg-[#111215] text-[#D4F82C] dark:bg-[#D4F82C] dark:text-[#111215]">
+                      Question {currentQ + 1} of {test.questions.length}
+                    </span>
+                    {question.difficulty && (
+                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold capitalize border ${
+                        question.difficulty === 'easy'
+                          ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                          : question.difficulty === 'hard'
+                          ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
+                          : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
+                      }`}>
+                        {question.difficulty}
+                      </span>
+                    )}
+                    {question.questionType && (
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-mono uppercase bg-[#F1F3EB] dark:bg-white/5 text-[#575A51] dark:text-neutral-400 border border-[#E4E7DC] dark:border-white/10">
+                        {question.questionType.replace('_', ' ')}
+                      </span>
+                    )}
+                  </div>
                   <span className="text-xs text-[#73766C] dark:text-neutral-400 font-medium">
                     Single Correct Choice
                   </span>
@@ -1623,15 +1641,15 @@ export const TakeTest: React.FC = () => {
                         key={i}
                         type="button"
                         onClick={() => handleAnswer(i)}
-                        className={`w-full p-4 rounded-2xl border text-left text-xs sm:text-sm font-semibold transition-all flex items-center justify-between gap-3 cursor-pointer ${
+                        className={`w-full p-4 rounded-2xl border text-left text-xs sm:text-sm font-semibold transition-all flex items-start justify-between gap-3.5 cursor-pointer ${
                           isSelected
                             ? 'bg-[#111215] text-[#D4F82C] border-[#111215] shadow-md dark:bg-[#D4F82C] dark:text-[#111215] dark:border-[#D4F82C]'
                             : 'border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-white/5 text-[#111215] dark:text-white hover:border-[#111215]/40 dark:hover:border-white/30'
                         }`}
                       >
-                        <div className="flex items-center gap-3.5 min-w-0">
+                        <div className="flex items-start gap-3.5 min-w-0 flex-1">
                           <span
-                            className={`size-7 rounded-xl text-xs font-mono font-bold flex items-center justify-center shrink-0 ${
+                            className={`size-7 rounded-xl text-xs font-mono font-bold flex items-center justify-center shrink-0 mt-0.5 ${
                               isSelected
                                 ? 'bg-[#D4F82C] text-[#111215] dark:bg-[#111215] dark:text-[#D4F82C]'
                                 : 'bg-white dark:bg-white/10 text-[#575A51] dark:text-neutral-300 border border-[#E4E7DC] dark:border-white/5'
@@ -1639,12 +1657,12 @@ export const TakeTest: React.FC = () => {
                           >
                             {letter}
                           </span>
-                          <span className="truncate">{opt}</span>
+                          <span className="leading-relaxed break-words flex-1">{opt}</span>
                         </div>
 
                         {/* Selected Radio Pill */}
                         <div
-                          className={`size-5 rounded-full border-2 flex items-center justify-center shrink-0 ${
+                          className={`size-5 rounded-full border-2 flex items-center justify-center shrink-0 mt-1 ${
                             isSelected
                               ? 'border-current bg-current'
                               : 'border-[#73766C]/40 dark:border-white/20'
@@ -1680,9 +1698,22 @@ export const TakeTest: React.FC = () => {
                     <FileCode size={16} className="text-[#8FB305] dark:text-[#D4F82C]" />
                     <h3 className="font-bold text-sm text-[#111215] dark:text-white">Problem Statement</h3>
                   </div>
-                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-[#D4F82C] text-[#111215]">
-                    Coding Challenge
-                  </span>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {question.difficulty && (
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold capitalize border ${
+                        question.difficulty === 'easy'
+                          ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                          : question.difficulty === 'hard'
+                          ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
+                          : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
+                      }`}>
+                        {question.difficulty}
+                      </span>
+                    )}
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-[#D4F82C] text-[#111215]">
+                      {question.questionType ? question.questionType.replace('_', ' ') : 'Coding Challenge'}
+                    </span>
+                  </div>
                 </div>
 
                 <div className="flex-1 overflow-y-auto space-y-4 pr-1">

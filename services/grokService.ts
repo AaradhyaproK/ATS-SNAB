@@ -3,6 +3,7 @@ import {
   callBedrockChat,
   bedrockGenerateJson,
   stripMarkdownJson,
+  safeParseJson,
   type BedrockModelPurpose,
 } from './bedrockService';
 
@@ -176,7 +177,7 @@ export async function grokGenerateWithResumeJson<T>(
     purpose
   );
 
-  return JSON.parse(stripMarkdownJson(text)) as T;
+  return safeParseJson<T>(text);
 }
 
 /** Multi-turn chat — used by CareerHub bot (GLM 4.7 Flash). */

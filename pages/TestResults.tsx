@@ -849,11 +849,11 @@ const TestResults: React.FC = () => {
                           return (
                             <div
                               key={optionIndex}
-                              className={`p-2.5 rounded-xl border text-xs flex items-center justify-between gap-3 ${optionStyle}`}
+                              className={`p-2.5 rounded-xl border text-xs flex items-start justify-between gap-3 ${optionStyle}`}
                             >
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-start gap-2 min-w-0 flex-1">
                                 <span
-                                  className={`size-5 rounded-full flex items-center justify-center text-[10px] font-mono font-bold ${
+                                  className={`size-5 rounded-full flex items-center justify-center text-[10px] font-mono font-bold shrink-0 mt-0.5 ${
                                     isCorrectOption
                                       ? 'bg-emerald-600 text-white'
                                       : isCandidateSelected
@@ -863,7 +863,7 @@ const TestResults: React.FC = () => {
                                 >
                                   {String.fromCharCode(65 + optionIndex)}
                                 </span>
-                                <span>{option}</span>
+                                <span className="leading-relaxed break-words flex-1">{option}</span>
                               </div>
 
                               <div className="flex items-center gap-1.5 text-[10px] font-bold">

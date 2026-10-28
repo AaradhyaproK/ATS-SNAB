@@ -72,8 +72,117 @@ export const getBedrockClient = (): OpenAI => {
   return clientInstance;
 };
 
-const stripMarkdownJson = (text: string): string =>
-  text.replace(/```json/gi, '').replace(/```/g, '').trim();
+export const stripMarkdownJson = (text: string): string => {
+  if (!text) return '';
+  return text.replace(/```(?:json)?/gi, '').replace(/```/g, '').trim();
+};
+
+/**
+ * Robust JSON parser for LLM responses.
+ * Automatically recovers from markdown wrapping, control chars, and truncated token cutoffs.
+ */
+export function safeParseJson<T>(rawText: string): T {
+  if (!rawText || typeof rawText !== 'string') {
+    throw new Error('Empty or invalid response received from AI model.');
+  }
+
+  // 1. Direct parse after stripping markdown fences
+  const cleaned = stripMarkdownJson(rawText);
+  try {
+    return JSON.parse(cleaned) as T;
+  } catch {
+    // Continue to repair strategies
+  }
+
+  // 2. Extract outermost JSON structure: { ... } or [ ... ]
+  const firstBrace = cleaned.indexOf('{');
+  const firstBracket = cleaned.indexOf('[');
+  let startIdx = -1;
+  let isArray = false;
+
+  if (firstBrace !== -1 && (firstBracket === -1 || firstBrace < firstBracket)) {
+    startIdx = firstBrace;
+    isArray = false;
+  } else if (firstBracket !== -1) {
+    startIdx = firstBracket;
+    isArray = true;
+  }
+
+  if (startIdx !== -1) {
+    const endChar = isArray ? ']' : '}';
+    const lastEnd = cleaned.lastIndexOf(endChar);
+    if (lastEnd > startIdx) {
+      const candidate = cleaned.slice(startIdx, lastEnd + 1);
+      try {
+        return JSON.parse(candidate) as T;
+      } catch {
+        // Proceed to repair
+      }
+    }
+  }
+
+  // 3. Automatic repair for truncated JSON (e.g. token cutoff mid-string or mid-object)
+  // Strategy: Find the last valid closed item boundary '}' and close the parent array and object
+  try {
+    const targetSubstring = startIdx !== -1 ? cleaned.slice(startIdx) : cleaned;
+    const lastClosingBrace = targetSubstring.lastIndexOf('}');
+    if (lastClosingBrace !== -1) {
+      let candidate = targetSubstring.slice(0, lastClosingBrace + 1).trim();
+
+      // If candidate was inside an array like "questions": [ {...}, ...
+      if (candidate.includes('[') && !candidate.endsWith(']')) {
+        candidate += '\n]}';
+      } else if (!candidate.endsWith('}')) {
+        candidate += '\n}';
+      }
+
+      try {
+        return JSON.parse(candidate) as T;
+      } catch {
+        // Try with just closing array ']'
+        try {
+          return JSON.parse(targetSubstring.slice(0, lastClosingBrace + 1) + ']') as T;
+        } catch {
+          // Proceed to next fallback
+        }
+      }
+    }
+  } catch {
+    // Continue
+  }
+
+  // 4. Sanitize unescaped control characters inside JSON strings (e.g. raw tabs or newlines)
+  try {
+    const sanitized = cleaned
+      .replace(/[\u0000-\u0009\u000B\u000C\u000E-\u001F]/g, '')
+      .replace(/\r\n/g, '\n');
+    return JSON.parse(sanitized) as T;
+  } catch {
+    // Continue
+  }
+
+  // 5. Final fallback: extract individual questions or items via regex
+  try {
+    const questionBlocks = cleaned.match(/\{[^{}]*"question"\s*:\s*"[^"]+"[^{}]*\}/g);
+    if (questionBlocks && questionBlocks.length > 0) {
+      const items: any[] = [];
+      for (const block of questionBlocks) {
+        try {
+          items.push(JSON.parse(block));
+        } catch {
+          // skip
+        }
+      }
+      if (items.length > 0) {
+        return { questions: items } as unknown as T;
+      }
+    }
+  } catch {
+    // Continue
+  }
+
+  throw new Error('AI response was incomplete. Please try generating with fewer questions or a more specific topic.');
+}
 
 export interface BedrockCallOptions {
   purpose?: BedrockModelPurpose;
@@ -278,7 +387,5 @@ export async function bedrockGenerateJson<T>(
     maxTokens,
     modelOverride
   );
-  return JSON.parse(stripMarkdownJson(text)) as T;
+  return safeParseJson<T>(text);
 }
-
-export { stripMarkdownJson };
