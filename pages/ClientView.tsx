@@ -98,36 +98,38 @@ const ClientView: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-[#0a0a0a] text-gray-800 dark:text-gray-200">
         <div className="bg-white dark:bg-[#111] border-b border-gray-200 dark:border-white/10 sticky top-0 z-40 shadow-sm">
-            <div className="max-w-6xl mx-auto px-4 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div className="max-w-6xl mx-auto px-4 py-3.5 sm:py-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-3 md:gap-4">
                 <div>
-                    <h1 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">Shortlisted Candidates</h1>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Role: <span className="font-semibold text-primary">{jobTitle}</span></p>
+                    <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 dark:text-white">Shortlisted Candidates</h1>
+                    <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-0.5">Role: <span className="font-semibold text-primary">{jobTitle}</span></p>
                 </div>
-                <div className="flex flex-col md:flex-row items-center gap-4">
-                    <div className="flex items-center gap-2 mr-2">
-                        <Logo className="h-8 md:h-10 w-auto object-contain" />
+                <div className="flex items-center justify-between w-full md:w-auto gap-2.5 sm:gap-4">
+                    <div className="flex items-center gap-2">
+                        <Logo className="h-7 sm:h-8 md:h-10 w-auto object-contain" />
                     </div>
-                    <div className="px-4 py-1.5 bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 font-bold rounded-full text-sm flex items-center gap-2">
-                        <i className="fas fa-check-circle"></i> {submissions.length} Shortlisted
+                    <div className="flex items-center gap-2">
+                        <div className="px-3 sm:px-4 py-1 sm:py-1.5 bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 font-bold rounded-full text-xs sm:text-sm flex items-center gap-1.5">
+                            <i className="fas fa-check-circle"></i> <span>{submissions.length} Shortlisted</span>
+                        </div>
+                        <DayNightToggle />
                     </div>
-                    <DayNightToggle />
                 </div>
             </div>
         </div>
 
-        <div className="max-w-6xl mx-auto space-y-8 p-4 md:p-8">
-          <div className="flex flex-col md:flex-row gap-4">
+        <div className="max-w-6xl mx-auto space-y-6 sm:space-y-8 p-3 sm:p-4 md:p-8">
+          <div className="flex flex-col md:flex-row gap-3 sm:gap-4">
             <input
               type="text"
               placeholder="Search by candidate name..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full md:flex-1 p-3 border border-gray-200 dark:border-white/10 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-white/5 text-gray-900 dark:text-white placeholder-gray-500 shadow-sm"
+              className="w-full md:flex-1 p-2.5 sm:p-3 text-sm border border-gray-200 dark:border-white/10 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-white/5 text-gray-900 dark:text-white placeholder-gray-500 shadow-sm"
             />
             <select
               value={sortOrder}
               onChange={(e) => setSortOrder(e.target.value as 'desc' | 'asc')}
-              className="w-full md:w-auto p-3 border border-gray-200 dark:border-white/10 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-white/5 text-gray-900 dark:text-white cursor-pointer shadow-sm"
+              className="w-full md:w-auto p-2.5 sm:p-3 text-sm border border-gray-200 dark:border-white/10 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-white/5 text-gray-900 dark:text-white cursor-pointer shadow-sm"
             >
               <option value="desc">Score: High to Low</option>
               <option value="asc">Score: Low to High</option>
@@ -143,40 +145,40 @@ const ClientView: React.FC = () => {
                 </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                 {filteredAndSortedSubmissions.map(submission => (
                     <div 
                         key={submission.id} 
                         className="bg-white dark:bg-white/5 rounded-2xl border border-gray-200 dark:border-white/10 shadow-sm hover:shadow-md transition-all duration-300 flex flex-col overflow-hidden group"
                     >
-                        <div className="p-6 flex-1 flex flex-col gap-4">
-                            <div className="flex justify-between items-start">
-                                <div>
-                                    <h3 className="font-bold text-xl text-gray-900 dark:text-white capitalize group-hover:text-primary transition-colors">{submission.candidateInfo?.name || 'Unknown Candidate'}</h3>
+                        <div className="p-4 sm:p-6 flex-1 flex flex-col gap-3 sm:gap-4">
+                            <div className="flex justify-between items-start gap-3">
+                                <div className="min-w-0 flex-1">
+                                    <h3 className="font-bold text-lg sm:text-xl text-gray-900 dark:text-white capitalize group-hover:text-primary transition-colors truncate">{submission.candidateInfo?.name || 'Unknown Candidate'}</h3>
                                     {submission.candidateInfo?.email && (
-                                        <div className="flex items-center gap-2 mt-1.5 text-sm text-gray-500 dark:text-gray-400">
-                                            <i className="fas fa-envelope text-gray-400"></i> {submission.candidateInfo.email}
+                                        <div className="flex items-center gap-1.5 mt-1 text-xs sm:text-sm text-gray-500 dark:text-gray-400 truncate">
+                                            <i className="fas fa-envelope text-gray-400 shrink-0"></i> <span className="truncate">{submission.candidateInfo.email}</span>
                                         </div>
                                     )}
                                     {submission.candidateInfo?.phone && (
-                                        <div className="flex items-center gap-2 mt-1 text-sm text-gray-500 dark:text-gray-400">
-                                            <i className="fas fa-phone text-gray-400"></i> {submission.candidateInfo.phone}
+                                        <div className="flex items-center gap-1.5 mt-0.5 text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+                                            <i className="fas fa-phone text-gray-400 shrink-0"></i> <span>{submission.candidateInfo.phone}</span>
                                         </div>
                                     )}
                                 </div>
-                                <div className="flex flex-col items-end bg-gray-50 dark:bg-black/20 p-3 rounded-xl border border-gray-100 dark:border-white/5">
-                                    <div className="text-2xl font-black text-primary">{getScoreValue(submission.score).toFixed(1)}<span className="text-sm text-gray-400 font-medium">/{getScoreDenom(submission.score)}</span></div>
-                                    <span className="text-xs font-bold uppercase tracking-wider text-gray-500 mt-0.5">AI Score</span>
+                                <div className="flex flex-col items-end bg-gray-50 dark:bg-black/20 p-2 sm:p-3 rounded-xl border border-gray-100 dark:border-white/5 shrink-0">
+                                    <div className="text-xl sm:text-2xl font-black text-primary">{getScoreValue(submission.score).toFixed(1)}<span className="text-xs sm:text-sm text-gray-400 font-medium">/{getScoreDenom(submission.score)}</span></div>
+                                    <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-gray-500 mt-0.5">AI Score</span>
                                 </div>
                             </div>
                             
                             {submission.candidateInfo?.resumeText || submission.candidateResumeURL ? (
-                                <div className="mt-2 flex items-center gap-3">
-                                    <span className="px-3 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 text-xs font-bold rounded-lg border border-blue-200 dark:border-blue-800/30 flex items-center gap-1.5">
+                                <div className="mt-1 flex flex-wrap items-center gap-2 sm:gap-3">
+                                    <span className="px-2.5 sm:px-3 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 text-[11px] sm:text-xs font-bold rounded-lg border border-blue-200 dark:border-blue-800/30 flex items-center gap-1.5">
                                         <i className="fas fa-file-alt"></i> Resume Attached
                                     </span>
                                     {submission.videoURLs && submission.videoURLs.some(v => v !== null) && (
-                                        <span className="px-3 py-1 bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 text-xs font-bold rounded-lg border border-purple-200 dark:border-purple-800/30 flex items-center gap-1.5">
+                                        <span className="px-2.5 sm:px-3 py-1 bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 text-[11px] sm:text-xs font-bold rounded-lg border border-purple-200 dark:border-purple-800/30 flex items-center gap-1.5">
                                             <i className="fas fa-video"></i> Video Answers
                                         </span>
                                     )}
@@ -184,19 +186,19 @@ const ClientView: React.FC = () => {
                             ) : null}
                         </div>
 
-                        <div className="p-4 border-t border-gray-100 dark:border-white/5 bg-gray-50 dark:bg-black/20 flex gap-3">
+                        <div className="p-3 sm:p-4 border-t border-gray-100 dark:border-white/5 bg-gray-50 dark:bg-black/20 flex gap-2.5 sm:gap-3">
                             <Link 
                                 to={`/report/${interviewId}/${submission.id}`} 
-                                className="flex-1 py-2.5 bg-primary text-primary-foreground text-center font-bold rounded-xl text-sm hover:bg-primary-dark transition-colors shadow-sm flex items-center justify-center gap-2"
+                                className="flex-1 py-2 sm:py-2.5 bg-primary text-primary-foreground text-center font-bold rounded-xl text-xs sm:text-sm hover:bg-primary-dark transition-colors shadow-sm flex items-center justify-center gap-1.5 sm:gap-2"
                             >
-                                <i className="fas fa-chart-pie"></i> View Detailed Report
+                                <i className="fas fa-chart-pie"></i> <span>View Detailed Report</span>
                             </Link>
                             {submission.candidateResumeURL && !submission.candidateResumeURL.startsWith('data:text') && (
                                 <a 
                                     href={submission.candidateResumeURL} 
                                     target="_blank" 
                                     rel="noopener noreferrer" 
-                                    className="px-5 py-2.5 bg-white dark:bg-white/10 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-white/10 text-center font-bold rounded-xl text-sm hover:bg-gray-50 dark:hover:bg-white/20 transition-colors shadow-sm"
+                                    className="px-3.5 sm:px-5 py-2 sm:py-2.5 bg-white dark:bg-white/10 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-white/10 text-center font-bold rounded-xl text-xs sm:text-sm hover:bg-gray-50 dark:hover:bg-white/20 transition-colors shadow-sm shrink-0"
                                     title="Download Resume"
                                 >
                                     <i className="fas fa-download"></i>

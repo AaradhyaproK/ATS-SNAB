@@ -52,8 +52,8 @@ const ScoreCircle: React.FC<{ score: number; denom: number; color: 'green' | 'ye
   const c = colorMap[color] || colorMap.green;
 
   return (
-    <div className="flex flex-col items-center gap-3 text-center group">
-      <div className="relative w-28 h-28 flex items-center justify-center">
+    <div className="flex flex-col items-center gap-2 sm:gap-3 text-center group w-full">
+      <div className="relative w-24 h-24 sm:w-28 sm:h-28 flex items-center justify-center">
         <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
           <circle
             className="text-[#E4E7DC] dark:text-white/[0.06]"
@@ -78,13 +78,13 @@ const ScoreCircle: React.FC<{ score: number; denom: number; color: 'green' | 'ye
           />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-          <span className="text-3xl font-black text-[#111215] dark:text-white font-mono">{score.toFixed(1)}</span>
-          <span className="text-[10px] text-[#73766C] dark:text-white/40 font-bold uppercase tracking-wider font-mono">/ {denom}</span>
+          <span className="text-2xl sm:text-3xl font-black text-[#111215] dark:text-white font-mono">{score.toFixed(1)}</span>
+          <span className="text-[9px] sm:text-[10px] text-[#73766C] dark:text-white/40 font-bold uppercase tracking-wider font-mono">/ {denom}</span>
         </div>
       </div>
-      <div className="space-y-1">
-        <p className="text-xs font-bold text-[#111215] dark:text-gray-200 uppercase tracking-wide font-mono">{label}</p>
-        <span className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border ${c.bgPill} font-mono`}>
+      <div className="space-y-1 w-full px-1">
+        <p className="text-[11px] sm:text-xs font-bold text-[#111215] dark:text-gray-200 uppercase tracking-wide font-mono truncate">{label}</p>
+        <span className={`inline-block px-2 sm:px-2.5 py-0.5 rounded-full text-[9px] sm:text-[10px] font-extrabold border ${c.bgPill} font-mono`}>
           {pct.toFixed(0)}%
         </span>
       </div>
@@ -103,13 +103,13 @@ const BehavioralStat: React.FC<{ icon: React.ReactNode; label: string; value: st
   }[color];
 
   return (
-    <div className="flex items-center gap-3.5 p-3.5 rounded-2xl bg-[#F8F9F5] dark:bg-white/[0.03] border border-[#E4E7DC] dark:border-white/[0.08] hover:border-gray-300 dark:hover:border-white/[0.14] transition-all shadow-xs">
-      <div className={`w-11 h-11 flex-shrink-0 flex items-center justify-center rounded-xl border ${colorClasses}`}>
+    <div className="flex items-center gap-2.5 sm:gap-3.5 p-3 sm:p-3.5 rounded-2xl bg-[#F8F9F5] dark:bg-white/[0.03] border border-[#E4E7DC] dark:border-white/[0.08] hover:border-gray-300 dark:hover:border-white/[0.14] transition-all shadow-xs min-w-0">
+      <div className={`w-9 h-9 sm:w-11 sm:h-11 shrink-0 flex items-center justify-center rounded-xl border ${colorClasses}`}>
         {icon}
       </div>
-      <div>
-        <p className="text-xs text-[#73766C] dark:text-gray-400 font-medium">{label}</p>
-        <p className="text-lg font-bold text-[#111215] dark:text-white mt-0.5">{value}</p>
+      <div className="min-w-0 flex-1">
+        <p className="text-[10px] sm:text-xs text-[#73766C] dark:text-gray-400 font-medium truncate">{label}</p>
+        <p className="text-xs sm:text-base md:text-lg font-bold text-[#111215] dark:text-white mt-0.5 truncate">{value}</p>
       </div>
     </div>
   );
@@ -523,25 +523,25 @@ export const VoiceInterviewReport: React.FC = () => {
       `}</style>
 
       {/* Top Navbar (Hidden in Print) */}
-      <header className="sticky top-0 z-30 bg-[#F8F9F5]/90 dark:bg-[#0a0a0c]/90 backdrop-blur-xl border-b border-[#E4E7DC] dark:border-white/10 px-4 sm:px-8 py-3.5 shadow-xs transition-colors print:hidden">
-        <div className="max-w-6xl mx-auto flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
+      <header className="sticky top-0 z-30 bg-[#F8F9F5]/90 dark:bg-[#0a0a0c]/90 backdrop-blur-xl border-b border-[#E4E7DC] dark:border-white/10 px-3 sm:px-8 py-2.5 sm:py-3.5 shadow-xs transition-colors print:hidden">
+        <div className="max-w-6xl mx-auto flex items-center justify-between gap-2 sm:gap-4">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             <button
               onClick={() => navigate(-1)}
-              className="p-2 rounded-xl text-[#575A51] dark:text-gray-300 hover:text-[#111215] dark:hover:text-white hover:bg-white dark:hover:bg-white/10 border border-transparent hover:border-[#E4E7DC] dark:hover:border-white/10 transition-all cursor-pointer shadow-xs"
+              className="p-1.5 sm:p-2 rounded-xl text-[#575A51] dark:text-gray-300 hover:text-[#111215] dark:hover:text-white hover:bg-white dark:hover:bg-white/10 border border-transparent hover:border-[#E4E7DC] dark:hover:border-white/10 transition-all cursor-pointer shadow-xs shrink-0"
               title="Back"
             >
-              <ArrowLeft size={18} />
+              <ArrowLeft size={16} className="sm:w-[18px] sm:h-[18px]" />
             </button>
-            <div className="flex items-center gap-2.5">
+            <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
               <HireXLogo size="md" variant="full" withLink to="/" isDark={isDark} />
-              <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-mono uppercase tracking-wider text-[#111215] bg-[#D4F82C] border border-[#b8da1f] font-black shadow-xs">
+              <span className="hidden md:inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-mono uppercase tracking-wider text-[#111215] bg-[#D4F82C] border border-[#b8da1f] font-black shadow-xs">
                 <Sparkles size={11} /> Interview Assessment Dossier
               </span>
             </div>
           </div>
 
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
             <DayNightToggle />
 
             <button
@@ -557,17 +557,18 @@ export const VoiceInterviewReport: React.FC = () => {
             <button
               type="button"
               onClick={handleCopyShareLink}
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#111215] dark:bg-white hover:bg-black text-[#D4F82C] dark:text-[#111215] font-extrabold text-xs shadow-md shadow-black/10 active:scale-[0.98] transition-all cursor-pointer"
+              className="inline-flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-[#111215] dark:bg-white hover:bg-black text-[#D4F82C] dark:text-[#111215] font-extrabold text-[11px] sm:text-xs shadow-md shadow-black/10 active:scale-[0.98] transition-all cursor-pointer"
             >
-              {copied ? <Check size={14} /> : <Share2 size={14} />}
-              <span>{copied ? 'Link Copied!' : 'Share Dossier'}</span>
+              {copied ? <Check size={13} /> : <Share2 size={13} />}
+              <span className="hidden sm:inline">{copied ? 'Link Copied!' : 'Share Dossier'}</span>
+              <span className="sm:hidden">{copied ? 'Copied' : 'Share'}</span>
             </button>
           </div>
         </div>
       </header>
 
       {/* Main Content Area */}
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
+      <main className="max-w-6xl mx-auto px-3 sm:px-6 py-4 sm:py-8 space-y-4 sm:space-y-6">
         
         {/* PRINT-ONLY OFFICIAL LETTERHEAD BANNER */}
         <div className="hidden print:flex items-center justify-between border-b-2 border-black pb-4 mb-6">
@@ -585,24 +586,24 @@ export const VoiceInterviewReport: React.FC = () => {
         </div>
 
         {/* 1. HERO CANDIDATE BENTO CARD */}
-        <section className="bg-white dark:bg-[#0c0c0c]/90 backdrop-blur-xl rounded-3xl border border-[#E4E7DC] dark:border-white/[0.08] p-6 sm:p-8 shadow-[0_20px_50px_rgba(0,0,0,0.03)] relative overflow-hidden space-y-6 print-avoid-break">
+        <section className="bg-white dark:bg-[#0c0c0c]/90 backdrop-blur-xl rounded-3xl border border-[#E4E7DC] dark:border-white/[0.08] p-4 sm:p-8 shadow-[0_20px_50px_rgba(0,0,0,0.03)] relative overflow-hidden space-y-4 sm:space-y-6 print-avoid-break">
           {/* Subtle Ambient Accent Glow */}
           <div className="absolute -top-32 -right-32 w-80 h-80 rounded-full bg-[#D4F82C]/20 dark:bg-[#D4F82C]/10 blur-3xl pointer-events-none print:hidden" />
 
           {/* Top Classification Strip */}
-          <div className="flex flex-wrap items-center justify-between gap-3 relative z-10 border-b border-[#E4E7DC] dark:border-white/[0.06] pb-4">
-            <div className="flex flex-wrap items-center gap-2 text-xs">
-              <span className="text-[11px] font-mono font-black tracking-wider text-[#73766C] dark:text-white/50 uppercase">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3 relative z-10 border-b border-[#E4E7DC] dark:border-white/[0.06] pb-3.5 sm:pb-4">
+            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-xs">
+              <span className="text-[10px] sm:text-[11px] font-mono font-black tracking-wider text-[#73766C] dark:text-white/50 uppercase">
                 AI INTERVIEW ASSESSMENT DOSSIER
               </span>
-              <span className="text-[#C4C7BC] dark:text-white/20">•</span>
-              <span className="font-mono text-[#575A51] dark:text-white/70 font-semibold bg-[#F8F9F5] dark:bg-white/5 px-2.5 py-0.5 rounded-md border border-[#E4E7DC] dark:border-white/10">
+              <span className="text-[#C4C7BC] dark:text-white/20 hidden sm:inline">•</span>
+              <span className="font-mono text-[#575A51] dark:text-white/70 font-semibold bg-[#F8F9F5] dark:bg-white/5 px-2 py-0.5 rounded-md border border-[#E4E7DC] dark:border-white/10 text-[10px] sm:text-xs truncate max-w-[200px] sm:max-w-none">
                 ID: {response.id}
               </span>
             </div>
 
             {/* Prominent Recommendation Status Badge */}
-            <span className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider border shadow-xs ${
+            <span className={`self-start sm:self-auto inline-flex items-center gap-1.5 px-3 sm:px-4 py-1 sm:py-1.5 rounded-full text-[11px] sm:text-xs font-black uppercase tracking-wider border shadow-xs ${
               rec === 'Shortlist'
                 ? 'bg-[#D4F82C] text-[#111215] border-[#b8da1f] shadow-[0_0_20px_rgba(212,248,44,0.35)]'
                 : rec === 'Reject'
@@ -615,35 +616,36 @@ export const VoiceInterviewReport: React.FC = () => {
           </div>
 
           {/* Balanced 2-Column Grid: Candidate Profile (Left) & Evaluated Position (Right) */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 relative z-10 items-stretch">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 relative z-10 items-stretch">
             
             {/* Left Column: Candidate Info & Attached Resume */}
-            <div className="lg:col-span-7 flex flex-col justify-between space-y-5">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5">
+            <div className="lg:col-span-7 flex flex-col justify-between space-y-4 sm:space-y-5">
+              <div className="flex items-start sm:items-center gap-3.5 sm:gap-5">
                 {/* Monogram Avatar */}
-                <div className="size-20 rounded-2xl bg-[#D4F82C] text-[#111215] border-2 border-[#111215] flex items-center justify-center font-black text-3xl shadow-sm shrink-0 font-mono">
+                <div className="size-14 sm:size-20 rounded-2xl bg-[#D4F82C] text-[#111215] border-2 border-[#111215] flex items-center justify-center font-black text-xl sm:text-3xl shadow-sm shrink-0 font-mono">
                   {candInitials}
                 </div>
 
-                <div className="min-w-0 space-y-2">
-                  <h1 className="text-2xl sm:text-3xl font-black text-[#111215] dark:text-white tracking-tight">
+                <div className="min-w-0 space-y-1.5 sm:space-y-2 flex-1">
+                  <h1 className="text-xl sm:text-3xl font-black text-[#111215] dark:text-white tracking-tight break-words">
                     {candName}
                   </h1>
 
-                  <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm text-[#575A51] dark:text-gray-300">
+                  <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-xs sm:text-sm text-[#575A51] dark:text-gray-300">
                     {candidateInfo?.email && (
-                      <span className="inline-flex items-center gap-1.5 font-medium bg-[#F8F9F5] dark:bg-white/5 px-2.5 py-1 rounded-xl border border-[#E4E7DC] dark:border-white/10">
-                        <Mail size={13} className="text-[#73766C] dark:text-white/40" /> {candidateInfo.email}
+                      <span className="inline-flex items-center gap-1.5 font-medium bg-[#F8F9F5] dark:bg-white/5 px-2.5 py-1 rounded-xl border border-[#E4E7DC] dark:border-white/10 max-w-full">
+                        <Mail size={12} className="text-[#73766C] dark:text-white/40 shrink-0" />
+                        <span className="truncate max-w-[190px] sm:max-w-none">{candidateInfo.email}</span>
                       </span>
                     )}
                     {candidateInfo?.phone && (
-                      <span className="inline-flex items-center gap-1.5 font-medium bg-[#F8F9F5] dark:bg-white/5 px-2.5 py-1 rounded-xl border border-[#E4E7DC] dark:border-white/10">
-                        <Phone size={13} className="text-[#73766C] dark:text-white/40" /> {candidateInfo.phone}
+                      <span className="inline-flex items-center gap-1.5 font-medium bg-[#F8F9F5] dark:bg-white/5 px-2.5 py-1 rounded-xl border border-[#E4E7DC] dark:border-white/10 shrink-0">
+                        <Phone size={12} className="text-[#73766C] dark:text-white/40 shrink-0" /> {candidateInfo.phone}
                       </span>
                     )}
                     {candidateInfo?.currentCity && (
-                      <span className="inline-flex items-center gap-1.5 font-bold text-[#111215] dark:text-white bg-[#D4F82C]/30 dark:bg-[#D4F82C]/20 px-2.5 py-1 rounded-xl border border-[#D4F82C]/60">
-                        <MapPin size={13} className="text-[#111215] dark:text-[#D4F82C]" /> {candidateInfo.currentCity}
+                      <span className="inline-flex items-center gap-1.5 font-bold text-[#111215] dark:text-white bg-[#D4F82C]/30 dark:bg-[#D4F82C]/20 px-2.5 py-1 rounded-xl border border-[#D4F82C]/60 shrink-0">
+                        <MapPin size={12} className="text-[#111215] dark:text-[#D4F82C] shrink-0" /> {candidateInfo.currentCity}
                       </span>
                     )}
                   </div>
@@ -652,17 +654,17 @@ export const VoiceInterviewReport: React.FC = () => {
 
               {/* Verified Attached Resume Drawer Tile */}
               {resumeLink && (
-                <div className="p-3.5 sm:p-4 rounded-2xl bg-[#F8F9F5] dark:bg-white/[0.03] border border-[#E4E7DC] dark:border-white/[0.08] flex items-center justify-between gap-3 hover:border-[#111215] dark:hover:border-white/30 transition-all">
+                <div className="p-3 sm:p-4 rounded-2xl bg-[#F8F9F5] dark:bg-white/[0.03] border border-[#E4E7DC] dark:border-white/[0.08] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 hover:border-[#111215] dark:hover:border-white/30 transition-all">
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className="p-2.5 rounded-xl bg-[#111215] dark:bg-white text-[#D4F82C] dark:text-[#111215] shrink-0 shadow-xs">
-                      <FileText size={18} />
+                    <div className="p-2 sm:p-2.5 rounded-xl bg-[#111215] dark:bg-white text-[#D4F82C] dark:text-[#111215] shrink-0 shadow-xs">
+                      <FileText size={16} />
                     </div>
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                       <p className="text-xs font-bold text-[#111215] dark:text-white truncate" title={resumeName}>
                         {resumeName}
                       </p>
-                      <p className="text-[11px] text-[#73766C] dark:text-white/50 truncate">
-                        Verified Candidate Resume · Analyzed for Personalized Cross-Questions
+                      <p className="text-[10px] sm:text-[11px] text-[#73766C] dark:text-white/50 truncate">
+                        Verified Candidate Resume · Analyzed for Personalized Questions
                       </p>
                     </div>
                   </div>
@@ -672,7 +674,7 @@ export const VoiceInterviewReport: React.FC = () => {
                     target="_blank"
                     rel="noopener noreferrer"
                     download
-                    className="shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#111215] dark:bg-white hover:bg-black text-[#D4F82C] dark:text-[#111215] font-bold text-xs transition-colors shadow-xs print:hidden"
+                    className="w-full sm:w-auto shrink-0 inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#111215] dark:bg-white hover:bg-black text-[#D4F82C] dark:text-[#111215] font-bold text-xs transition-colors shadow-xs print:hidden"
                   >
                     <Download size={13} />
                     <span>View / Download</span>
@@ -725,10 +727,10 @@ export const VoiceInterviewReport: React.FC = () => {
         </section>
 
         {/* 2. PERFORMANCE OVERVIEW: RADIAL SCORE STRIP (MATCHING VIDEO INTERVIEW REPORT) */}
-        <section className="bg-white dark:bg-[#0c0c0c]/90 backdrop-blur-xl rounded-3xl p-6 sm:p-8 border border-[#E4E7DC] dark:border-white/[0.08] shadow-[0_4px_24px_rgba(17,18,21,0.04)] print-avoid-break space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#E4E7DC] dark:border-white/[0.06] pb-4">
+        <section className="bg-white dark:bg-[#0c0c0c]/90 backdrop-blur-xl rounded-3xl p-4 sm:p-8 border border-[#E4E7DC] dark:border-white/[0.08] shadow-[0_4px_24px_rgba(17,18,21,0.04)] print-avoid-break space-y-4 sm:space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#E4E7DC] dark:border-white/[0.06] pb-3.5 sm:pb-4">
             <div className="flex items-center gap-2.5">
-              <div className="p-2 rounded-xl bg-[#D4F82C] text-[#111215] border border-[#b8da1f]">
+              <div className="p-2 rounded-xl bg-[#D4F82C] text-[#111215] border border-[#b8da1f] shrink-0">
                 <Award size={18} />
               </div>
               <div>
@@ -740,29 +742,29 @@ export const VoiceInterviewReport: React.FC = () => {
                 </p>
               </div>
             </div>
-            <span className="text-[11px] font-mono font-bold text-[#73766C] dark:text-white/50 bg-[#F8F9F5] dark:bg-white/5 px-2.5 py-1 rounded-lg border border-[#E4E7DC] dark:border-white/10">
+            <span className="self-start sm:self-auto text-[10px] sm:text-[11px] font-mono font-bold text-[#73766C] dark:text-white/50 bg-[#F8F9F5] dark:bg-white/5 px-2.5 py-1 rounded-lg border border-[#E4E7DC] dark:border-white/10">
               Scoring Model: ATS-v3.8
             </span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             {/* Overall Fit */}
-            <div className="p-4 rounded-2xl bg-[#F8F9F5] dark:bg-white/[0.02] border border-[#E4E7DC] dark:border-white/[0.06] flex items-center justify-around">
+            <div className="p-3 sm:p-4 rounded-2xl bg-[#F8F9F5] dark:bg-white/[0.02] border border-[#E4E7DC] dark:border-white/[0.06] flex items-center justify-center">
               <ScoreCircle score={overallScoreVal} denom={10} color={getColorName(overallScoreVal)} label="Overall Fit" />
             </div>
 
             {/* Technical Competency */}
-            <div className="p-4 rounded-2xl bg-[#F8F9F5] dark:bg-white/[0.02] border border-[#E4E7DC] dark:border-white/[0.06] flex items-center justify-around">
+            <div className="p-3 sm:p-4 rounded-2xl bg-[#F8F9F5] dark:bg-white/[0.02] border border-[#E4E7DC] dark:border-white/[0.06] flex items-center justify-center">
               <ScoreCircle score={skillsScoreVal} denom={10} color={getColorName(skillsScoreVal)} label="Technical Skills" />
             </div>
 
             {/* Communication Skills */}
-            <div className="p-4 rounded-2xl bg-[#F8F9F5] dark:bg-white/[0.02] border border-[#E4E7DC] dark:border-white/[0.06] flex items-center justify-around">
+            <div className="p-3 sm:p-4 rounded-2xl bg-[#F8F9F5] dark:bg-white/[0.02] border border-[#E4E7DC] dark:border-white/[0.06] flex items-center justify-center">
               <ScoreCircle score={commsScoreVal} denom={10} color={getColorName(commsScoreVal)} label="Communication" />
             </div>
 
             {/* Executive Decision & Integrity Summary Tile */}
-            <div className="p-4 rounded-2xl bg-[#F8F9F5] dark:bg-white/[0.02] border border-[#E4E7DC] dark:border-white/[0.06] flex flex-col justify-between">
+            <div className="p-3.5 sm:p-4 rounded-2xl bg-[#F8F9F5] dark:bg-white/[0.02] border border-[#E4E7DC] dark:border-white/[0.06] flex flex-col justify-between col-span-2 lg:col-span-1">
               <div>
                 <span className="text-[10px] font-bold uppercase tracking-wider text-[#73766C] dark:text-white/40 font-mono">
                   Executive Verdict
@@ -786,15 +788,15 @@ export const VoiceInterviewReport: React.FC = () => {
                   <span className="flex items-center gap-1.5 font-medium">
                     <Shield size={13} className={tabSwitchesNum > 0 ? "text-amber-500" : "text-emerald-600 dark:text-emerald-400"} /> Session Integrity
                   </span>
-                  <span className={`font-mono font-bold ${tabSwitchesNum > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
-                    {tabSwitchesNum > 0 ? `${tabSwitchesNum} Tab Switch${tabSwitchesNum === 1 ? '' : 'es'}` : '0 Tab Switches (Clean)'}
+                  <span className={`font-mono font-bold text-right ${tabSwitchesNum > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+                    {tabSwitchesNum > 0 ? `${tabSwitchesNum} Switch${tabSwitchesNum === 1 ? '' : 'es'}` : 'Clean (0)'}
                   </span>
                 </div>
 
                 {tabSwitchesNum > 0 && (
-                  <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/25 text-amber-800 dark:text-amber-300 flex items-start gap-2 text-xs">
-                    <AlertTriangle size={14} className="shrink-0 mt-0.5 text-amber-500" />
-                    <span><strong>Proctoring Flag:</strong> Candidate switched tabs or lost window focus {tabSwitchesNum} time{tabSwitchesNum === 1 ? '' : 's'} during the session.</span>
+                  <div className="p-2 sm:p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/25 text-amber-800 dark:text-amber-300 flex items-start gap-1.5 text-[11px] sm:text-xs">
+                    <AlertTriangle size={13} className="shrink-0 mt-0.5 text-amber-500" />
+                    <span>Candidate switched window {tabSwitchesNum} time{tabSwitchesNum === 1 ? '' : 's'}.</span>
                   </div>
                 )}
 
@@ -803,7 +805,7 @@ export const VoiceInterviewReport: React.FC = () => {
                     <span className="flex items-center gap-1.5 font-medium">
                       <MapPin size={13} className="text-indigo-600 dark:text-indigo-400" /> Location Fit
                     </span>
-                    <span className="font-mono font-bold text-[#111215] dark:text-white">
+                    <span className="font-mono font-bold text-[#111215] dark:text-white truncate max-w-[120px] sm:max-w-none text-right">
                       {candidateInfo.currentCity}
                     </span>
                   </div>
@@ -814,34 +816,34 @@ export const VoiceInterviewReport: React.FC = () => {
         </section>
 
         {/* 3. MASTER FULL-SESSION COMPLETE VIDEO PLAYER (THE CORE OF USER'S REQUEST) */}
-        <section className="bg-white dark:bg-[#0c0c0c]/90 backdrop-blur-xl rounded-3xl p-6 sm:p-8 border border-[#E4E7DC] dark:border-white/[0.08] shadow-[0_4px_24px_rgba(17,18,21,0.04)] space-y-6 print-avoid-break">
+        <section className="bg-white dark:bg-[#0c0c0c]/90 backdrop-blur-xl rounded-3xl p-4 sm:p-8 border border-[#E4E7DC] dark:border-white/[0.08] shadow-[0_4px_24px_rgba(17,18,21,0.04)] space-y-4 sm:space-y-6 print-avoid-break">
           {/* Header & Controls */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#E4E7DC] dark:border-white/[0.06]">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-2xl bg-[#D4F82C] text-[#111215] border border-[#b8da1f] shadow-xs">
-                <Video size={20} />
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 pb-3.5 sm:pb-4 border-b border-[#E4E7DC] dark:border-white/[0.06]">
+            <div className="flex items-start sm:items-center gap-2.5 sm:gap-3">
+              <div className="p-2 sm:p-2.5 rounded-2xl bg-[#D4F82C] text-[#111215] border border-[#b8da1f] shadow-xs shrink-0 mt-0.5 sm:mt-0">
+                <Video size={18} className="sm:w-5 sm:h-5" />
               </div>
               <div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <h3 className="font-extrabold text-[#111215] dark:text-white text-base sm:text-lg">
                     Complete Interview Video Recording
                   </h3>
-                  <span className="text-[10px] font-mono font-black uppercase px-2.5 py-0.5 rounded-full bg-[#111215] text-[#D4F82C]">
-                    Continuous HD Stream
+                  <span className="text-[9px] sm:text-[10px] font-mono font-black uppercase px-2 py-0.5 rounded-full bg-[#111215] text-[#D4F82C]">
+                    HD Stream
                   </span>
                 </div>
                 <p className="text-xs text-[#73766C] dark:text-white/50 mt-0.5">
-                  Synchronized candidate camera feed and two-way interview assessment recording with interactive chapter jump points
+                  Synchronized candidate camera feed and two-way interview assessment recording
                 </p>
               </div>
             </div>
 
             {recordedVideoUrl && (
-              <div className="flex items-center gap-2 shrink-0 print:hidden">
+              <div className="flex items-center gap-2 shrink-0 print:hidden w-full sm:w-auto">
                 <button
                   type="button"
                   onClick={() => setIsTheaterMode(!isTheaterMode)}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-white/5 hover:bg-white dark:hover:bg-white/10 text-xs font-bold text-[#111215] dark:text-white shadow-xs transition-colors cursor-pointer"
+                  className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-white/5 hover:bg-white dark:hover:bg-white/10 text-xs font-bold text-[#111215] dark:text-white shadow-xs transition-colors cursor-pointer"
                 >
                   {isTheaterMode ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
                   <span>{isTheaterMode ? 'Exit Theater' : 'Theater Mode'}</span>
@@ -852,10 +854,10 @@ export const VoiceInterviewReport: React.FC = () => {
                   target="_blank"
                   rel="noopener noreferrer"
                   download={`interview_full_session_${response.id}.webm`}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#111215] dark:bg-white hover:bg-black text-[#D4F82C] dark:text-[#111215] text-xs font-bold shadow-xs transition-all cursor-pointer"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#111215] dark:bg-white hover:bg-black text-[#D4F82C] dark:text-[#111215] text-xs font-bold shadow-xs transition-all cursor-pointer"
                 >
                   <Download size={13} />
-                  <span>Download Video (.webm)</span>
+                  <span>Download Video</span>
                 </a>
               </div>
             )}
@@ -911,13 +913,13 @@ export const VoiceInterviewReport: React.FC = () => {
               </div>
 
               {/* Video Speed Selector Bar */}
-              <div className="flex items-center justify-between text-xs px-2 text-[#73766C] dark:text-white/60">
-                <div className="flex items-center gap-2 font-mono">
-                  <Clock size={13} />
+              <div className="flex flex-wrap items-center justify-between gap-2 text-xs px-1 sm:px-2 text-[#73766C] dark:text-white/60">
+                <div className="flex items-center gap-1.5 font-mono text-[11px] sm:text-xs">
+                  <Clock size={12} />
                   <span>{formatDuration(videoCurrentTime)} / {formatDuration(videoDuration || callDurationSeconds)}</span>
                 </div>
-                <div className="flex items-center gap-1.5 font-mono">
-                  <span className="text-[11px] font-bold">Playback Speed:</span>
+                <div className="flex items-center gap-1 font-mono">
+                  <span className="text-[10px] sm:text-[11px] font-bold hidden sm:inline">Playback Speed:</span>
                   {[1, 1.25, 1.5, 2].map((spd) => (
                     <button
                       key={spd}
@@ -926,7 +928,7 @@ export const VoiceInterviewReport: React.FC = () => {
                         setPlaybackRate(spd);
                         if (videoRef.current) videoRef.current.playbackRate = spd;
                       }}
-                      className={`px-2 py-0.5 rounded text-[11px] font-bold transition-all cursor-pointer ${
+                      className={`px-1.5 sm:px-2 py-0.5 rounded text-[10px] sm:text-[11px] font-bold transition-all cursor-pointer ${
                         playbackRate === spd
                           ? 'bg-[#111215] text-[#D4F82C] dark:bg-[#D4F82C] dark:text-[#111215]'
                           : 'bg-[#F0F2EB] dark:bg-white/10 text-[#575A51] dark:text-white/70 hover:bg-[#E4E7DC]'
@@ -940,7 +942,7 @@ export const VoiceInterviewReport: React.FC = () => {
             </div>
 
             {/* Interactive Chapter Markers Sidebar */}
-            <div className={`${isTheaterMode ? 'w-full' : 'lg:col-span-4'} flex flex-col bg-[#F8F9F5] dark:bg-white/[0.02] border border-[#E4E7DC] dark:border-white/[0.06] rounded-2xl p-4 space-y-3 min-h-[260px] max-h-[500px] overflow-y-auto custom-scrollbar`}>
+            <div className={`${isTheaterMode ? 'w-full' : 'lg:col-span-4'} flex flex-col bg-[#F8F9F5] dark:bg-white/[0.02] border border-[#E4E7DC] dark:border-white/[0.06] rounded-2xl p-3 sm:p-4 space-y-2.5 sm:space-y-3 max-h-[340px] sm:max-h-[500px] overflow-y-auto custom-scrollbar`}>
               <div className="flex items-center justify-between border-b border-[#E4E7DC] dark:border-white/[0.06] pb-2">
                 <span className="text-[11px] font-black uppercase tracking-wider text-[#73766C] dark:text-white/60 flex items-center gap-1.5 font-mono">
                   <Layers size={13} className="text-[#111215] dark:text-white" /> Chapter Markers
@@ -1017,7 +1019,7 @@ export const VoiceInterviewReport: React.FC = () => {
         </section>
 
         {/* 4. BEHAVIORAL & INTEGRITY ANALYTICS GRID */}
-        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 print-avoid-break">
+        <section className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4 print-avoid-break">
           <BehavioralStat
             icon={<Video size={18} />}
             label="Video & Audio Monitoring"
@@ -1180,35 +1182,35 @@ export const VoiceInterviewReport: React.FC = () => {
 
         {/* 6. QUESTION-BY-QUESTION DEEP DIVE WITH 1-CLICK VIDEO JUMP */}
         {answersSummary && answersSummary.length > 0 && (
-          <section className="bg-white dark:bg-[#0c0c0c]/90 backdrop-blur-xl rounded-3xl border border-[#E4E7DC] dark:border-white/[0.08] p-6 sm:p-8 shadow-xs space-y-5 print-avoid-break">
-            <div className="border-b border-[#E4E7DC] dark:border-white/[0.06] pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <section className="bg-white dark:bg-[#0c0c0c]/90 backdrop-blur-xl rounded-3xl border border-[#E4E7DC] dark:border-white/[0.08] p-4 sm:p-8 shadow-xs space-y-4 sm:space-y-5 print-avoid-break">
+            <div className="border-b border-[#E4E7DC] dark:border-white/[0.06] pb-3.5 sm:pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3">
               <div>
                 <h3 className="font-extrabold text-[#111215] dark:text-white text-base sm:text-lg flex items-center gap-2">
                   <Layers size={18} />
                   <span>Question-by-Question Deep Dive</span>
                 </h3>
                 <p className="text-xs text-[#73766C] dark:text-white/50 mt-0.5">
-                  Detailed screening questions, candidate spoken answers, and interactive video playback synchronization
+                  Detailed screening questions, candidate spoken answers, and video synchronization
                 </p>
               </div>
-              <span className="text-xs font-mono font-bold text-[#73766C] dark:text-white/50 bg-[#F8F9F5] dark:bg-white/5 px-2.5 py-1 rounded-lg border border-[#E4E7DC] dark:border-white/10">
+              <span className="self-start sm:self-auto text-[10px] sm:text-xs font-mono font-bold text-[#73766C] dark:text-white/50 bg-[#F8F9F5] dark:bg-white/5 px-2.5 py-1 rounded-lg border border-[#E4E7DC] dark:border-white/10">
                 {answersSummary.length} Questions Evaluated
               </span>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-3.5 sm:space-y-4">
               {answersSummary.map((item: any, idx: number) => {
                 const bm = chapterBookmarks[idx];
                 return (
-                  <div key={idx} className="p-5 sm:p-6 rounded-2xl bg-[#F8F9F5] dark:bg-white/[0.02] border border-[#E4E7DC] dark:border-white/[0.06] space-y-3.5 print-avoid-break">
+                  <div key={idx} className="p-4 sm:p-6 rounded-2xl bg-[#F8F9F5] dark:bg-white/[0.02] border border-[#E4E7DC] dark:border-white/[0.06] space-y-3 sm:space-y-3.5 print-avoid-break">
                     {/* Question Header & Video Jump Button */}
                     <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
                       <div className="flex items-center gap-2">
-                        <span className="font-black text-[#111215] uppercase tracking-wider text-[11px] bg-[#D4F82C] px-3 py-1 rounded-md border border-[#b8da1f]">
+                        <span className="font-black text-[#111215] uppercase tracking-wider text-[10px] sm:text-[11px] bg-[#D4F82C] px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-md border border-[#b8da1f]">
                           Question {idx + 1}
                         </span>
                         {item.score !== undefined && (
-                          <span className="text-xs font-mono font-bold text-[#111215] dark:text-white bg-white dark:bg-white/10 px-2.5 py-0.5 rounded border border-[#E4E7DC] dark:border-white/10">
+                          <span className="text-[11px] sm:text-xs font-mono font-bold text-[#111215] dark:text-white bg-white dark:bg-white/10 px-2 sm:px-2.5 py-0.5 rounded border border-[#E4E7DC] dark:border-white/10">
                             Score: {item.score}/10
                           </span>
                         )}
@@ -1222,10 +1224,13 @@ export const VoiceInterviewReport: React.FC = () => {
                             handleSeekVideo(bm.timestampSec);
                             videoRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
                           }}
-                          className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[#111215] dark:bg-white text-[#D4F82C] dark:text-[#111215] text-xs font-bold transition-all shadow-xs cursor-pointer hover:scale-105 active:scale-95 print:hidden"
+                          className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-lg bg-[#111215] dark:bg-white text-[#D4F82C] dark:text-[#111215] text-[11px] sm:text-xs font-bold transition-all shadow-xs cursor-pointer hover:scale-105 active:scale-95 print:hidden"
                         >
-                          <Play size={11} className="fill-current" />
-                          <span>Watch Question in Video ({bm.formattedTime || '0:00'})</span>
+                          <Play size={10} className="fill-current" />
+                          <span>
+                            <span className="hidden sm:inline">Watch Question in Video</span>
+                            <span className="sm:hidden">Watch</span> ({bm.formattedTime || '0:00'})
+                          </span>
                         </button>
                       )}
                     </div>
@@ -1244,7 +1249,7 @@ export const VoiceInterviewReport: React.FC = () => {
                             videoRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
                           }
                         }}
-                        className="relative group rounded-2xl overflow-hidden bg-black aspect-video max-h-[200px] sm:max-h-[240px] cursor-pointer border border-[#E4E7DC] dark:border-white/10 hover:border-[#111215] dark:hover:border-[#D4F82C] transition-all shadow-xs print:hidden"
+                        className="relative group rounded-2xl overflow-hidden bg-black aspect-video max-h-[180px] sm:max-h-[240px] cursor-pointer border border-[#E4E7DC] dark:border-white/10 hover:border-[#111215] dark:hover:border-[#D4F82C] transition-all shadow-xs print:hidden"
                       >
                         <video
                           src={recordedVideoUrl}
@@ -1254,10 +1259,10 @@ export const VoiceInterviewReport: React.FC = () => {
                           preload="metadata"
                         />
                         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/30 group-hover:bg-black/55 transition-all">
-                          <div className="w-12 h-12 rounded-full bg-[#D4F82C] text-[#111215] flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform border border-[#b8da1f]">
-                            <Play size={18} className="fill-current ml-0.5" />
+                          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-[#D4F82C] text-[#111215] flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform border border-[#b8da1f]">
+                            <Play size={16} className="fill-current ml-0.5" />
                           </div>
-                          <span className="mt-2 text-[11px] font-bold text-white bg-black/80 px-3 py-1 rounded-full border border-white/20 shadow-md">
+                          <span className="mt-2 text-[10px] sm:text-[11px] font-bold text-white bg-black/80 px-2.5 sm:px-3 py-1 rounded-full border border-white/20 shadow-md">
                             ▶ Watch Question {idx + 1} Video ({bm?.formattedTime || '0:00'})
                           </span>
                         </div>
@@ -1265,8 +1270,8 @@ export const VoiceInterviewReport: React.FC = () => {
                     )}
 
                     {/* Candidate Answer */}
-                    <div className="p-4 rounded-xl bg-white dark:bg-white/[0.03] border border-[#E4E7DC] dark:border-white/[0.06] space-y-1.5 shadow-2xs">
-                      <div className="text-[11px] font-bold text-[#73766C] dark:text-white/40 uppercase tracking-wider">
+                    <div className="p-3.5 sm:p-4 rounded-xl bg-white dark:bg-white/[0.03] border border-[#E4E7DC] dark:border-white/[0.06] space-y-1.5 shadow-2xs">
+                      <div className="text-[10px] sm:text-[11px] font-bold text-[#73766C] dark:text-white/40 uppercase tracking-wider">
                         Candidate Spoken Answer:
                       </div>
                       <p className="text-xs sm:text-sm text-[#111215] dark:text-white/90 leading-relaxed font-medium">
@@ -1282,11 +1287,11 @@ export const VoiceInterviewReport: React.FC = () => {
                           Clarification Cross-Question:
                         </span>
                         {item.crossQuestions.map((cq: any, cqIdx: number) => (
-                          <div key={cqIdx} className="p-3.5 rounded-xl bg-[#D4F82C]/15 dark:bg-[#D4F82C]/10 border border-[#D4F82C]/50 space-y-2">
+                          <div key={cqIdx} className="p-3 sm:p-3.5 rounded-xl bg-[#D4F82C]/15 dark:bg-[#D4F82C]/10 border border-[#D4F82C]/50 space-y-2">
                             <p className="text-xs font-bold text-[#111215] dark:text-white">
                               AI Interviewer: "{cq.question}"
                             </p>
-                            <p className="text-xs text-[#111215] dark:text-white font-medium bg-white dark:bg-white/10 p-2.5 rounded-lg border border-[#E4E7DC] dark:border-white/10">
+                            <p className="text-xs text-[#111215] dark:text-white font-medium bg-white dark:bg-white/10 p-2 sm:p-2.5 rounded-lg border border-[#E4E7DC] dark:border-white/10">
                               Candidate Answer: "{cq.answer}"
                             </p>
                           </div>
@@ -1301,8 +1306,8 @@ export const VoiceInterviewReport: React.FC = () => {
         )}
 
         {/* 7. COMPLETE VERBATIM INTERVIEW TRANSCRIPT */}
-        <section className="bg-white dark:bg-[#0c0c0c]/90 backdrop-blur-xl rounded-3xl border border-[#E4E7DC] dark:border-white/[0.08] p-6 sm:p-8 shadow-xs space-y-5 print-avoid-break">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#E4E7DC] dark:border-white/[0.06] pb-4">
+        <section className="bg-white dark:bg-[#0c0c0c]/90 backdrop-blur-xl rounded-3xl border border-[#E4E7DC] dark:border-white/[0.08] p-4 sm:p-8 shadow-xs space-y-4 sm:space-y-5 print-avoid-break">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 border-b border-[#E4E7DC] dark:border-white/[0.06] pb-3.5 sm:pb-4">
             <div>
               <h3 className="font-extrabold text-[#111215] dark:text-white text-base sm:text-lg flex items-center gap-2">
                 <MessageSquare size={18} className="text-[#111215] dark:text-white" />
@@ -1314,12 +1319,12 @@ export const VoiceInterviewReport: React.FC = () => {
             </div>
 
             {/* Controls: Speaker Filter & Search */}
-            <div className="flex flex-wrap items-center gap-2 print:hidden">
-              <div className="flex items-center bg-[#F8F9F5] dark:bg-white/5 p-1 rounded-xl border border-[#E4E7DC] dark:border-white/10 text-xs font-bold">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 print:hidden w-full sm:w-auto">
+              <div className="flex items-center justify-between sm:justify-start bg-[#F8F9F5] dark:bg-white/5 p-1 rounded-xl border border-[#E4E7DC] dark:border-white/10 text-xs font-bold w-full sm:w-auto">
                 <button
                   type="button"
                   onClick={() => setSpeakerFilter('all')}
-                  className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
+                  className={`flex-1 sm:flex-initial text-center px-3 py-1 rounded-lg transition-all cursor-pointer ${
                     speakerFilter === 'all' ? 'bg-[#111215] dark:bg-white text-white dark:text-[#111215] shadow-xs' : 'text-[#73766C] dark:text-white/60 hover:text-[#111215]'
                   }`}
                 >
@@ -1328,7 +1333,7 @@ export const VoiceInterviewReport: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setSpeakerFilter('candidate')}
-                  className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
+                  className={`flex-1 sm:flex-initial text-center px-3 py-1 rounded-lg transition-all cursor-pointer ${
                     speakerFilter === 'candidate' ? 'bg-[#111215] dark:bg-white text-white dark:text-[#111215] shadow-xs' : 'text-[#73766C] dark:text-white/60 hover:text-[#111215]'
                   }`}
                 >
@@ -1337,7 +1342,7 @@ export const VoiceInterviewReport: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setSpeakerFilter('ai')}
-                  className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
+                  className={`flex-1 sm:flex-initial text-center px-3 py-1 rounded-lg transition-all cursor-pointer ${
                     speakerFilter === 'ai' ? 'bg-[#111215] dark:bg-white text-white dark:text-[#111215] shadow-xs' : 'text-[#73766C] dark:text-white/60 hover:text-[#111215]'
                   }`}
                 >
@@ -1345,14 +1350,14 @@ export const VoiceInterviewReport: React.FC = () => {
                 </button>
               </div>
 
-              <div className="relative">
+              <div className="relative w-full sm:w-48">
                 <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#73766C] dark:text-white/40 pointer-events-none" />
                 <input
                   type="text"
                   placeholder="Search transcript..."
                   value={transcriptSearch}
                   onChange={(e) => setTranscriptSearch(e.target.value)}
-                  className="pl-8 pr-3 py-1.5 rounded-xl bg-[#F8F9F5] dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 text-xs text-[#111215] dark:text-white placeholder-[#73766C] dark:placeholder-white/40 focus:outline-hidden focus:border-[#111215] dark:focus:border-white w-40 sm:w-48 transition-all"
+                  className="pl-8 pr-3 py-1.5 rounded-xl bg-[#F8F9F5] dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 text-xs text-[#111215] dark:text-white placeholder-[#73766C] dark:placeholder-white/40 focus:outline-hidden focus:border-[#111215] dark:focus:border-white w-full transition-all"
                 />
               </div>
             </div>
