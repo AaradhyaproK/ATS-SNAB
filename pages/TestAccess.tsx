@@ -349,12 +349,12 @@ const TestAccess: React.FC = () => {
   ];
 
   return (
-    <div className="relative min-h-screen flex flex-col items-center justify-center p-4 sm:p-6 bg-[#F8F9F5] dark:bg-[#0D0E11] text-[#111215] dark:text-[#F8F9F5] font-sans antialiased selection:bg-[#D4F82C] selection:text-[#111215]">
+    <div className="relative min-h-screen flex flex-col items-center justify-center p-3 sm:p-5 lg:p-6 bg-[#F8F9F5] dark:bg-[#0D0E11] text-[#111215] dark:text-[#F8F9F5] font-sans antialiased selection:bg-[#D4F82C] selection:text-[#111215]">
       {/* Background radial glow */}
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(212,248,44,0.06),transparent_40rem)] dark:bg-[radial-gradient(circle_at_50%_0%,rgba(212,248,44,0.03),transparent_40rem)]" />
 
       {/* Top Header Logo Bar */}
-      <header className="w-full max-w-xl mx-auto flex items-center justify-between py-4 mb-2">
+      <header className="w-full max-w-xl lg:max-w-5xl xl:max-w-6xl mx-auto flex items-center justify-between py-2 sm:py-3 mb-2">
         <HireXLogo size="md" variant="full" withLink to="/" isDark={isDark} />
         <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-[#E4E7DC] dark:border-white/10 bg-white/80 dark:bg-white/5 text-[11px] font-bold shadow-2xs">
           <span className="size-1.5 rounded-full bg-[#8FB305] dark:bg-[#D4F82C] animate-pulse" />
@@ -363,213 +363,249 @@ const TestAccess: React.FC = () => {
       </header>
 
       {/* Main Container Card */}
-      <main className="relative w-full max-w-xl rounded-3xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] p-6 sm:p-9 shadow-xl space-y-6">
-        {/* Test Header */}
-        <div className="space-y-3">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider bg-[#D4F82C] text-[#111215] shadow-xs">
-              <Sparkles size={11} className="fill-[#111215]" />
-              <span>{isCoding ? 'CODING CHALLENGE' : 'APTITUDE ASSESSMENT'}</span>
-            </span>
-            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-white/5 text-[#575A51] dark:text-neutral-300">
-              <Clock size={11} />
-              <span>{testDetails?.duration || 10} Minutes</span>
-            </span>
-            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-white/5 text-[#575A51] dark:text-neutral-300">
-              <Target size={11} />
-              <span>{testDetails?.passingScore || 70}% Pass Benchmark</span>
-            </span>
-          </div>
+      <main className="relative w-full max-w-xl lg:max-w-5xl xl:max-w-6xl rounded-3xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] p-5 sm:p-7 lg:p-8 shadow-xl">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
+          
+          {/* Left Column: Assessment Info & Integrity Rules (7 cols) */}
+          <div className="lg:col-span-7 space-y-4">
+            {/* Badges */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider bg-[#D4F82C] text-[#111215] shadow-xs">
+                <Sparkles size={11} className="fill-[#111215]" />
+                <span>{isCoding ? 'CODING CHALLENGE' : 'APTITUDE ASSESSMENT'}</span>
+              </span>
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-white/5 text-[#575A51] dark:text-neutral-300">
+                <Clock size={11} />
+                <span>{testDetails?.duration || 10} Minutes</span>
+              </span>
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-white/5 text-[#575A51] dark:text-neutral-300">
+                <Target size={11} />
+                <span>{testDetails?.passingScore || 70}% Pass Benchmark</span>
+              </span>
+              {Boolean(testDetails?.questionsCount) && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-white/5 text-[#575A51] dark:text-neutral-300">
+                  <HelpCircle size={11} />
+                  <span>{testDetails?.questionsCount} Questions</span>
+                </span>
+              )}
+            </div>
 
-          <h1 className="text-2xl sm:text-3xl font-black text-[#111215] dark:text-white tracking-tight">
-            {testDetails?.title || 'Candidate Assessment'}
-          </h1>
-          <p className="text-xs sm:text-sm text-[#575A51] dark:text-neutral-400 leading-relaxed">
-            Welcome! Enter your email address to sync your profile and begin this evaluation. No access code required.
-          </p>
-        </div>
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-black text-[#111215] dark:text-white tracking-tight">
+                {testDetails?.title || 'Candidate Assessment'}
+              </h1>
+              <p className="text-xs sm:text-sm text-[#575A51] dark:text-neutral-400 mt-1 leading-relaxed">
+                Welcome! Enter your email address to sync your profile and begin this evaluation. No access code required.
+              </p>
+            </div>
 
-        {/* Proctoring & Examination Rules */}
-        <div className="rounded-2xl border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5]/70 dark:bg-white/[0.02] p-4 sm:p-5 space-y-3">
-          <div className="text-[10px] font-bold uppercase tracking-wider text-[#73766C] dark:text-neutral-400">
-            Assessment Guidelines & Integrity Rules
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-            {rules.map((rule, idx) => (
-              <div
-                key={idx}
-                className="p-2.5 rounded-xl border border-[#E4E7DC] dark:border-white/5 bg-white dark:bg-[#1D1F24] flex items-start gap-2.5 text-xs shadow-2xs"
-              >
-                <div className="size-7 rounded-lg bg-[#F8F9F5] dark:bg-white/10 flex items-center justify-center shrink-0 mt-0.5 text-[#111215] dark:text-[#D4F82C]">
-                  <rule.icon size={13} />
-                </div>
-                <div className="min-w-0">
-                  <h4 className="font-bold text-[#111215] dark:text-white text-[11px] leading-tight">
-                    {rule.title}
-                  </h4>
-                  <p className="text-[10px] text-[#73766C] dark:text-neutral-400 mt-0.5 leading-snug">
-                    {rule.desc}
-                  </p>
-                </div>
+            {/* Proctoring & Examination Rules */}
+            <div className="rounded-2xl border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5]/70 dark:bg-white/[0.02] p-3.5 sm:p-4 space-y-2.5">
+              <div className="text-[10px] font-bold uppercase tracking-wider text-[#73766C] dark:text-neutral-400">
+                Assessment Guidelines & Integrity Rules
               </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Error Alert */}
-        {error && (
-          <div className="p-3.5 rounded-2xl border border-red-500/20 bg-red-500/10 text-xs sm:text-sm font-semibold text-red-600 dark:text-red-400 flex items-center gap-2.5">
-            <AlertCircle size={16} className="shrink-0" />
-            <span>{error}</span>
-          </div>
-        )}
-
-        {/* Candidate Entry Form */}
-        {testDetails && !isRateLimited ? (
-          <form onSubmit={handleStartTest} className="space-y-4 pt-1">
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-[#111215] dark:text-[#F8F9F5] flex items-center justify-between">
-                <span>Enter Your Email Address</span>
-                {isSearchingProfile && (
-                  <span className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                    <span className="size-3 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
-                    <span>Searching profile...</span>
-                  </span>
-                )}
-              </label>
-              <div className="relative">
-                <Mail
-                  className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[#73766C]"
-                  size={16}
-                />
-                <input
-                  type="email"
-                  required
-                  placeholder="name@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full h-12 pl-11 pr-4 rounded-2xl border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-[#101114] text-sm font-semibold text-[#111215] dark:text-white placeholder:text-[#73766C] outline-none transition-all focus:border-[#111215] dark:focus:border-[#D4F82C] focus:bg-white dark:focus:bg-[#15161A]"
-                />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {rules.map((rule, idx) => (
+                  <div
+                    key={idx}
+                    className="p-2 sm:p-2.5 rounded-xl border border-[#E4E7DC] dark:border-white/5 bg-white dark:bg-[#1D1F24] flex items-start gap-2.5 text-xs shadow-2xs"
+                  >
+                    <div className="size-6 sm:size-7 rounded-lg bg-[#F8F9F5] dark:bg-white/10 flex items-center justify-center shrink-0 mt-0.5 text-[#111215] dark:text-[#D4F82C]">
+                      <rule.icon size={13} />
+                    </div>
+                    <div className="min-w-0">
+                      <h4 className="font-bold text-[#111215] dark:text-white text-[11px] leading-tight">
+                        {rule.title}
+                      </h4>
+                      <p className="text-[10px] text-[#73766C] dark:text-neutral-400 mt-0.5 leading-snug">
+                        {rule.desc}
+                      </p>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
 
-            {/* Profile Found Card */}
-            {fetchedCandidate ? (
-              <div className="p-3.5 rounded-2xl border border-emerald-300 dark:border-emerald-800/40 bg-emerald-50/70 dark:bg-emerald-950/20 flex items-center justify-between gap-3 animate-in fade-in slide-in-from-top-2 duration-200">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="size-10 rounded-full bg-emerald-600 text-white font-black text-sm flex items-center justify-center shrink-0 shadow-xs">
-                    {(fetchedCandidate.name || 'C').charAt(0).toUpperCase()}
-                  </div>
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-xs font-black text-[#111215] dark:text-white truncate">
-                        {fetchedCandidate.name}
+            {/* Laptop footer strip */}
+            <div className="hidden lg:flex items-center gap-3 pt-2 text-[11px] text-[#73766C] dark:text-neutral-400">
+              <span className="inline-flex items-center gap-1.5 font-medium">
+                <ShieldCheck size={13} className="text-emerald-600 dark:text-emerald-400" />
+                Protected by InterviewXpert AI Proctoring
+              </span>
+              <span>•</span>
+              <span>Encrypted Transport</span>
+            </div>
+          </div>
+
+          {/* Right Column: Candidate Entry Panel (5 cols) */}
+          <div className="lg:col-span-5 rounded-2xl border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5]/50 dark:bg-white/[0.02] p-4 sm:p-5 space-y-4 min-w-0">
+            <div className="pb-2 border-b border-[#E4E7DC] dark:border-white/10 flex items-center justify-between">
+              <div>
+                <span className="text-xs font-black uppercase tracking-wider text-[#111215] dark:text-white block">Candidate Check-in</span>
+                <span className="text-[10px] text-[#73766C] dark:text-neutral-400">Enter your email to verify identity</span>
+              </div>
+              <div className="size-6 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-[10px] font-bold">
+                1/2
+              </div>
+            </div>
+
+            {/* Error Alert */}
+            {error && (
+              <div className="p-3 rounded-2xl border border-red-500/20 bg-red-500/10 text-xs font-semibold text-red-600 dark:text-red-400 flex items-center gap-2">
+                <AlertCircle size={15} className="shrink-0" />
+                <span className="min-w-0 flex-1 leading-snug">{error}</span>
+              </div>
+            )}
+
+            {/* Candidate Entry Form */}
+            {testDetails && !isRateLimited ? (
+              <form onSubmit={handleStartTest} className="space-y-3.5">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-[#111215] dark:text-[#F8F9F5] flex items-center justify-between">
+                    <span>Enter Your Email Address</span>
+                    {isSearchingProfile && (
+                      <span className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                        <span className="size-3 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+                        <span>Searching...</span>
                       </span>
-                      <span className="inline-flex items-center gap-0.5 px-2 py-0.2 rounded-full text-[9px] font-bold bg-emerald-600 text-white shadow-2xs">
-                        <Check size={9} strokeWidth={3} />
-                        <span>Verified</span>
+                    )}
+                  </label>
+                  <div className="relative">
+                    <Mail
+                      className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[#73766C]"
+                      size={15}
+                    />
+                    <input
+                      type="email"
+                      required
+                      placeholder="name@example.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="w-full h-11 pl-10 pr-4 rounded-xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#101114] text-xs sm:text-sm font-semibold text-[#111215] dark:text-white placeholder:text-[#73766C] outline-none transition-all focus:border-[#111215] dark:focus:border-[#D4F82C]"
+                    />
+                  </div>
+                </div>
+
+                {/* Profile Found Card */}
+                {fetchedCandidate ? (
+                  <div className="p-3 rounded-xl border border-emerald-300 dark:border-emerald-800/40 bg-emerald-50/80 dark:bg-emerald-950/20 flex items-center justify-between gap-2.5 animate-in fade-in slide-in-from-top-1 duration-200">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="size-9 rounded-full bg-emerald-600 text-white font-black text-xs flex items-center justify-center shrink-0 shadow-xs">
+                        {(fetchedCandidate.name || 'C').charAt(0).toUpperCase()}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs font-black text-[#111215] dark:text-white truncate">
+                            {fetchedCandidate.name}
+                          </span>
+                          <span className="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-emerald-600 text-white shadow-2xs shrink-0">
+                            <Check size={8} strokeWidth={3} />
+                            <span>Verified</span>
+                          </span>
+                        </div>
+                        <p className="text-[10px] text-emerald-800 dark:text-emerald-300 font-medium truncate mt-0.5">
+                          Profile matched from talent pool • Ready to start
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ) : profileSearched && email.includes('@') ? (
+                  /* New Candidate: Name Input */
+                  <div className="space-y-1.5 animate-in fade-in slide-in-from-top-1 duration-200">
+                    <label className="text-xs font-bold text-[#111215] dark:text-[#F8F9F5] flex items-center justify-between">
+                      <span>Full Name</span>
+                      <span className="text-[10px] text-[#73766C] dark:text-neutral-400">
+                        First time candidate
+                      </span>
+                    </label>
+                    <div className="relative">
+                      <User
+                        className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[#73766C]"
+                        size={15}
+                      />
+                      <input
+                        type="text"
+                        required
+                        placeholder="Enter your full name"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        className="w-full h-11 pl-10 pr-4 rounded-xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#101114] text-xs sm:text-sm font-semibold text-[#111215] dark:text-white placeholder:text-[#73766C] outline-none transition-all focus:border-[#111215] dark:focus:border-[#D4F82C]"
+                      />
+                    </div>
+                  </div>
+                ) : null}
+
+                {/* Previous Submission Warning Card */}
+                {existingSubmission ? (
+                  <div className="p-3.5 rounded-xl border border-amber-500/30 bg-amber-500/10 text-[#111215] dark:text-neutral-200 space-y-1.5 animate-in fade-in duration-200">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5 text-amber-700 dark:text-amber-400 font-bold text-xs">
+                        <AlertCircle size={14} className="shrink-0" />
+                        <span className="truncate">Assessment Already Completed</span>
+                      </div>
+                      <span className="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase bg-amber-500/20 text-amber-800 dark:text-amber-300 shrink-0">
+                        Single Attempt
                       </span>
                     </div>
-                    <p className="text-[11px] text-emerald-800 dark:text-emerald-300 font-medium truncate mt-0.5">
-                      Profile matched from talent pool • Ready to start
+                    <p className="text-[11px] text-[#575A51] dark:text-neutral-400 leading-snug">
+                      You already took this assessment and scored{' '}
+                      <strong className="font-mono text-[#111215] dark:text-white font-bold">
+                        {existingSubmission.score}%
+                      </strong>{' '}
+                      ({existingSubmission.status}). Re-attempts are blocked unless your previous attempt is deleted by the recruiter.
                     </p>
+                    <div className="pt-1 flex items-center justify-between text-[10px] text-[#73766C] dark:text-neutral-400 border-t border-amber-500/20">
+                      <span>Score: <strong className="text-[#111215] dark:text-white font-mono">{existingSubmission.score}%</strong></span>
+                      <span className="capitalize font-semibold text-emerald-600 dark:text-emerald-400">Submission Recorded</span>
+                    </div>
                   </div>
-                </div>
-              </div>
-            ) : profileSearched && email.includes('@') ? (
-              /* New Candidate: Name Input */
-              <div className="space-y-1.5 animate-in fade-in slide-in-from-top-2 duration-200">
-                <label className="text-xs font-bold text-[#111215] dark:text-[#F8F9F5] flex items-center justify-between">
-                  <span>Full Name</span>
-                  <span className="text-[10px] text-[#73766C] dark:text-neutral-400">
-                    First time candidate
-                  </span>
-                </label>
-                <div className="relative">
-                  <User
-                    className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[#73766C]"
-                    size={16}
-                  />
-                  <input
-                    type="text"
-                    required
-                    placeholder="Enter your full name"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    className="w-full h-12 pl-11 pr-4 rounded-2xl border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-[#101114] text-sm font-semibold text-[#111215] dark:text-white placeholder:text-[#73766C] outline-none transition-all focus:border-[#111215] dark:focus:border-[#D4F82C] focus:bg-white dark:focus:bg-[#15161A]"
-                  />
-                </div>
-              </div>
-            ) : null}
+                ) : null}
 
-            {/* Previous Submission Warning Card */}
-            {existingSubmission ? (
-              <div className="p-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 text-[#111215] dark:text-neutral-200 space-y-2 animate-in fade-in duration-200">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5 text-amber-700 dark:text-amber-400 font-bold text-xs">
-                    <AlertCircle size={15} />
-                    <span>Assessment Already Completed</span>
-                  </div>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-amber-500/20 text-amber-800 dark:text-amber-300">
-                    Single Attempt Policy
-                  </span>
-                </div>
-                <p className="text-xs text-[#575A51] dark:text-neutral-400 leading-relaxed">
-                  You already took this assessment and scored{' '}
-                  <span className="font-mono font-bold text-[#111215] dark:text-white">
-                    {existingSubmission.score}%
-                  </span>{' '}
-                  ({existingSubmission.status}). Re-attempts with this test link are strictly blocked unless your previous attempt is deleted by the recruiter.
-                </p>
-                <div className="pt-1 flex items-center justify-between text-[11px] text-[#73766C] dark:text-neutral-400 border-t border-amber-500/20">
-                  <span>Score: <strong className="text-[#111215] dark:text-white font-mono">{existingSubmission.score}%</strong></span>
-                  <span className="capitalize font-semibold text-emerald-600 dark:text-emerald-400">Submission Recorded</span>
-                </div>
-              </div>
-            ) : null}
-
-            {/* Start Button */}
-            {existingSubmission ? (
-              <button
-                type="button"
-                disabled
-                className="w-full h-12 rounded-full font-bold text-xs uppercase tracking-wider bg-[#E4E7DC] dark:bg-white/10 text-[#73766C] dark:text-neutral-400 cursor-not-allowed shadow-none"
-              >
-                Already Submitted ({existingSubmission.score}%) • Re-attempt Blocked
-              </button>
-            ) : (
-              <button
-                type="submit"
-                disabled={isLoading || isSearchingProfile || !email.trim()}
-                className="w-full h-12 rounded-full font-bold text-sm bg-[#111215] text-[#D4F82C] hover:bg-[#202227] dark:bg-[#D4F82C] dark:text-[#111215] dark:hover:bg-[#c5ea24] transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 active:scale-[0.99]"
-              >
-                {isLoading ? (
-                  <>
-                    <div className="size-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                    <span>Launching Assessment...</span>
-                  </>
+                {/* Start Button */}
+                {existingSubmission ? (
+                  <button
+                    type="button"
+                    disabled
+                    className="w-full h-11 rounded-full font-bold text-xs uppercase tracking-wider bg-[#E4E7DC] dark:bg-white/10 text-[#73766C] dark:text-neutral-400 cursor-not-allowed shadow-none"
+                  >
+                    Already Submitted ({existingSubmission.score}%) • Blocked
+                  </button>
                 ) : (
-                  <>
-                    <span>Start Assessment</span>
-                    <ArrowRight size={15} />
-                  </>
+                  <button
+                    type="submit"
+                    disabled={isLoading || isSearchingProfile || !email.trim()}
+                    className="w-full h-11 rounded-full font-bold text-xs sm:text-sm bg-[#111215] text-[#D4F82C] hover:bg-[#202227] dark:bg-[#D4F82C] dark:text-[#111215] dark:hover:bg-[#c5ea24] transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 active:scale-[0.99]"
+                  >
+                    {isLoading ? (
+                      <>
+                        <div className="size-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                        <span>Launching Assessment...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>Start Assessment</span>
+                        <ArrowRight size={15} />
+                      </>
+                    )}
+                  </button>
                 )}
-              </button>
+              </form>
+            ) : (
+              !error && (
+                <div className="py-6 text-center text-xs text-[#73766C] dark:text-neutral-400 space-y-2">
+                  <div className="size-5 border-2 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin mx-auto" />
+                  <p>Loading assessment details...</p>
+                </div>
+              )
             )}
-          </form>
-        ) : (
-          !error && (
-            <div className="py-8 text-center text-xs text-[#73766C] dark:text-neutral-400 space-y-2">
-              <div className="size-6 border-2 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin mx-auto" />
-              <p>Loading assessment details...</p>
-            </div>
-          )
-        )}
 
-        {/* Footer info */}
-        <div className="pt-2 border-t border-[#E4E7DC] dark:border-white/10 flex items-center justify-between text-[11px] text-[#73766C] dark:text-neutral-400">
-          <span>Protected by InterviewXpert AI Proctoring</span>
-          <span>Encrypted Transport</span>
+            {/* Mobile-only footer */}
+            <div className="lg:hidden pt-2 border-t border-[#E4E7DC] dark:border-white/10 flex items-center justify-between text-[10px] text-[#73766C] dark:text-neutral-400">
+              <span>Protected by InterviewXpert AI</span>
+              <span>Encrypted Transport</span>
+            </div>
+          </div>
+
         </div>
       </main>
     </div>
