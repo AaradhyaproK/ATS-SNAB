@@ -30,6 +30,8 @@ import {
   ShieldCheck,
   UploadCloud,
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
   TrendingUp,
   Tag,
   Ban,
@@ -148,6 +150,8 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
   const [autofetchNotFound, setAutofetchNotFound] = useState(false);
   const [targetJobData, setTargetJobData] = useState<any | null>(null);
   const [targetJobLoading, setTargetJobLoading] = useState(false);
+  const [showTargetJdModal, setShowTargetJdModal] = useState(false);
+  const [isJdExpanded, setIsJdExpanded] = useState(false);
   const [isOneTapApplying, setIsOneTapApplying] = useState(false);
   const [oneTapApplySuccess, setOneTapApplySuccess] = useState<any | null>(null);
   const [targetJobAlreadyApplied, setTargetJobAlreadyApplied] = useState<CandidateApplicationInfo | null>(null);
@@ -262,28 +266,84 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
     const fetchDirect = async () => {
       setTargetJobLoading(true);
       try {
-        let snap = await getDoc(doc(db, 'interviews', resolvedTargetJobId));
+        let snap: any = await getDoc(doc(db, 'interviews', resolvedTargetJobId));
         if (!snap.exists()) {
           snap = await getDoc(doc(db, 'jobs', resolvedTargetJobId));
         }
-        if (snap.exists() && isSubscribed) {
+
+        // Secondary fallback: query by accessCode or jobNo if resolvedTargetJobId was an access code
+        if (!snap.exists()) {
+          const cleanCode = resolvedTargetJobId.trim().toUpperCase();
+          const cleanJobNo = resolvedTargetJobId.trim();
+
+          const qIntAccess = query(collection(db, 'interviews'), where('accessCode', '==', cleanCode));
+          let qSnap = await getDocs(qIntAccess).catch(() => null);
+
+          if (!qSnap || qSnap.empty) {
+            const qIntJobNo = query(collection(db, 'interviews'), where('jobNo', '==', cleanJobNo));
+            qSnap = await getDocs(qIntJobNo).catch(() => null);
+          }
+          if (!qSnap || qSnap.empty) {
+            const qJobsAccess = query(collection(db, 'jobs'), where('accessCode', '==', cleanCode));
+            qSnap = await getDocs(qJobsAccess).catch(() => null);
+          }
+          if (!qSnap || qSnap.empty) {
+            const qJobsJobNo = query(collection(db, 'jobs'), where('jobNo', '==', cleanJobNo));
+            qSnap = await getDocs(qJobsJobNo).catch(() => null);
+          }
+          if (qSnap && !qSnap.empty) {
+            snap = qSnap.docs[0];
+          }
+        }
+
+        if (snap && snap.exists() && isSubscribed) {
           const d = snap.data();
+          const parsedSkills = Array.isArray(d.skills)
+            ? d.skills
+            : (typeof d.skills === 'string'
+              ? d.skills.split(/[,;\n]/).map((s: string) => s.trim()).filter(Boolean)
+              : []);
+
+          const parsedSalary = d.salary || d.salaryRange ||
+            (d.minSalary && d.maxSalary ? `₹${d.minSalary} - ₹${d.maxSalary}` : '') ||
+            (d.minSalary ? `₹${d.minSalary}+` : '') ||
+            'Competitive CTC';
+
+          const parsedExp = d.experience ||
+            (d.minExperience !== undefined && d.maxExperience !== undefined && (d.minExperience > 0 || d.maxExperience > 0)
+              ? `${d.minExperience} - ${d.maxExperience} yrs`
+              : (d.minExperience ? `${d.minExperience}+ yrs` : 'Fresher / Any Experience'));
+
           setTargetJobData({
             id: snap.id,
             title: d.title || 'Job Opening',
             company: d.company || d.companyName || 'Hiring Partner',
-            location: d.location || d.city || 'Remote / Hybrid',
-            experience: d.experience || (d.minExperience !== undefined ? `${d.minExperience} - ${d.maxExperience} yrs` : 'Not specified'),
-            salary: d.salary || d.salaryRange || 'Competitive CTC',
+            location: d.location || (d.city && d.state ? `${d.city}, ${d.state}` : d.city || 'Remote / Hybrid'),
+            city: d.city || d.location || 'Remote',
+            state: d.state || '',
+            experience: parsedExp,
+            minExperience: d.minExperience,
+            maxExperience: d.maxExperience,
+            salary: parsedSalary,
+            minSalary: d.minSalary,
+            maxSalary: d.maxSalary,
             employmentType: d.employmentType || d.jobType || 'Full-Time',
-            skills: Array.isArray(d.skills) ? d.skills : (typeof d.skills === 'string' ? d.skills.split(',').map((s: string) => s.trim()) : []),
+            skills: parsedSkills,
             description: d.description || d.jobDescription || '',
+            jobDescription: d.description || d.jobDescription || '',
+            responsibilities: d.responsibilities || '',
+            requirements: d.requirements || '',
+            qualification: d.qualification || d.education || d.qualifications || 'Graduate / Relevant Degree',
+            education: d.education || d.qualification || '',
+            department: d.department || d.roleCategory || 'General',
             accessCode: d.accessCode || d.jobNo || snap.id.slice(0, 6).toUpperCase(),
+            jobNo: d.jobNo || '',
             recruiterName: d.recruiterName || d.entryBy || 'Recruiting Desk',
             recruiterUID: d.recruiterUID || d.createdBy?.uid || '',
             teamId: d.teamId || '',
             interviewMode: d.interviewMode,
             interviewLink: d.interviewLink,
+            deadline: d.deadlineDate || d.deadline || d.applyDeadline || '',
           });
         }
       } catch (err) {
@@ -1945,6 +2005,315 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
     });
   };
 
+  // ── Dedicated Full Job Description (JD) Modal ──
+  const renderTargetJdModal = () => {
+    if (!showTargetJdModal || !targetJobData) return null;
+
+    const isAlreadyApplied = appliedJobIds.includes(targetJobData.id) ||
+      (targetJobData.jobNo && appliedJobIds.includes(targetJobData.jobNo)) ||
+      (targetJobData.accessCode && appliedJobIds.includes(targetJobData.accessCode)) ||
+      Boolean(targetJobAlreadyApplied);
+
+    return (
+      <div
+        className="fixed inset-0 z-[120] flex items-center justify-center p-3 sm:p-6 bg-black/75 backdrop-blur-md overflow-hidden animate-in fade-in"
+        onClick={() => setShowTargetJdModal(false)}
+        role="dialog"
+        aria-modal="true"
+      >
+        <div
+          className="relative flex flex-col w-full max-w-3xl max-h-[calc(100dvh-2rem)] sm:max-h-[calc(100vh-3.5rem)] rounded-3xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] text-[#111215] dark:text-[#F8F9F5] shadow-2xl overflow-hidden my-auto"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Modal Header */}
+          <div className="flex items-start justify-between gap-3 px-5 sm:px-7 py-4 sm:py-5 border-b border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-[#1D1F24]/70 shrink-0">
+            <div className="space-y-1 pr-2 min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-[#D4F82C] text-[#111215] shadow-2xs">
+                  <Zap size={13} className="fill-[#111215]" />
+                  <span>Verified Role Invitation • #{targetJobData.accessCode || targetJobId}</span>
+                </span>
+
+                <button
+                  type="button"
+                  onClick={() => togglePlayAudio(targetJobData)}
+                  className={`px-3 py-1 rounded-full text-xs font-bold border transition-colors inline-flex items-center gap-1.5 cursor-pointer ${
+                    playingJobId === targetJobData.id
+                      ? 'bg-[#111215] text-[#D4F82C] border-[#111215] dark:bg-[#D4F82C] dark:text-[#111215]'
+                      : 'bg-white dark:bg-white/10 text-[#111215] dark:text-white border-[#E4E7DC] dark:border-white/10 hover:bg-[#D4F82C] dark:hover:bg-[#D4F82C] hover:text-[#111215]'
+                  }`}
+                  title="Listen to AI Audio Job Description"
+                >
+                  {playingJobId === targetJobData.id ? (
+                    <>
+                      <VolumeX size={13} className="text-red-500 animate-pulse" />
+                      <span>Stop Audio</span>
+                    </>
+                  ) : (
+                    <>
+                      <Volume2 size={13} className="text-[#8FB305] dark:text-[#D4F82C]" />
+                      <span>Audio JD</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
+              <h2 className="text-xl sm:text-2xl font-black text-[#111215] dark:text-white truncate mt-1">
+                {targetJobData.title || 'Open Position'}
+              </h2>
+
+              <div className="flex items-center gap-2 text-xs font-semibold text-[#575A51] dark:text-neutral-400">
+                <Building2 size={14} className="shrink-0 text-[#8FB305] dark:text-[#D4F82C]" />
+                <span className="truncate">{targetJobData.company || 'Hiring Partner'}</span>
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20">
+                  Verified Role
+                </span>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowTargetJdModal(false)}
+              className="p-2 rounded-full text-[#73766C] dark:text-neutral-400 hover:text-[#111215] dark:hover:text-white hover:bg-[#E4E7DC]/60 dark:hover:bg-white/10 transition-colors cursor-pointer shrink-0"
+              aria-label="Close modal"
+            >
+              <X size={20} />
+            </button>
+          </div>
+
+          {/* Modal Scrollable Body */}
+          <div className="flex-1 overflow-y-auto px-5 sm:px-7 py-5 space-y-6">
+            {/* Core Specifications 3x2 Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+              <div className="p-3 rounded-2xl bg-[#F8F9F5] dark:bg-[#1D1F24] border border-[#E4E7DC]/80 dark:border-white/5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#73766C] dark:text-neutral-400 block mb-1">
+                  Location
+                </span>
+                <div className="text-xs sm:text-sm font-bold text-[#111215] dark:text-white flex items-center gap-1.5 truncate">
+                  <MapPin size={14} className="text-[#8FB305] dark:text-[#D4F82C] shrink-0" />
+                  <span className="truncate">{targetJobData.location || 'Remote / Hybrid'}</span>
+                </div>
+              </div>
+
+              <div className="p-3 rounded-2xl bg-[#F8F9F5] dark:bg-[#1D1F24] border border-[#E4E7DC]/80 dark:border-white/5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#73766C] dark:text-neutral-400 block mb-1">
+                  Experience Required
+                </span>
+                <div className="text-xs sm:text-sm font-bold text-[#111215] dark:text-white flex items-center gap-1.5 truncate">
+                  <Clock size={14} className="text-[#8FB305] dark:text-[#D4F82C] shrink-0" />
+                  <span className="truncate">{targetJobData.experience || 'Any Experience'}</span>
+                </div>
+              </div>
+
+              <div className="p-3 rounded-2xl bg-[#F8F9F5] dark:bg-[#1D1F24] border border-[#E4E7DC]/80 dark:border-white/5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#73766C] dark:text-neutral-400 block mb-1">
+                  Salary / Compensation
+                </span>
+                <div className="text-xs sm:text-sm font-bold text-[#111215] dark:text-white flex items-center gap-1.5 truncate">
+                  <TrendingUp size={14} className="text-[#8FB305] dark:text-[#D4F82C] shrink-0" />
+                  <span className="truncate">{targetJobData.salary || 'Competitive CTC'}</span>
+                </div>
+              </div>
+
+              <div className="p-3 rounded-2xl bg-[#F8F9F5] dark:bg-[#1D1F24] border border-[#E4E7DC]/80 dark:border-white/5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#73766C] dark:text-neutral-400 block mb-1">
+                  Employment Type
+                </span>
+                <div className="text-xs sm:text-sm font-bold text-[#111215] dark:text-white flex items-center gap-1.5 truncate">
+                  <Briefcase size={14} className="text-[#8FB305] dark:text-[#D4F82C] shrink-0" />
+                  <span className="truncate">{targetJobData.employmentType || 'Full-Time'}</span>
+                </div>
+              </div>
+
+              <div className="p-3 rounded-2xl bg-[#F8F9F5] dark:bg-[#1D1F24] border border-[#E4E7DC]/80 dark:border-white/5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#73766C] dark:text-neutral-400 block mb-1">
+                  Education / Qualification
+                </span>
+                <div className="text-xs sm:text-sm font-bold text-[#111215] dark:text-white flex items-center gap-1.5 truncate">
+                  <GraduationCap size={14} className="text-[#8FB305] dark:text-[#D4F82C] shrink-0" />
+                  <span className="truncate">{targetJobData.qualification || targetJobData.education || 'Graduate / Relevant Degree'}</span>
+                </div>
+              </div>
+
+              <div className="p-3 rounded-2xl bg-[#F8F9F5] dark:bg-[#1D1F24] border border-[#E4E7DC]/80 dark:border-white/5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#73766C] dark:text-neutral-400 block mb-1">
+                  Department
+                </span>
+                <div className="text-xs sm:text-sm font-bold text-[#111215] dark:text-white flex items-center gap-1.5 truncate">
+                  <Layers size={14} className="text-[#8FB305] dark:text-[#D4F82C] shrink-0" />
+                  <span className="truncate">{targetJobData.department || 'General'}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Required Core Skills */}
+            {targetJobData.skills && targetJobData.skills.length > 0 && (
+              <div className="space-y-2">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-[#73766C] dark:text-neutral-400 flex items-center gap-1.5">
+                  <Sparkles size={13} className="text-[#8FB305] dark:text-[#D4F82C]" />
+                  <span>Key Skills & Technical Requirements</span>
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  {targetJobData.skills.map((skill: string, idx: number) => (
+                    <span
+                      key={idx}
+                      className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-[#F8F9F5] dark:bg-[#1D1F24] text-[#111215] dark:text-white border border-[#E4E7DC] dark:border-white/10"
+                    >
+                      {skill}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Complete Job Description */}
+            <div className="space-y-2.5">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-[#73766C] dark:text-neutral-400 flex items-center gap-1.5">
+                <FileText size={14} className="text-[#8FB305] dark:text-[#D4F82C]" />
+                <span>Complete Job Description & Deliverables</span>
+              </h3>
+              <div className="p-4 sm:p-5 rounded-2xl bg-[#F8F9F5] dark:bg-[#1D1F24] border border-[#E4E7DC]/80 dark:border-white/5 text-xs sm:text-sm leading-relaxed text-[#111215] dark:text-neutral-200 whitespace-pre-line font-normal selection:bg-[#D4F82C] selection:text-[#111215]">
+                {targetJobData.description || targetJobData.jobDescription || 'No detailed text description provided for this opening. Please refer to role specifications above.'}
+              </div>
+            </div>
+
+            {/* Key Responsibilities if specified */}
+            {targetJobData.responsibilities && (
+              <div className="space-y-2">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-[#73766C] dark:text-neutral-400">
+                  Key Responsibilities
+                </h3>
+                <div className="p-4 rounded-2xl bg-[#F8F9F5] dark:bg-[#1D1F24] border border-[#E4E7DC]/80 dark:border-white/5 text-xs sm:text-sm leading-relaxed text-[#111215] dark:text-neutral-200 whitespace-pre-line">
+                  {targetJobData.responsibilities}
+                </div>
+              </div>
+            )}
+
+            {/* Recruiter / Desk Verified Stamp */}
+            <div className="p-3.5 rounded-2xl bg-white dark:bg-[#15161A] border border-[#E4E7DC] dark:border-white/10 flex flex-wrap items-center justify-between gap-2 text-xs text-[#73766C] dark:text-neutral-400">
+              <div className="flex items-center gap-2">
+                <ShieldCheck size={16} className="text-[#8FB305] dark:text-[#D4F82C]" />
+                <span>Posted by {targetJobData.recruiterName || 'Verified Recruiting Desk'}</span>
+              </div>
+              {targetJobData.deadline && (
+                <span className="text-[11px] font-semibold text-amber-600 dark:text-amber-400">
+                  Deadline: {targetJobData.deadline}
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Modal Footer */}
+          <div className="p-4 sm:px-7 border-t border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-[#1D1F24]/70 flex items-center justify-between gap-3 shrink-0">
+            <button
+              type="button"
+              onClick={() => setShowTargetJdModal(false)}
+              className="px-4 py-2.5 rounded-xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-white/5 text-xs font-bold text-[#575A51] dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-white/10 transition-colors cursor-pointer"
+            >
+              Close
+            </button>
+
+            {candidate ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setShowTargetJdModal(false);
+                  handleApplyToJob(targetJobData);
+                }}
+                disabled={isAlreadyApplied}
+                className="px-6 py-2.5 rounded-xl bg-[#D4F82C] hover:bg-[#C2E820] text-[#111215] font-black text-xs shadow-md transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              >
+                {isAlreadyApplied ? (
+                  <>
+                    <CheckCircle2 size={14} className="text-emerald-800" />
+                    <span>Already Applied</span>
+                  </>
+                ) : (
+                  <>
+                    <Zap size={14} className="fill-[#111215]" />
+                    <span>1-Tap Apply to Role</span>
+                  </>
+                )}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  setShowTargetJdModal(false);
+                  window.scrollTo({ top: 400, behavior: 'smooth' });
+                }}
+                className="px-6 py-2.5 rounded-xl bg-[#D4F82C] hover:bg-[#C2E820] text-[#111215] font-black text-xs shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
+              >
+                <Zap size={14} className="fill-[#111215]" />
+                <span>Apply for this Job</span>
+                <ArrowRight size={14} />
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // ── Reusable Resume Preview Modal ──
+  const renderResumePreviewModal = () => {
+    if (!previewResumeModalUrl) return null;
+
+    const candName = candidate?.resumeOriginalName || autofetchedCandidate?.resumeName || 'Candidate Resume Preview';
+
+    return (
+      <div className="fixed inset-0 z-[130] flex items-center justify-center p-2 sm:p-6 bg-black/80 backdrop-blur-md animate-in fade-in">
+        <div className={`relative w-full max-w-5xl h-[92vh] rounded-2xl flex flex-col overflow-hidden shadow-2xl border ${
+          isDark ? 'bg-[#121218] border-white/10' : 'bg-white border-slate-200'
+        }`}>
+          <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-200 dark:border-white/10 shrink-0">
+            <div className="flex items-center gap-2">
+              <FileText size={18} className="text-emerald-500" />
+              <span className="text-sm font-bold truncate max-w-xs sm:max-w-md">
+                {candName}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <a
+                href={previewResumeModalUrl}
+                download
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`p-2 sm:px-3 sm:py-1.5 rounded-xl text-xs font-semibold border flex items-center gap-1.5 transition-colors ${
+                  isDark ? 'border-white/10 hover:bg-white/5 text-slate-200' : 'border-slate-200 hover:bg-slate-100 text-slate-700'
+                }`}
+                title="Download File"
+              >
+                <Download size={14} />
+                <span className="hidden sm:inline">Download</span>
+              </a>
+              <button
+                type="button"
+                onClick={() => setPreviewResumeModalUrl(null)}
+                className={`p-2 rounded-xl transition-colors cursor-pointer ${
+                  isDark ? 'text-slate-400 hover:text-white hover:bg-white/10' : 'text-slate-600 hover:text-black hover:bg-slate-100'
+                }`}
+              >
+                <X size={18} />
+              </button>
+            </div>
+          </div>
+          <div className="flex-1 w-full bg-slate-900/60 relative">
+            <iframe
+              src={
+                previewResumeModalUrl.toLowerCase().includes('.doc')
+                  ? `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(previewResumeModalUrl)}`
+                  : previewResumeModalUrl
+              }
+              className="w-full h-full border-0"
+              title="Resume Fullscreen Viewer"
+            />
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   // If NOT logged in -> Render Dedicated Candidate Login Screen
   if (!candidate) {
     const hashPart = window.location.hash.includes('?') ? window.location.hash.split('?')[1] : '';
@@ -2068,26 +2437,37 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
                         </div>
                       </div>
 
-                      {targetJobData && (
+                      <div className="flex items-center gap-2">
+                        {targetJobData && (
+                          <button
+                            type="button"
+                            onClick={() => togglePlayAudio(targetJobData)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-[#E4E7DC]/70 dark:bg-white/10 text-[#111215] dark:text-white hover:bg-[#D4F82C] dark:hover:bg-[#D4F82C] hover:text-[#111215] dark:hover:text-[#111215] transition-all cursor-pointer shadow-2xs"
+                            title="Listen to AI Audio Job Description"
+                          >
+                            {playingJobId === targetJobData.id ? (
+                              <>
+                                <VolumeX size={13} className="text-red-500 animate-pulse" />
+                                <span>Stop Audio</span>
+                              </>
+                            ) : (
+                              <>
+                                <Volume2 size={13} className="text-[#8FB305] dark:text-[#D4F82C]" />
+                                <span>Audio JD</span>
+                              </>
+                            )}
+                          </button>
+                        )}
                         <button
                           type="button"
-                          onClick={() => togglePlayAudio(targetJobData)}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-[#E4E7DC]/70 dark:bg-white/10 text-[#111215] dark:text-white hover:bg-[#D4F82C] dark:hover:bg-[#D4F82C] hover:text-[#111215] dark:hover:text-[#111215] transition-all cursor-pointer shadow-2xs"
-                          title="Listen to AI Audio Job Description"
+                          onClick={() => setShowTargetJdModal(true)}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-[#111215] text-[#D4F82C] dark:bg-white dark:text-[#111215] hover:opacity-90 transition-all cursor-pointer shadow-2xs"
+                          title="View Complete Job Description"
                         >
-                          {playingJobId === targetJobData.id ? (
-                            <>
-                              <VolumeX size={13} className="text-red-500 animate-pulse" />
-                              <span>Stop Audio</span>
-                            </>
-                          ) : (
-                            <>
-                              <Volume2 size={13} className="text-[#8FB305] dark:text-[#D4F82C]" />
-                              <span>Audio JD</span>
-                            </>
-                          )}
+                          <FileText size={13} />
+                          <span>View Full JD ↗</span>
                         </button>
-                      )}
+                      </div>
                     </div>
 
                     {/* Requirement Badges Grid */}
@@ -2125,6 +2505,30 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
                       </div>
                     </div>
 
+                    {/* Extra Badges if present */}
+                    {(targetJobData?.qualification || targetJobData?.department) && (
+                      <div className="mt-2.5 grid grid-cols-2 gap-2.5">
+                        {targetJobData?.qualification && (
+                          <div className="p-2 rounded-xl bg-[#F8F9F5] dark:bg-[#1D1F24] border border-[#E4E7DC]/60 dark:border-white/5">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-[#73766C] dark:text-neutral-400 block mb-0.5">Education</span>
+                            <div className="text-xs font-bold text-[#111215] dark:text-white flex items-center gap-1 truncate">
+                              <GraduationCap size={12} className="text-[#8FB305] dark:text-[#D4F82C] shrink-0" />
+                              <span className="truncate">{targetJobData.qualification}</span>
+                            </div>
+                          </div>
+                        )}
+                        {targetJobData?.department && (
+                          <div className="p-2 rounded-xl bg-[#F8F9F5] dark:bg-[#1D1F24] border border-[#E4E7DC]/60 dark:border-white/5">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-[#73766C] dark:text-neutral-400 block mb-0.5">Department</span>
+                            <div className="text-xs font-bold text-[#111215] dark:text-white flex items-center gap-1 truncate">
+                              <Layers size={12} className="text-[#8FB305] dark:text-[#D4F82C] shrink-0" />
+                              <span className="truncate">{targetJobData.department}</span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
                     {/* Key Skills */}
                     {targetJobData?.skills && targetJobData.skills.length > 0 && (
                       <div className="mt-4">
@@ -2139,12 +2543,38 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
                       </div>
                     )}
 
-                    {/* Description Excerpt */}
+                    {/* Complete Job Description (JD) Section */}
                     {targetJobData?.description && (
-                      <div className="mt-4 pt-3 border-t border-[#E4E7DC]/60 dark:border-white/5">
-                        <p className="text-xs text-[#575A51] dark:text-neutral-400 line-clamp-3 leading-relaxed">
-                          {targetJobData.description}
-                        </p>
+                      <div className="mt-4 pt-3.5 border-t border-[#E4E7DC]/60 dark:border-white/5">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-[11px] font-bold uppercase tracking-wider text-[#73766C] dark:text-neutral-400 flex items-center gap-1.5">
+                            <FileText size={13} className="text-[#8FB305] dark:text-[#D4F82C]" />
+                            Job Description & Requirements
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setShowTargetJdModal(true)}
+                            className="inline-flex items-center gap-1 text-[11px] font-bold text-[#8FB305] dark:text-[#D4F82C] hover:underline cursor-pointer"
+                          >
+                            <span>Open Full Modal</span>
+                            <ExternalLink size={11} />
+                          </button>
+                        </div>
+                        <div className="p-3.5 rounded-2xl bg-[#F8F9F5] dark:bg-[#1D1F24] border border-[#E4E7DC]/60 dark:border-white/5">
+                          <p className={`text-xs text-[#575A51] dark:text-neutral-300 leading-relaxed whitespace-pre-line ${!isJdExpanded ? 'line-clamp-4' : ''}`}>
+                            {targetJobData.description}
+                          </p>
+                          {targetJobData.description.length > 220 && (
+                            <button
+                              type="button"
+                              onClick={() => setIsJdExpanded(!isJdExpanded)}
+                              className="mt-2.5 inline-flex items-center gap-1 text-[11px] font-bold text-[#111215] dark:text-white hover:text-[#8FB305] dark:hover:text-[#D4F82C] transition-colors cursor-pointer"
+                            >
+                              <span>{isJdExpanded ? 'Show Less' : 'Read Full Description'}</span>
+                              {isJdExpanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                            </button>
+                          )}
+                        </div>
                       </div>
                     )}
                   </div>
@@ -2283,7 +2713,97 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
             {/* ══════════════════════════════════════════════
                 RIGHT SIDE: Express 1-Tap Apply OR Auth Card
                ══════════════════════════════════════════════ */}
-            <div className="lg:col-span-5 w-full">
+            <div className="lg:col-span-5 w-full space-y-4">
+              {/* Mobile/Tablet Target Job Card (Visible on screens < lg) */}
+              {targetJobId && targetJobData && (
+                <div className="lg:hidden p-4 sm:p-5 rounded-3xl bg-white dark:bg-[#15161A] border border-[#E4E7DC] dark:border-white/10 shadow-xl space-y-3 relative overflow-hidden">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#D4F82C] text-[#111215] mb-1.5 shadow-2xs">
+                        <Zap size={11} className="fill-[#111215]" />
+                        <span>Role Invitation #{targetJobData.accessCode || targetJobId}</span>
+                      </div>
+                      <h2 className="text-base sm:text-lg font-black text-[#111215] dark:text-white leading-snug truncate">
+                        {targetJobData.title}
+                      </h2>
+                      <p className="text-xs text-[#73766C] dark:text-neutral-400 mt-0.5 flex items-center gap-1.5 truncate">
+                        <Building2 size={13} className="text-[#8FB305] dark:text-[#D4F82C] shrink-0" />
+                        <span className="truncate">{targetJobData.company}</span>
+                        <span>•</span>
+                        <span className="truncate">{targetJobData.location}</span>
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => togglePlayAudio(targetJobData)}
+                        className="p-2 rounded-full bg-[#E4E7DC]/60 dark:bg-white/10 text-[#111215] dark:text-white hover:bg-[#D4F82C] transition-all cursor-pointer shadow-2xs"
+                        title="Listen to AI Audio JD"
+                      >
+                        {playingJobId === targetJobData.id ? (
+                          <VolumeX size={14} className="text-red-500 animate-pulse" />
+                        ) : (
+                          <Volume2 size={14} className="text-[#8FB305] dark:text-[#D4F82C]" />
+                        )}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setShowTargetJdModal(true)}
+                        className="px-3 py-1.5 rounded-xl bg-[#111215] text-[#D4F82C] dark:bg-[#D4F82C] dark:text-[#111215] text-xs font-bold transition-all flex items-center gap-1 cursor-pointer shadow-xs"
+                      >
+                        <FileText size={12} />
+                        <span>View Full JD</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Badges 2x2 */}
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="p-2 rounded-xl bg-[#F8F9F5] dark:bg-[#1D1F24] border border-[#E4E7DC]/60 dark:border-white/5 truncate">
+                      <span className="text-[9px] font-bold uppercase text-[#73766C] dark:text-neutral-400 block">Experience</span>
+                      <span className="font-bold text-[#111215] dark:text-white truncate block">{targetJobData.experience || 'Any'}</span>
+                    </div>
+                    <div className="p-2 rounded-xl bg-[#F8F9F5] dark:bg-[#1D1F24] border border-[#E4E7DC]/60 dark:border-white/5 truncate">
+                      <span className="text-[9px] font-bold uppercase text-[#73766C] dark:text-neutral-400 block">Salary / CTC</span>
+                      <span className="font-bold text-[#111215] dark:text-white truncate block">{targetJobData.salary || 'Competitive'}</span>
+                    </div>
+                  </div>
+
+                  {/* JD Excerpt with Expand or Modal */}
+                  {targetJobData.description && (
+                    <div className="p-3 rounded-2xl bg-[#F8F9F5] dark:bg-[#1D1F24] border border-[#E4E7DC]/60 dark:border-white/5 text-xs">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-[#73766C] dark:text-neutral-400 flex items-center gap-1">
+                          <FileText size={11} className="text-[#8FB305] dark:text-[#D4F82C]" />
+                          Job Description (JD)
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setShowTargetJdModal(true)}
+                          className="text-[10px] font-bold text-[#8FB305] dark:text-[#D4F82C] hover:underline cursor-pointer"
+                        >
+                          Open Full Modal ↗
+                        </button>
+                      </div>
+                      <p className={`text-xs text-[#575A51] dark:text-neutral-300 leading-relaxed whitespace-pre-line ${!isJdExpanded ? 'line-clamp-3' : ''}`}>
+                        {targetJobData.description}
+                      </p>
+                      {targetJobData.description.length > 160 && (
+                        <button
+                          type="button"
+                          onClick={() => setIsJdExpanded(!isJdExpanded)}
+                          className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-bold text-[#111215] dark:text-white hover:underline cursor-pointer"
+                        >
+                          <span>{isJdExpanded ? 'Show Less' : 'Read More'}</span>
+                          {isJdExpanded ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div className="relative rounded-3xl bg-white dark:bg-[#15161A] border border-[#E4E7DC] dark:border-white/10 p-5 sm:p-7 shadow-2xl backdrop-blur-xl">
                 
                 {/* Top Accent Strip */}
@@ -2361,6 +2881,32 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
                       <p className="mt-1 text-xs text-[#575A51] dark:text-neutral-400">
                         Enter your email below. We'll automatically fetch your profile from our talent vault for instant 1-tap apply.
                       </p>
+                    </div>
+
+                    {/* Target Role Chip inside the Form */}
+                    <div className="mb-4 p-3 rounded-2xl bg-[#D4F82C]/15 dark:bg-[#D4F82C]/10 border border-[#8FB305]/30 dark:border-[#D4F82C]/20 flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-8 h-8 rounded-xl bg-[#111215] text-[#D4F82C] flex items-center justify-center shrink-0 shadow-2xs">
+                          <Briefcase size={15} />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-[10px] font-bold uppercase tracking-wider text-[#8FB305] dark:text-[#D4F82C] truncate">
+                            Target Opening
+                          </div>
+                          <div className="text-xs font-bold text-[#111215] dark:text-white truncate">
+                            {targetJobData?.title || 'Open Position'} • {targetJobData?.company || 'Hiring Partner'}
+                          </div>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setShowTargetJdModal(true)}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-white dark:bg-[#1D1F24] text-[#111215] dark:text-white hover:bg-[#D4F82C] dark:hover:bg-[#D4F82C] hover:text-[#111215] dark:hover:text-[#111215] border border-[#E4E7DC] dark:border-white/10 transition-all shrink-0 cursor-pointer shadow-2xs"
+                        title="View Full Job Description"
+                      >
+                        <FileText size={12} />
+                        <span>View Full JD</span>
+                      </button>
                     </div>
 
                     {/* Email Input Field with Live Auto-Fetch Indicator */}
@@ -2854,6 +3400,9 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
           </div>
           <p>© {new Date().getFullYear()} InterviewXpert • Candidate Portal. All rights reserved.</p>
         </footer>
+
+        {renderTargetJdModal()}
+        {renderResumePreviewModal()}
       </div>
     );
   }
@@ -2899,6 +3448,88 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
 
       {/* Main Body */}
       <div className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 pb-28 sm:pb-12 space-y-6">
+        {/* ── Direct Job Invitation Dossier Banner (When URL has ?job=...) ── */}
+        {targetJobId && targetJobData && (
+          <div className="p-4 sm:p-6 rounded-3xl bg-gradient-to-br from-[#D4F82C]/20 via-white to-white dark:from-[#D4F82C]/10 dark:via-[#15161A] dark:to-[#15161A] border-2 border-[#D4F82C] shadow-xl relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-[#D4F82C]/10 rounded-full blur-3xl pointer-events-none" />
+            <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="space-y-1.5 min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-[#D4F82C] text-[#111215] shadow-xs">
+                    <Zap size={13} className="fill-[#111215]" />
+                    <span>Target Role Invitation • #{targetJobData.accessCode || targetJobId}</span>
+                  </span>
+                  <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-[#E4E7DC] dark:bg-white/10 text-[#575A51] dark:text-neutral-300">
+                    {targetJobData.employmentType || 'Full-Time'}
+                  </span>
+                </div>
+                <h2 className="text-xl sm:text-2xl font-black text-[#111215] dark:text-white truncate">
+                  {targetJobData.title}
+                </h2>
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[#575A51] dark:text-neutral-300 font-medium">
+                  <span className="flex items-center gap-1">
+                    <Building2 size={13} className="text-[#8FB305] dark:text-[#D4F82C]" />
+                    <strong>{targetJobData.company}</strong>
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <MapPin size={13} className="text-[#8FB305] dark:text-[#D4F82C]" />
+                    {targetJobData.location}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <Clock size={13} className="text-[#8FB305] dark:text-[#D4F82C]" />
+                    {targetJobData.experience}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <TrendingUp size={13} className="text-[#8FB305] dark:text-[#D4F82C]" />
+                    {targetJobData.salary}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => togglePlayAudio(targetJobData)}
+                  className="px-3.5 py-2 rounded-xl text-xs font-bold bg-[#E4E7DC]/60 dark:bg-white/10 text-[#111215] dark:text-white hover:bg-[#D4F82C] hover:text-[#111215] transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                  title="Listen to AI Audio JD"
+                >
+                  {playingJobId === targetJobData.id ? (
+                    <VolumeX size={14} className="text-red-500 animate-pulse" />
+                  ) : (
+                    <Volume2 size={14} className="text-[#8FB305] dark:text-[#D4F82C]" />
+                  )}
+                  <span>Audio JD</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowTargetJdModal(true)}
+                  className="px-4 py-2 rounded-xl text-xs font-bold bg-white dark:bg-[#1D1F24] border border-[#E4E7DC] dark:border-white/10 text-[#111215] dark:text-white hover:bg-[#F8F9F5] dark:hover:bg-white/10 transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+                >
+                  <FileText size={14} className="text-[#8FB305] dark:text-[#D4F82C]" />
+                  <span>View Full JD</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleApplyToJob(targetJobData)}
+                  disabled={appliedJobIds.includes(targetJobData.id)}
+                  className="px-5 py-2 rounded-xl text-xs font-black bg-[#D4F82C] hover:bg-[#C2E820] text-[#111215] transition-all flex items-center gap-1.5 cursor-pointer shadow-md disabled:opacity-50"
+                >
+                  {appliedJobIds.includes(targetJobData.id) ? (
+                    <>
+                      <CheckCircle2 size={14} className="text-emerald-800" />
+                      <span>Applied</span>
+                    </>
+                  ) : (
+                    <>
+                      <Zap size={14} className="fill-[#111215]" />
+                      <span>1-Tap Apply</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
         {/* Clean Welcome Header - ONLY on Home (Matched roles) tab */}
         {activeTab === 'matches' && (
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-2">
@@ -5046,6 +5677,8 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
           <span className="text-[10px] mt-0.5 tracking-tight">Profile</span>
         </button>
       </nav>
+
+      {renderTargetJdModal()}
     </div>
   );
 };

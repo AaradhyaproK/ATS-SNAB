@@ -33,7 +33,7 @@ export const HireXLogo: React.FC<HireXLogoProps> = ({
   variant = 'full',
   withLink = false,
   to = '/',
-  isDark = false,
+  isDark,
 }) => {
   const sizeMap = {
     sm: { icon: 26, text: 'text-base' },
@@ -44,6 +44,29 @@ export const HireXLogo: React.FC<HireXLogoProps> = ({
 
   const currentSize = sizeMap[size];
 
+  // High-contrast, beautifully legible color tokens for "InterviewXpert" wordmark
+  const getWordmarkClasses = () => {
+    if (isDark === true) {
+      return {
+        brandPrefix: 'text-white',
+        brandSuffix: 'text-[#D4F82C]',
+      };
+    }
+    if (isDark === false) {
+      return {
+        brandPrefix: 'text-[#111215]',
+        brandSuffix: 'text-[#15803D]',
+      };
+    }
+    // Adaptive mode when isDark is not explicitly passed
+    return {
+      brandPrefix: 'text-[#111215] dark:text-white',
+      brandSuffix: 'text-[#15803D] dark:text-[#D4F82C]',
+    };
+  };
+
+  const { brandPrefix, brandSuffix } = getWordmarkClasses();
+
   const content = (
     <div className={`inline-flex items-center gap-2.5 select-none ${className}`}>
       {/* Brand Icon Badge */}
@@ -51,12 +74,8 @@ export const HireXLogo: React.FC<HireXLogoProps> = ({
 
       {/* Brand Typographic Wordmark */}
       {variant === 'full' && (
-        <span
-          className={`font-black tracking-tight ${currentSize.text} ${
-            isDark ? 'text-white' : 'text-[#111215]'
-          }`}
-        >
-          Interview<span className="text-[#8FB305] dark:text-[#D4F82C]">Xpert</span>
+        <span className={`font-black tracking-tight ${currentSize.text} ${brandPrefix}`}>
+          Interview<span className={brandSuffix}>Xpert</span>
         </span>
       )}
     </div>

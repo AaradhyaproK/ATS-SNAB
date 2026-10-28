@@ -1368,7 +1368,7 @@ export default function PublicJobSeekerUpload() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link to="/" className="flex items-center group">
-              <HireXLogo size="md" variant="full" />
+              <HireXLogo size="md" variant="full" isDark={false} />
             </Link>
             <div className="hidden sm:block border-l border-[#E4E7DC] pl-3">
               <span className="text-[11px] font-mono text-[#8FB305] font-bold block uppercase tracking-wider">Candidate Match Portal</span>
@@ -3392,7 +3392,7 @@ export default function PublicJobSeekerUpload() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 pb-12">
             <div>
               <div className="mb-3">
-                <HireXLogo size="md" variant="full" />
+                <HireXLogo size="md" variant="full" isDark={false} />
               </div>
               <p className="text-xs text-[#73766C] leading-relaxed">
                 The AI-powered recruitment operating system for agile hiring teams and modern staffing agencies.

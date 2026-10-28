@@ -107,7 +107,7 @@ const LayoutContent: React.FC<{ children?: React.ReactNode }> = ({ children }) =
             {/* Logo Area */}
             <div className="flex-shrink-0 flex items-center">
               <Link to="/" className="flex items-center group">
-                <HireXLogo size="md" variant="full" />
+                <HireXLogo size="md" variant="full" isDark={showRecruiterSidebar ? true : undefined} />
               </Link>
             </div>
 

@@ -576,7 +576,7 @@ export default function LandingPage() {
           {/* Logo & Product Badge */}
           <div className="flex items-center gap-2.5 sm:gap-3">
             <Link to="/" className="group inline-flex items-center" title="InterviewXpert - AI Recruitment Platform">
-              <HireXLogo size="md" variant="full" />
+              <HireXLogo size="md" variant="full" isDark={false} />
             </Link>
             <div className="hidden sm:flex items-center gap-1.5 pl-3 border-l border-[#E4E7DC] text-[11px] font-medium text-[#73766C]">
               <span>by</span>
@@ -2992,7 +2992,7 @@ export default function LandingPage() {
             <div className="sm:col-span-2 lg:col-span-2 space-y-4">
               <div className="mb-2">
                 <Link to="/" className="inline-block" title="InterviewXpert Home">
-                  <HireXLogo size="md" variant="full" />
+                  <HireXLogo size="md" variant="full" isDark={false} />
                 </Link>
               </div>
               <p className="text-xs text-[#575A51] leading-relaxed max-w-sm">
