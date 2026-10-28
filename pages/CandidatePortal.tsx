@@ -17,6 +17,10 @@ import {
   AlertCircle,
   LogOut,
   Edit3,
+  BarChart3,
+  Code,
+  Target,
+  Trophy,
   Save,
   Plus,
   X,
@@ -175,8 +179,17 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
   const [quickResumeFile, setQuickResumeFile] = useState<File | null>(null);
   const [isUploadingQuickResume, setIsUploadingQuickResume] = useState(false);
 
-  // Active Tab inside Dashboard: 'dashboard' | 'matches' | 'applied' | 'resume' | 'edit-profile'
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'matches' | 'applied' | 'resume' | 'edit-profile'>('dashboard');
+  // Active Tab inside Dashboard: 'dashboard' | 'matches' | 'applied' | 'assessments' | 'assessment-results' | 'resume' | 'edit-profile'
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'matches' | 'applied' | 'assessments' | 'assessment-results' | 'resume' | 'edit-profile'>('dashboard');
+
+  // Assessments & Assessment Results State
+  const [candidateAssessments, setCandidateAssessments] = useState<any[]>([]);
+  const [candidateSubmissions, setCandidateSubmissions] = useState<any[]>([]);
+  const [assessmentsLoading, setAssessmentsLoading] = useState(false);
+  const [selectedScorecardSubmission, setSelectedScorecardSubmission] = useState<any>(null);
+  const [assessmentFilter, setAssessmentFilter] = useState<'all' | 'aptitude' | 'coding'>('all');
+  const [resultsFilter, setResultsFilter] = useState<'all' | 'passed' | 'failed'>('all');
+  const [assessmentSearchQuery, setAssessmentSearchQuery] = useState('');
 
   // Stage filter inside 'applied' tab: 'all' | 'shortlisted' | 'under-review' | 'selected' | 'rejected'
   const [appliedStageFilter, setAppliedStageFilter] = useState<'all' | 'shortlisted' | 'under-review' | 'selected' | 'rejected'>('all');
@@ -951,6 +964,86 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
       isMounted = false;
     };
   }, [candidate?.email, candidate?.profile?.email, editForm.email, allJobs]);
+
+  // Fetch available tests/assessments and candidate's past test submissions
+  useEffect(() => {
+    let isMounted = true;
+    const candEmail = (candidate?.email || candidate?.profile?.email || editForm.email || '').trim().toLowerCase();
+
+    const fetchAssessmentsAndResults = async () => {
+      setAssessmentsLoading(true);
+      try {
+        // 1. Fetch available tests from tests collection
+        const testsSnap = await getDocs(collection(db, 'tests')).catch(() => null);
+        const testsList: any[] = [];
+        if (testsSnap && !testsSnap.empty) {
+          testsSnap.docs.forEach((docSnap) => {
+            const data = docSnap.data();
+            const statusLower = String(data.status || '').trim().toLowerCase();
+            if (statusLower !== 'inactive' && statusLower !== 'archived') {
+              testsList.push({
+                id: docSnap.id,
+                ...data,
+                passingScore: Number(data.passingScore ?? 70),
+                duration: Number(data.duration ?? 30),
+                questionsCount: Array.isArray(data.questions) ? data.questions.length : 0,
+              });
+            }
+          });
+        }
+
+        // 2. Fetch candidate test submissions from testSubmissions collection
+        const subsList: any[] = [];
+        if (candEmail) {
+          const q1 = query(collection(db, 'testSubmissions'), where('candidateEmail', '==', candEmail));
+          const q2 = query(collection(db, 'testSubmissions'), where('email', '==', candEmail));
+          const [snap1, snap2] = await Promise.all([
+            getDocs(q1).catch(() => null),
+            getDocs(q2).catch(() => null),
+          ]);
+
+          const seenIds = new Set<string>();
+          const allDocs = [...(snap1?.docs || []), ...(snap2?.docs || [])];
+
+          for (const d of allDocs) {
+            if (!seenIds.has(d.id)) {
+              seenIds.add(d.id);
+              const data = d.data();
+              const matchedTest = testsList.find(t => t.id === data.testId);
+              subsList.push({
+                id: d.id,
+                ...data,
+                testTitle: data.testTitle || matchedTest?.title || 'Skill Assessment',
+                passingScore: Number(data.passingScore || matchedTest?.passingScore || 70),
+                type: data.type || matchedTest?.type || 'aptitude',
+                testQuestions: matchedTest?.questions || data.questions || [],
+              });
+            }
+          }
+
+          subsList.sort((a, b) => {
+            const tA = a.submittedAt?.toMillis ? a.submittedAt.toMillis() : (a.submittedAt ? new Date(a.submittedAt).getTime() : 0);
+            const tB = b.submittedAt?.toMillis ? b.submittedAt.toMillis() : (b.submittedAt ? new Date(b.submittedAt).getTime() : 0);
+            return tB - tA;
+          });
+        }
+
+        if (isMounted) {
+          setCandidateAssessments(testsList);
+          setCandidateSubmissions(subsList);
+        }
+      } catch (err) {
+        console.warn('Error fetching candidate assessments & results:', err);
+      } finally {
+        if (isMounted) setAssessmentsLoading(false);
+      }
+    };
+
+    fetchAssessmentsAndResults();
+    return () => {
+      isMounted = false;
+    };
+  }, [candidate?.email, candidate?.profile?.email, editForm.email]);
 
   // Fetch all active jobs from Firestore interviews & jobs collections (same source as upload resume)
   useEffect(() => {
@@ -2012,6 +2105,185 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
       onEnd: () => setPlayingJobId(null),
       onError: () => setPlayingJobId(null)
     });
+  };
+
+  // ── Assessment Scorecard & Solution Modal ──
+  const renderScorecardModal = () => {
+    if (!selectedScorecardSubmission) return null;
+
+    const score = Number(selectedScorecardSubmission.score) || 0;
+    const passingScore = Number(selectedScorecardSubmission.passingScore) || 70;
+    const isPassed = selectedScorecardSubmission.status === 'passed' || score >= passingScore;
+    const tabSwitches = Number(selectedScorecardSubmission.tabSwitchCount) || 0;
+
+    return (
+      <div
+        className="fixed inset-0 z-[120] flex items-center justify-center p-3 sm:p-6 bg-black/75 backdrop-blur-md animate-in fade-in"
+        onClick={() => setSelectedScorecardSubmission(null)}
+        role="dialog"
+        aria-modal="true"
+      >
+        <div
+          className="relative flex flex-col w-full max-w-3xl max-h-[calc(100dvh-2rem)] sm:max-h-[calc(100vh-3.5rem)] rounded-3xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] text-[#111215] dark:text-[#F8F9F5] shadow-2xl overflow-hidden my-auto"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Modal Header */}
+          <div className="flex items-start justify-between gap-4 p-5 sm:p-6 border-b border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-[#1D1F24]">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <span className={`text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full ${
+                  selectedScorecardSubmission.type === 'coding'
+                    ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950/60 dark:text-indigo-300'
+                    : 'bg-[#D4F82C] text-[#111215]'
+                }`}>
+                  {selectedScorecardSubmission.type === 'coding' ? 'Coding Assessment' : 'Aptitude Assessment'}
+                </span>
+                <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${
+                  isPassed
+                    ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
+                    : 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300'
+                }`}>
+                  {isPassed ? '✓ Passed Benchmark' : 'Needs Improvement'}
+                </span>
+              </div>
+              <h2 className="text-xl font-bold text-[#111215] dark:text-white">
+                {selectedScorecardSubmission.testTitle}
+              </h2>
+              <p className="text-xs text-[#575A51] dark:text-neutral-400 mt-0.5">
+                Evaluated for {candidateDisplayName} • Submitted{' '}
+                {selectedScorecardSubmission.submittedAt?.toDate
+                  ? selectedScorecardSubmission.submittedAt.toDate().toLocaleString()
+                  : 'Recently'}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setSelectedScorecardSubmission(null)}
+              className="size-8 rounded-full border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-white/5 flex items-center justify-center hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
+            >
+              <X size={16} />
+            </button>
+          </div>
+
+          {/* Modal Body */}
+          <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-5">
+            {/* Performance KPI banner */}
+            <div className="grid grid-cols-3 gap-3 p-4 rounded-2xl border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-white/5 text-center">
+              <div>
+                <span className="text-[10px] uppercase font-bold text-[#73766C] dark:text-neutral-400">Score</span>
+                <p className={`text-2xl font-black mt-0.5 ${isPassed ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>
+                  {score}%
+                </p>
+              </div>
+              <div>
+                <span className="text-[10px] uppercase font-bold text-[#73766C] dark:text-neutral-400">Pass Benchmark</span>
+                <p className="text-2xl font-black text-[#111215] dark:text-white mt-0.5">
+                  {passingScore}%
+                </p>
+              </div>
+              <div>
+                <span className="text-[10px] uppercase font-bold text-[#73766C] dark:text-neutral-400">Proctoring</span>
+                <p className="text-xs font-bold text-[#111215] dark:text-white mt-2">
+                  {tabSwitches > 0 ? `⚠️ ${tabSwitches} switch(es)` : '🛡️ 100% Clean'}
+                </p>
+              </div>
+            </div>
+
+            {/* Evaluator feedback */}
+            {selectedScorecardSubmission.feedback && (
+              <div className="p-4 rounded-2xl border border-blue-200 dark:border-blue-900/50 bg-blue-50/50 dark:bg-blue-950/20">
+                <h4 className="text-xs font-bold text-blue-900 dark:text-blue-300 flex items-center gap-1.5 mb-1">
+                  <Sparkles size={14} />
+                  <span>Automated Evaluator Feedback</span>
+                </h4>
+                <p className="text-xs text-blue-800 dark:text-blue-200 leading-relaxed">
+                  {selectedScorecardSubmission.feedback}
+                </p>
+              </div>
+            )}
+
+            {/* Questions list */}
+            <div className="space-y-4">
+              <h4 className="text-xs font-black uppercase tracking-wider text-[#73766C] dark:text-neutral-400">
+                Question & Answer Breakdown
+              </h4>
+
+              {Array.isArray(selectedScorecardSubmission.testQuestions) && selectedScorecardSubmission.testQuestions.length > 0 ? (
+                selectedScorecardSubmission.testQuestions.map((q: any, qIdx: number) => {
+                  const userAns = selectedScorecardSubmission.answers?.[qIdx];
+                  return (
+                    <div key={qIdx} className="p-4 rounded-2xl border border-[#E4E7DC] dark:border-white/10 bg-[#FAFAF8] dark:bg-white/[0.02] space-y-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <span className="text-[11px] font-bold text-[#73766C] dark:text-neutral-400">
+                          Q{qIdx + 1}.
+                        </span>
+                        <h5 className="flex-1 text-xs font-bold text-[#111215] dark:text-white">
+                          {selectedScorecardSubmission.type === 'aptitude' ? q.question : q.title}
+                        </h5>
+                      </div>
+
+                      {selectedScorecardSubmission.type === 'aptitude' && Array.isArray(q.options) ? (
+                        <div className="space-y-1.5 pl-4">
+                          {q.options.map((opt: string, optIdx: number) => {
+                            const isSelected = userAns === optIdx;
+                            const isCorrect = q.correctIndex === optIdx;
+                            return (
+                              <div
+                                key={optIdx}
+                                className={`p-2.5 rounded-xl text-xs flex items-center justify-between border ${
+                                  isCorrect
+                                    ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-700 text-emerald-900 dark:text-emerald-200 font-semibold'
+                                    : isSelected && !isCorrect
+                                    ? 'bg-red-50 dark:bg-red-950/40 border-red-300 dark:border-red-700 text-red-900 dark:text-red-200'
+                                    : 'bg-white dark:bg-white/5 border-[#E4E7DC] dark:border-white/10 text-[#575A51] dark:text-neutral-300'
+                                }`}
+                              >
+                                <span>{opt}</span>
+                                {isCorrect && (
+                                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-200 text-emerald-900">
+                                    ✓ Correct
+                                  </span>
+                                )}
+                                {isSelected && !isCorrect && (
+                                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-200 text-red-900">
+                                    ✗ Your Answer
+                                  </span>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="p-3 rounded-xl bg-black text-white font-mono text-xs overflow-x-auto">
+                          <pre className="text-neutral-300">
+                            {selectedScorecardSubmission.answers?.[qIdx] || '// No code submitted for this problem'}
+                          </pre>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="p-6 rounded-2xl border border-dashed border-[#E4E7DC] dark:border-white/10 text-center text-xs text-[#73766C] dark:text-neutral-400">
+                  Full test score recorded: {score}%. Detailed solution logs are retained by the evaluation team.
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Modal Footer */}
+          <div className="p-4 border-t border-[#E4E7DC] dark:border-white/10 flex justify-end bg-[#F8F9F5] dark:bg-[#1D1F24]">
+            <button
+              type="button"
+              onClick={() => setSelectedScorecardSubmission(null)}
+              className="px-5 py-2 rounded-xl text-xs font-bold bg-[#111215] dark:bg-[#D4F82C] text-white dark:text-[#111215] cursor-pointer hover:opacity-90 transition-opacity"
+            >
+              Close Scorecard
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   // ── Dedicated Full Job Description (JD) Modal ──
@@ -3458,6 +3730,10 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
                   ? 'Dashboard Overview'
                   : activeTab === 'applied'
                   ? (appliedStageFilter === 'shortlisted' ? 'Interview Rounds' : 'Applications Pipeline')
+                  : activeTab === 'assessments'
+                  ? 'Skill Assessments'
+                  : activeTab === 'assessment-results'
+                  ? 'Assessment Results & Scorecards'
                   : activeTab === 'matches'
                   ? 'Matched Opportunities'
                   : activeTab === 'resume'
@@ -3611,6 +3887,36 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
 
                   <button
                     type="button"
+                    onClick={() => setActiveTab('assessments')}
+                    className={`w-full flex items-center justify-between px-3 py-2 rounded-xl transition-all cursor-pointer ${
+                      activeTab === 'assessments'
+                        ? 'bg-[#111215] text-white dark:bg-[#D4F82C] dark:text-[#111215]'
+                        : 'hover:bg-[#F8F9F5] dark:hover:bg-white/5 text-[#575A51] dark:text-neutral-300'
+                    }`}
+                  >
+                    <span className="flex items-center gap-2">
+                      <FileCheck size={14} />
+                      <span>Skill Assessments</span>
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('assessment-results')}
+                    className={`w-full flex items-center justify-between px-3 py-2 rounded-xl transition-all cursor-pointer ${
+                      activeTab === 'assessment-results'
+                        ? 'bg-[#111215] text-white dark:bg-[#D4F82C] dark:text-[#111215]'
+                        : 'hover:bg-[#F8F9F5] dark:hover:bg-white/5 text-[#575A51] dark:text-neutral-300'
+                    }`}
+                  >
+                    <span className="flex items-center gap-2">
+                      <Award size={14} />
+                      <span>Assessment Results</span>
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
                     onClick={() => setActiveTab('matches')}
                     className={`w-full flex items-center justify-between px-3 py-2 rounded-xl transition-all cursor-pointer ${
                       activeTab === 'matches'
@@ -3756,6 +4062,48 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
                 strokeWidth={1.8}
               />
               <span className="text-xs truncate">Shortlisted</span>
+            </button>
+
+            {/* Item 3: Assessments */}
+            <button
+              type="button"
+              onClick={() => setActiveTab('assessments')}
+              className={`group flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left transition-all duration-150 active:scale-[0.98] select-none cursor-pointer ${
+                activeTab === 'assessments'
+                  ? 'bg-[#111215] text-white dark:bg-[#D4F82C] dark:text-[#111215] font-bold shadow-xs'
+                  : 'text-[#575A51] dark:text-neutral-400 hover:bg-[#F8F9F5] dark:hover:bg-white/5 hover:text-[#111215] dark:hover:text-white font-medium'
+              }`}
+            >
+              <FileCheck
+                className={`size-4 shrink-0 transition-colors ${
+                  activeTab === 'assessments'
+                    ? 'text-[#D4F82C] dark:text-[#111215]'
+                    : 'text-[#73766C] group-hover:text-[#111215] dark:group-hover:text-white'
+                }`}
+                strokeWidth={1.8}
+              />
+              <span className="text-xs truncate">Assessments</span>
+            </button>
+
+            {/* Item 4: Assessment Results */}
+            <button
+              type="button"
+              onClick={() => setActiveTab('assessment-results')}
+              className={`group flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left transition-all duration-150 active:scale-[0.98] select-none cursor-pointer ${
+                activeTab === 'assessment-results'
+                  ? 'bg-[#111215] text-white dark:bg-[#D4F82C] dark:text-[#111215] font-bold shadow-xs'
+                  : 'text-[#575A51] dark:text-neutral-400 hover:bg-[#F8F9F5] dark:hover:bg-white/5 hover:text-[#111215] dark:hover:text-white font-medium'
+              }`}
+            >
+              <Award
+                className={`size-4 shrink-0 transition-colors ${
+                  activeTab === 'assessment-results'
+                    ? 'text-[#D4F82C] dark:text-[#111215]'
+                    : 'text-[#73766C] group-hover:text-[#111215] dark:group-hover:text-white'
+                }`}
+                strokeWidth={1.8}
+              />
+              <span className="text-xs truncate">Assessment Results</span>
             </button>
 
             {/* Item 3: Matched Jobs */}
@@ -4377,7 +4725,7 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
                 </button>
               </div>
             ) : (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 items-stretch">
                 {filteredMatches.map((matchItem) => {
                   const job = matchItem.job;
                   const liveJob = allJobs.find(j => j.id === job.id || (job.jobNo && j.jobNo === job.jobNo) || (job.accessCode && j.accessCode === job.accessCode)) || job;
@@ -4426,128 +4774,107 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
                   return (
                     <div
                       key={job.id}
-                      className="rounded-3xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] p-5 sm:p-6 flex flex-col justify-between transition-all hover:shadow-md hover:border-[#111215]/30 dark:hover:border-white/20 shadow-xs group"
+                      className="rounded-2xl sm:rounded-3xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] p-4 sm:p-5 flex flex-col justify-between transition-all hover:shadow-md hover:border-[#111215]/30 dark:hover:border-white/20 shadow-xs group"
                     >
                       {/* Top Badges */}
                       <div className="space-y-3">
                         <div className="flex items-center justify-between gap-2">
-                          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black shadow-xs ${
+                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-black shadow-xs ${
                             matchItem.overallScore >= 80
                               ? 'bg-[#D4F82C] text-[#111215]'
                               : matchItem.overallScore >= 60
                               ? 'bg-[#8FB305]/20 text-[#8FB305] dark:text-[#D4F82C] border border-[#8FB305]/30'
                               : 'bg-[#E4E7DC] dark:bg-white/10 text-[#575A51] dark:text-neutral-300'
                           }`}>
-                            <Sparkles size={12} className={matchItem.overallScore >= 80 ? 'fill-[#111215]' : ''} />
-                            <span>{matchItem.overallScore}% Match • {matchItem.matchGrade}</span>
+                            <Sparkles size={11} className={matchItem.overallScore >= 80 ? 'fill-[#111215]' : ''} />
+                            <span>{matchItem.overallScore}% • {matchItem.matchGrade}</span>
                           </span>
 
-                          <span className="text-[10px] font-mono px-2.5 py-0.5 rounded-full border border-[#E4E7DC] dark:border-white/10 text-[#73766C] dark:text-neutral-400 bg-[#F8F9F5] dark:bg-[#1D1F24]">
+                          <span className="text-[10px] font-mono px-2 py-0.5 rounded-full border border-[#E4E7DC] dark:border-white/10 text-[#73766C] dark:text-neutral-400 bg-[#F8F9F5] dark:bg-[#1D1F24]">
                             #{job.accessCode}
                           </span>
                         </div>
 
                         {/* Title & Company */}
                         <div>
-                          <h4 className="text-base sm:text-lg font-black tracking-tight text-[#111215] dark:text-white hover:text-[#8FB305] dark:hover:text-[#D4F82C] transition-colors">
+                          <h4 className="text-sm sm:text-base font-black tracking-tight text-[#111215] dark:text-white hover:text-[#8FB305] dark:hover:text-[#D4F82C] transition-colors line-clamp-1">
                             {job.title}
                           </h4>
-                          <p className="text-xs font-semibold text-[#575A51] dark:text-neutral-400 flex items-center gap-1.5 mt-0.5">
-                            <Building2 size={13} className="text-[#73766C] dark:text-neutral-500" />
-                            <span>{job.company}</span>
+                          <p className="text-xs font-semibold text-[#575A51] dark:text-neutral-400 flex items-center gap-1.5 mt-0.5 truncate">
+                            <Building2 size={12} className="text-[#73766C] dark:text-neutral-500 shrink-0" />
+                            <span className="truncate">{job.company}</span>
                             <span>•</span>
-                            <span>{job.department}</span>
+                            <span className="truncate">{job.department}</span>
                           </p>
                         </div>
 
                         {/* Details Pills: Location, Exp, Salary */}
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
-                          <div className="p-2.5 rounded-xl border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-[#1D1F24] flex items-center gap-2 text-[#575A51] dark:text-neutral-300 font-medium">
-                            <MapPin size={13} className="text-[#8FB305] dark:text-[#D4F82C] shrink-0" />
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 text-[11px]">
+                          <div className="p-2 rounded-lg border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-[#1D1F24] flex items-center gap-1.5 text-[#575A51] dark:text-neutral-300 font-medium">
+                            <MapPin size={12} className="text-[#8FB305] dark:text-[#D4F82C] shrink-0" />
                             <span className="truncate">{job.location}</span>
                           </div>
 
-                          <div className="p-2.5 rounded-xl border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-[#1D1F24] flex items-center gap-2 text-[#575A51] dark:text-neutral-300 font-medium">
-                            <Briefcase size={13} className="text-[#8FB305] dark:text-[#D4F82C] shrink-0" />
+                          <div className="p-2 rounded-lg border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-[#1D1F24] flex items-center gap-1.5 text-[#575A51] dark:text-neutral-300 font-medium">
+                            <Briefcase size={12} className="text-[#8FB305] dark:text-[#D4F82C] shrink-0" />
                             <span className="truncate">{job.experience}</span>
                           </div>
 
-                          <div className="p-2.5 rounded-xl border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-[#1D1F24] col-span-2 sm:col-span-1 flex items-center gap-2 text-[#575A51] dark:text-neutral-300 font-medium">
-                            <Clock size={13} className="text-[#8FB305] dark:text-[#D4F82C] shrink-0" />
+                          <div className="p-2 rounded-lg border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-[#1D1F24] col-span-2 sm:col-span-1 flex items-center gap-1.5 text-[#575A51] dark:text-neutral-300 font-medium">
+                            <Clock size={12} className="text-[#8FB305] dark:text-[#D4F82C] shrink-0" />
                             <span className="truncate">{job.salary}</span>
                           </div>
                         </div>
 
                         {/* Matched Skills */}
                         {matchItem.skillMatch?.matchedSkills?.length > 0 && (
-                          <div className="space-y-1.5 pt-1">
+                          <div className="space-y-1 pt-0.5">
                             <span className="text-[10px] uppercase font-bold tracking-wider text-[#73766C] dark:text-neutral-400 block">
                               Matching Skills ({matchItem.skillMatch.matchedSkills.length})
                             </span>
-                            <div className="flex flex-wrap gap-1.5">
-                              {matchItem.skillMatch.matchedSkills.map((sk: string) => (
+                            <div className="flex flex-wrap gap-1">
+                              {matchItem.skillMatch.matchedSkills.slice(0, 4).map((sk: string) => (
                                 <span
                                   key={sk}
-                                  className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-[#E4E7DC]/60 dark:bg-white/10 text-[#111215] dark:text-[#D4F82C] border border-[#E4E7DC] dark:border-white/10"
+                                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#E4E7DC]/60 dark:bg-white/10 text-[#111215] dark:text-[#D4F82C] border border-[#E4E7DC] dark:border-white/10"
                                 >
-                                  <Check size={11} strokeWidth={2.5} className="text-[#8FB305] dark:text-[#D4F82C]" />
+                                  <Check size={10} strokeWidth={2.5} className="text-[#8FB305] dark:text-[#D4F82C]" />
                                   <span>{sk}</span>
                                 </span>
                               ))}
+                              {matchItem.skillMatch.matchedSkills.length > 4 && (
+                                <span className="text-[10px] font-bold text-[#73766C] dark:text-neutral-400 px-1.5 py-0.5">
+                                  +{matchItem.skillMatch.matchedSkills.length - 4} more
+                                </span>
+                              )}
                             </div>
                           </div>
                         )}
 
                         {/* Application Status Banner (if candidate already applied) */}
                         {isApplied && (
-                          <div className="mt-3 p-3.5 rounded-2xl border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-[#1D1F24]">
-                            <div className="flex items-center justify-between gap-2 flex-wrap">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <span className="text-[10px] font-bold uppercase tracking-wider text-[#73766C] dark:text-neutral-400">
-                                  Application Status:
-                                </span>
-                                <span className="text-xs font-black px-3 py-0.5 rounded-full shadow-xs bg-[#111215] text-white dark:bg-[#D4F82C] dark:text-[#111215]">
-                                  {applicationInfo?.status === 'pending' || applicationInfo?.status === 'interested'
-                                    ? 'Applied • Under Review'
-                                    : (applicationInfo?.status || 'Applied • Under Review')}
-                                </span>
-                              </div>
-
-                              {applicationInfo?.appliedAt && (
-                                <span className="text-[10px] text-[#73766C] dark:text-neutral-400 font-mono">
-                                  Applied {formatDisplayDate(applicationInfo.appliedAt)}
-                                </span>
-                              )}
+                          <div className="mt-2.5 p-2.5 rounded-xl border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-[#1D1F24]">
+                            <div className="flex items-center justify-between gap-1.5 flex-wrap">
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-[#73766C] dark:text-neutral-400">
+                                Status:
+                              </span>
+                              <span className="text-[11px] font-black px-2.5 py-0.5 rounded-full shadow-xs bg-[#111215] text-white dark:bg-[#D4F82C] dark:text-[#111215]">
+                                {applicationInfo?.status === 'pending' || applicationInfo?.status === 'interested'
+                                  ? 'Applied'
+                                  : (applicationInfo?.status || 'Applied')}
+                              </span>
                             </div>
 
                             {/* Confirmed Interview Details (if Interview Scheduled) */}
                             {applicationInfo?.status === 'Interview Scheduled' && applicationInfo.scheduledInterview && (
-                              <div className="mt-2.5 pt-2 border-t border-[#E4E7DC] dark:border-white/10 space-y-1.5 text-xs">
-                                <div className="font-bold text-[#111215] dark:text-white flex items-center gap-1.5">
-                                  <Calendar size={13} className="text-[#8FB305] dark:text-[#D4F82C]" />
-                                  <span>Confirmed Interview Session</span>
+                              <div className="mt-2 pt-1.5 border-t border-[#E4E7DC] dark:border-white/10 text-[11px] space-y-1">
+                                <div className="font-bold text-[#111215] dark:text-white flex items-center gap-1">
+                                  <Calendar size={12} className="text-[#8FB305] dark:text-[#D4F82C]" />
+                                  <span>Interview Scheduled</span>
                                 </div>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-[11px] text-[#575A51] dark:text-neutral-300">
-                                  {applicationInfo.scheduledInterview.date && (
-                                    <div>🗓 <strong>Date:</strong> {applicationInfo.scheduledInterview.date} {applicationInfo.scheduledInterview.time}</div>
-                                  )}
-                                  {applicationInfo.scheduledInterview.contactPerson && (
-                                    <div>👤 <strong>Contact:</strong> {applicationInfo.scheduledInterview.contactPerson}</div>
-                                  )}
-                                  {applicationInfo.scheduledInterview.mode && (
-                                    <div>💼 <strong>Mode:</strong> {applicationInfo.scheduledInterview.mode}</div>
-                                  )}
-                                  {applicationInfo.scheduledInterview.location && (
-                                    <div>📍 <strong>Venue:</strong> {applicationInfo.scheduledInterview.location}</div>
-                                  )}
+                                <div className="text-[10px] text-[#575A51] dark:text-neutral-300">
+                                  🗓 {applicationInfo.scheduledInterview.date} {applicationInfo.scheduledInterview.time}
                                 </div>
-                              </div>
-                            )}
-
-                            {/* Recruiter feedback notes if available */}
-                            {applicationInfo?.recruiterNotes && (
-                              <div className="mt-2 text-[11px] text-[#575A51] dark:text-neutral-300 italic border-l-2 border-[#8FB305] pl-2">
-                                💬 Recruiter note: "{applicationInfo.recruiterNotes}"
                               </div>
                             )}
                           </div>
@@ -4555,25 +4882,25 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
                       </div>
 
                       {/* Card Footer Actions */}
-                      <div className="mt-5 pt-4 border-t border-[#E4E7DC] dark:border-white/10 flex items-center justify-between gap-2">
+                      <div className="mt-4 pt-3 border-t border-[#E4E7DC] dark:border-white/10 flex items-center justify-between gap-2">
                         {/* View JD Details */}
                         <button
                           type="button"
                           onClick={() => handleOpenJobModal(matchItem)}
-                          className="px-4 py-2 rounded-full border border-[#E4E7DC] dark:border-white/10 bg-white/80 dark:bg-white/5 hover:bg-white dark:hover:bg-white/10 text-xs font-bold text-[#111215] dark:text-white transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
+                          className="px-3 py-1.5 rounded-full border border-[#E4E7DC] dark:border-white/10 bg-white/80 dark:bg-white/5 hover:bg-white dark:hover:bg-white/10 text-xs font-bold text-[#111215] dark:text-white transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
                         >
-                          <Eye size={13} />
+                          <Eye size={12} />
                           <span>View Details</span>
                         </button>
 
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1.5">
                           {/* Apply / Status Button */}
                           {isApplied ? (
-                            <div className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold border border-[#8FB305]/40 bg-[#D4F82C]/15 text-[#111215] dark:text-[#D4F82C]">
-                              <CheckCircle2 size={13} />
-                              <span>
+                            <div className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold border border-[#8FB305]/40 bg-[#D4F82C]/15 text-[#111215] dark:text-[#D4F82C]">
+                              <CheckCircle2 size={12} />
+                              <span className="truncate max-w-[110px]">
                                 {applicationInfo?.status === 'pending' || applicationInfo?.status === 'interested'
-                                  ? 'Applied • Under Review'
+                                  ? 'Under Review'
                                   : (applicationInfo?.status || 'Applied')}
                               </span>
                             </div>
@@ -4582,14 +4909,14 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
                               type="button"
                               disabled={applyingJobId === job.id}
                               onClick={() => handleApplyToJob(matchItem)}
-                              className="px-5 py-2 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer bg-[#111215] hover:bg-[#202227] text-white dark:bg-[#D4F82C] dark:hover:bg-[#C2E820] dark:text-[#111215] shadow-xs active:scale-95 disabled:opacity-50"
+                              className="px-4 py-1.5 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer bg-[#111215] hover:bg-[#202227] text-white dark:bg-[#D4F82C] dark:hover:bg-[#C2E820] dark:text-[#111215] shadow-xs active:scale-95 disabled:opacity-50"
                             >
                               {applyingJobId === job.id ? (
                                 <span>Applying...</span>
                               ) : (
                                 <>
                                   <span>Apply Now</span>
-                                  <ArrowRight size={13} />
+                                  <ArrowRight size={12} />
                                 </>
                               )}
                             </button>
@@ -4722,7 +5049,7 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
                 </div>
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-5 items-start">
                 {filteredApplications.map((item) => {
                   const { job, appInfo, matchItem } = item;
                   const step = getStageStep(appInfo.status);
@@ -4734,13 +5061,13 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
                   return (
                     <div
                       key={job.id}
-                      className="rounded-3xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] p-5 sm:p-6 shadow-xs hover:shadow-md transition-all"
+                      className="rounded-2xl sm:rounded-3xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] p-4 sm:p-5 shadow-xs hover:shadow-md transition-all flex flex-col justify-between"
                     >
                       {/* Top Header Row */}
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#E4E7DC] dark:border-white/10 pb-4">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 border-b border-[#E4E7DC] dark:border-white/10 pb-3.5">
                         <div className="space-y-1">
                           <div className="flex flex-wrap items-center gap-2">
-                            <h4 className="text-base sm:text-lg font-black tracking-tight text-[#111215] dark:text-white">
+                            <h4 className="text-sm sm:text-base font-black tracking-tight text-[#111215] dark:text-white">
                               {job.title}
                             </h4>
                             {job.jobNo && (
@@ -4749,26 +5076,26 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
                               </span>
                             )}
                           </div>
-                          <div className="flex flex-wrap items-center gap-2 text-xs text-[#575A51] dark:text-neutral-400">
+                          <div className="flex flex-wrap items-center gap-2 text-[11px] text-[#575A51] dark:text-neutral-400">
                             {job.department && (
                               <span className="flex items-center gap-1">
-                                <Building2 size={12} className="text-[#73766C] dark:text-neutral-500" />
+                                <Building2 size={11} className="text-[#73766C] dark:text-neutral-500" />
                                 <span>{job.department}</span>
                               </span>
                             )}
                             {job.location && (
                               <span className="flex items-center gap-1">
-                                <MapPin size={12} className="text-[#8FB305] dark:text-[#D4F82C]" />
+                                <MapPin size={11} className="text-[#8FB305] dark:text-[#D4F82C]" />
                                 <span>{job.location}</span>
                               </span>
                             )}
                             {job.jobType && (
-                              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#E4E7DC]/60 dark:bg-white/10 text-[#111215] dark:text-white">
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#E4E7DC]/60 dark:bg-white/10 text-[#111215] dark:text-white">
                                 {job.jobType}
                               </span>
                             )}
                             {appInfo.appliedAt && (
-                              <span className="text-[11px] text-[#73766C] dark:text-neutral-400">
+                              <span className="text-[10px] text-[#73766C] dark:text-neutral-400">
                                 Applied: {new Date(appInfo.appliedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                               </span>
                             )}
@@ -4776,15 +5103,15 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
                         </div>
 
                         {/* Status Badge */}
-                        <div className="flex items-center gap-2 self-start sm:self-auto">
+                        <div className="flex items-center gap-1.5 self-start sm:self-auto shrink-0">
                           {matchItem && (
-                            <span className="px-3 py-1 rounded-full text-xs font-black bg-[#D4F82C] text-[#111215] shadow-xs flex items-center gap-1">
-                              <Sparkles size={12} className="fill-[#111215]" />
+                            <span className="px-2.5 py-0.5 rounded-full text-[11px] font-black bg-[#D4F82C] text-[#111215] shadow-xs flex items-center gap-1">
+                              <Sparkles size={11} className="fill-[#111215]" />
                               <span>{matchItem.score}% Match</span>
                             </span>
                           )}
 
-                          <span className={`px-3.5 py-1 rounded-full text-xs font-black uppercase tracking-wider flex items-center gap-1.5 shadow-xs ${
+                          <span className={`px-3 py-0.5 rounded-full text-[11px] font-black uppercase tracking-wider flex items-center gap-1 shadow-xs ${
                             isSelected
                               ? 'bg-[#111215] text-[#D4F82C] dark:bg-[#D4F82C] dark:text-[#111215]'
                               : isShortlisted
@@ -4794,13 +5121,13 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
                               : 'bg-[#111215] text-white dark:bg-white/10 dark:text-white'
                           }`}>
                             {isSelected ? (
-                              <Award size={13} />
+                              <Award size={12} />
                             ) : isShortlisted ? (
-                              <CheckCircle2 size={13} />
+                              <CheckCircle2 size={12} />
                             ) : isRejected ? (
-                              <XCircle size={13} />
+                              <XCircle size={12} />
                             ) : (
-                              <Clock size={13} />
+                              <Clock size={12} />
                             )}
                             <span>{appInfo.status || 'Under Review'}</span>
                           </span>
@@ -4808,96 +5135,96 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
                       </div>
 
                       {/* 4-Step Pipeline Visual Tracker */}
-                      <div className="py-5">
-                        <div className="text-[11px] font-bold text-[#73766C] dark:text-neutral-400 mb-2 uppercase tracking-wider">
+                      <div className="py-3.5">
+                        <div className="text-[10px] font-bold text-[#73766C] dark:text-neutral-400 mb-2 uppercase tracking-wider">
                           Application Journey Tracker
                         </div>
 
                         {isRejected ? (
-                          <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 text-xs flex items-center gap-2.5">
-                            <XCircle size={16} className="shrink-0" />
-                            <span>This application was not selected to proceed further. Your profile remains active for other exciting matching opportunities!</span>
+                          <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 text-xs flex items-center gap-2">
+                            <XCircle size={14} className="shrink-0" />
+                            <span>This application was not selected to proceed further. Your profile remains active for other matching opportunities!</span>
                           </div>
                         ) : (
                           <div className="relative">
                             {/* Track line */}
-                            <div className="absolute top-4 left-6 right-6 h-0.5 bg-[#E4E7DC] dark:bg-white/10 -z-0" />
+                            <div className="absolute top-3.5 left-5 right-5 h-0.5 bg-[#E4E7DC] dark:bg-white/10 -z-0" />
                             <div
-                              className="absolute top-4 left-6 h-0.5 bg-[#111215] dark:bg-[#D4F82C] transition-all duration-500 -z-0"
+                              className="absolute top-3.5 left-5 h-0.5 bg-[#111215] dark:bg-[#D4F82C] transition-all duration-500 -z-0"
                               style={{
-                                width: step >= 5 ? '92%' : step >= 3 ? '66%' : step >= 2 ? '33%' : '0%'
+                                width: step >= 5 ? '90%' : step >= 3 ? '66%' : step >= 2 ? '33%' : '0%'
                               }}
                             />
 
-                            <div className="grid grid-cols-4 gap-2 relative z-10 text-center">
+                            <div className="grid grid-cols-4 gap-1.5 relative z-10 text-center">
                               {/* Step 1: Applied */}
                               <div className="flex flex-col items-center">
-                                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all shadow-xs ${
+                                <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all shadow-xs ${
                                   step >= 1
-                                    ? 'bg-[#111215] text-[#D4F82C] dark:bg-[#D4F82C] dark:text-[#111215] ring-4 ring-[#D4F82C]/30'
+                                    ? 'bg-[#111215] text-[#D4F82C] dark:bg-[#D4F82C] dark:text-[#111215] ring-3 ring-[#D4F82C]/30'
                                     : 'bg-[#E4E7DC] dark:bg-white/10 text-[#73766C]'
                                 }`}>
-                                  <Check size={14} />
+                                  <Check size={12} />
                                 </div>
-                                <span className={`text-[11px] font-bold mt-2 leading-tight ${
+                                <span className={`text-[10px] font-bold mt-1.5 leading-tight ${
                                   step >= 1 ? 'text-[#111215] dark:text-white' : 'text-[#73766C] dark:text-neutral-400'
                                 }`}>
                                   1. Applied
                                 </span>
-                                <span className="text-[9px] text-[#73766C] dark:text-neutral-400 hidden sm:inline">Resume Submitted</span>
+                                <span className="text-[8px] text-[#73766C] dark:text-neutral-400 hidden sm:inline">Submitted</span>
                               </div>
 
                               {/* Step 2: Under Review */}
                               <div className="flex flex-col items-center">
-                                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all shadow-xs ${
+                                <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all shadow-xs ${
                                   step >= 2
-                                    ? 'bg-[#111215] text-[#D4F82C] dark:bg-[#D4F82C] dark:text-[#111215] ring-4 ring-[#D4F82C]/30'
+                                    ? 'bg-[#111215] text-[#D4F82C] dark:bg-[#D4F82C] dark:text-[#111215] ring-3 ring-[#D4F82C]/30'
                                     : 'bg-[#E4E7DC] dark:bg-white/10 text-[#73766C]'
                                 }`}>
-                                  {step > 2 ? <Check size={14} /> : <Eye size={13} />}
+                                  {step > 2 ? <Check size={12} /> : <Eye size={11} />}
                                 </div>
-                                <span className={`text-[11px] font-bold mt-2 leading-tight ${
+                                <span className={`text-[10px] font-bold mt-1.5 leading-tight ${
                                   step >= 2 ? 'text-[#111215] dark:text-white' : 'text-[#73766C] dark:text-neutral-400'
                                 }`}>
                                   2. In Review
                                 </span>
-                                <span className="text-[9px] text-[#73766C] dark:text-neutral-400 hidden sm:inline">Recruiter Screening</span>
+                                <span className="text-[8px] text-[#73766C] dark:text-neutral-400 hidden sm:inline">Screening</span>
                               </div>
 
                               {/* Step 3: Shortlisted / Interview */}
                               <div className="flex flex-col items-center">
-                                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all shadow-xs ${
+                                <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all shadow-xs ${
                                   step >= 3
                                     ? isShortlisted
-                                      ? 'bg-[#D4F82C] text-[#111215] ring-4 ring-[#8FB305]/40 animate-bounce'
+                                      ? 'bg-[#D4F82C] text-[#111215] ring-3 ring-[#8FB305]/40 animate-bounce'
                                       : 'bg-[#111215] text-white dark:bg-[#D4F82C] dark:text-[#111215]'
                                     : 'bg-[#E4E7DC] dark:bg-white/10 text-[#73766C]'
                                 }`}>
-                                  {step >= 4 ? <Check size={14} /> : <Award size={13} />}
+                                  {step >= 4 ? <Check size={12} /> : <Award size={11} />}
                                 </div>
-                                <span className={`text-[11px] font-bold mt-2 leading-tight ${
+                                <span className={`text-[10px] font-bold mt-1.5 leading-tight ${
                                   step >= 3 ? 'text-[#111215] dark:text-white font-black' : 'text-[#73766C] dark:text-neutral-400'
                                 }`}>
-                                  3. Shortlisted
+                                  3. Shortlist
                                 </span>
-                                <span className="text-[9px] text-[#73766C] dark:text-neutral-400 hidden sm:inline">Rounds / Interview</span>
+                                <span className="text-[8px] text-[#73766C] dark:text-neutral-400 hidden sm:inline">Interview</span>
                               </div>
 
                               {/* Step 4: Decision */}
                               <div className="flex flex-col items-center">
-                                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all shadow-xs ${
+                                <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all shadow-xs ${
                                   step >= 5
-                                    ? 'bg-[#111215] text-[#D4F82C] dark:bg-[#D4F82C] dark:text-[#111215] ring-4 ring-[#D4F82C]/30'
+                                    ? 'bg-[#111215] text-[#D4F82C] dark:bg-[#D4F82C] dark:text-[#111215] ring-3 ring-[#D4F82C]/30'
                                     : 'bg-[#E4E7DC] dark:bg-white/10 text-[#73766C]'
                                 }`}>
-                                  <Sparkles size={13} />
+                                  <Sparkles size={11} />
                                 </div>
-                                <span className={`text-[11px] font-bold mt-2 leading-tight ${
+                                <span className={`text-[10px] font-bold mt-1.5 leading-tight ${
                                   step >= 5 ? 'text-[#111215] dark:text-white font-extrabold' : 'text-[#73766C] dark:text-neutral-400'
                                 }`}>
-                                  4. Offer / Hired
+                                  4. Decision
                                 </span>
-                                <span className="text-[9px] text-[#73766C] dark:text-neutral-400 hidden sm:inline">Final Decision</span>
+                                <span className="text-[8px] text-[#73766C] dark:text-neutral-400 hidden sm:inline">Offer</span>
                               </div>
                             </div>
                           </div>
@@ -4906,41 +5233,41 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
 
                       {/* Scheduled Interview Action Box (if applicable) */}
                       {scheduled && (
-                        <div className="mt-2 mb-4 p-4 rounded-xl border border-amber-500/30 bg-amber-500/10 space-y-3">
+                        <div className="mt-2 mb-3 p-3 sm:p-3.5 rounded-xl border border-amber-500/30 bg-amber-500/10 space-y-2.5">
                           <div className="flex items-center justify-between flex-wrap gap-2">
-                            <div className="flex items-center gap-2">
-                              <Calendar className="text-amber-500" size={18} />
-                              <span className="text-xs font-black uppercase tracking-wider text-amber-600 dark:text-amber-400">
+                            <div className="flex items-center gap-1.5">
+                              <Calendar className="text-amber-500" size={15} />
+                              <span className="text-[11px] font-black uppercase tracking-wider text-amber-600 dark:text-amber-400">
                                 📅 Interview Scheduled — {scheduled.round || 'Candidate Interview'}
                               </span>
                             </div>
-                            <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30">
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30">
                               Confirmed Session
                             </span>
                           </div>
 
                           {/* Key Session Details Grid */}
-                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                          <div className="grid grid-cols-2 gap-2 text-xs">
                             {scheduled.date && (
-                              <div className="p-2.5 rounded-xl bg-black/5 dark:bg-white/5 border border-slate-200/50 dark:border-white/5">
+                              <div className="p-2 rounded-lg bg-black/5 dark:bg-white/5 border border-slate-200/50 dark:border-white/5">
                                 <span className="text-slate-400 text-[10px] uppercase font-bold block">Date</span>
                                 <span className="font-bold">{scheduled.date}</span>
                               </div>
                             )}
                             {scheduled.time && (
-                              <div className="p-2.5 rounded-xl bg-black/5 dark:bg-white/5 border border-slate-200/50 dark:border-white/5">
+                              <div className="p-2 rounded-lg bg-black/5 dark:bg-white/5 border border-slate-200/50 dark:border-white/5">
                                 <span className="text-slate-400 text-[10px] uppercase font-bold block">Time</span>
                                 <span className="font-bold">{scheduled.time}</span>
                               </div>
                             )}
                             {(scheduled.contactPerson || scheduled.interviewer) && (
-                              <div className="p-2.5 rounded-xl bg-black/5 dark:bg-white/5 border border-slate-200/50 dark:border-white/5">
+                              <div className="p-2 rounded-lg bg-black/5 dark:bg-white/5 border border-slate-200/50 dark:border-white/5">
                                 <span className="text-slate-400 text-[10px] uppercase font-bold block">Contact Person</span>
                                 <span className="font-bold truncate block">{scheduled.contactPerson || scheduled.interviewer}</span>
                               </div>
                             )}
                             {scheduled.mode && (
-                              <div className="p-2.5 rounded-xl bg-black/5 dark:bg-white/5 border border-slate-200/50 dark:border-white/5">
+                              <div className="p-2 rounded-lg bg-black/5 dark:bg-white/5 border border-slate-200/50 dark:border-white/5">
                                 <span className="text-slate-400 text-[10px] uppercase font-bold block">Interview Mode</span>
                                 <span className="font-bold">{scheduled.mode}</span>
                               </div>
@@ -4949,8 +5276,8 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
 
                           {/* Venue Location if specified */}
                           {scheduled.location && (
-                            <div className="p-2.5 rounded-xl bg-black/5 dark:bg-white/5 border border-slate-200/50 dark:border-white/5 text-xs flex items-center gap-2">
-                              <MapPin size={14} className="text-amber-500 shrink-0" />
+                            <div className="p-2 rounded-lg bg-black/5 dark:bg-white/5 border border-slate-200/50 dark:border-white/5 text-xs flex items-center gap-2">
+                              <MapPin size={13} className="text-amber-500 shrink-0" />
                               <div>
                                 <span className="text-slate-400 text-[10px] uppercase font-bold block">Venue / Location</span>
                                 <span className="font-bold">{scheduled.location}</span>
@@ -4960,9 +5287,9 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
 
                           {/* Recruiter Notes / Instructions if specified */}
                           {scheduled.notes && (
-                            <div className="p-2.5 rounded-xl bg-black/5 dark:bg-white/5 border border-slate-200/50 dark:border-white/5 text-xs">
+                            <div className="p-2 rounded-lg bg-black/5 dark:bg-white/5 border border-slate-200/50 dark:border-white/5 text-xs">
                               <span className="text-slate-400 text-[10px] uppercase font-bold block mb-0.5">Instructions & Notes</span>
-                              <p className="italic text-slate-700 dark:text-slate-300">{scheduled.notes}</p>
+                              <p className="italic text-slate-700 dark:text-slate-300 text-[11px]">{scheduled.notes}</p>
                             </div>
                           )}
 
@@ -4976,46 +5303,46 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
                             const waDigits = cleanDigits.length === 10 ? `91${cleanDigits}` : cleanDigits;
 
                             return (
-                              <div className="mt-2 p-3.5 rounded-xl border border-amber-500/30 bg-white/80 dark:bg-black/30 space-y-2.5">
+                              <div className="mt-1.5 p-2.5 sm:p-3 rounded-xl border border-amber-500/30 bg-white/80 dark:bg-black/30 space-y-2">
                                 <div className="flex items-center justify-between">
-                                  <div className="flex items-center gap-1.5 text-xs font-black text-amber-700 dark:text-amber-400 uppercase tracking-wider">
-                                    {isPhoneNumber ? <Phone size={13} /> : <ExternalLink size={13} />}
-                                    <span>{isPhoneNumber ? 'Interviewer Phone / Direct Contact' : isWebUrl ? 'Meeting URL / Platform' : 'Meeting Details'}</span>
+                                  <div className="flex items-center gap-1.5 text-[11px] font-black text-amber-700 dark:text-amber-400 uppercase tracking-wider">
+                                    {isPhoneNumber ? <Phone size={12} /> : <ExternalLink size={12} />}
+                                    <span>{isPhoneNumber ? 'Interviewer Contact' : isWebUrl ? 'Meeting URL / Platform' : 'Meeting Details'}</span>
                                   </div>
                                   <button
                                     type="button"
                                     onClick={() => handleCopyInterviewLink(raw)}
-                                    className="text-[11px] text-amber-600 dark:text-amber-400 hover:underline flex items-center gap-1 font-semibold cursor-pointer"
+                                    className="text-[10px] text-amber-600 dark:text-amber-400 hover:underline flex items-center gap-1 font-semibold cursor-pointer"
                                   >
-                                    {copiedLink === raw ? <Check size={12} /> : <Copy size={12} />}
-                                    <span>{copiedLink === raw ? 'Copied!' : 'Copy Info'}</span>
+                                    {copiedLink === raw ? <Check size={11} /> : <Copy size={11} />}
+                                    <span>{copiedLink === raw ? 'Copied!' : 'Copy'}</span>
                                   </button>
                                 </div>
 
                                 {/* Raw detail value displayed prominently */}
-                                <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 font-mono text-xs text-slate-800 dark:text-slate-200 break-all select-all flex items-center justify-between gap-2">
+                                <div className="p-2 rounded-lg bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 font-mono text-[11px] text-slate-800 dark:text-slate-200 break-all select-all flex items-center justify-between gap-2">
                                   <span className="font-bold">{raw}</span>
                                 </div>
 
                                 {/* Smart Action Buttons */}
-                                <div className="flex flex-wrap items-center gap-2 pt-0.5">
+                                <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
                                   {isPhoneNumber && (
                                     <>
                                       <a
                                         href={`tel:${cleanDigits}`}
-                                        className="px-3.5 py-1.5 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 shadow-sm flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
+                                        className="px-3 py-1.5 rounded-lg text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 shadow-sm flex items-center gap-1 transition-all cursor-pointer active:scale-95"
                                       >
-                                        <Phone size={13} />
-                                        <span>Call {cleanDigits}</span>
+                                        <Phone size={12} />
+                                        <span>Call</span>
                                       </a>
                                       <a
                                         href={`https://wa.me/${waDigits}`}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="px-3.5 py-1.5 rounded-xl text-xs font-bold text-white bg-green-600 hover:bg-green-500 shadow-sm flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
+                                        className="px-3 py-1.5 rounded-lg text-xs font-bold text-white bg-green-600 hover:bg-green-500 shadow-sm flex items-center gap-1 transition-all cursor-pointer active:scale-95"
                                       >
-                                        <MessageCircle size={13} />
-                                        <span>WhatsApp Interviewer</span>
+                                        <MessageCircle size={12} />
+                                        <span>WhatsApp</span>
                                       </a>
                                     </>
                                   )}
@@ -5025,9 +5352,9 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
                                       href={fullUrl}
                                       target="_blank"
                                       rel="noopener noreferrer"
-                                      className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-amber-600 hover:bg-amber-500 shadow-md shadow-amber-500/20 flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
+                                      className="px-3.5 py-1.5 rounded-lg text-xs font-bold text-white bg-amber-600 hover:bg-amber-500 shadow-md shadow-amber-500/20 flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
                                     >
-                                      <ExternalLink size={14} />
+                                      <ExternalLink size={13} />
                                       <span>Join Video Call</span>
                                     </a>
                                   )}
@@ -5035,14 +5362,14 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
                                   <button
                                     type="button"
                                     onClick={() => handleCopyInterviewLink(raw)}
-                                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold border flex items-center gap-1.5 transition-all cursor-pointer ${
+                                    className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold border flex items-center gap-1 transition-all cursor-pointer ${
                                       copiedLink === raw
                                         ? 'bg-emerald-500/20 text-emerald-500 border-emerald-500/40'
                                         : 'border-amber-500/30 text-amber-700 dark:text-amber-300 hover:bg-amber-500/10'
                                     }`}
                                   >
-                                    {copiedLink === raw ? <Check size={13} /> : <Copy size={13} />}
-                                    <span>{copiedLink === raw ? 'Copied to Clipboard!' : 'Copy'}</span>
+                                    {copiedLink === raw ? <Check size={12} /> : <Copy size={12} />}
+                                    <span>{copiedLink === raw ? 'Copied' : 'Copy Info'}</span>
                                   </button>
                                 </div>
                               </div>
@@ -5053,22 +5380,22 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
 
                       {/* Recruiter Feedback notes (if any) */}
                       {appInfo.recruiterNotes && (
-                        <div className="p-3 rounded-xl bg-slate-100 dark:bg-white/5 text-xs text-slate-600 dark:text-slate-300 mb-3 border border-slate-200 dark:border-white/10">
+                        <div className="p-2.5 rounded-xl bg-slate-100 dark:bg-white/5 text-xs text-slate-600 dark:text-slate-300 mb-2.5 border border-slate-200 dark:border-white/10">
                           <span className="font-bold text-slate-800 dark:text-white block mb-0.5">Recruiter Note:</span>
-                          <p>{appInfo.recruiterNotes}</p>
+                          <p className="text-[11px]">{appInfo.recruiterNotes}</p>
                         </div>
                       )}
 
                       {/* Bottom Action Buttons */}
-                      <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-200 dark:border-white/10 text-xs">
+                      <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-[#E4E7DC] dark:border-white/10 text-xs">
                         <button
                           type="button"
                           onClick={() => handleOpenJobModal(matchItem || job)}
-                          className={`px-3.5 py-1.5 rounded-xl font-bold border transition-all cursor-pointer flex items-center gap-1.5 ${
+                          className={`px-3 py-1.5 rounded-xl font-bold border transition-all cursor-pointer flex items-center gap-1.5 ${
                             isDark ? 'border-white/10 text-slate-300 hover:bg-white/5' : 'border-slate-200 text-slate-700 hover:bg-slate-100'
                           }`}
                         >
-                          <Eye size={13} />
+                          <Eye size={12} />
                           <span>View Full Job Spec</span>
                         </button>
 
@@ -5083,12 +5410,12 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
                                   setActiveTab('resume');
                                 }
                               }}
-                              className={`px-3.5 py-1.5 rounded-xl font-semibold border transition-all cursor-pointer flex items-center gap-1.5 ${
+                              className={`px-3 py-1.5 rounded-xl font-semibold border transition-all cursor-pointer flex items-center gap-1.5 ${
                                 isDark ? 'border-white/10 text-slate-300 hover:bg-white/5' : 'border-slate-200 text-slate-700 hover:bg-slate-100'
                               }`}
                             >
-                              <FileText size={13} />
-                              <span>View Applied Resume</span>
+                              <FileText size={12} />
+                              <span>View Resume</span>
                             </button>
                           )}
                         </div>
@@ -5101,7 +5428,382 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
           </div>
         )}
 
-        {/* TAB 3: My Resume & Document Management */}
+        {/* ── TAB: Skill Assessments & Challenges ── */}
+        {activeTab === 'assessments' && (
+          <div className="space-y-6 animate-in fade-in duration-200">
+            {/* Header with Search and Filter bar */}
+            <div className="p-5 sm:p-6 rounded-3xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] shadow-xs space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <div className="inline-flex items-center gap-2 rounded-full border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-white/5 px-3 py-1 text-[11px] font-semibold tracking-wider uppercase text-[#575A51] dark:text-neutral-400 mb-2">
+                    <span className="h-1.5 w-1.5 rounded-full bg-[#8FB305] animate-pulse" />
+                    03 • CANDIDATE DESK • ASSESSMENTS
+                  </div>
+                  <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-[#111215] dark:text-white">
+                    Skill Assessments & Challenges
+                  </h2>
+                  <p className="mt-1 text-xs sm:text-sm text-[#575A51] dark:text-neutral-400">
+                    Take verified assessments to evaluate your technical competencies, logic, and coding skills.
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('assessment-results')}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-white/5 px-4 py-2 text-xs font-bold text-[#111215] dark:text-white hover:bg-[#E4E7DC]/60 transition-colors cursor-pointer"
+                  >
+                    <Award size={14} className="text-[#8FB305]" />
+                    <span>View My Results ({candidateSubmissions.length})</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Filters and Search Bar */}
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-3 border-t border-[#E4E7DC] dark:border-white/10">
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+                  <button
+                    type="button"
+                    onClick={() => setAssessmentFilter('all')}
+                    className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                      assessmentFilter === 'all'
+                        ? 'bg-[#111215] text-white dark:bg-[#D4F82C] dark:text-[#111215]'
+                        : 'bg-[#F8F9F5] dark:bg-white/5 text-[#575A51] dark:text-neutral-400 hover:text-[#111215] dark:hover:text-white'
+                    }`}
+                  >
+                    All ({candidateAssessments.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAssessmentFilter('coding')}
+                    className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                      assessmentFilter === 'coding'
+                        ? 'bg-[#111215] text-white dark:bg-[#D4F82C] dark:text-[#111215]'
+                        : 'bg-[#F8F9F5] dark:bg-white/5 text-[#575A51] dark:text-neutral-400 hover:text-[#111215] dark:hover:text-white'
+                    }`}
+                  >
+                    Coding ({candidateAssessments.filter(t => t.type === 'coding').length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAssessmentFilter('aptitude')}
+                    className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                      assessmentFilter === 'aptitude'
+                        ? 'bg-[#111215] text-white dark:bg-[#D4F82C] dark:text-[#111215]'
+                        : 'bg-[#F8F9F5] dark:bg-white/5 text-[#575A51] dark:text-neutral-400 hover:text-[#111215] dark:hover:text-white'
+                    }`}
+                  >
+                    Aptitude & Logic ({candidateAssessments.filter(t => t.type !== 'coding').length})
+                  </button>
+                </div>
+
+                <div className="relative min-w-[200px]">
+                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#73766C]" />
+                  <input
+                    type="text"
+                    value={assessmentSearchQuery}
+                    onChange={(e) => setAssessmentSearchQuery(e.target.value)}
+                    placeholder="Search assessments..."
+                    className="w-full pl-8 pr-3 py-1.5 text-xs rounded-xl border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-white/5 text-[#111215] dark:text-white focus:outline-none focus:ring-1 focus:ring-[#111215] dark:focus:ring-[#D4F82C]"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Assessments List / Cards */}
+            {assessmentsLoading ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {[...Array(6)].map((_, i) => (
+                  <div key={i} className="h-48 rounded-3xl bg-white dark:bg-[#15161A] border border-[#E4E7DC] dark:border-white/10 p-5 animate-pulse" />
+                ))}
+              </div>
+            ) : candidateAssessments.length === 0 ? (
+              <div className="p-12 text-center rounded-3xl border border-dashed border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] space-y-3">
+                <div className="size-12 rounded-2xl bg-[#F8F9F5] dark:bg-white/5 flex items-center justify-center mx-auto text-[#73766C]">
+                  <FileCheck size={24} />
+                </div>
+                <h3 className="text-base font-bold text-[#111215] dark:text-white">No Assessments Available</h3>
+                <p className="text-xs text-[#575A51] dark:text-neutral-400 max-w-md mx-auto">
+                  There are no active assessments published right now. When recruiters post evaluations for your profile, they will appear here.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {candidateAssessments
+                  .filter((test) => {
+                    if (assessmentFilter === 'coding' && test.type !== 'coding') return false;
+                    if (assessmentFilter === 'aptitude' && test.type === 'coding') return false;
+                    if (assessmentSearchQuery) {
+                      const q = assessmentSearchQuery.toLowerCase();
+                      const matchTitle = String(test.title || '').toLowerCase().includes(q);
+                      const matchDesc = String(test.description || '').toLowerCase().includes(q);
+                      const matchCode = String(test.accessCode || '').toLowerCase().includes(q);
+                      return matchTitle || matchDesc || matchCode;
+                    }
+                    return true;
+                  })
+                  .map((test) => {
+                    const submission = candidateSubmissions.find((s) => s.testId === test.id);
+                    const isCompleted = !!submission;
+                    const isPassed = submission && (submission.status === 'passed' || Number(submission.score) >= test.passingScore);
+
+                    return (
+                      <div
+                        key={test.id}
+                        className="rounded-3xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] p-5 shadow-xs flex flex-col justify-between hover:border-[#111215]/30 dark:hover:border-white/20 transition-all group"
+                      >
+                        <div className="space-y-3">
+                          {/* Type & ID Row */}
+                          <div className="flex items-center justify-between">
+                            <span className={`text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full ${
+                              test.type === 'coding'
+                                ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950/60 dark:text-indigo-300'
+                                : 'bg-[#D4F82C] text-[#111215]'
+                            }`}>
+                              {test.type === 'coding' ? 'Coding Challenge' : 'Aptitude Test'}
+                            </span>
+                            <span className="text-[10px] font-bold text-[#73766C] dark:text-neutral-400">
+                              #{test.accessCode || test.id.slice(0, 6)}
+                            </span>
+                          </div>
+
+                          {/* Title & Description */}
+                          <div>
+                            <h3 className="text-base font-bold text-[#111215] dark:text-white group-hover:text-[#8FB305] dark:group-hover:text-[#D4F82C] transition-colors line-clamp-1">
+                              {test.title}
+                            </h3>
+                            <p className="mt-1 text-xs text-[#575A51] dark:text-neutral-400 line-clamp-2">
+                              {test.description || 'Comprehensive evaluation to validate domain knowledge and problem-solving skills.'}
+                            </p>
+                          </div>
+
+                          {/* Meta Tags */}
+                          <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-[#E4E7DC]/60 dark:border-white/5 text-[11px] text-[#73766C] dark:text-neutral-400 font-medium">
+                            <span className="flex items-center gap-1">
+                              <Clock size={12} className="text-[#8FB305]" />
+                              <span>{test.duration} mins</span>
+                            </span>
+                            <span>•</span>
+                            <span className="flex items-center gap-1">
+                              <FileText size={12} className="text-[#8FB305]" />
+                              <span>{test.questionsCount} Questions</span>
+                            </span>
+                            <span>•</span>
+                            <span className="flex items-center gap-1">
+                              <Target size={12} className="text-[#8FB305]" />
+                              <span>{test.passingScore}% Pass</span>
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* CTA Footer */}
+                        <div className="mt-5 pt-3 border-t border-[#E4E7DC] dark:border-white/10 flex items-center justify-between gap-2">
+                          {isCompleted ? (
+                            <>
+                              <span className={`inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full ${
+                                isPassed
+                                  ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
+                                  : 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300'
+                              }`}>
+                                {isPassed ? '✓ Passed' : 'Attempted'} ({submission.score}%)
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => setSelectedScorecardSubmission(submission)}
+                                className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-[#111215] text-[#D4F82C] hover:bg-black transition-all cursor-pointer shadow-xs"
+                              >
+                                Scorecard →
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <span className="text-[11px] font-medium text-[#73766C] dark:text-neutral-400">
+                                Ready to take
+                              </span>
+                              <a
+                                href={`/test/${test.id}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl text-xs font-bold bg-[#111215] dark:bg-[#D4F82C] text-white dark:text-[#111215] hover:opacity-90 transition-all cursor-pointer shadow-xs"
+                              >
+                                <span>Start Test</span>
+                                <ExternalLink size={12} />
+                              </a>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── TAB: Assessment Results & Scorecards ── */}
+        {activeTab === 'assessment-results' && (
+          <div className="space-y-6 animate-in fade-in duration-200">
+            {/* Header & Overall KPI Summary */}
+            <div className="p-5 sm:p-6 rounded-3xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] shadow-xs space-y-5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <div className="inline-flex items-center gap-2 rounded-full border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-white/5 px-3 py-1 text-[11px] font-semibold tracking-wider uppercase text-[#575A51] dark:text-neutral-400 mb-2">
+                    <span className="h-1.5 w-1.5 rounded-full bg-[#8FB305] animate-pulse" />
+                    04 • CANDIDATE DESK • RESULTS
+                  </div>
+                  <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-[#111215] dark:text-white">
+                    My Assessment Results & Scorecards
+                  </h2>
+                  <p className="mt-1 text-xs sm:text-sm text-[#575A51] dark:text-neutral-400">
+                    Review your completed assessment scores, integrity audits, and automated evaluation reports.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('assessments')}
+                  className="inline-flex items-center gap-1.5 rounded-full bg-[#111215] dark:bg-[#D4F82C] px-4 py-2 text-xs font-bold text-white dark:text-[#111215] hover:opacity-90 transition-all cursor-pointer shadow-xs self-start sm:self-auto"
+                >
+                  <FileCheck size={14} />
+                  <span>Take More Assessments</span>
+                </button>
+              </div>
+
+              {/* KPI Summary Cards */}
+              {candidateSubmissions.length > 0 && (
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-4 border-t border-[#E4E7DC] dark:border-white/10">
+                  <div className="p-3.5 rounded-2xl bg-[#F8F9F5] dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-[#73766C] dark:text-neutral-400">Completed</span>
+                    <p className="text-2xl font-extrabold text-[#111215] dark:text-white mt-1">{candidateSubmissions.length}</p>
+                  </div>
+                  <div className="p-3.5 rounded-2xl bg-[#F8F9F5] dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-[#73766C] dark:text-neutral-400">Passed</span>
+                    <p className="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400 mt-1">
+                      {candidateSubmissions.filter(s => s.status === 'passed' || Number(s.score) >= (Number(s.passingScore) || 70)).length}
+                    </p>
+                  </div>
+                  <div className="p-3.5 rounded-2xl bg-[#F8F9F5] dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-[#73766C] dark:text-neutral-400">Avg Score</span>
+                    <p className="text-2xl font-extrabold text-[#111215] dark:text-white mt-1">
+                      {Math.round(candidateSubmissions.reduce((sum, s) => sum + (Number(s.score) || 0), 0) / candidateSubmissions.length)}%
+                    </p>
+                  </div>
+                  <div className="p-3.5 rounded-2xl bg-[#F8F9F5] dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-[#73766C] dark:text-neutral-400">Integrity</span>
+                    <p className="text-xs font-bold text-emerald-700 dark:text-emerald-300 mt-2">
+                      🛡️ {candidateSubmissions.filter(s => !s.tabSwitchCount || Number(s.tabSwitchCount) === 0).length}/{candidateSubmissions.length} Clean
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Submissions List */}
+            {assessmentsLoading ? (
+              <div className="space-y-3">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="h-32 rounded-3xl bg-white dark:bg-[#15161A] border border-[#E4E7DC] dark:border-white/10 p-5 animate-pulse" />
+                ))}
+              </div>
+            ) : candidateSubmissions.length === 0 ? (
+              <div className="p-12 text-center rounded-3xl border border-dashed border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] space-y-4">
+                <div className="size-12 rounded-2xl bg-[#F8F9F5] dark:bg-white/5 flex items-center justify-center mx-auto text-[#73766C]">
+                  <Award size={24} />
+                </div>
+                <h3 className="text-base font-bold text-[#111215] dark:text-white">No Assessment Results Recorded</h3>
+                <p className="text-xs text-[#575A51] dark:text-neutral-400 max-w-md mx-auto">
+                  You haven't completed any assessments yet. Choose from our catalog of skill challenges to get evaluated and earn verified recruiter scorecards.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('assessments')}
+                  className="px-5 py-2.5 rounded-full text-xs font-bold bg-[#111215] dark:bg-[#D4F82C] text-white dark:text-[#111215] hover:opacity-90 transition-opacity cursor-pointer shadow-xs inline-flex items-center gap-1.5"
+                >
+                  <FileCheck size={14} />
+                  <span>Browse Available Assessments</span>
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {candidateSubmissions.map((submission) => {
+                  const score = Number(submission.score) || 0;
+                  const passingScore = Number(submission.passingScore) || 70;
+                  const isPassed = submission.status === 'passed' || score >= passingScore;
+                  const tabSwitches = Number(submission.tabSwitchCount) || 0;
+
+                  return (
+                    <div
+                      key={submission.id}
+                      className="p-5 sm:p-6 rounded-3xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] shadow-xs hover:border-[#111215]/30 dark:hover:border-white/20 transition-all flex flex-col md:flex-row md:items-center justify-between gap-5"
+                    >
+                      <div className="space-y-2 min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className={`text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full ${
+                            submission.type === 'coding'
+                              ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950/60 dark:text-indigo-300'
+                              : 'bg-[#D4F82C] text-[#111215]'
+                          }`}>
+                            {submission.type === 'coding' ? 'Coding Challenge' : 'Aptitude Test'}
+                          </span>
+                          <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${
+                            isPassed
+                              ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
+                              : 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300'
+                          }`}>
+                            {isPassed ? '✓ Passed' : 'Needs Improvement'}
+                          </span>
+                          <span className="text-[10px] text-[#73766C] dark:text-neutral-400">
+                            {tabSwitches === 0 ? '🛡️ Clean Audit' : `⚠️ ${tabSwitches} Tab Switch(es)`}
+                          </span>
+                        </div>
+
+                        <h3 className="text-base sm:text-lg font-bold text-[#111215] dark:text-white truncate">
+                          {submission.testTitle}
+                        </h3>
+
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[#73766C] dark:text-neutral-400">
+                          <span>
+                            Submitted: {submission.submittedAt?.toDate ? submission.submittedAt.toDate().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Recently'}
+                          </span>
+                          <span>•</span>
+                          <span>Pass Benchmark: {passingScore}%</span>
+                        </div>
+
+                        {submission.feedback && (
+                          <p className="text-xs text-[#575A51] dark:text-neutral-300 bg-[#F8F9F5] dark:bg-white/5 p-2.5 rounded-xl border border-[#E4E7DC]/60 dark:border-white/5 line-clamp-2">
+                            "{submission.feedback}"
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="flex items-center justify-between md:flex-col md:items-end gap-3 shrink-0 pt-3 md:pt-0 border-t md:border-t-0 border-[#E4E7DC] dark:border-white/10">
+                        <div className="text-left md:text-right">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-[#73766C] dark:text-neutral-400 block">
+                            Final Score
+                          </span>
+                          <span className={`text-2xl sm:text-3xl font-black ${
+                            score >= passingScore ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'
+                          }`}>
+                            {score}%
+                          </span>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => setSelectedScorecardSubmission(submission)}
+                          className="px-4 py-2 rounded-xl text-xs font-bold bg-[#111215] dark:bg-[#D4F82C] text-white dark:text-[#111215] hover:opacity-90 transition-opacity cursor-pointer shadow-xs flex items-center gap-1.5"
+                        >
+                          <FileText size={13} />
+                          <span>View Scorecard</span>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
         {activeTab === 'resume' && (
           <div className="space-y-6">
             {/* Resume Hero & Quick Actions */}
@@ -6133,6 +6835,20 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
           <span className="text-[10px] mt-0.5 tracking-tight">Applied</span>
         </button>
 
+        {/* Assessments */}
+        <button
+          type="button"
+          onClick={() => setActiveTab('assessments')}
+          className={`flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition-all cursor-pointer relative ${
+            activeTab === 'assessments' || activeTab === 'assessment-results'
+              ? 'text-emerald-600 dark:text-emerald-400 font-bold scale-105'
+              : 'text-slate-500 dark:text-slate-400'
+          }`}
+        >
+          <FileCheck size={20} />
+          <span className="text-[10px] mt-0.5 tracking-tight">Tests</span>
+        </button>
+
         {/* Resume */}
         <button
           type="button"
@@ -6168,6 +6884,7 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
       </nav>
 
       {renderTargetJdModal()}
+      {renderScorecardModal()}
     </div>
   );
 };
