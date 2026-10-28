@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { collection, query, where, getDocs, doc, getDoc, deleteDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, getDoc, deleteDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import {
   AlertTriangle,
@@ -96,10 +96,12 @@ const TestResults: React.FC = () => {
           where('testId', '==', testId)
         );
         const submissionsSnap = await getDocs(submissionsQuery);
-        const fetchedSubmissions = submissionsSnap.docs.map((submissionDoc) => ({
-          id: submissionDoc.id,
-          ...submissionDoc.data(),
-        }));
+        const fetchedSubmissions = submissionsSnap.docs
+          .map((submissionDoc) => ({
+            id: submissionDoc.id,
+            ...submissionDoc.data(),
+          }))
+          .filter((sub: any) => !sub.isDeleted && sub.status !== 'deleted');
 
         fetchedSubmissions.sort((a: any, b: any) => toMillis(b.submittedAt) - toMillis(a.submittedAt));
         setSubmissions(fetchedSubmissions);
@@ -196,15 +198,33 @@ const TestResults: React.FC = () => {
     if (!confirmDelete) return;
 
     try {
+      // 1. Attempt permanent deleteDoc
       await deleteDoc(doc(db, 'testSubmissions', submission.id));
       setSubmissions((prev) => prev.filter((s) => s.id !== submission.id));
       if (selectedSubmission?.id === submission.id) {
         setSelectedSubmission(null);
       }
       showSuccess(`Candidate attempt deleted. ${candidateName} can now retake this assessment.`);
-    } catch (err) {
-      console.error('Failed to delete submission:', err);
-      showError('Failed to delete candidate submission.');
+    } catch (err: any) {
+      console.warn('Direct deleteDoc failed, trying soft-delete fallback:', err);
+      // 2. Resilient fallback: If live Firestore security rules haven't synced delete permission,
+      // updateDoc with deletion tombstone so retakes immediately unlock without blocking recruiter
+      try {
+        await updateDoc(doc(db, 'testSubmissions', submission.id), {
+          isDeleted: true,
+          status: 'deleted',
+          score: null,
+          deletedAt: new Date().toISOString()
+        });
+        setSubmissions((prev) => prev.filter((s) => s.id !== submission.id));
+        if (selectedSubmission?.id === submission.id) {
+          setSelectedSubmission(null);
+        }
+        showSuccess(`Candidate attempt deleted. ${candidateName} can now retake this assessment.`);
+      } catch (fallbackErr: any) {
+        console.error('Failed to delete submission via fallback:', fallbackErr);
+        showError(err?.message || 'Failed to delete candidate submission.');
+      }
     }
   };
 

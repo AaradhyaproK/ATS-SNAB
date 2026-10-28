@@ -371,6 +371,13 @@ export const VoiceInterviewReport: React.FC = () => {
     tabSwitchCount
   } = response as any;
 
+  const tabSwitchesNum = Number(
+    (response as any)?.tabSwitchCount ??
+    (response as any)?.meta?.tabSwitchCount ??
+    tabSwitchCount ??
+    0
+  );
+
   // Master Full Video Resolution (resolves candidate video recording across all stored attributes & S3 patterns)
   const recordedVideoUrl = 
     fullSessionVideoUrl ||
@@ -777,12 +784,19 @@ export const VoiceInterviewReport: React.FC = () => {
               <div className="space-y-2 mt-3 pt-3 border-t border-[#E4E7DC] dark:border-white/[0.06] text-xs">
                 <div className="flex items-center justify-between text-[#73766C] dark:text-white/60">
                   <span className="flex items-center gap-1.5 font-medium">
-                    <Shield size={13} className="text-emerald-600 dark:text-emerald-400" /> Session Integrity
+                    <Shield size={13} className={tabSwitchesNum > 0 ? "text-amber-500" : "text-emerald-600 dark:text-emerald-400"} /> Session Integrity
                   </span>
-                  <span className={`font-mono font-bold ${(tabSwitchCount || 0) > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
-                    {tabSwitchCount || 0} Tab Switches
+                  <span className={`font-mono font-bold ${tabSwitchesNum > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+                    {tabSwitchesNum > 0 ? `${tabSwitchesNum} Tab Switch${tabSwitchesNum === 1 ? '' : 'es'}` : '0 Tab Switches (Clean)'}
                   </span>
                 </div>
+
+                {tabSwitchesNum > 0 && (
+                  <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/25 text-amber-800 dark:text-amber-300 flex items-start gap-2 text-xs">
+                    <AlertTriangle size={14} className="shrink-0 mt-0.5 text-amber-500" />
+                    <span><strong>Proctoring Flag:</strong> Candidate switched tabs or lost window focus {tabSwitchesNum} time{tabSwitchesNum === 1 ? '' : 's'} during the session.</span>
+                  </div>
+                )}
 
                 {candidateInfo?.currentCity && (
                   <div className="flex items-center justify-between text-[#73766C] dark:text-white/60">
@@ -1028,8 +1042,8 @@ export const VoiceInterviewReport: React.FC = () => {
           <BehavioralStat
             icon={<Shield size={18} />}
             label="Integrity & Fluency"
-            value={`${tabSwitchCount || 0} Tab Switches`}
-            color={(tabSwitchCount || 0) > 0 ? 'yellow' : 'green'}
+            value={tabSwitchesNum > 0 ? `${tabSwitchesNum} Tab Switch${tabSwitchesNum === 1 ? '' : 'es'} (Flagged)` : '0 Tab Switches (100% Clean)'}
+            color={tabSwitchesNum > 0 ? 'yellow' : 'green'}
           />
         </section>
 

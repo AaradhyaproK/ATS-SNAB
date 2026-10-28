@@ -3606,23 +3606,54 @@ const ActiveInterviewSession: React.FC<{
   }, [isTerminated, onFinish, isMobile]);
 
 
-  // Tab Visibility
+  // Strict Tab Visibility & Focus Loss Detector
   useEffect(() => {
+    let isAway = false;
+
+    const recordTabSwitch = () => {
+      if (isAway) return;
+      isAway = true;
+      onTabSwitch();
+      const warning = 'TAB SWITCH DETECTED — Window focus was lost. This tab switch has been recorded in your integrity audit report.';
+      setTabWarning(warning);
+      // Auto-clear the warning banner after 5 seconds
+      if (tabWarningTimerRef.current) clearTimeout(tabWarningTimerRef.current);
+      tabWarningTimerRef.current = setTimeout(() => setTabWarning(null), 5000);
+    };
+
+    const recordReturn = () => {
+      if (!document.hidden && document.hasFocus()) {
+        isAway = false;
+      }
+    };
+
     const handleVisibility = () => {
       if (document.hidden) {
-        onTabSwitch();
-        const warning = 'TAB SWITCH DETECTED - This activity has been recorded and will be flagged in your report.';
-        setTabWarning(warning);
-        // Auto-clear the warning banner after 5 seconds
-        if (tabWarningTimerRef.current) clearTimeout(tabWarningTimerRef.current);
-        tabWarningTimerRef.current = setTimeout(() => setTabWarning(null), 5000);
+        recordTabSwitch();
+      } else {
+        recordReturn();
       }
-
       syncTimeLeftFromDeadline();
     };
+
+    const handleBlur = () => {
+      if (document.hidden || !document.hasFocus()) {
+        recordTabSwitch();
+      }
+    };
+
+    const handleFocus = () => {
+      recordReturn();
+    };
+
     document.addEventListener("visibilitychange", handleVisibility);
+    window.addEventListener("blur", handleBlur);
+    window.addEventListener("focus", handleFocus);
+
     return () => {
       document.removeEventListener("visibilitychange", handleVisibility);
+      window.removeEventListener("blur", handleBlur);
+      window.removeEventListener("focus", handleFocus);
       if (tabWarningTimerRef.current) clearTimeout(tabWarningTimerRef.current);
     };
   }, [onTabSwitch]);
@@ -4913,6 +4944,7 @@ const InterviewSubmission: React.FC<{
             recruiterUID: recruiterUID || null,
             jobId: interviewId,
             isMock: state.isMock || false,
+            tabSwitchCount: tabSwitches,
             meta: { tabSwitchCount: tabSwitches }
         };
         const docRef = doc(collection(db, 'interviews', interviewId, 'attempts'));

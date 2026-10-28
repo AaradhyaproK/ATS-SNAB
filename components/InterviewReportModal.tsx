@@ -91,7 +91,7 @@ const InterviewReportModal: React.FC<InterviewReportModalProps> = ({ interview, 
                                 { label: 'Overall Score', value: interview.score, icon: 'fa-chart-pie', type: 'score' },
                                 { label: 'Resume Match', value: interview.resumeScore, icon: 'fa-file-contract', type: 'score' },
                                 { label: 'Q&A Quality', value: interview.qnaScore, icon: 'fa-comments', type: 'score' },
-                                { label: 'Tab Switches', value: interview.meta?.tabSwitchCount || 0, icon: 'fa-window-restore', type: 'count' }
+                                { label: 'Tab Switches', value: interview.tabSwitchCount ?? interview.meta?.tabSwitchCount ?? 0, icon: 'fa-window-restore', type: 'count' }
                             ].map((metric, i) => (
                                 <div key={i} className={`${isDark ? 'bg-white/5 border-white/10' : 'bg-gray-50 border-gray-100'} p-4 rounded-xl border`}>
                                     <div className="flex justify-between items-start mb-2">
@@ -160,12 +160,12 @@ const InterviewReportModal: React.FC<InterviewReportModalProps> = ({ interview, 
                         </div>
 
                         {/* Integrity Warning */}
-                        {interview.meta && interview.meta.tabSwitchCount > 0 && (
+                        {Number(interview.tabSwitchCount ?? interview.meta?.tabSwitchCount ?? 0) > 0 && (
                             <div className={`text-center p-4 rounded-xl border ${isDark ? 'bg-red-900/30 border-red-800' : 'bg-red-50 border-red-100'}`}>
                                 <i className={`fas fa-shield-alt ${isDark ? 'text-red-400' : 'text-red-400'} text-xl mb-1`}></i>
                                 <h4 className={`${isDark ? 'text-red-300' : 'text-red-800'} font-bold text-sm`}>Integrity Note</h4>
                                 <p className={`${isDark ? 'text-red-400' : 'text-red-600'} text-xs`}>
-                                    The candidate switched tabs <span className="font-bold">{interview.meta.tabSwitchCount}</span> time(s) during the session.
+                                    The candidate switched tabs <span className="font-bold">{interview.tabSwitchCount ?? interview.meta?.tabSwitchCount}</span> time(s) during the session.
                                 </p>
                             </div>
                         )}

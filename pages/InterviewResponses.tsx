@@ -631,6 +631,19 @@ const InterviewResponses: React.FC = () => {
                       {submission.submittedAt?.toDate ? submission.submittedAt.toDate().toLocaleString('en-GB') : 'Submitted date N/A'}
                     </span>
                   </div>
+                  <div className="mt-1.5 flex items-center gap-2">
+                    {Number(submission.tabSwitchCount ?? submission.meta?.tabSwitchCount ?? 0) > 0 ? (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-amber-500/15 border border-amber-500/25 text-amber-400">
+                        <i className="fas fa-exclamation-triangle text-[8px]"></i>
+                        {submission.tabSwitchCount ?? submission.meta?.tabSwitchCount} tab switch{Number(submission.tabSwitchCount ?? submission.meta?.tabSwitchCount) === 1 ? '' : 'es'}
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+                        <i className="fas fa-shield-alt text-[8px]"></i>
+                        Clean audit
+                      </span>
+                    )}
+                  </div>
                   <p className="geist-small mt-1 truncate text-[#6b7280]">{feedbackPreview}</p>
                 </div>
 

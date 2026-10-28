@@ -780,11 +780,10 @@ const InterviewReport: React.FC = () => {
         y += 2;
 
         // 6. SESSION INTEGRITY
-        if (submission.meta) {
-            drawSectionHeader("Session Integrity");
-            drawInfoBox('Tab Switches', `${submission.meta.tabSwitchCount ?? 0}`, margin, y, Math.min(contentW, 48));
-            y += 24;
-        }
+        const reportedTabSwitches = Number(submission.tabSwitchCount ?? submission.meta?.tabSwitchCount ?? 0);
+        drawSectionHeader("Session Integrity");
+        drawInfoBox('Tab Switches', `${reportedTabSwitches}`, margin, y, Math.min(contentW, 48));
+        y += 24;
 
         // 7. Q&A TRANSCRIPTS
         if (submission.questions && submission.questions.length > 0) {
@@ -1275,8 +1274,8 @@ const InterviewReport: React.FC = () => {
                                         <span className="flex items-center gap-1.5 font-medium">
                                             <Shield size={13} className="text-emerald-600 dark:text-emerald-400" /> Integrity
                                         </span>
-                                        <span className={`font-mono font-bold ${(submission.meta?.tabSwitchCount || 0) > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
-                                            {submission.meta?.tabSwitchCount || 0} Tab Switches
+                                        <span className={`font-mono font-bold ${Number(submission.tabSwitchCount ?? submission.meta?.tabSwitchCount ?? 0) > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+                                            {Number(submission.tabSwitchCount ?? submission.meta?.tabSwitchCount ?? 0)} Tab Switches
                                         </span>
                                     </div>
                                     {candidateCity && (
@@ -1933,8 +1932,8 @@ const InterviewReport: React.FC = () => {
                             <BehavioralStat 
                                 icon={<Shield size={18}/>} 
                                 label="Session Tab Switches" 
-                                value={submission.meta?.tabSwitchCount ?? 0} 
-                                color={submission.meta?.tabSwitchCount && submission.meta.tabSwitchCount > 0 ? 'red' : 'green'} 
+                                value={Number(submission.tabSwitchCount ?? submission.meta?.tabSwitchCount ?? 0)} 
+                                color={Number(submission.tabSwitchCount ?? submission.meta?.tabSwitchCount ?? 0) > 0 ? 'red' : 'green'} 
                             />
                         </div>
                     </div>

@@ -1010,6 +1010,7 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
             if (!seenIds.has(d.id)) {
               seenIds.add(d.id);
               const data = d.data();
+              if (data.isDeleted || data.status === 'deleted') continue;
               const matchedTest = testsList.find(t => t.id === data.testId);
               subsList.push({
                 id: d.id,
@@ -4567,9 +4568,12 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 items-stretch">
                   {filteredMatches.slice(0, 3).map((matchItem) => {
                     const job = matchItem.job;
-                    const jobTitle = job?.title || 'Job Opportunity';
-                    const jobCompany = job?.company || 'Company';
-                    const jobLocation = job?.location || 'Nashik';
+                    const rawTitle = (job?.title || job?.jobTitle || job?.role || '').trim();
+                    const jobTitle = (rawTitle && rawTitle !== '.') ? rawTitle : (job?.roleCategory || job?.department ? `${job?.department || job?.roleCategory} Role` : 'Job Opportunity');
+                    const rawCompany = (job?.company || job?.companyName || '').trim();
+                    const jobCompany = (rawCompany && rawCompany !== '.') ? rawCompany : 'Hiring Partner';
+                    const rawLoc = (job?.location || job?.city || '').trim();
+                    const jobLocation = (rawLoc && rawLoc !== '.') ? rawLoc : 'Nashik';
                     const jobSalary = job?.salary || 'Competitive';
                     const jobType = job?.jobType || job?.employmentType || 'Full-Time';
 
@@ -4642,8 +4646,10 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
                 <div className="space-y-2">
                   {myApplicationsList.slice(0, 3).map((item) => {
                     const { job, appInfo } = item;
-                    const jobTitle = job?.title || 'Job Application';
-                    const jobCompany = job?.company || 'Company';
+                    const rawTitle = (job?.title || job?.jobTitle || appInfo?.jobTitle || '').trim();
+                    const jobTitle = (rawTitle && rawTitle !== '.') ? rawTitle : 'Job Application';
+                    const rawCompany = (job?.company || job?.companyName || '').trim();
+                    const jobCompany = (rawCompany && rawCompany !== '.') ? rawCompany : 'Hiring Partner';
                     const status = appInfo?.status || 'Under Review';
                     const appliedDateStr = appInfo?.appliedAt
                       ? new Date(appInfo.appliedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
@@ -5190,10 +5196,10 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
 
                         {/* Status Badge */}
                         <div className="flex items-center gap-1.5 self-start sm:self-auto shrink-0">
-                          {matchItem && (
+                          {((matchItem && matchItem.overallScore !== undefined) || appInfo.matchScore !== undefined) && (
                             <span className="px-2.5 py-0.5 rounded-full text-[11px] font-black bg-[#D4F82C] text-[#111215] shadow-xs flex items-center gap-1">
                               <Sparkles size={11} className="fill-[#111215]" />
-                              <span>{matchItem.score}% Match</span>
+                              <span>{matchItem?.overallScore ?? appInfo.matchScore}% Match</span>
                             </span>
                           )}
 

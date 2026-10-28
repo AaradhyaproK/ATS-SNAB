@@ -460,8 +460,13 @@ export const TakeTest: React.FC = () => {
           )
         );
 
-        if (!subSnap.empty) {
-          const prev = subSnap.docs[0].data();
+        const activeDocs = subSnap.docs.filter((d) => {
+          const data = d.data();
+          return !data.isDeleted && data.status !== 'deleted';
+        });
+
+        if (activeDocs.length > 0) {
+          const prev = activeDocs[0].data();
           setResultData({
             score: Number(prev.score) || 0,
             feedback: prev.feedback || '',

@@ -236,12 +236,76 @@ export const LiveVoiceInterview: React.FC = () => {
   const [submittedSessionId, setSubmittedSessionId] = useState<string>('');
   const [savedVideoUrl, setSavedVideoUrl] = useState<string>('');
 
+  // Strict Proctoring / Tab Switch Detection State
+  const [tabSwitchCount, setTabSwitchCount] = useState(0);
+  const tabSwitchCountRef = useRef(0);
+  const isAwayRef = useRef(false);
+  const [tabWarning, setTabWarning] = useState<string | null>(null);
+  const tabWarningTimerRef = useRef<NodeJS.Timeout | null>(null);
+
   const roomRef = useRef<Room | null>(null);
   const linesRef = useRef<Line[]>([]);
   const startedAtRef = useRef(0);
   const recorderRef = useRef<{ rec: MediaRecorder; chunks: Blob[]; ctx: AudioContext; dest: MediaStreamAudioDestinationNode; mimeType: string } | null>(null);
   const finishedRef = useRef(false);
   const cameraStreamRef = useRef<MediaStream | null>(null);
+
+  // Strict Tab Switch & Window Focus Loss Detector
+  useEffect(() => {
+    if (phase !== 'live') return;
+
+    const recordTabSwitch = () => {
+      if (isAwayRef.current) return;
+      isAwayRef.current = true;
+
+      tabSwitchCountRef.current += 1;
+      const count = tabSwitchCountRef.current;
+      setTabSwitchCount(count);
+
+      const msg = `TAB SWITCH DETECTED (${count}) — Window focus was lost. This tab switch has been recorded in your integrity audit report.`;
+      setTabWarning(msg);
+
+      if (tabWarningTimerRef.current) clearTimeout(tabWarningTimerRef.current);
+      tabWarningTimerRef.current = setTimeout(() => {
+        setTabWarning(null);
+      }, 5000);
+    };
+
+    const recordReturn = () => {
+      if (!document.hidden && document.hasFocus()) {
+        isAwayRef.current = false;
+      }
+    };
+
+    const handleVisibility = () => {
+      if (document.hidden) {
+        recordTabSwitch();
+      } else {
+        recordReturn();
+      }
+    };
+
+    const handleBlur = () => {
+      if (document.hidden || !document.hasFocus()) {
+        recordTabSwitch();
+      }
+    };
+
+    const handleFocus = () => {
+      recordReturn();
+    };
+
+    document.addEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('blur', handleBlur);
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('blur', handleBlur);
+      window.removeEventListener('focus', handleFocus);
+      if (tabWarningTimerRef.current) clearTimeout(tabWarningTimerRef.current);
+    };
+  }, [phase]);
 
   // Resolve job document
   useEffect(() => {
@@ -525,11 +589,21 @@ export const LiveVoiceInterview: React.FC = () => {
     };
 
     try {
+      const totalTabSwitches = tabSwitchCountRef.current;
       const screeningReport = await evaluateVoiceInterviewSession(job?.title || 'Job Screening', dialogueHistory, candidateInfo, {
         jobDescription: job?.description,
         location: job?.location,
         companyName: job?.companyName || job?.company,
       });
+
+      if (totalTabSwitches > 0 && screeningReport) {
+        if (!Array.isArray(screeningReport.concerns)) {
+          screeningReport.concerns = [];
+        }
+        screeningReport.concerns.unshift(
+          `Integrity Alert: Candidate switched tabs/windows ${totalTabSwitches} time${totalTabSwitches === 1 ? '' : 's'} during the session.`
+        );
+      }
 
       const response: VoiceInterviewResponse = {
         id: sessionId,
@@ -549,6 +623,7 @@ export const LiveVoiceInterview: React.FC = () => {
         videoRecordingUrl: videoUrl,
         fullSessionVideoUrl: videoUrl,
         speechAnalytics: { transcriptionEngine: 'LiveKit · AssemblyAI Universal-3.6 Pro' },
+        tabSwitchCount: totalTabSwitches,
         status: screeningReport.recommendation === 'Shortlist' ? 'Shortlist' : 'Completed',
         submittedAt: new Date(),
       };
@@ -577,6 +652,10 @@ export const LiveVoiceInterview: React.FC = () => {
         callDurationSeconds: response.callDurationSeconds,
         voiceResponseId: sessionId,
         responseId: sessionId,
+        tabSwitchCount: totalTabSwitches,
+        meta: {
+          tabSwitchCount: totalTabSwitches
+        },
         status: 'Completed',
         interviewId: jobId,
         jobId,
@@ -893,6 +972,27 @@ export const LiveVoiceInterview: React.FC = () => {
               </span>
             </div>
 
+            {/* Live Proctoring & Tab Switch Integrity Badge */}
+            <div
+              className={`flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-mono font-bold transition-all ${
+                tabSwitchCount > 0
+                  ? 'bg-amber-500/15 border-amber-500/30 text-amber-400'
+                  : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
+              }`}
+              title={
+                tabSwitchCount > 0
+                  ? `${tabSwitchCount} tab switch(es) detected and logged in audit report`
+                  : 'Live Proctoring Active: Zero tab switches'
+              }
+            >
+              {tabSwitchCount > 0 ? (
+                <AlertTriangle size={13} className="text-amber-400 shrink-0" />
+              ) : (
+                <Shield size={13} className="text-emerald-400 shrink-0" />
+              )}
+              <span>{tabSwitchCount > 0 ? `${tabSwitchCount} Switch${tabSwitchCount === 1 ? '' : 'es'}` : 'Proctored'}</span>
+            </div>
+
             {/* Countdown Clock */}
             <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-neutral-900 border border-white/15 text-xs font-mono font-bold text-white">
               <Clock size={13} className="text-[#D4F82C]" />
@@ -912,6 +1012,18 @@ export const LiveVoiceInterview: React.FC = () => {
 
         {/* MAIN STAGE (CINEMATIC DUAL TILES + TRANSCRIPT DRAWER) */}
         <main className="flex-1 p-3 sm:p-5 flex gap-4 overflow-hidden relative">
+          {/* Strict Tab Switch Alert Banner */}
+          {tabWarning && (
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 max-w-xl w-[92%] p-3.5 sm:p-4 rounded-2xl bg-amber-500 text-black font-extrabold text-xs sm:text-sm flex items-center justify-between gap-3 shadow-2xl backdrop-blur-md border border-amber-300 animate-bounce">
+              <div className="flex items-center gap-2.5">
+                <AlertTriangle size={20} className="shrink-0 text-black" />
+                <span className="leading-tight">{tabWarning}</span>
+              </div>
+              <span className="text-[11px] bg-black/25 text-black px-2.5 py-1 rounded-full font-mono shrink-0 font-black uppercase tracking-wider">
+                Logged #{tabSwitchCount}
+              </span>
+            </div>
+          )}
           <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 h-full overflow-hidden">
             {/* Candidate Live Mirrored Video Tile (Zero Flicker!) */}
             <CandidateCameraTile

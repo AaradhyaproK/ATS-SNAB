@@ -137,8 +137,12 @@ const TestAccess: React.FC = () => {
               where('candidateEmail', '==', cleanEmail)
             )
           );
-          if (!subSnap.empty) {
-            const subDoc = subSnap.docs[0];
+          const activeDocs = subSnap.docs.filter((d) => {
+            const data = d.data();
+            return !data.isDeleted && data.status !== 'deleted';
+          });
+          if (activeDocs.length > 0) {
+            const subDoc = activeDocs[0];
             const subData = subDoc.data();
             setExistingSubmission({
               id: subDoc.id,
