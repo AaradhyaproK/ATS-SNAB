@@ -75,6 +75,14 @@ export const uploadToS3 = async (
     }
   } catch (serverlessErr: any) {
     console.error("Serverless S3 Upload Error:", serverlessErr);
+    try {
+      const { uploadToCloudinary } = await import('./api');
+      console.warn("Attempting Cloudinary fallback upload...", serverlessErr);
+      const fallbackUrl = await uploadToCloudinary(blob, resourceType);
+      if (fallbackUrl) return fallbackUrl;
+    } catch (fallbackErr) {
+      console.error("Cloudinary fallback upload also failed:", fallbackErr);
+    }
     throw serverlessErr;
   }
 

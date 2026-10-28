@@ -116,8 +116,8 @@ const BehavioralStat: React.FC<{ icon: React.ReactNode; label: string; value: st
 
 export const VoiceInterviewReport: React.FC = () => {
   const { responseId: rawRespId, submissionId: rawSubId, interviewId: rawIntId } = useParams<{ responseId?: string; submissionId?: string; interviewId?: string }>();
-  const responseId = rawRespId || rawSubId || '';
-  const interviewId = rawIntId || '';
+  const responseId = rawRespId || rawSubId || rawIntId || '';
+  const interviewId = (rawRespId || rawSubId) ? (rawIntId || '') : '';
   const navigate = useNavigate();
   const messageBox = useMessageBox();
 

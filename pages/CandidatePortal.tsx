@@ -5486,7 +5486,7 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
                         Close
                       </button>
 
-                      {(modalJob.isAiVideoInterview || liveJob.isAiVideoInterview) && modalJob.interviewMode !== 'voice' && liveJob.interviewMode !== 'voice' && (
+                      {(modalJob.isAiVideoInterview || liveJob.isAiVideoInterview || modalJob.interviewMode || liveJob.interviewMode || modalJob.accessCode || liveJob.accessCode || modalJob.interviewLink || liveJob.interviewLink) && (
                         <button
                           type="button"
                           onClick={() => {
@@ -5495,22 +5495,8 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
                           }}
                           className="px-5 py-2.5 rounded-full text-xs font-bold bg-[#D4F82C] text-[#111215] hover:bg-[#c7eb22] flex items-center gap-1.5 shadow-sm cursor-pointer"
                         >
-                          <Video size={13} />
-                          <span>Start Video Interview</span>
-                        </button>
-                      )}
-
-                      {(modalJob.interviewMode === 'voice' || liveJob.interviewMode === 'voice') && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const candEmailParam = candEmail ? `?email=${encodeURIComponent(candEmail)}&name=${encodeURIComponent(editForm.name || candidate?.name || '')}` : '';
-                            navigate(`/voice/${modalJob.id}${candEmailParam}`);
-                          }}
-                          className="px-5 py-2.5 rounded-full text-xs font-bold bg-[#D4F82C] text-[#111215] hover:bg-[#c7eb22] flex items-center gap-1.5 shadow-sm cursor-pointer"
-                        >
-                          <Mic size={13} />
-                          <span>Start Voice Interview</span>
+                          <Sparkles size={13} />
+                          <span>Start AI Interview</span>
                         </button>
                       )}
 

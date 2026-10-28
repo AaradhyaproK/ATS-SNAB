@@ -39,7 +39,7 @@ import { generateInterviewQuestions } from '../services/api';
 import { uploadToS3 } from '../services/s3Service';
 import { getCandidateRateLimitReachedMessage, isRateLimitReached, loadCompanyRateLimitStatus, recordCandidateSubmission } from '../services/rateLimitService';
 import { db } from '../services/firebase';
-import { collection, doc, getDocs, query, serverTimestamp, where, limit } from 'firebase/firestore';
+import { collection, doc, getDocs, query, serverTimestamp, setDoc, where, limit } from 'firebase/firestore';
 import { VoiceInterviewResponse, VoiceInterviewTurn } from '../types';
 import HireXLogo from '../components/HireXLogo';
 
@@ -454,20 +454,49 @@ export const LiveVoiceInterview: React.FC = () => {
 
     const rec = recorderRef.current;
     const recMime = rec?.mimeType || 'video/webm';
-    const videoBlob = rec && rec.rec.state !== 'inactive'
-      ? await new Promise<Blob>((done) => {
-          rec.rec.onstop = () => done(new Blob(rec.chunks, { type: recMime }));
-          rec.rec.stop();
-        })
-      : null;
+    let videoBlob: Blob | null = null;
+    if (rec) {
+      try {
+        if (rec.rec.state === 'recording' || rec.rec.state === 'paused') {
+          videoBlob = await new Promise<Blob>((done) => {
+            rec.rec.onstop = () => done(new Blob(rec.chunks, { type: recMime }));
+            try {
+              if (typeof rec.rec.requestData === 'function') {
+                rec.rec.requestData();
+              }
+              rec.rec.stop();
+            } catch (stopErr) {
+              console.warn('[LiveVoiceInterview] MediaRecorder stop error:', stopErr);
+              done(new Blob(rec.chunks, { type: recMime }));
+            }
+          });
+        } else if (rec.chunks && rec.chunks.length > 0) {
+          videoBlob = new Blob(rec.chunks, { type: recMime });
+        }
+      } catch (err) {
+        console.warn('[LiveVoiceInterview] Error assembling videoBlob:', err);
+        if (rec.chunks && rec.chunks.length > 0) {
+          videoBlob = new Blob(rec.chunks, { type: recMime });
+        }
+      }
+    }
     rec?.ctx.close().catch(() => {});
     cameraStreamRef.current?.getTracks().forEach((track) => track.stop());
+    try {
+      roomRef.current?.disconnect();
+    } catch (_) {}
 
     const sessionId = roomRef.current?.name || `vresp_${Date.now()}`;
     const [videoUrl, uploadedResumeUrl] = await Promise.all([
-      videoBlob?.size ? uploadToS3(videoBlob, 'video', `voice_interview_video_${sessionId}.webm`).catch((err) => {
-        console.warn('Video S3 upload error:', err);
-        return undefined;
+      videoBlob?.size ? uploadToS3(videoBlob, 'video', `voice_interview_video_${sessionId}.webm`).catch(async (err) => {
+        console.warn('Video S3 upload error, trying Cloudinary fallback:', err);
+        try {
+          const { uploadToCloudinary } = await import('../services/api');
+          return await uploadToCloudinary(videoBlob, 'video');
+        } catch (cErr) {
+          console.error('All video upload strategies failed:', cErr);
+          return undefined;
+        }
       }) : undefined,
       resume ? uploadToS3(resume.file, 'raw', `resumes/${Date.now()}_${resume.file.name.replace(/[^\w.-]/g, '_')}`).catch(() => undefined) : undefined,
     ]);
@@ -518,6 +547,7 @@ export const LiveVoiceInterview: React.FC = () => {
         videoUrl,
         candidateVideoUrl: videoUrl,
         videoRecordingUrl: videoUrl,
+        fullSessionVideoUrl: videoUrl,
         speechAnalytics: { transcriptionEngine: 'LiveKit · AssemblyAI Universal-3.6 Pro' },
         status: screeningReport.recommendation === 'Shortlist' ? 'Shortlist' : 'Completed',
         submittedAt: new Date(),
@@ -529,7 +559,8 @@ export const LiveVoiceInterview: React.FC = () => {
       // Save attempt under interviews/{jobId}/attempts/{sessionId} for recruiter dashboard
       const score = Math.round((screeningReport.overallScore || 0) * 10);
       const attempt = JSON.parse(JSON.stringify({
-        interviewType: 'voice',
+        interviewType: 'video',
+        isAiVideoInterview: true,
         candidateInfo: response.candidateInfo,
         candidateResumeURL: finalResumeUrl,
         score: `${score}/100`,
@@ -537,20 +568,32 @@ export const LiveVoiceInterview: React.FC = () => {
         screeningReport,
         dialogueHistory,
         answersSummary,
+        fullSessionVideoUrl: videoUrl,
         audioRecordingUrl: videoUrl,
         videoRecordingUrl: videoUrl,
         candidateVideoUrl: videoUrl,
         videoUrl,
+        videoURLs: videoUrl ? [videoUrl] : [],
         callDurationSeconds: response.callDurationSeconds,
         voiceResponseId: sessionId,
+        responseId: sessionId,
         status: 'Completed',
         interviewId: jobId,
         jobId,
-        interviewTitle: job?.title || 'Voice Interview',
-        title: job?.title || 'Voice Interview',
+        interviewTitle: job?.title || 'AI Interview',
+        title: job?.title || 'AI Interview',
         recruiterUID: job?.recruiterUID || null,
       }));
       await recordCandidateSubmission('interviews', doc(db, 'interviews', jobId, 'attempts', sessionId), { ...attempt, submittedAt: serverTimestamp() });
+
+      try {
+        await setDoc(doc(db, 'submissions', sessionId), {
+          ...attempt,
+          submittedAt: serverTimestamp()
+        }, { merge: true });
+      } catch (subErr) {
+        console.warn('Submissions collection mirror fallback:', subErr);
+      }
 
       // Save/update candidate profile in Resume Dump
       saveResumeDumpCandidate({
@@ -975,8 +1018,8 @@ export const LiveVoiceInterview: React.FC = () => {
 
             {/* End Call Button */}
             <button
-              onClick={() => roomRef.current?.disconnect()}
-              className="px-5 py-3 rounded-2xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold flex items-center gap-2 shadow-lg transition"
+              onClick={() => void finish()}
+              className="px-5 py-3 rounded-2xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold flex items-center gap-2 shadow-lg transition cursor-pointer"
             >
               <PhoneOff size={18} />
               <span>End Interview</span>

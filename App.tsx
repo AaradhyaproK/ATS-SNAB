@@ -309,11 +309,7 @@ const App: React.FC = () => {
             
             {/* Candidate & Recruiter Interview Assessment Report */}
             <Route path="report/:interviewId/:submissionId" element={<VoiceInterviewReport />} />
-            <Route path="report/:interviewId" element={
-              <ThemeProvider>
-                <Report />
-              </ThemeProvider>
-            } />
+            <Route path="report/:interviewId" element={<VoiceInterviewReport />} />
             
             {/* Public Client Shortlist Review Portal */}
             <Route path="review/:shareId" element={

@@ -974,8 +974,8 @@ const CreateInterview: React.FC = () => {
     }
 
     const cleanVoiceQuestions = voiceQuestions.map((q) => q.trim()).filter(Boolean);
-    if (interviewMode === 'voice' && !cleanVoiceQuestions.length) {
-      alert("❌ Add at least one voice interview question.");
+    if (!cleanVoiceQuestions.length) {
+      alert("❌ Add at least one interview question or click 'Generate from JD'.");
       return;
     }
 
@@ -984,9 +984,7 @@ const CreateInterview: React.FC = () => {
     try {
       // 1. Generate Job ID, Link, and Access Code locally
       const newRand = Math.random().toString(36).substring(2, 15);
-      const newInterviewLink = interviewMode === 'voice'
-        ? `${window.location.origin}/voice/${newRand}`
-        : `${window.location.origin}/candidate?job=${newRand}`;
+      const newInterviewLink = `${window.location.origin}/interview/video/${newRand}`;
       const newAccessCode = Math.random().toString(36).substring(2, 8).toUpperCase();
 
       // 2. Save to Firestore
@@ -1021,28 +1019,26 @@ const CreateInterview: React.FC = () => {
         createdBy: creatorInfo,
         createdAt: serverTimestamp(),
         isMock: false,
-        interviewMode,
-        ...(interviewMode === 'voice' ? { isAiVideoInterview: false } : {}),
+        interviewMode: 'video',
+        isAiVideoInterview: true,
       });
 
-      // Voice jobs: the questions the AI interviewer asks (editable later in the job's Voice Interview tab)
-      if (interviewMode === 'voice') {
-        await saveVoiceInterview({
-          id: newRand,
-          jobId: newRand,
-          interviewId: newRand,
-          title: formData.title,
-          jobTitle: formData.title,
-          jobDescription: formData.description,
-          companyName: formData.companyName || '',
-          location: formData.location || formData.city || '',
-          recruiterUID: user.uid,
-          teamId,
-          questions: cleanVoiceQuestions.map((question, i) => ({ id: `q_${i}`, question, category: 'skills' })),
-          status: 'active',
-          createdAt: serverTimestamp(),
-        });
-      }
+      // Unified AI interview questions (saved for conversational AI interviewer and assessment)
+      await saveVoiceInterview({
+        id: newRand,
+        jobId: newRand,
+        interviewId: newRand,
+        title: formData.title,
+        jobTitle: formData.title,
+        jobDescription: formData.description,
+        companyName: formData.companyName || '',
+        location: formData.location || formData.city || '',
+        recruiterUID: user.uid,
+        teamId,
+        questions: cleanVoiceQuestions.map((question, i) => ({ id: `q_${i}`, question, category: 'skills' })),
+        status: 'active',
+        createdAt: serverTimestamp(),
+      });
 
       // Also mirror to jobs collection for ATS consistency
       await setDoc(doc(db, 'jobs', newRand), {
@@ -1936,28 +1932,26 @@ const CreateInterview: React.FC = () => {
                 <Mic size={16} className="text-[#8FB305] dark:text-[#D4F82C]" />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {([
-                  { mode: 'video', Icon: Video, title: 'Video Interview', desc: 'Recorded AI video interview (current flow)' },
-                  { mode: 'voice', Icon: Mic, title: 'Voice Interview', desc: 'Live two-way call with an AI interviewer' },
-                ] as const).map(({ mode, Icon, title, desc }) => (
-                  <button
-                    key={mode}
-                    type="button"
-                    onClick={() => setInterviewMode(mode)}
-                    className={`text-left rounded-2xl border p-4 transition-all cursor-pointer ${interviewMode === mode ? 'border-[#111215] dark:border-[#D4F82C] bg-[#F8F9F5] dark:bg-[#101114]' : 'border-[#E4E7DC] dark:border-white/10'}`}
-                  >
-                    <Icon size={18} className="text-[#8FB305] dark:text-[#D4F82C]" />
-                    <div className="mt-2 text-sm font-black text-[#111215] dark:text-white">{title}</div>
-                    <div className="text-xs text-[#73766C] dark:text-neutral-400">{desc}</div>
-                  </button>
-                ))}
+              <div className="rounded-2xl border border-[#111215] dark:border-[#D4F82C] bg-[#F8F9F5] dark:bg-[#101114] p-4.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+                <div className="flex items-center gap-3.5">
+                  <div className="w-10 h-10 rounded-xl bg-[#D4F82C] text-[#111215] flex items-center justify-center font-bold shrink-0">
+                    <Sparkles size={20} />
+                  </div>
+                  <div>
+                    <div className="text-sm font-black text-[#111215] dark:text-white flex items-center gap-2">
+                      <span>Unified AI Interview (Video & Voice)</span>
+                      <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-[#111215] text-[#D4F82C]">Platform Standard</span>
+                    </div>
+                    <div className="text-xs text-[#73766C] dark:text-neutral-400 mt-0.5">
+                      Autonomous live conversational AI assessment with continuous HD camera recording, two-way speech, and full executive report dossier.
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              {interviewMode === 'voice' && (
-                <div className="space-y-2.5">
-                  <div className="flex items-center justify-between gap-2">
-                    <label className={labelClass}>Questions the AI interviewer asks, in order</label>
+              <div className="space-y-2.5">
+                <div className="flex items-center justify-between gap-2">
+                  <label className={labelClass}>Questions the AI interviewer asks, in order</label>
                     <button
                       type="button"
                       disabled={generatingVoiceQuestions || !formData.description.trim()}
@@ -1998,7 +1992,6 @@ const CreateInterview: React.FC = () => {
                     About 1.5 minutes per question (5–15 minute call). The interviewer may ask one short follow-up per answer.
                   </p>
                 </div>
-              )}
             </section>
 
             {/* Sticky Submission Bar */}
