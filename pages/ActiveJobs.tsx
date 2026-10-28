@@ -475,7 +475,7 @@ const ActiveJobsPage: React.FC = () => {
           {/* Logo & Product Badge */}
           <div className="flex items-center gap-3">
             <Link to="/" className="group inline-flex items-center">
-              <HireXLogo size="md" variant="full" />
+              <HireXLogo size="md" variant="full" isDark={false} />
             </Link>
             <div className="hidden sm:flex items-center gap-1.5 pl-3 border-l border-[#E4E7DC] text-[11px] font-medium text-[#73766C]">
               <span>by</span>
@@ -1247,7 +1247,7 @@ const ActiveJobsPage: React.FC = () => {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 pb-12">
             <div>
               <div className="mb-3">
-                <HireXLogo size="md" variant="full" />
+                <HireXLogo size="md" variant="full" isDark={false} />
               </div>
               <p className="text-xs text-[#73766C] leading-relaxed">
                 The AI-powered recruitment operating system for agile hiring teams and modern staffing agencies.

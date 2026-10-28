@@ -872,7 +872,7 @@ export const LiveVoiceInterview: React.FC = () => {
         {/* TOP BAR */}
         <header className="h-16 px-4 sm:px-6 border-b border-white/10 bg-[#0F1116]/80 backdrop-blur-md flex items-center justify-between z-20 shrink-0">
           <div className="flex items-center gap-3 sm:gap-4 truncate">
-            <HireXLogo />
+            <HireXLogo isDark={true} />
             <div className="h-5 w-px bg-white/15 hidden sm:block" />
             <div className="truncate">
               <h2 className="text-sm font-bold text-white truncate flex items-center gap-2">
@@ -1083,7 +1083,7 @@ export const LiveVoiceInterview: React.FC = () => {
   if (phase === 'done') {
     return (
       <div className="min-h-screen bg-[#F8F9F5] text-[#111215] flex flex-col items-center justify-center p-4">
-        <HireXLogo />
+        <HireXLogo isDark={false} />
         <div className="w-full max-w-xl mt-8 rounded-3xl border border-[#E4E7DC] bg-white p-8 text-center shadow-xl space-y-6">
           <div className="size-20 rounded-full bg-emerald-50 border border-emerald-200 flex items-center justify-center mx-auto text-emerald-600 shadow-sm">
             <CheckCircle2 size={44} />
@@ -1134,7 +1134,7 @@ export const LiveVoiceInterview: React.FC = () => {
   if (phase === 'error') {
     return (
       <div className="min-h-screen bg-[#F8F9F5] text-[#111215] flex flex-col items-center justify-center p-4">
-        <HireXLogo />
+        <HireXLogo isDark={false} />
         <div className="w-full max-w-md mt-8 rounded-3xl border border-red-200 bg-white p-8 text-center shadow-lg space-y-5">
           <div className="size-16 rounded-full bg-red-50 text-red-500 flex items-center justify-center mx-auto">
             <AlertTriangle size={32} />
@@ -1160,7 +1160,7 @@ export const LiveVoiceInterview: React.FC = () => {
   // -------------------------------------------------------------
   return (
     <div className="min-h-screen bg-[#F8F9F5] text-[#111215] flex flex-col items-center justify-center px-4 py-8">
-      <HireXLogo />
+      <HireXLogo isDark={false} />
 
       <div className="w-full max-w-4xl mt-6 rounded-3xl border border-[#E4E7DC] bg-white shadow-xl overflow-hidden grid grid-cols-1 md:grid-cols-12">
         {/* Left Hero Banner */}

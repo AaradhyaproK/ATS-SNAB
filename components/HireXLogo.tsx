@@ -55,13 +55,13 @@ export const HireXLogo: React.FC<HireXLogoProps> = ({
     if (isDark === false) {
       return {
         brandPrefix: 'text-[#111215]',
-        brandSuffix: 'text-[#15803D]',
+        brandSuffix: 'text-[#8FB305]',
       };
     }
     // Adaptive mode when isDark is not explicitly passed
     return {
       brandPrefix: 'text-[#111215] dark:text-white',
-      brandSuffix: 'text-[#15803D] dark:text-[#D4F82C]',
+      brandSuffix: 'text-[#8FB305] dark:text-[#D4F82C]',
     };
   };
 

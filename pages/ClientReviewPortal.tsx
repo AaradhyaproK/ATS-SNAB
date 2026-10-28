@@ -489,7 +489,7 @@ export default function ClientReviewPortal() {
           {/* Brand Left: hireX Logo + Client badge (NO DOT) */}
           <div className="flex items-center gap-3 sm:gap-4 min-w-0">
             <Link to="/" className="flex items-center gap-2 shrink-0 group" title="hireX Talent Platform">
-              <HireXLogo className="h-8 sm:h-9 w-auto" />
+              <HireXLogo className="h-8 sm:h-9 w-auto" isDark={isDark} />
             </Link>
 
             <div className="h-5 w-px bg-[#E4E7DC] dark:bg-white/10 hidden sm:block shrink-0" />
@@ -1202,7 +1202,7 @@ export default function ClientReviewPortal() {
             {/* Col 1: Brand & Certification (4 cols) */}
             <div className="lg:col-span-4 space-y-4">
               <Link to="/" className="inline-block" title="hireX Home">
-                <HireXLogo className="h-9 w-auto" />
+                <HireXLogo className="h-9 w-auto" isDark={isDark} />
               </Link>
               <p className="text-xs text-[#575A51] dark:text-neutral-400 leading-relaxed max-w-sm">
                 Enterprise AI-Powered Talent Screening, Blind Anti-Bias Candidate Shortlists & Executive Hiring Infrastructure.

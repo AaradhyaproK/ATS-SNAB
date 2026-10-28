@@ -18,6 +18,7 @@ import {
 import { resolveJobOrInterviewDocument } from '../services/jobResolutionService';
 import { VoiceInterviewResponse, VoiceInterview, VoiceInterviewTurn } from '../types';
 import DayNightToggle from '../components/DayNightToggle';
+import { useTheme } from '../context/ThemeContext';
 import { useMessageBox } from '../components/MessageBox';
 import HireXLogo, { HireXMark } from '../components/HireXLogo';
 
@@ -120,6 +121,7 @@ export const VoiceInterviewReport: React.FC = () => {
   const interviewId = (rawRespId || rawSubId) ? (rawIntId || '') : '';
   const navigate = useNavigate();
   const messageBox = useMessageBox();
+  const { isDark } = useTheme();
 
   const [response, setResponse] = useState<VoiceInterviewResponse | null>(null);
   const [interview, setInterview] = useState<VoiceInterview | null>(null);
@@ -525,7 +527,7 @@ export const VoiceInterviewReport: React.FC = () => {
               <ArrowLeft size={18} />
             </button>
             <div className="flex items-center gap-2.5">
-              <HireXLogo size="md" variant="full" withLink to="/" />
+              <HireXLogo size="md" variant="full" withLink to="/" isDark={isDark} />
               <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-mono uppercase tracking-wider text-[#111215] bg-[#D4F82C] border border-[#b8da1f] font-black shadow-xs">
                 <Sparkles size={11} /> Interview Assessment Dossier
               </span>
@@ -563,7 +565,7 @@ export const VoiceInterviewReport: React.FC = () => {
         {/* PRINT-ONLY OFFICIAL LETTERHEAD BANNER */}
         <div className="hidden print:flex items-center justify-between border-b-2 border-black pb-4 mb-6">
           <div className="flex items-center gap-3">
-            <HireXLogo size="md" variant="full" />
+            <HireXLogo size="md" variant="full" isDark={false} />
             <div>
               <h1 className="text-xl font-black text-black tracking-tight uppercase">AI Interview Assessment Dossier</h1>
               <p className="text-[11px] text-neutral-600 font-mono">Confidential Candidate Evaluation Report · Verified by InterviewXpert Autonomous Recruiter</p>

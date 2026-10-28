@@ -255,7 +255,7 @@ const FAQ_ITEMS = [
   },
   {
     q: 'How does the AI Video Interview work and what does it cost?',
-    a: 'Our autonomous AI interviewer conducts live, interactive spoken video interviews with candidates 24/7. It asks dynamic technical cross-questions, records full-length HD video with live word-for-word transcripts, enforces anti-cheat verification, and automatically generates personalized evaluation reports with executive scorecards. Pricing is fully dynamic: starting at ₹65 per interview for 10 interviews, scaling down to ₹50 per interview for volume screening — saving you over 92% compared to manual recruiter calls.',
+    a: 'Our autonomous AI interviewer conducts live, interactive spoken video interviews with candidates 24/7. It asks dynamic technical cross-questions, records full-length HD video with live word-for-word transcripts, enforces anti-cheat verification, and automatically generates personalized evaluation reports with executive scorecards. Pricing is fully dynamic: starting at ₹149 per interview for low volume, scaling down to ₹119 per interview for volume screening (1,000+ candidates) — saving you over 80% compared to manual recruiter calls.',
   },
   {
     q: 'How is candidate data secured and privacy preserved?',
@@ -298,29 +298,29 @@ export default function LandingPage() {
   const [calcVoiceScreening, setCalcVoiceScreening] = useState<boolean>(false);
   const [copiedQuote, setCopiedQuote] = useState<boolean>(false);
 
-  // Dynamic AI Interview Pricing Calculator State (₹65 down to ₹50 / interview)
+  // Dynamic AI Interview Pricing Calculator State (₹149 down to ₹119 / interview)
   const [pricingTab, setPricingTab] = useState<'ai-interviews' | 'subscription'>('ai-interviews');
   const [calcAiInterviews, setCalcAiInterviews] = useState<number>(50);
 
   const aiInterviewCalc = useMemo(() => {
-    const count = calcAiInterviews;
-    // Dynamic tiered pricing: ₹65 for 10, drops down to ₹50 for 1,000+
-    let ratePerInterview = 65;
+    const count = Math.max(1, calcAiInterviews);
+    // Dynamic tiered pricing: ₹149 for low volume, scaling down to ₹119 for 1,000+ volume
+    let ratePerInterview = 149;
     if (count >= 1000) {
-      ratePerInterview = 50;
+      ratePerInterview = 119;
     } else if (count >= 500) {
-      ratePerInterview = 52;
+      ratePerInterview = 124;
     } else if (count >= 200) {
-      ratePerInterview = 55;
+      ratePerInterview = 129;
     } else if (count >= 50) {
-      ratePerInterview = 60;
+      ratePerInterview = 139;
     } else {
-      ratePerInterview = 65;
+      ratePerInterview = 149;
     }
 
     const totalCost = count * ratePerInterview;
-    const baseCostAt65 = count * 65;
-    const volumeDiscount = baseCostAt65 - totalCost;
+    const baseCostAt149 = count * 149;
+    const volumeDiscount = baseCostAt149 - totalCost;
     const manualScreeningCost = count * 750;
     const recruiterHoursSaved = Math.round(count * 0.75);
     const savingsAmount = manualScreeningCost - totalCost;
@@ -330,7 +330,7 @@ export default function LandingPage() {
       count,
       ratePerInterview,
       totalCost,
-      baseCostAt65,
+      baseCostAt149,
       volumeDiscount,
       manualScreeningCost,
       recruiterHoursSaved,
@@ -2554,7 +2554,7 @@ export default function LandingPage() {
             </div>
           </div>
 
-          {/* TAB 1: AI VIDEO INTERVIEWS (DYNAMIC ₹65 TO ₹50 / INTERVIEW) */}
+          {/* TAB 1: AI VIDEO INTERVIEWS (DYNAMIC ₹149 TO ₹119 / INTERVIEW) */}
           {pricingTab === 'ai-interviews' && (
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 items-start">
               
@@ -2563,43 +2563,59 @@ export default function LandingPage() {
                 <div className="flex items-center justify-between pb-3 border-b border-[#E4E7DC]">
                   <div>
                     <h3 className="text-base font-black text-[#111215]">Estimate Your AI Screening Investment</h3>
-                    <p className="text-xs text-[#73766C]">Dynamic volume rates: ₹65 at 10, scaling down to ₹50 for 1,000+ volume.</p>
+                    <p className="text-xs text-[#73766C]">Dynamic volume rates: ₹149 for low volume, scaling down to ₹119 for 1,000+ volume.</p>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <span className="px-2.5 py-1 rounded-full bg-[#111215] text-[#D4F82C] text-xs font-black shadow-xs">
                       ₹{aiInterviewCalc.ratePerInterview} / Interview
                     </span>
-                    {aiInterviewCalc.ratePerInterview < 65 && (
+                    {aiInterviewCalc.ratePerInterview < 149 && (
                       <span className="hidden sm:inline-flex px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold">
-                        Volume Discount
+                        Save ₹{149 - aiInterviewCalc.ratePerInterview}/int.
                       </span>
                     )}
                   </div>
                 </div>
 
-                {/* Candidate Interview Volume Slider */}
+                {/* Candidate Interview Volume Slider & Input */}
                 <div>
                   <div className="flex items-center justify-between text-xs font-bold mb-2">
                     <span className="text-[#111215]">Planned Candidate Interviews</span>
-                    <span className="px-2.5 py-1 rounded bg-[#111215] text-[#D4F82C] font-black text-sm">
-                      {calcAiInterviews} Interviews • ₹{aiInterviewCalc.ratePerInterview} INR / interview
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center rounded-lg border border-[#E4E7DC] bg-[#F8F9F5] px-2 py-0.5 focus-within:border-black focus-within:bg-white transition-all shadow-2xs">
+                        <input
+                          type="number"
+                          min={1}
+                          max={5000}
+                          value={calcAiInterviews}
+                          onChange={(e) => {
+                            const val = parseInt(e.target.value);
+                            setCalcAiInterviews(isNaN(val) ? 1 : Math.max(1, Math.min(5000, val)));
+                          }}
+                          className="w-16 bg-transparent text-right font-mono text-xs font-bold text-[#111215] outline-none"
+                        />
+                        <span className="ml-1 text-[11px] text-[#73766C] font-semibold">calls</span>
+                      </div>
+                      <span className="px-2.5 py-1 rounded bg-[#111215] text-[#D4F82C] font-black text-xs">
+                        ₹{aiInterviewCalc.ratePerInterview} INR / interview
+                      </span>
+                    </div>
                   </div>
                   <input
                     type="range"
                     min={10}
                     max={1000}
                     step={10}
-                    value={calcAiInterviews}
+                    value={Math.min(1000, calcAiInterviews)}
                     onChange={(e) => setCalcAiInterviews(parseInt(e.target.value))}
                     className="w-full accent-[#111215] cursor-pointer"
                   />
-                  <div className="flex justify-between text-[10px] text-[#73766C] mt-1 font-mono">
-                    <span>10 (₹65)</span>
-                    <span>50 (₹60)</span>
-                    <span>200 (₹55)</span>
-                    <span>500 (₹52)</span>
-                    <span>1,000+ (₹50)</span>
+                  <div className="flex justify-between text-[10px] text-[#73766C] mt-1.5 font-mono">
+                    <span>10 (₹149)</span>
+                    <span>50 (₹139)</span>
+                    <span>200 (₹129)</span>
+                    <span>500 (₹124)</span>
+                    <span className="font-bold text-[#111215]">1,000+ (₹119)</span>
                   </div>
                 </div>
 
@@ -2608,10 +2624,10 @@ export default function LandingPage() {
                   <span className="text-[11px] font-bold text-[#73766C] uppercase tracking-wider block mb-2">Popular Volume Packs</span>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                     {[
-                      { count: 10, label: 'Starter Pack', rate: '₹65 INR / interview', price: '₹650 INR' },
-                      { count: 50, label: 'Growth Pack', rate: '₹60 INR / interview', price: '₹3,000 INR' },
-                      { count: 200, label: 'Scale Pack', rate: '₹55 INR / interview', price: '₹11,000 INR' },
-                      { count: 1000, label: 'Enterprise', rate: '₹50 INR / interview', price: '₹50,000 INR' }
+                      { count: 10, label: 'Starter Pack', rate: '₹149 INR / int.', price: '₹1,490 INR', badge: 'Base' },
+                      { count: 50, label: 'Growth Pack', rate: '₹139 INR / int.', price: '₹6,950 INR', badge: 'Save ₹500' },
+                      { count: 200, label: 'Scale Pack', rate: '₹129 INR / int.', price: '₹25,800 INR', badge: 'Save ₹4,000' },
+                      { count: 1000, label: 'Enterprise', rate: '₹119 INR / int.', price: '₹1,19,000 INR', badge: 'Save ₹30,000' }
                     ].map(pack => (
                       <button
                         key={pack.count}
@@ -2623,9 +2639,16 @@ export default function LandingPage() {
                             : 'border-[#E4E7DC] bg-[#F8F9F5] text-[#111215] hover:border-black/30'
                         }`}
                       >
-                        <p className="text-[11px] font-bold">{pack.label}</p>
-                        <p className={`text-xs font-black ${calcAiInterviews === pack.count ? 'text-[#D4F82C]' : 'text-neutral-900'}`}>{pack.price}</p>
-                        <p className="text-[10px] opacity-75">{pack.count} interviews • {pack.rate}</p>
+                        <div className="flex items-center justify-between">
+                          <p className="text-[11px] font-bold">{pack.label}</p>
+                          <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded ${
+                            calcAiInterviews === pack.count ? 'bg-[#D4F82C] text-[#111215]' : 'bg-[#E4E7DC] text-[#575A51]'
+                          }`}>
+                            {pack.badge}
+                          </span>
+                        </div>
+                        <p className={`text-xs font-black mt-1 ${calcAiInterviews === pack.count ? 'text-[#D4F82C]' : 'text-neutral-900'}`}>{pack.price}</p>
+                        <p className="text-[10px] opacity-75">{pack.count} calls • {pack.rate}</p>
                       </button>
                     ))}
                   </div>
@@ -2674,9 +2697,18 @@ export default function LandingPage() {
                   <div className="text-xs text-[#D4F82C] font-semibold mt-1">
                     Pay strictly per completed interview • Credits never expire
                   </div>
-                  {aiInterviewCalc.volumeDiscount > 0 && (
+                  {aiInterviewCalc.volumeDiscount > 0 ? (
                     <div className="text-[11px] text-emerald-400 font-semibold mt-0.5">
-                      Volume discount unlocked: Saved ₹{aiInterviewCalc.volumeDiscount.toLocaleString('en-IN')} vs base rate!
+                      Volume discount unlocked: Saved ₹{aiInterviewCalc.volumeDiscount.toLocaleString('en-IN')} vs base rate (₹149)!
+                    </div>
+                  ) : (
+                    <div className="text-[11px] text-slate-400 font-normal mt-0.5">
+                      Base rate applied (₹149/interview). Scale up to 1,000+ interviews to unlock ₹119/interview.
+                    </div>
+                  )}
+                  {calcAiInterviews >= 1000 && (
+                    <div className="text-[11px] text-[#D4F82C] font-bold mt-1">
+                      ★ Max Volume Tier Active (₹119 / interview)
                     </div>
                   )}
                 </div>
