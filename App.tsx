@@ -364,6 +364,7 @@ const App: React.FC = () => {
               <Route path="recruiter/interview/create" element={<ProtectedRoute role="recruiter" loadingFallback={<CreateInterviewSkeleton />}><CreateInterview /></ProtectedRoute>} />
               <Route path="recruiter/tests" element={<ProtectedRoute role="recruiter" loadingFallback={<RecruiterInterviewsSkeleton />}><RecruiterTests /></ProtectedRoute>} />
               <Route path="recruiter/tests/create" element={<ProtectedRoute role="recruiter" loadingFallback={<CreateInterviewSkeleton />}><CreateTest /></ProtectedRoute>} />
+              <Route path="recruiter/tests/:testId/edit" element={<ProtectedRoute role="recruiter" loadingFallback={<CreateInterviewSkeleton />}><CreateTest /></ProtectedRoute>} />
               <Route path="recruiter/tests/:testId/results" element={<ProtectedRoute role="recruiter" loadingFallback={<InterviewResponsesSkeleton />}><TestResults /></ProtectedRoute>} />
               <Route path="recruiter/templates" element={<ProtectedRoute role="recruiter"><RecruiterTemplatesPage /></ProtectedRoute>} />
               

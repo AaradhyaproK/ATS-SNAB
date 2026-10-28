@@ -23,7 +23,8 @@ import {
   Share2,
   FileCheck,
   Check,
-  AlertCircle
+  AlertCircle,
+  Edit3
 } from 'lucide-react';
 import { useMessageBox } from '../components/MessageBox';
 import { useCompanyRateLimits } from '../hooks/useRecruiterRateLimits';
@@ -514,6 +515,15 @@ const RecruiterTests: React.FC = () => {
                     </div>
 
                     <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/recruiter/tests/${test.id}/edit`)}
+                        className={secondaryButtonClass}
+                        title="Edit Assessment"
+                      >
+                        <Edit3 size={13} className="text-[#8FB305] dark:text-[#D4F82C]" />
+                        <span>Edit</span>
+                      </button>
                       <button
                         type="button"
                         onClick={() => navigate(`/recruiter/tests/${test.id}/results`)}

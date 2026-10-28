@@ -1,22 +1,35 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
+import { useParams, useNavigate, Link } from 'react-router-dom';
+import { collection, query, where, getDocs, doc, getDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import {
   AlertTriangle,
   ArrowLeft,
+  Camera,
   Check,
+  CheckCircle2,
   Clock,
+  Code,
+  Copy,
+  Edit3,
+  ExternalLink,
   FileText,
   Filter,
+  Layers,
   Mail,
   Search,
   ShieldCheck,
+  Sparkles,
+  Target,
+  Trash2,
+  TrendingUp,
   Trophy,
   User,
+  Users,
   X,
-  XCircle,
+  XCircle
 } from 'lucide-react';
+import { useMessageBox } from '../components/MessageBox';
 
 type TimestampLike =
   | {
@@ -54,110 +67,19 @@ const formatDateTime = (value: TimestampLike): string => {
   });
 };
 
-const getScoreTone = (score: number) => {
-  if (score >= 70) return 'text-[#83d0a3]';
-  if (score >= 40) return 'text-[#f5c76b]';
-  return 'text-[#ff8f8f]';
-};
-
-const getResultStatus = (submission: any, passingScore: number) => {
-  if (submission.status === 'terminated') {
-    return {
-      label: 'Terminated',
-      icon: XCircle,
-      className: 'border-[#3f1d1d] bg-[#180707] text-[#ff8f8f]',
-    };
-  }
-
-  if (submission.status === 'passed' || Number(submission.score) >= passingScore) {
-    return {
-      label: 'Passed',
-      icon: Check,
-      className: 'border-[#1f3a2a] bg-[#07180f] text-[#83d0a3]',
-    };
-  }
-
-  return {
-    label: 'Failed',
-    icon: XCircle,
-    className: 'border-[#3f1d1d] bg-[#180707] text-[#ff8f8f]',
-  };
-};
-
-const getIntegrityState = (submission: any) => {
-  const tabSwitchCount = Number(submission.tabSwitchCount) || 0;
-
-  if (submission.status === 'terminated') {
-    return {
-      label: 'Terminated',
-      icon: AlertTriangle,
-      className: 'border-[#3f1d1d] bg-[#180707] text-[#ff8f8f]',
-    };
-  }
-
-  if (tabSwitchCount > 0) {
-    return {
-      label: `${tabSwitchCount} switch${tabSwitchCount === 1 ? '' : 'es'}`,
-      icon: AlertTriangle,
-      className: 'border-[#3d2b12] bg-[#1a1205] text-[#f5c76b]',
-    };
-  }
-
-  return {
-    label: 'Clean',
-    icon: ShieldCheck,
-    className: 'border-[#1f3a2a] bg-[#07180f] text-[#83d0a3]',
-  };
-};
-
-const getEmailState = (submission: any) => {
-  if (submission.emailSent === true) {
-    return {
-      label: 'Sent',
-      icon: Mail,
-      className: 'border-[#1f3a2a] bg-[#07180f] text-[#83d0a3]',
-    };
-  }
-
-  if (submission.emailSent === false) {
-    return {
-      label: 'Failed',
-      icon: X,
-      className: 'border-[#3f1d1d] bg-[#180707] text-[#ff8f8f]',
-    };
-  }
-
-  return {
-    label: 'Not sent',
-    icon: Mail,
-    className: 'border-white/[0.11] bg-white/[0.03] text-[#8f8f8f]',
-  };
-};
-
-const Badge = ({
-  icon: Icon,
-  label,
-  className,
-}: {
-  icon: React.ComponentType<{ size?: number; strokeWidth?: number }>;
-  label: string;
-  className: string;
-}) => (
-  <span className={`geist-small inline-flex h-7 items-center justify-center gap-1.5 rounded-[6px] border px-2.5 font-medium ${className}`}>
-    <Icon size={13} strokeWidth={2.2} />
-    <span>{label}</span>
-  </span>
-);
-
 const TestResults: React.FC = () => {
   const { testId } = useParams();
   const navigate = useNavigate();
+  const { showSuccess, showError } = useMessageBox();
+
   const [submissions, setSubmissions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [test, setTest] = useState<any>(null);
   const [selectedSubmission, setSelectedSubmission] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'passed' | 'failed' | 'flagged'>('all');
   const [sortBy, setSortBy] = useState<'date' | 'score' | 'name'>('date');
+  const [copiedLink, setCopiedLink] = useState(false);
 
   useEffect(() => {
     const fetchResults = async () => {
@@ -191,327 +113,763 @@ const TestResults: React.FC = () => {
     fetchResults();
   }, [testId]);
 
+  const passingScore = Number(test?.passingScore ?? 70);
+  const title = test?.title || 'Assessment Results';
+  const isCoding = test?.type === 'coding';
+  const testLink = testId ? `${window.location.origin}/test/${testId}` : '';
+
+  const handleCopyLink = async () => {
+    if (!testLink) return;
+    try {
+      await navigator.clipboard.writeText(testLink);
+      setCopiedLink(true);
+      showSuccess('Assessment link copied to clipboard!');
+      setTimeout(() => setCopiedLink(false), 2000);
+    } catch {
+      showError('Unable to copy link.');
+    }
+  };
+
+  const overviewStats = useMemo(() => {
+    const total = submissions.length;
+    const passed = submissions.filter((s) => s.status === 'passed' || Number(s.score) >= passingScore).length;
+    const terminated = submissions.filter((s) => s.status === 'terminated').length;
+    const failed = submissions.filter((s) => s.status !== 'passed' && Number(s.score) < passingScore && s.status !== 'terminated').length;
+    const flagged = submissions.filter(
+      (s) =>
+        s.status === 'terminated' ||
+        (Number(s.tabSwitchCount) || 0) > 0 ||
+        (Number(s.copyPasteAttempts) || 0) > 0 ||
+        (Number(s.screenshotAttempts) || 0) > 0
+    ).length;
+
+    const totalScore = submissions.reduce((sum, s) => sum + (Number(s.score) || 0), 0);
+    const averageScore = total > 0 ? Math.round(totalScore / total) : 0;
+    const passRate = total > 0 ? Math.round((passed / total) * 100) : 0;
+    const highestScore = total > 0 ? Math.max(...submissions.map((s) => Number(s.score) || 0)) : 0;
+
+    return {
+      total,
+      passed,
+      failed,
+      terminated,
+      flagged,
+      averageScore,
+      passRate,
+      highestScore,
+    };
+  }, [submissions, passingScore]);
+
   const filteredAndSortedSubmissions = useMemo(() => {
     const search = searchTerm.trim().toLowerCase();
 
     return submissions
       .filter((submission) => {
-        if (!search) return true;
-        return `${submission.candidateName || ''} ${submission.candidateEmail || ''}`.toLowerCase().includes(search);
+        const matchesSearch =
+          !search ||
+          `${submission.candidateName || ''} ${submission.candidateEmail || ''}`.toLowerCase().includes(search);
+
+        const isPassed = submission.status === 'passed' || Number(submission.score) >= passingScore;
+        const isTerminated = submission.status === 'terminated';
+        const hasViolations =
+          (Number(submission.tabSwitchCount) || 0) > 0 ||
+          (Number(submission.copyPasteAttempts) || 0) > 0 ||
+          (Number(submission.screenshotAttempts) || 0) > 0;
+
+        if (statusFilter === 'passed') return matchesSearch && isPassed && !isTerminated;
+        if (statusFilter === 'failed') return matchesSearch && !isPassed && !isTerminated;
+        if (statusFilter === 'flagged') return matchesSearch && (isTerminated || hasViolations);
+        return matchesSearch;
       })
       .sort((a, b) => {
         if (sortBy === 'score') return (Number(b.score) || 0) - (Number(a.score) || 0);
         if (sortBy === 'name') return String(a.candidateName || '').localeCompare(String(b.candidateName || ''));
         return toMillis(b.submittedAt) - toMillis(a.submittedAt);
       });
-  }, [submissions, searchTerm, sortBy]);
+  }, [submissions, searchTerm, sortBy, statusFilter, passingScore]);
 
-  const passingScore = Number(test?.passingScore ?? 70);
-  const title = test?.title || 'Assessment results';
+  const handleDeleteSubmission = async (submission: TestSubmission) => {
+    const candidateName = submission.candidateName || submission.candidateEmail || 'this candidate';
+    const confirmDelete = window.confirm(
+      `Delete previous attempt for ${candidateName}?\n\nThis will remove their test score and allow them to retake the assessment with the same test link.`
+    );
+    if (!confirmDelete) return;
+
+    try {
+      await deleteDoc(doc(db, 'testSubmissions', submission.id));
+      setSubmissions((prev) => prev.filter((s) => s.id !== submission.id));
+      if (selectedSubmission?.id === submission.id) {
+        setSelectedSubmission(null);
+      }
+      showSuccess(`Candidate attempt deleted. ${candidateName} can now retake this assessment.`);
+    } catch (err) {
+      console.error('Failed to delete submission:', err);
+      showError('Failed to delete candidate submission.');
+    }
+  };
+
+  const secondaryButtonClass =
+    'inline-flex h-9 items-center justify-center rounded-full border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-white/5 px-3.5 font-bold text-xs text-[#111215] dark:text-white transition-all hover:bg-[#F1F3EB] dark:hover:bg-white/10 cursor-pointer shadow-2xs gap-1.5';
+  const primaryButtonClass =
+    'inline-flex h-9 items-center justify-center rounded-full bg-[#111215] text-white hover:bg-[#202227] dark:bg-[#D4F82C] dark:text-[#111215] dark:hover:bg-[#c5ea24] px-4 font-bold text-xs transition-all shadow-md cursor-pointer gap-1.5';
 
   return (
-    <div className="-mx-4 -my-8 flex h-[calc(100vh-3.5rem)] min-h-0 flex-col overflow-hidden bg-[#000] text-white sm:-mx-6 lg:-mx-8">
-      <section className="shrink-0 border-b border-white/[0.11] bg-[#000]">
-        <div className="flex flex-col gap-4 px-4 py-5 sm:px-6 lg:px-7 xl:flex-row xl:items-start xl:justify-between">
+    <div className="w-full min-h-screen bg-[#F8F9F5] dark:bg-[#0D0E11] text-[#111215] dark:text-[#F8F9F5] font-sans antialiased selection:bg-[#D4F82C] selection:text-[#111215]">
+      {/* Top Header */}
+      <header className="border-b border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-[#0D0E11] px-4 py-6 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <button
-              type="button"
-              onClick={() => navigate('/recruiter/tests')}
-              className="geist-caption inline-flex h-8 items-center gap-2 rounded-[6px] border border-white/[0.11] bg-white/[0.03] px-3 font-medium text-[#d4d4d4] transition-colors hover:bg-white/[0.06] hover:text-white"
-            >
-              <ArrowLeft size={14} />
-              <span>Assessments</span>
-            </button>
+            <div className="flex items-center gap-3 mb-2">
+              <button
+                type="button"
+                onClick={() => navigate('/recruiter/tests')}
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-white dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 text-[#575A51] dark:text-neutral-300 hover:text-[#111215] dark:hover:text-white hover:border-[#111215] dark:hover:border-white/30 transition-all shadow-2xs cursor-pointer"
+              >
+                <ArrowLeft size={13} />
+                <span>Assessments</span>
+              </button>
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 text-[11px] font-bold text-[#111215] dark:text-[#F8F9F5] shadow-2xs">
+                <span className="size-2 rounded-full bg-[#8FB305] dark:bg-[#D4F82C] animate-pulse"></span>
+                <span className="font-mono uppercase text-[10px] text-[#73766C] dark:text-neutral-400">
+                  {isCoding ? 'CODING EVALUATION' : 'APTITUDE EVALUATION'}
+                </span>
+                <span className="text-[#E4E7DC] dark:text-white/20">|</span>
+                <span>Cohort Outcomes</span>
+              </div>
+            </div>
 
-            <div className="mt-3 flex flex-wrap items-center gap-2">
-              <span className="geist-label inline-flex h-7 items-center gap-2 rounded-[6px] border border-white/[0.11] bg-white/[0.03] px-2.5 uppercase text-[#9ca3af]">
-                <Trophy size={13} />
-                Result review
-              </span>
-              {test?.type && (
-                <span className="geist-label inline-flex h-7 items-center rounded-[6px] border border-white/[0.11] bg-white/[0.03] px-2.5 uppercase text-[#6b7280]">
-                  {test.type}
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <h1 className="text-2xl sm:text-3xl font-black text-[#111215] dark:text-[#F8F9F5] tracking-tight">
+                {title}
+              </h1>
+              {test?.accessCode && (
+                <span className="font-mono text-[11px] font-bold px-2.5 py-0.5 rounded-full border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-white/5 text-[#73766C] dark:text-neutral-300">
+                  #{test.accessCode}
                 </span>
               )}
             </div>
-
-            <h1 className="geist-page-title mt-2 max-w-4xl truncate text-white" title={title}>
-              {title}
-            </h1>
-            <p className="geist-small mt-1 max-w-2xl text-[#8f8f8f]">
-              Review candidate answers, score outcomes, delivery status, and integrity signals.
+            <p className="text-xs sm:text-sm text-[#575A51] dark:text-neutral-400 mt-1 max-w-2xl leading-relaxed">
+              Review candidate score breakdowns, proctoring integrity violations, email delivery status, and submitted answer sheets.
             </p>
           </div>
-        </div>
-      </section>
 
-      <section className="shrink-0 border-b border-white/[0.11]">
-        <div className="flex flex-col gap-3 px-4 py-3 sm:px-6 lg:px-7 xl:flex-row xl:items-center xl:justify-between">
-          <div className="relative w-full xl:max-w-sm">
-            <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#6b7280]" size={14} />
+          <div className="flex flex-wrap items-center gap-2.5">
+            {testId && (
+              <button
+                type="button"
+                onClick={() => navigate(`/recruiter/tests/${testId}/edit`)}
+                className={secondaryButtonClass}
+                title="Edit assessment questions and scoring"
+              >
+                <Edit3 size={13} className="text-[#8FB305] dark:text-[#D4F82C]" />
+                <span>Edit Assessment</span>
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={handleCopyLink}
+              className={secondaryButtonClass}
+              title="Copy candidate assessment link"
+            >
+              {copiedLink ? <Check size={13} className="text-emerald-500" /> : <Copy size={13} />}
+              <span>{copiedLink ? 'Copied Link' : 'Copy Link'}</span>
+            </button>
+
+            {testLink && (
+              <a
+                href={testLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={primaryButtonClass}
+              >
+                <span>Take Test</span>
+                <ExternalLink size={13} />
+              </a>
+            )}
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content Area */}
+      <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8 space-y-6">
+        {/* 5 Bento Metric Stat Cards */}
+        <section className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5 sm:gap-4">
+          {/* Card 1: Total Tested */}
+          <div className="rounded-2xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] p-4 sm:p-5 shadow-xs flex flex-col justify-between">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-[11px] font-bold text-[#73766C] dark:text-neutral-400 uppercase tracking-wider">
+                Candidates
+              </span>
+              <div className="size-7 rounded-lg bg-[#F8F9F5] dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 flex items-center justify-center text-[#111215] dark:text-white">
+                <Users size={14} />
+              </div>
+            </div>
+            <div>
+              <p className="text-2xl sm:text-3xl font-black font-mono text-[#111215] dark:text-white">
+                {overviewStats.total}
+              </p>
+              <p className="text-[10px] font-medium text-[#73766C] dark:text-neutral-400 mt-0.5">
+                Submissions recorded
+              </p>
+            </div>
+          </div>
+
+          {/* Card 2: Passed */}
+          <div className="rounded-2xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] p-4 sm:p-5 shadow-xs flex flex-col justify-between">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-[11px] font-bold text-[#73766C] dark:text-neutral-400 uppercase tracking-wider">
+                Passed
+              </span>
+              <div className="size-7 rounded-lg bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800/40 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+                <CheckCircle2 size={14} />
+              </div>
+            </div>
+            <div>
+              <p className="text-2xl sm:text-3xl font-black font-mono text-emerald-600 dark:text-emerald-400">
+                {overviewStats.passed}
+              </p>
+              <p className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">
+                {overviewStats.passRate}% pass rate
+              </p>
+            </div>
+          </div>
+
+          {/* Card 3: Average Score */}
+          <div className="rounded-2xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] p-4 sm:p-5 shadow-xs flex flex-col justify-between">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-[11px] font-bold text-[#73766C] dark:text-neutral-400 uppercase tracking-wider">
+                Avg Score
+              </span>
+              <div className="size-7 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40 flex items-center justify-center text-amber-600 dark:text-amber-400">
+                <TrendingUp size={14} />
+              </div>
+            </div>
+            <div>
+              <p className="text-2xl sm:text-3xl font-black font-mono text-amber-600 dark:text-amber-400">
+                {overviewStats.averageScore}%
+              </p>
+              <p className="text-[10px] font-medium text-[#73766C] dark:text-neutral-400 mt-0.5">
+                Cohort benchmark
+              </p>
+            </div>
+          </div>
+
+          {/* Card 4: Passing Threshold */}
+          <div className="rounded-2xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] p-4 sm:p-5 shadow-xs flex flex-col justify-between">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-[11px] font-bold text-[#73766C] dark:text-neutral-400 uppercase tracking-wider">
+                Pass Mark
+              </span>
+              <div className="size-7 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800/40 flex items-center justify-center text-blue-600 dark:text-blue-400">
+                <Target size={14} />
+              </div>
+            </div>
+            <div>
+              <p className="text-2xl sm:text-3xl font-black font-mono text-[#111215] dark:text-white">
+                {passingScore}%
+              </p>
+              <p className="text-[10px] font-medium text-[#73766C] dark:text-neutral-400 mt-0.5">
+                {test?.duration || 10}m duration
+              </p>
+            </div>
+          </div>
+
+          {/* Card 5: Integrity Violations */}
+          <div className="rounded-2xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] p-4 sm:p-5 shadow-xs flex flex-col justify-between col-span-2 sm:col-span-1">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-[11px] font-bold text-[#73766C] dark:text-neutral-400 uppercase tracking-wider">
+                Integrity Alerts
+              </span>
+              <div className="size-7 rounded-lg bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-800/40 flex items-center justify-center text-purple-600 dark:text-purple-400">
+                <ShieldCheck size={14} />
+              </div>
+            </div>
+            <div>
+              <p className={`text-2xl sm:text-3xl font-black font-mono ${overviewStats.flagged > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+                {overviewStats.flagged}
+              </p>
+              <p className="text-[10px] font-medium text-[#73766C] dark:text-neutral-400 mt-0.5">
+                {overviewStats.flagged > 0 ? 'Tab switches / alerts' : 'Clean proctoring'}
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* Filter and Search Bar */}
+        <section className="rounded-2xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] p-3 sm:p-4 shadow-xs flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="relative flex-1 max-w-md">
+            <Search className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[#73766C]" size={15} />
             <input
               type="text"
               value={searchTerm}
               onChange={(event) => setSearchTerm(event.target.value)}
-              placeholder="Search candidates..."
-              className="geist-caption h-9 w-full rounded-[6px] border border-white/[0.11] bg-white/[0.03] pl-9 pr-3 text-white outline-none transition-colors placeholder:text-[#6b7280] focus:border-white/[0.28] focus:bg-white/[0.05]"
+              placeholder="Search candidate name or email..."
+              className="w-full h-10 pl-10 pr-4 rounded-xl border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-[#101114] text-xs sm:text-sm text-[#111215] dark:text-white placeholder:text-[#73766C] outline-none transition-all focus:border-[#111215] dark:focus:border-[#D4F82C]"
             />
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="geist-label inline-flex items-center gap-1.5 uppercase text-[#6b7280]">
-              <Filter size={13} />
-              Sort
-            </span>
-            <div className="flex rounded-[6px] border border-white/[0.11] bg-white/[0.03] p-0.5">
-              {[
-                ['date', 'Newest'],
-                ['score', 'Score'],
-                ['name', 'Name'],
-              ].map(([value, label]) => (
+          <div className="flex items-center flex-wrap gap-2">
+            <span className="text-xs font-bold text-[#73766C] dark:text-neutral-400 mr-1">Status:</span>
+            <div className="flex p-1 rounded-full border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-[#101114]">
+              {(
+                [
+                  ['all', `All (${submissions.length})`],
+                  ['passed', `Passed (${overviewStats.passed})`],
+                  ['failed', `Failed (${overviewStats.failed})`],
+                  ['flagged', `Flagged (${overviewStats.flagged})`],
+                ] as const
+              ).map(([filterKey, filterLabel]) => (
                 <button
-                  key={value}
+                  key={filterKey}
                   type="button"
-                  onClick={() => setSortBy(value as 'date' | 'score' | 'name')}
-                  className={`geist-caption rounded-[4px] px-2.5 py-1 font-medium transition-colors ${sortBy === value ? 'bg-white/[0.09] text-white' : 'text-[#6b7280] hover:text-[#d4d4d4]'}`}
+                  onClick={() => setStatusFilter(filterKey)}
+                  className={`px-3 py-1 text-xs font-bold rounded-full transition-all cursor-pointer ${
+                    statusFilter === filterKey
+                      ? 'bg-[#111215] text-[#D4F82C] dark:bg-[#D4F82C] dark:text-[#111215] shadow-xs'
+                      : 'text-[#575A51] dark:text-neutral-400 hover:text-[#111215] dark:hover:text-white'
+                  }`}
                 >
-                  {label}
+                  {filterLabel}
                 </button>
               ))}
             </div>
-            {searchTerm && (
+
+            <div className="flex items-center gap-1.5 ml-1">
+              <span className="text-xs font-bold text-[#73766C] dark:text-neutral-400">Sort:</span>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as any)}
+                className="h-8 px-2.5 rounded-full border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-[#101114] text-xs font-bold text-[#111215] dark:text-white outline-none cursor-pointer"
+              >
+                <option value="date">Newest</option>
+                <option value="score">Highest Score</option>
+                <option value="name">Candidate Name</option>
+              </select>
+            </div>
+
+            {(searchTerm || statusFilter !== 'all') && (
               <button
                 type="button"
-                onClick={() => setSearchTerm('')}
-                className="geist-caption inline-flex h-8 items-center justify-center rounded-[6px] border border-[#3f1d1d] bg-[#180707] px-3 font-medium text-[#ff8f8f] transition-colors hover:bg-[#260b0b]"
+                onClick={() => {
+                  setSearchTerm('');
+                  setStatusFilter('all');
+                }}
+                className="px-3 py-1 text-xs font-bold rounded-full bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400 border border-red-200 dark:border-red-500/20 hover:bg-red-100 transition-colors cursor-pointer"
               >
-                Clear
+                Reset
               </button>
             )}
           </div>
-        </div>
-      </section>
+        </section>
 
-      <section className="flex min-h-0 flex-1 flex-col">
+        {/* Results Table Section */}
         {loading ? (
-          <div className="flex min-h-0 flex-1 flex-col">
-            <div className="hidden shrink-0 items-center gap-4 border-b border-white/[0.11] px-4 py-2 sm:px-6 lg:grid lg:grid-cols-[minmax(0,1.25fr)_90px_112px_132px_118px_150px_130px] lg:px-7">
-              {[...Array(7)].map((_, index) => (
-                <div key={index} className="h-3 rounded bg-white/[0.04]" />
-              ))}
-            </div>
-            <div className="min-h-0 flex-1 overflow-y-auto">
-              {[...Array(8)].map((_, index) => (
-                <div key={index} className="grid gap-3 border-b border-white/[0.08] px-4 py-4 sm:px-6 lg:grid-cols-[minmax(0,1.25fr)_90px_112px_132px_118px_150px_130px] lg:items-center lg:px-7">
-                  <div className="space-y-2">
-                    <div className="h-4 w-48 rounded bg-white/[0.04]" />
-                    <div className="h-3 w-64 max-w-full rounded bg-white/[0.035]" />
-                  </div>
-                  {[...Array(6)].map((__, cellIndex) => (
-                    <div key={cellIndex} className="h-7 rounded bg-white/[0.04]" />
-                  ))}
-                </div>
-              ))}
-            </div>
+          <div className="rounded-3xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] p-8 shadow-xs text-center space-y-3">
+            <div className="w-8 h-8 border-2 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin mx-auto" />
+            <p className="text-xs font-semibold text-[#73766C] dark:text-neutral-400">
+              Loading test submission outcomes...
+            </p>
           </div>
         ) : submissions.length === 0 ? (
-          <div className="flex min-h-0 flex-1 items-center justify-center overflow-y-auto border-b border-dashed border-white/[0.11] px-4 py-16 text-center sm:px-6 lg:px-7">
-            <div>
-              <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-[6px] border border-white/[0.11] bg-white/[0.03] text-[#8f8f8f]">
-                <Clock size={18} />
-              </div>
-              <p className="geist-caption mt-4 text-[#d4d4d4]">No submissions yet.</p>
-              <p className="geist-small mt-1 text-[#8f8f8f]">Results will appear here as candidates complete this assessment.</p>
+          <div className="rounded-3xl border-2 border-dashed border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] p-12 sm:p-16 text-center shadow-xs">
+            <div className="size-14 rounded-2xl bg-[#F8F9F5] dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 flex items-center justify-center text-[#8FB305] dark:text-[#D4F82C] mx-auto mb-4 shadow-2xs">
+              <Clock size={24} />
+            </div>
+            <h3 className="text-lg font-black text-[#111215] dark:text-white">No submissions recorded yet</h3>
+            <p className="text-xs sm:text-sm text-[#575A51] dark:text-neutral-400 max-w-md mx-auto mt-1 leading-relaxed">
+              Share the assessment link with candidates or integrate it into an automated job screening pipeline. Outcomes will appear here in real time.
+            </p>
+            <div className="flex items-center justify-center gap-3 mt-6">
+              <button
+                type="button"
+                onClick={handleCopyLink}
+                className={primaryButtonClass}
+              >
+                <Copy size={14} />
+                <span>Copy Candidate Test Link</span>
+              </button>
             </div>
           </div>
         ) : filteredAndSortedSubmissions.length === 0 ? (
-          <div className="flex min-h-0 flex-1 items-center justify-center overflow-y-auto border-b border-dashed border-white/[0.11] px-4 py-16 text-center sm:px-6 lg:px-7">
-            <div>
-              <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-[6px] border border-white/[0.11] bg-white/[0.03] text-[#8f8f8f]">
-                <Search size={18} />
-              </div>
-              <p className="geist-caption mt-4 text-[#d4d4d4]">No candidates match your search.</p>
-              <button
-                type="button"
-                onClick={() => setSearchTerm('')}
-                className="geist-caption mt-3 inline-flex h-8 items-center justify-center rounded-[6px] border border-[#3f1d1d] bg-[#180707] px-3 font-medium text-[#ff8f8f] transition-colors hover:bg-[#260b0b]"
-              >
-                Reset search
-              </button>
+          <div className="rounded-3xl border-2 border-dashed border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] p-12 text-center shadow-xs">
+            <div className="size-12 rounded-2xl bg-[#F8F9F5] dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 flex items-center justify-center text-[#73766C] mx-auto mb-3">
+              <Search size={20} />
             </div>
+            <h3 className="text-base font-bold text-[#111215] dark:text-white">No matching candidate submissions</h3>
+            <p className="text-xs text-[#73766C] dark:text-neutral-400 max-w-sm mx-auto mt-1">
+              Adjust your search keywords or toggle the status filters above.
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                setSearchTerm('');
+                setStatusFilter('all');
+              }}
+              className="mt-4 px-4 py-2 rounded-full bg-[#111215] text-white dark:bg-[#D4F82C] dark:text-[#111215] text-xs font-bold cursor-pointer"
+            >
+              Reset Search & Filters
+            </button>
           </div>
         ) : (
-          <>
-            <div className="hidden shrink-0 items-center gap-4 border-b border-white/[0.11] bg-[#000] px-4 py-2 sm:px-6 lg:grid lg:grid-cols-[minmax(0,1.25fr)_90px_112px_132px_118px_150px_130px] lg:px-7">
-              <span className="geist-label uppercase text-[#6b7280]">Candidate</span>
-              <span className="geist-label text-center uppercase text-[#6b7280]">Score</span>
-              <span className="geist-label text-center uppercase text-[#6b7280]">Status</span>
-              <span className="geist-label text-center uppercase text-[#6b7280]">Integrity</span>
-              <span className="geist-label text-center uppercase text-[#6b7280]">Email</span>
-              <span className="geist-label text-center uppercase text-[#6b7280]">Submitted</span>
-              <span className="geist-label text-right uppercase text-[#6b7280]">Actions</span>
+          <div className="rounded-3xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] overflow-hidden shadow-xs">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="border-b border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-[#1D1F24] text-[10px] font-bold uppercase tracking-wider text-[#73766C] dark:text-neutral-400">
+                    <th className="py-3 px-4 sm:px-6">Candidate</th>
+                    <th className="py-3 px-3 text-center">Score</th>
+                    <th className="py-3 px-3 text-center">Status</th>
+                    <th className="py-3 px-3 text-center">Integrity</th>
+                    <th className="py-3 px-3 text-center">Email Dispatch</th>
+                    <th className="py-3 px-4 text-center">Submitted At</th>
+                    <th className="py-3 px-4 sm:px-6 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#E4E7DC]/60 dark:divide-white/5">
+                  {filteredAndSortedSubmissions.map((submission) => {
+                    const score = Number(submission.score) || 0;
+                    const isTerminated = submission.status === 'terminated';
+                    const isPassed = !isTerminated && (submission.status === 'passed' || score >= passingScore);
+                    const tabSwitchCount = Number(submission.tabSwitchCount) || 0;
+
+                    return (
+                      <tr
+                        key={submission.id}
+                        className="hover:bg-[#F8F9F5]/70 dark:hover:bg-white/[0.02] transition-colors"
+                      >
+                        {/* Candidate Info */}
+                        <td className="py-3.5 px-4 sm:px-6">
+                          <div className="font-bold text-[#111215] dark:text-white text-xs sm:text-sm truncate max-w-xs">
+                            {submission.candidateName || 'Unnamed Candidate'}
+                          </div>
+                          {submission.candidateEmail && (
+                            <div className="text-[11px] text-[#73766C] dark:text-neutral-400 flex items-center gap-1 mt-0.5 truncate max-w-xs">
+                              <Mail size={11} className="shrink-0" />
+                              <span className="truncate">{submission.candidateEmail}</span>
+                            </div>
+                          )}
+                        </td>
+
+                        {/* Score */}
+                        <td className="py-3.5 px-3 text-center whitespace-nowrap">
+                          <span
+                            className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-mono font-black text-xs shadow-2xs ${
+                              isPassed
+                                ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/50'
+                                : score >= 40
+                                ? 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400 border border-amber-200 dark:border-amber-800/50'
+                                : 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400 border border-rose-200 dark:border-rose-800/50'
+                            }`}
+                          >
+                            <span>{score}%</span>
+                          </span>
+                        </td>
+
+                        {/* Status */}
+                        <td className="py-3.5 px-3 text-center whitespace-nowrap">
+                          {isTerminated ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
+                              <AlertTriangle size={12} />
+                              <span>Terminated</span>
+                            </span>
+                          ) : isPassed ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#111215] text-[#D4F82C] dark:bg-[#D4F82C] dark:text-[#111215] shadow-xs">
+                              <CheckCircle2 size={12} />
+                              <span>Passed</span>
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400 border border-rose-200 dark:border-rose-500/20">
+                              <XCircle size={12} />
+                              <span>Failed</span>
+                            </span>
+                          )}
+                        </td>
+
+                        {/* Integrity */}
+                        <td className="py-3.5 px-3 text-center whitespace-nowrap">
+                          {isTerminated ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
+                              <AlertTriangle size={12} />
+                              <span>Terminated</span>
+                            </span>
+                          ) : tabSwitchCount > 0 || (Number(submission.copyPasteAttempts) || 0) > 0 || (Number(submission.screenshotAttempts) || 0) > 0 ? (
+                            <div className="inline-flex flex-col items-center gap-1">
+                              {tabSwitchCount > 0 && (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400 border border-amber-200 dark:border-amber-800/30">
+                                  <AlertTriangle size={11} />
+                                  <span>
+                                    {tabSwitchCount} switch{tabSwitchCount === 1 ? '' : 'es'}
+                                  </span>
+                                </span>
+                              )}
+                              {(Number(submission.copyPasteAttempts) || 0) > 0 && (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-50 text-rose-700 dark:bg-rose-950/30 dark:text-rose-400 border border-rose-200 dark:border-rose-800/30">
+                                  <Copy size={11} />
+                                  <span>
+                                    {submission.copyPasteAttempts} copy/paste
+                                  </span>
+                                </span>
+                              )}
+                              {(Number(submission.screenshotAttempts) || 0) > 0 && (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-50 text-rose-700 dark:bg-rose-950/30 dark:text-rose-400 border border-rose-200 dark:border-rose-800/30">
+                                  <Camera size={11} />
+                                  <span>
+                                    {submission.screenshotAttempts} screenshot(s)
+                                  </span>
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/30">
+                              <ShieldCheck size={12} />
+                              <span>Clean</span>
+                            </span>
+                          )}
+                        </td>
+
+                        {/* Email Dispatch */}
+                        <td className="py-3.5 px-3 text-center whitespace-nowrap">
+                          {submission.emailSent === true ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/30">
+                              <Check size={11} />
+                              <span>Sent</span>
+                            </span>
+                          ) : submission.emailSent === false ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-rose-50 text-rose-700 dark:bg-rose-950/30 dark:text-rose-400 border border-rose-200 dark:border-rose-800/30">
+                              <X size={11} />
+                              <span>Failed</span>
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-slate-50 text-slate-600 dark:bg-white/5 dark:text-neutral-400 border border-slate-200 dark:border-white/10">
+                              <Mail size={11} />
+                              <span>Queued</span>
+                            </span>
+                          )}
+                        </td>
+
+                        {/* Submitted At */}
+                        <td className="py-3.5 px-4 text-center whitespace-nowrap text-[11px] text-[#73766C] dark:text-neutral-400">
+                          {formatDateTime(submission.submittedAt)}
+                        </td>
+
+                        {/* Actions */}
+                        <td className="py-3.5 px-4 sm:px-6 text-right whitespace-nowrap">
+                          <div className="inline-flex items-center gap-2">
+                            {submission.candidateUID && (
+                              <button
+                                type="button"
+                                onClick={() => navigate(`/profile/${submission.candidateUID}`)}
+                                className="size-8 rounded-full border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-white/5 flex items-center justify-center text-[#575A51] dark:text-neutral-300 hover:text-[#111215] dark:hover:text-white hover:bg-[#F1F3EB] dark:hover:bg-white/10 transition-all cursor-pointer shadow-2xs"
+                                title="View candidate profile"
+                              >
+                                <User size={13} />
+                              </button>
+                            )}
+
+                            <button
+                              type="button"
+                              onClick={() => setSelectedSubmission(submission)}
+                              className="px-3 py-1.5 rounded-full border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-white/5 hover:bg-[#F1F3EB] dark:hover:bg-white/10 text-xs font-bold text-[#111215] dark:text-white transition-all shadow-2xs flex items-center gap-1.5 cursor-pointer"
+                            >
+                              <FileText size={12} className="text-[#8FB305] dark:text-[#D4F82C]" />
+                              <span>Solution</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteSubmission(submission)}
+                              className="size-8 rounded-full border border-rose-500/20 bg-rose-500/5 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 flex items-center justify-center transition-all cursor-pointer shadow-2xs"
+                              title="Delete candidate attempt (allows retake with same ID)"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
 
-            <div className="min-h-0 flex-1 overflow-y-auto [scrollbar-color:#27272a_#000] [scrollbar-width:thin]">
-              {filteredAndSortedSubmissions.map((submission) => {
-                const score = Number(submission.score) || 0;
-                const resultStatus = getResultStatus(submission, passingScore);
-                const integrity = getIntegrityState(submission);
-                const email = getEmailState(submission);
-
-                return (
-                  <article
-                    key={submission.id}
-                    className="grid gap-3 border-b border-white/[0.08] px-4 py-3 transition-colors hover:bg-white/[0.025] sm:px-6 lg:grid-cols-[minmax(0,1.25fr)_90px_112px_132px_118px_150px_130px] lg:items-center lg:gap-4 lg:px-7"
-                  >
-                    <div className="min-w-0">
-                      <button
-                        type="button"
-                        onClick={() => setSelectedSubmission(submission)}
-                        className="geist-caption block max-w-full truncate text-left font-semibold text-white hover:underline"
-                        title={submission.candidateName || 'Candidate'}
-                      >
-                        {submission.candidateName || 'Unnamed candidate'}
-                      </button>
-                      {submission.candidateEmail && (
-                        <div className="geist-small mt-1 flex min-w-0 items-center gap-1.5 text-[#8f8f8f]">
-                          <Mail size={13} className="shrink-0" />
-                          <span className="truncate">{submission.candidateEmail}</span>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="flex items-center justify-between gap-3 lg:justify-center">
-                      <span className="geist-label uppercase text-[#6b7280] lg:hidden">Score</span>
-                      <span className={`geist-metric tabular-nums ${getScoreTone(score)}`}>{score}%</span>
-                    </div>
-
-                    <div className="flex items-center justify-between gap-3 lg:justify-center">
-                      <span className="geist-label uppercase text-[#6b7280] lg:hidden">Status</span>
-                      <Badge {...resultStatus} />
-                    </div>
-
-                    <div className="flex items-center justify-between gap-3 lg:justify-center">
-                      <span className="geist-label uppercase text-[#6b7280] lg:hidden">Integrity</span>
-                      <Badge {...integrity} />
-                    </div>
-
-                    <div className="flex items-center justify-between gap-3 lg:justify-center">
-                      <span className="geist-label uppercase text-[#6b7280] lg:hidden">Email</span>
-                      <Badge {...email} />
-                    </div>
-
-                    <div className="flex items-center justify-between gap-3 lg:justify-center">
-                      <span className="geist-label uppercase text-[#6b7280] lg:hidden">Submitted</span>
-                      <span className="geist-small text-[#8f8f8f]">{formatDateTime(submission.submittedAt)}</span>
-                    </div>
-
-                    <div className="flex items-center justify-end gap-2">
-                      {submission.candidateUID && (
-                        <button
-                          type="button"
-                          onClick={() => navigate(`/profile/${submission.candidateUID}`)}
-                          className="flex h-8 w-8 items-center justify-center rounded-[6px] border border-white/[0.11] bg-white/[0.03] text-[#d4d4d4] transition-colors hover:bg-white/[0.06] hover:text-white"
-                          title="View profile"
-                          aria-label="View profile"
-                        >
-                          <User size={14} />
-                        </button>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => setSelectedSubmission(submission)}
-                        className="geist-caption inline-flex h-8 items-center justify-center gap-2 rounded-[6px] border border-white bg-white px-3 font-medium text-black transition-colors hover:bg-[#eaeaea]"
-                      >
-                        <FileText size={14} />
-                        <span>Solution</span>
-                      </button>
-                    </div>
-                  </article>
-                );
-              })}
+            {/* Table Footer */}
+            <div className="p-4 border-t border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-[#1D1F24] flex items-center justify-between text-xs text-[#73766C] dark:text-neutral-400">
+              <span>Showing {filteredAndSortedSubmissions.length} of {submissions.length} submissions</span>
+              <span>Passing benchmark: {passingScore}%</span>
             </div>
-          </>
+          </div>
         )}
-      </section>
+      </div>
 
+      {/* Solution Review Modal */}
       {selectedSubmission && test && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto"
           onClick={() => setSelectedSubmission(null)}
         >
           <div
-            className="flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-[8px] border border-white/[0.14] bg-[#050505] text-white shadow-2xl"
-            onClick={(event) => event.stopPropagation()}
+            className="w-full max-w-3xl rounded-3xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] text-[#111215] dark:text-white shadow-2xl overflow-hidden my-8 animate-in fade-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-start justify-between gap-4 border-b border-white/[0.11] px-5 py-4">
-              <div className="min-w-0">
-                <span className="geist-label uppercase text-[#6b7280]">Submitted solution</span>
-                <h2 className="mt-1 truncate text-xl font-semibold text-white">
-                  {selectedSubmission.candidateName || 'Unnamed candidate'}
-                </h2>
-                <div className="mt-2 flex flex-wrap items-center gap-2">
-                  <span className={`geist-label tabular-nums ${getScoreTone(Number(selectedSubmission.score) || 0)}`}>
-                    {Number(selectedSubmission.score) || 0}% score
+            {/* Modal Header */}
+            <div className="flex items-start justify-between gap-4 p-5 sm:p-6 border-b border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-[#101114]">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-[10px] font-mono font-bold uppercase px-2 py-0.5 rounded-full bg-[#111215] text-[#D4F82C] dark:bg-[#D4F82C] dark:text-[#111215]">
+                    SUBMITTED ANSWERS
                   </span>
-                  <span className="geist-small text-[#8f8f8f]">{formatDateTime(selectedSubmission.submittedAt)}</span>
+                  <span className="text-xs text-[#73766C] dark:text-neutral-400">
+                    {formatDateTime(selectedSubmission.submittedAt)}
+                  </span>
                 </div>
+                <h3 className="text-lg sm:text-xl font-black text-[#111215] dark:text-white">
+                  {selectedSubmission.candidateName || 'Candidate Submission'}
+                </h3>
+                {selectedSubmission.candidateEmail && (
+                  <p className="text-xs text-[#73766C] dark:text-neutral-400 mt-0.5">
+                    {selectedSubmission.candidateEmail}
+                  </p>
+                )}
               </div>
-              <button
-                type="button"
-                onClick={() => setSelectedSubmission(null)}
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[6px] border border-white/[0.11] bg-white/[0.03] text-[#d4d4d4] transition-colors hover:bg-white/[0.06] hover:text-white"
-                title="Close"
-                aria-label="Close solution"
-              >
-                <X size={15} />
-              </button>
+
+              <div className="flex items-center gap-3">
+                <div className="text-right">
+                  <span className="text-[10px] uppercase font-bold text-[#73766C] dark:text-neutral-400 block">
+                    Final Score
+                  </span>
+                  <span className="font-mono text-lg font-black text-[#111215] dark:text-[#D4F82C]">
+                    {Number(selectedSubmission.score) || 0}%
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSelectedSubmission(null)}
+                  className="size-8 rounded-full border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-white/5 flex items-center justify-center text-[#73766C] hover:text-[#111215] dark:hover:text-white transition-all cursor-pointer"
+                >
+                  <X size={15} />
+                </button>
+              </div>
             </div>
 
-            <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5 [scrollbar-color:#27272a_#050505] [scrollbar-width:thin]">
-              <div className="space-y-4">
-                {test.questions?.map((question: any, index: number) => (
-                  <section key={index} className="rounded-[8px] border border-white/[0.11] bg-white/[0.03]">
-                    <div className="border-b border-white/[0.08] px-4 py-3">
-                      <p className="geist-label uppercase text-[#6b7280]">Question {index + 1}</p>
-                      <h3 className="geist-caption mt-1 font-semibold text-white">
-                        {test.type === 'aptitude' ? question.question : question.title}
-                      </h3>
+            {/* Questions Sheet Content */}
+            <div className="p-5 sm:p-6 max-h-[70vh] overflow-y-auto space-y-4">
+              {test.questions?.map((question: any, index: number) => {
+                const candidateAnswerIndex = selectedSubmission.answers?.[index];
+                const isCorrectAnswer = question.correctIndex !== undefined && candidateAnswerIndex === question.correctIndex;
+
+                return (
+                  <div
+                    key={index}
+                    className="p-4 rounded-2xl border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5]/70 dark:bg-white/[0.02] space-y-3"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-start gap-2.5">
+                        <span className="size-6 rounded-lg bg-[#111215] text-[#D4F82C] dark:bg-[#D4F82C] dark:text-[#111215] text-xs font-mono font-bold flex items-center justify-center shrink-0 mt-0.5">
+                          {index + 1}
+                        </span>
+                        <h4 className="text-xs sm:text-sm font-bold text-[#111215] dark:text-white leading-snug">
+                          {test.type === 'aptitude' ? question.question : question.title}
+                        </h4>
+                      </div>
+
+                      {test.type === 'aptitude' && (
+                        <span
+                          className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider shrink-0 ${
+                            isCorrectAnswer
+                              ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 border border-emerald-200'
+                              : 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400 border border-rose-200'
+                          }`}
+                        >
+                          {isCorrectAnswer ? 'Correct' : 'Incorrect'}
+                        </span>
+                      )}
                     </div>
 
                     {test.type === 'aptitude' ? (
-                      <div className="space-y-2 p-4">
+                      <div className="space-y-1.5 pl-8">
                         {question.options?.map((option: string, optionIndex: number) => {
-                          const isSelected = selectedSubmission.answers?.[index] === optionIndex;
-                          const isCorrect = question.correctIndex === optionIndex;
-                          const optionClass = isCorrect
-                            ? 'border-[#1f3a2a] bg-[#07180f] text-[#83d0a3]'
-                            : isSelected
-                              ? 'border-[#3f1d1d] bg-[#180707] text-[#ff8f8f]'
-                              : 'border-white/[0.08] bg-[#050505] text-[#a1a1a1]';
+                          const isCandidateSelected = candidateAnswerIndex === optionIndex;
+                          const isCorrectOption = question.correctIndex === optionIndex;
+
+                          let optionStyle =
+                            'border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-white/5 text-[#575A51] dark:text-neutral-300';
+                          if (isCorrectOption) {
+                            optionStyle =
+                              'border-emerald-300 dark:border-emerald-800 bg-[#EAF7E8] dark:bg-emerald-950/40 text-emerald-900 dark:text-emerald-300 font-bold';
+                          } else if (isCandidateSelected && !isCorrectOption) {
+                            optionStyle =
+                              'border-rose-300 dark:border-rose-800 bg-rose-50 dark:bg-rose-950/40 text-rose-900 dark:text-rose-300 font-bold';
+                          }
 
                           return (
                             <div
                               key={optionIndex}
-                              className={`geist-caption flex items-center justify-between gap-3 rounded-[6px] border px-3 py-2 ${optionClass}`}
+                              className={`p-2.5 rounded-xl border text-xs flex items-center justify-between gap-3 ${optionStyle}`}
                             >
-                              <span>{option}</span>
-                              {isCorrect && <Check size={14} />}
-                              {isSelected && !isCorrect && <XCircle size={14} />}
+                              <div className="flex items-center gap-2">
+                                <span
+                                  className={`size-5 rounded-full flex items-center justify-center text-[10px] font-mono font-bold ${
+                                    isCorrectOption
+                                      ? 'bg-emerald-600 text-white'
+                                      : isCandidateSelected
+                                      ? 'bg-rose-600 text-white'
+                                      : 'bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-neutral-400'
+                                  }`}
+                                >
+                                  {String.fromCharCode(65 + optionIndex)}
+                                </span>
+                                <span>{option}</span>
+                              </div>
+
+                              <div className="flex items-center gap-1.5 text-[10px] font-bold">
+                                {isCorrectOption && (
+                                  <span className="text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
+                                    <Check size={12} strokeWidth={2.5} />
+                                    <span>Correct Answer</span>
+                                  </span>
+                                )}
+                                {isCandidateSelected && !isCorrectOption && (
+                                  <span className="text-rose-600 dark:text-rose-400 flex items-center gap-1">
+                                    <X size={12} strokeWidth={2.5} />
+                                    <span>Candidate Chose</span>
+                                  </span>
+                                )}
+                              </div>
                             </div>
                           );
                         })}
                       </div>
                     ) : (
-                      <div className="p-4">
-                        <pre className="overflow-x-auto rounded-[6px] border border-white/[0.11] bg-[#000] p-4 font-mono text-sm leading-6 text-[#d4d4d4]">
+                      <div className="pl-8 space-y-2">
+                        <div className="text-[10px] font-bold uppercase text-[#73766C] dark:text-neutral-400">
+                          Submitted Code:
+                        </div>
+                        <pre className="p-3.5 rounded-xl border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-black/40 text-xs font-mono text-[#111215] dark:text-neutral-200 overflow-x-auto whitespace-pre-wrap leading-relaxed">
                           {selectedSubmission.answers?.[index] || '// No code submitted'}
                         </pre>
+                        {question.testCases && (
+                          <div className="p-2.5 rounded-lg border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-white/5 text-[11px] font-mono text-[#73766C] dark:text-neutral-400">
+                            <span className="font-bold block text-[10px] uppercase mb-0.5">Test Cases:</span>
+                            {question.testCases}
+                          </div>
+                        )}
                       </div>
                     )}
-                  </section>
-                ))}
-              </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 border-t border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-[#101114] flex items-center justify-end">
+              <button
+                type="button"
+                onClick={() => setSelectedSubmission(null)}
+                className={secondaryButtonClass}
+              >
+                Close Solution
+              </button>
             </div>
           </div>
         </div>

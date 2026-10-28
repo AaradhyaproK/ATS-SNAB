@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   LayoutDashboard,
   Mail,
@@ -61,7 +61,8 @@ import {
   Video,
   Mic,
   Sun,
-  Moon
+  Moon,
+  Info
 } from 'lucide-react';
 import {
   collection,
@@ -1423,44 +1424,6 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
     }
   }, [allJobs]);
 
-  // Filtered Matches based on search, score, and segmented tabs
-  const filteredMatches = useMemo(() => {
-    let list = matchedJobs;
-
-    if (matchFilter === 'HighMatch') {
-      const high = list.filter(r => r.overallScore >= 60);
-      list = high.length > 0 ? high : list;
-    } else if (matchFilter === 'LocalCity') {
-      const candCity = (editForm.location || candidate?.location || '').toLowerCase().trim();
-      if (candCity) {
-        const local = list.filter(r =>
-          r.locationMatch.isMatch ||
-          (r.job.location && r.job.location.toLowerCase().includes(candCity)) ||
-          (r.job.city && r.job.city.toLowerCase().includes(candCity))
-        );
-        list = local.length > 0 ? local : list;
-      }
-    }
-
-    if (minScoreFilter > 0) {
-      list = list.filter(m => m.overallScore >= minScoreFilter);
-    }
-
-    if (searchJobQuery.trim()) {
-      const q = searchJobQuery.toLowerCase().trim();
-      list = list.filter(m => {
-        const matchTitle = (m.job.title || '').toLowerCase().includes(q);
-        const matchCompany = (m.job.company || '').toLowerCase().includes(q);
-        const matchLocation = (m.job.location || '').toLowerCase().includes(q);
-        const matchDept = (m.job.department || '').toLowerCase().includes(q);
-        const matchSkill = (m.job.skills || []).some((s: string) => s.toLowerCase().includes(q));
-        return matchTitle || matchCompany || matchLocation || matchDept || matchSkill;
-      });
-    }
-
-    return list;
-  }, [matchedJobs, matchFilter, editForm.location, candidate?.location, searchJobQuery]);
-
   // Full list of applications for the logged-in candidate with real-time status & interview data
   const myApplicationsList = useMemo(() => {
     const candEmail = (candidate?.email || candidate?.profile?.email || editForm.email || '').trim().toLowerCase();
@@ -1514,6 +1477,98 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
 
     return Array.from(map.values());
   }, [allJobs, appliedJobIds, appliedApplications, candidate, editForm, matchedJobs]);
+
+  // Reusable helper to check if candidate has applied to a specific job
+  const isJobApplied = useCallback((job: any): boolean => {
+    if (!job) return false;
+    const jId = job.id;
+    const jNo = job.jobNo;
+    const jAccess = job.accessCode;
+
+    if (jId && appliedJobIds.includes(jId)) return true;
+    if (jNo && appliedJobIds.includes(jNo)) return true;
+    if (jAccess && appliedJobIds.includes(jAccess)) return true;
+
+    if (jId && appliedApplications[jId]) return true;
+    if (jNo && appliedApplications[jNo]) return true;
+    if (jAccess && appliedApplications[jAccess]) return true;
+
+    const inAppsList = myApplicationsList.some(item => {
+      const aj = item.job;
+      return (jId && aj?.id === jId) || (jNo && aj?.jobNo === jNo) || (jAccess && aj?.accessCode === jAccess);
+    });
+    if (inAppsList) return true;
+
+    const liveJob = allJobs.find(j => (jId && j.id === jId) || (jNo && j.jobNo === jNo) || (jAccess && j.accessCode === jAccess)) || job;
+    const candEmail = (candidate?.email || candidate?.profile?.email || editForm.email || '').trim().toLowerCase();
+    const candPhoneNorm = (candidate?.phone || candidate?.profile?.phone || editForm.phone || '').replace(/\D/g, '');
+
+    const isCandMatch = (c: any) => {
+      if (!c) return false;
+      const cEmail = (c.email || '').toLowerCase().trim();
+      if (candEmail && cEmail && cEmail === candEmail) return true;
+      const cPhone = String(c.phone || '').replace(/\D/g, '');
+      if (candPhoneNorm && cPhone && (cPhone === candPhoneNorm || cPhone.endsWith(candPhoneNorm) || candPhoneNorm.endsWith(cPhone))) return true;
+      return false;
+    };
+
+    const candInJobData = (Array.isArray(liveJob.candidateData) ? liveJob.candidateData.find(isCandMatch) : null) ||
+      (Array.isArray(job.candidateData) ? job.candidateData.find(isCandMatch) : null);
+    if (candInJobData) return true;
+
+    const candInJobEmails = (Array.isArray(liveJob.candidateEmails) && liveJob.candidateEmails.some((e: any) => candEmail && String(e).toLowerCase().trim() === candEmail)) ||
+      (Array.isArray(job.candidateEmails) && job.candidateEmails.some((e: any) => candEmail && String(e).toLowerCase().trim() === candEmail));
+
+    return Boolean(candInJobEmails);
+  }, [appliedJobIds, appliedApplications, myApplicationsList, allJobs, candidate, editForm]);
+
+  // Filtered Matches based on search, score, and segmented tabs — Unapplied Jobs Ranked First!
+  const filteredMatches = useMemo(() => {
+    let list = [...matchedJobs];
+
+    if (matchFilter === 'HighMatch') {
+      const high = list.filter(r => r.overallScore >= 60);
+      list = high.length > 0 ? high : list;
+    } else if (matchFilter === 'LocalCity') {
+      const candCity = (editForm.location || candidate?.location || '').toLowerCase().trim();
+      if (candCity) {
+        const local = list.filter(r =>
+          r.locationMatch.isMatch ||
+          (r.job.location && r.job.location.toLowerCase().includes(candCity)) ||
+          (r.job.city && r.job.city.toLowerCase().includes(candCity))
+        );
+        list = local.length > 0 ? local : list;
+      }
+    }
+
+    if (minScoreFilter > 0) {
+      list = list.filter(m => m.overallScore >= minScoreFilter);
+    }
+
+    if (searchJobQuery.trim()) {
+      const q = searchJobQuery.toLowerCase().trim();
+      list = list.filter(m => {
+        const matchTitle = (m.job.title || '').toLowerCase().includes(q);
+        const matchCompany = (m.job.company || '').toLowerCase().includes(q);
+        const matchLocation = (m.job.location || '').toLowerCase().includes(q);
+        const matchDept = (m.job.department || '').toLowerCase().includes(q);
+        const matchSkill = (m.job.skills || []).some((s: string) => s.toLowerCase().includes(q));
+        return matchTitle || matchCompany || matchLocation || matchDept || matchSkill;
+      });
+    }
+
+    // Sort: NOT APPLIED jobs first, then by match score descending
+    list.sort((a, b) => {
+      const aApplied = isJobApplied(a.job);
+      const bApplied = isJobApplied(b.job);
+      if (aApplied !== bApplied) {
+        return aApplied ? 1 : -1; // unapplied (false) comes first
+      }
+      return b.overallScore - a.overallScore;
+    });
+
+    return list;
+  }, [matchedJobs, matchFilter, editForm.location, candidate?.location, searchJobQuery, minScoreFilter, isJobApplied]);
 
   const shortlistedCount = useMemo(() => {
     return myApplicationsList.filter(item => {
@@ -4505,12 +4560,12 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
                     onClick={() => setActiveTab('matches')}
                     className="text-xs font-bold text-[#111215] dark:text-[#D4F82C] hover:underline cursor-pointer"
                   >
-                    View All ({matchedJobs.length}) →
+                    View All ({filteredMatches.length}) →
                   </button>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
-                  {matchedJobs.slice(0, 3).map((matchItem) => {
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 items-stretch">
+                  {filteredMatches.slice(0, 3).map((matchItem) => {
                     const job = matchItem.job;
                     const jobTitle = job?.title || 'Job Opportunity';
                     const jobCompany = job?.company || 'Company';
@@ -4525,25 +4580,27 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
                           setSelectedJobModal(matchItem);
                           hasDismissedJobModalRef.current = true;
                         }}
-                        className="p-4 rounded-2xl border border-[#E4E7DC] dark:border-white/10 hover:border-[#111215]/30 dark:hover:border-white/20 bg-[#F8F9F5] dark:bg-white/5 transition-all cursor-pointer group flex flex-col justify-between"
+                        className="p-4 rounded-2xl border border-[#E4E7DC] dark:border-white/10 hover:border-[#111215]/30 dark:hover:border-white/20 bg-[#F8F9F5] dark:bg-white/5 transition-all cursor-pointer group flex flex-col justify-between h-full"
                       >
-                        <div>
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-[#D4F82C] text-[#111215]">
-                              {matchItem.overallScore}% Fit
-                            </span>
-                            <span className="text-[10px] text-[#73766C] dark:text-neutral-400 font-medium">
-                              {jobType}
-                            </span>
+                        <div className="flex-1 flex flex-col justify-between">
+                          <div>
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-[#D4F82C] text-[#111215]">
+                                {matchItem.overallScore}% Fit
+                              </span>
+                              <span className="text-[10px] text-[#73766C] dark:text-neutral-400 font-medium">
+                                {jobType}
+                              </span>
+                            </div>
+                            <h4 className="text-sm font-bold text-[#111215] dark:text-white group-hover:text-[#8FB305] dark:group-hover:text-[#D4F82C] transition-colors truncate">
+                              {jobTitle}
+                            </h4>
+                            <p className="text-xs text-[#73766C] dark:text-neutral-400 mt-0.5 truncate">
+                              {jobCompany} • {jobLocation}
+                            </p>
                           </div>
-                          <h4 className="text-sm font-bold text-[#111215] dark:text-white group-hover:text-[#8FB305] dark:group-hover:text-[#D4F82C] transition-colors truncate">
-                            {jobTitle}
-                          </h4>
-                          <p className="text-xs text-[#73766C] dark:text-neutral-400 mt-0.5 truncate">
-                            {jobCompany} • {jobLocation}
-                          </p>
                         </div>
-                        <div className="mt-3 pt-3 border-t border-[#E4E7DC] dark:border-white/10 flex items-center justify-between text-[11px]">
+                        <div className="mt-auto pt-3 border-t border-[#E4E7DC] dark:border-white/10 flex items-center justify-between text-[11px]">
                           <span className="font-semibold text-[#111215] dark:text-white">
                             {jobSalary}
                           </span>
@@ -4763,16 +4820,14 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
                   const candInJobEmails = (Array.isArray(liveJob.candidateEmails) && liveJob.candidateEmails.some((e: any) => candEmail && String(e).toLowerCase().trim() === candEmail)) ||
                     (Array.isArray(job.candidateEmails) && job.candidateEmails.some((e: any) => candEmail && String(e).toLowerCase().trim() === candEmail));
 
-                  const isApplied = appliedJobIds.includes(job.id) ||
-                    (job.jobNo && appliedJobIds.includes(job.jobNo)) ||
-                    (job.accessCode && appliedJobIds.includes(job.accessCode)) ||
-                    Boolean(appliedApplications[job.id]) ||
-                    Boolean(job.jobNo && appliedApplications[job.jobNo]) ||
-                    Boolean(job.accessCode && appliedApplications[job.accessCode]) ||
-                    Boolean(candInJobData) ||
-                    candInJobEmails;
+                  const matchAppItem = myApplicationsList.find(a =>
+                    (job.id && a.job?.id === job.id) ||
+                    (job.jobNo && a.job?.jobNo === job.jobNo) ||
+                    (job.accessCode && a.job?.accessCode === job.accessCode)
+                  );
+                  const isApplied = isJobApplied(job) || Boolean(matchAppItem);
 
-                  const applicationInfo = appliedApplications[job.id] ||
+                  const applicationInfo = matchAppItem?.appInfo || appliedApplications[job.id] ||
                     (job.jobNo && appliedApplications[job.jobNo]) ||
                     (job.accessCode && appliedApplications[job.accessCode]) ||
                     (candInJobData ? {
@@ -4790,7 +4845,7 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
                   return (
                     <div
                       key={job.id}
-                      className="rounded-2xl sm:rounded-3xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] p-4 sm:p-5 flex flex-col justify-between transition-all hover:shadow-md hover:border-[#111215]/30 dark:hover:border-white/20 shadow-xs group"
+                      className="rounded-2xl sm:rounded-3xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] p-4 sm:p-5 flex flex-col justify-between transition-all hover:shadow-md hover:border-[#111215]/30 dark:hover:border-white/20 shadow-xs group h-full"
                     >
                       {/* Top Badges */}
                       <div className="space-y-3">
@@ -4867,8 +4922,8 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
                           </div>
                         )}
 
-                        {/* Application Status Banner (if candidate already applied) */}
-                        {isApplied && (
+                        {/* Application Status Banner (if candidate already applied) OR Open Status Pill */}
+                        {isApplied ? (
                           <div className="mt-2.5 p-2.5 rounded-xl border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-[#1D1F24]">
                             <div className="flex items-center justify-between gap-1.5 flex-wrap">
                               <span className="text-[10px] font-bold uppercase tracking-wider text-[#73766C] dark:text-neutral-400">
@@ -4894,11 +4949,26 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
                               </div>
                             )}
                           </div>
+                        ) : (
+                          <div className="mt-2.5 p-2.5 rounded-xl border border-dashed border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5]/60 dark:bg-white/[0.02]">
+                            <div className="flex items-center justify-between gap-1.5">
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-[#73766C] dark:text-neutral-400">
+                                Opportunity:
+                              </span>
+                              <span className="text-[11px] font-bold px-2 py-0.5 rounded-full text-emerald-700 dark:text-emerald-400 bg-emerald-500/10">
+                                Open for Applications
+                              </span>
+                            </div>
+                            <div className="mt-1 text-[10px] text-[#73766C] dark:text-neutral-400 flex items-center gap-1">
+                              <Sparkles size={11} className="text-[#8FB305] dark:text-[#D4F82C]" />
+                              <span>Fast-track 1-click ATS application</span>
+                            </div>
+                          </div>
                         )}
                       </div>
 
                       {/* Card Footer Actions */}
-                      <div className="mt-4 pt-3 border-t border-[#E4E7DC] dark:border-white/10 flex items-center justify-between gap-2">
+                      <div className="mt-auto pt-3 border-t border-[#E4E7DC] dark:border-white/10 flex items-center justify-between gap-2">
                         {/* View JD Details */}
                         <button
                           type="button"
@@ -5065,7 +5135,7 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
                 </div>
               </div>
             ) : (
-              <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-5 items-start">
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-5 items-stretch">
                 {filteredApplications.map((item) => {
                   const { job, appInfo, matchItem } = item;
                   const step = getStageStep(appInfo.status);
@@ -5077,7 +5147,7 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
                   return (
                     <div
                       key={job.id}
-                      className="rounded-2xl sm:rounded-3xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] p-4 sm:p-5 shadow-xs hover:shadow-md transition-all flex flex-col justify-between"
+                      className="rounded-2xl sm:rounded-3xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] p-4 sm:p-5 shadow-xs hover:shadow-md transition-all flex flex-col justify-between h-full"
                     >
                       {/* Top Header Row */}
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 border-b border-[#E4E7DC] dark:border-white/10 pb-3.5">
@@ -5247,67 +5317,69 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
                         )}
                       </div>
 
-                      {/* Scheduled Interview Action Box (if applicable) */}
-                      {scheduled && (
-                        <div className="mt-2 mb-3 p-3 sm:p-3.5 rounded-xl border border-amber-500/30 bg-amber-500/10 space-y-2.5">
-                          <div className="flex items-center justify-between flex-wrap gap-2">
-                            <div className="flex items-center gap-1.5">
-                              <Calendar className="text-amber-500" size={15} />
-                              <span className="text-[11px] font-black uppercase tracking-wider text-amber-600 dark:text-amber-400">
-                                📅 Interview Scheduled — {scheduled.round || 'Candidate Interview'}
+                      {/* Middle Content Box: Scheduled Interview OR Active Pipeline Progress Box */}
+                      {scheduled ? (
+                        <div className="mt-2 mb-3 p-3 sm:p-3.5 rounded-xl border border-amber-500/30 bg-amber-500/10 space-y-2.5 flex-1 flex flex-col justify-between">
+                          <div className="space-y-2.5">
+                            <div className="flex items-center justify-between flex-wrap gap-2">
+                              <div className="flex items-center gap-1.5">
+                                <Calendar className="text-amber-500" size={15} />
+                                <span className="text-[11px] font-black uppercase tracking-wider text-amber-600 dark:text-amber-400">
+                                  📅 Interview Scheduled — {scheduled.round || 'Candidate Interview'}
+                                </span>
+                              </div>
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30">
+                                Confirmed Session
                               </span>
                             </div>
-                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30">
-                              Confirmed Session
-                            </span>
-                          </div>
 
-                          {/* Key Session Details Grid */}
-                          <div className="grid grid-cols-2 gap-2 text-xs">
-                            {scheduled.date && (
-                              <div className="p-2 rounded-lg bg-black/5 dark:bg-white/5 border border-slate-200/50 dark:border-white/5">
-                                <span className="text-slate-400 text-[10px] uppercase font-bold block">Date</span>
-                                <span className="font-bold">{scheduled.date}</span>
-                              </div>
-                            )}
-                            {scheduled.time && (
-                              <div className="p-2 rounded-lg bg-black/5 dark:bg-white/5 border border-slate-200/50 dark:border-white/5">
-                                <span className="text-slate-400 text-[10px] uppercase font-bold block">Time</span>
-                                <span className="font-bold">{scheduled.time}</span>
-                              </div>
-                            )}
-                            {(scheduled.contactPerson || scheduled.interviewer) && (
-                              <div className="p-2 rounded-lg bg-black/5 dark:bg-white/5 border border-slate-200/50 dark:border-white/5">
-                                <span className="text-slate-400 text-[10px] uppercase font-bold block">Contact Person</span>
-                                <span className="font-bold truncate block">{scheduled.contactPerson || scheduled.interviewer}</span>
-                              </div>
-                            )}
-                            {scheduled.mode && (
-                              <div className="p-2 rounded-lg bg-black/5 dark:bg-white/5 border border-slate-200/50 dark:border-white/5">
-                                <span className="text-slate-400 text-[10px] uppercase font-bold block">Interview Mode</span>
-                                <span className="font-bold">{scheduled.mode}</span>
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Venue Location if specified */}
-                          {scheduled.location && (
-                            <div className="p-2 rounded-lg bg-black/5 dark:bg-white/5 border border-slate-200/50 dark:border-white/5 text-xs flex items-center gap-2">
-                              <MapPin size={13} className="text-amber-500 shrink-0" />
-                              <div>
-                                <span className="text-slate-400 text-[10px] uppercase font-bold block">Venue / Location</span>
-                                <span className="font-bold">{scheduled.location}</span>
-                              </div>
+                            {/* Key Session Details Grid */}
+                            <div className="grid grid-cols-2 gap-2 text-xs">
+                              {scheduled.date && (
+                                <div className="p-2 rounded-lg bg-black/5 dark:bg-white/5 border border-slate-200/50 dark:border-white/5">
+                                  <span className="text-slate-400 text-[10px] uppercase font-bold block">Date</span>
+                                  <span className="font-bold">{scheduled.date}</span>
+                                </div>
+                              )}
+                              {scheduled.time && (
+                                <div className="p-2 rounded-lg bg-black/5 dark:bg-white/5 border border-slate-200/50 dark:border-white/5">
+                                  <span className="text-slate-400 text-[10px] uppercase font-bold block">Time</span>
+                                  <span className="font-bold">{scheduled.time}</span>
+                                </div>
+                              )}
+                              {(scheduled.contactPerson || scheduled.interviewer) && (
+                                <div className="p-2 rounded-lg bg-black/5 dark:bg-white/5 border border-slate-200/50 dark:border-white/5">
+                                  <span className="text-slate-400 text-[10px] uppercase font-bold block">Contact Person</span>
+                                  <span className="font-bold truncate block">{scheduled.contactPerson || scheduled.interviewer}</span>
+                                </div>
+                              )}
+                              {scheduled.mode && (
+                                <div className="p-2 rounded-lg bg-black/5 dark:bg-white/5 border border-slate-200/50 dark:border-white/5">
+                                  <span className="text-slate-400 text-[10px] uppercase font-bold block">Interview Mode</span>
+                                  <span className="font-bold">{scheduled.mode}</span>
+                                </div>
+                              )}
                             </div>
-                          )}
 
-                          {/* Recruiter Notes / Instructions if specified */}
-                          {scheduled.notes && (
-                            <div className="p-2 rounded-lg bg-black/5 dark:bg-white/5 border border-slate-200/50 dark:border-white/5 text-xs">
-                              <span className="text-slate-400 text-[10px] uppercase font-bold block mb-0.5">Instructions & Notes</span>
-                              <p className="italic text-slate-700 dark:text-slate-300 text-[11px]">{scheduled.notes}</p>
-                            </div>
-                          )}
+                            {/* Venue Location if specified */}
+                            {scheduled.location && (
+                              <div className="p-2 rounded-lg bg-black/5 dark:bg-white/5 border border-slate-200/50 dark:border-white/5 text-xs flex items-center gap-2">
+                                <MapPin size={13} className="text-amber-500 shrink-0" />
+                                <div>
+                                  <span className="text-slate-400 text-[10px] uppercase font-bold block">Venue / Location</span>
+                                  <span className="font-bold">{scheduled.location}</span>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Recruiter Notes / Instructions if specified */}
+                            {scheduled.notes && (
+                              <div className="p-2 rounded-lg bg-black/5 dark:bg-white/5 border border-slate-200/50 dark:border-white/5 text-xs">
+                                <span className="text-slate-400 text-[10px] uppercase font-bold block mb-0.5">Instructions & Notes</span>
+                                <p className="italic text-slate-700 dark:text-slate-300 text-[11px]">{scheduled.notes}</p>
+                              </div>
+                            )}
+                          </div>
 
                           {/* Contact & Meeting Details (Smartly detects Phone vs Web Video URL) */}
                           {scheduled.link && (() => {
@@ -5392,10 +5464,107 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
                             );
                           })()}
                         </div>
+                      ) : !isRejected ? (
+                        <div className="mt-2 mb-3 p-3 sm:p-3.5 rounded-xl border border-[#E4E7DC] dark:border-white/10 bg-[#FAFAF8] dark:bg-white/[0.03] space-y-2.5 flex-1 flex flex-col justify-between">
+                          <div className="space-y-2.5">
+                            {/* Stage Header */}
+                            <div className="flex items-center justify-between flex-wrap gap-2">
+                              <div className="flex items-center gap-1.5">
+                                {step >= 3 ? (
+                                  <Sparkles className="text-[#8FB305] dark:text-[#D4F82C]" size={15} />
+                                ) : step >= 2 ? (
+                                  <Eye className="text-sky-500 dark:text-sky-400" size={15} />
+                                ) : (
+                                  <Clock className="text-[#8FB305] dark:text-[#D4F82C]" size={15} />
+                                )}
+                                <span className="text-[11px] font-black uppercase tracking-wider text-[#111215] dark:text-white">
+                                  {step >= 5
+                                    ? '🎉 Final Selection • Offer Processing'
+                                    : step >= 3
+                                    ? 'Shortlist Confirmed • Interview Slot Allocation'
+                                    : step >= 2
+                                    ? 'Under Active Review • Recruiter Screening'
+                                    : 'Application Submitted • Queue Active'}
+                                </span>
+                              </div>
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#E4E7DC]/60 dark:bg-white/10 text-[#575A51] dark:text-neutral-300">
+                                Stage {step >= 5 ? '4 of 4' : step >= 3 ? '3 of 4' : step >= 2 ? '2 of 4' : '1 of 4'}
+                              </span>
+                            </div>
+
+                            {/* Stage Milestone Details Grid */}
+                            <div className="grid grid-cols-2 gap-2 text-xs">
+                              <div className="p-2 rounded-lg bg-black/5 dark:bg-white/5 border border-slate-200/50 dark:border-white/5">
+                                <span className="text-slate-400 text-[10px] uppercase font-bold block">Current Stage</span>
+                                <span className="font-bold text-[#111215] dark:text-white truncate block">
+                                  {appInfo.status || 'Under Review'}
+                                </span>
+                              </div>
+                              <div className="p-2 rounded-lg bg-black/5 dark:bg-white/5 border border-slate-200/50 dark:border-white/5">
+                                <span className="text-slate-400 text-[10px] uppercase font-bold block">Next Milestone</span>
+                                <span className="font-bold text-[#111215] dark:text-white truncate block">
+                                  {step >= 5 ? 'Offer Letter Release' : step >= 3 ? 'Interview Slot Booking' : step >= 2 ? 'Shortlist Evaluation' : 'Initial Profile Check'}
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Recruiter Notes / Guidance */}
+                            <div className="p-2.5 rounded-lg bg-black/5 dark:bg-white/5 border border-slate-200/50 dark:border-white/5 text-xs">
+                              <span className="text-slate-400 text-[10px] uppercase font-bold block mb-0.5">
+                                {appInfo.recruiterNotes ? 'Recruiter Note' : 'Hiring Team Status'}
+                              </span>
+                              <p className="italic text-slate-700 dark:text-slate-300 text-[11px] leading-relaxed">
+                                {appInfo.recruiterNotes
+                                  ? appInfo.recruiterNotes
+                                  : step >= 3
+                                  ? 'Your profile has passed initial screening and is shortlisted. The recruitment coordinator is setting up your interview slot and meeting coordinates.'
+                                  : step >= 2
+                                  ? 'The hiring team is currently evaluating your resume and skills against role requirements. Real-time updates will appear here automatically.'
+                                  : 'Your application has been received and logged into the ATS applicant pool. Automatic skills verification is active.'}
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Real-time sync & turnaround badge */}
+                          <div className="p-2.5 rounded-xl border border-[#E4E7DC] dark:border-white/10 bg-white/80 dark:bg-black/30 flex items-center justify-between text-[11px]">
+                            <div className="flex items-center gap-1.5 font-bold text-[#111215] dark:text-white">
+                              <CheckCircle2 size={13} className="text-[#8FB305] dark:text-[#D4F82C]" />
+                              <span>ATS Status: Live</span>
+                            </div>
+                            <span className="text-[10px] font-semibold text-[#73766C] dark:text-neutral-400">
+                              Turnaround: ~1–3 business days
+                            </span>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="mt-2 mb-3 p-3 sm:p-3.5 rounded-xl border border-rose-500/20 bg-rose-500/5 text-xs flex-1 flex flex-col justify-between space-y-2.5">
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-1.5 text-rose-600 dark:text-rose-400 font-black uppercase text-[11px]">
+                                <XCircle size={15} />
+                                <span>Application Concluded</span>
+                              </div>
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-600 dark:text-rose-400">
+                                Archived
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-[#73766C] dark:text-neutral-400 leading-relaxed">
+                              This opening was closed for new candidate evaluations. Your verified resume and assessment scores remain stored in our talent database for instant matching on newly opened roles.
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setActiveTab('matches')}
+                            className="w-full py-2 rounded-lg font-bold text-xs bg-rose-500/10 hover:bg-rose-500/20 text-rose-700 dark:text-rose-300 border border-rose-500/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                          >
+                            <Sparkles size={12} />
+                            <span>Explore Similar Matched Opportunities</span>
+                          </button>
+                        </div>
                       )}
 
-                      {/* Recruiter Feedback notes (if any) */}
-                      {appInfo.recruiterNotes && (
+                      {/* Recruiter Feedback notes (if outside scheduled) */}
+                      {appInfo.recruiterNotes && scheduled && (
                         <div className="p-2.5 rounded-xl bg-slate-100 dark:bg-white/5 text-xs text-slate-600 dark:text-slate-300 mb-2.5 border border-slate-200 dark:border-white/10">
                           <span className="font-bold text-slate-800 dark:text-white block mb-0.5">Recruiter Note:</span>
                           <p className="text-[11px]">{appInfo.recruiterNotes}</p>
@@ -5403,7 +5572,7 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
                       )}
 
                       {/* Bottom Action Buttons */}
-                      <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-[#E4E7DC] dark:border-white/10 text-xs">
+                      <div className="mt-auto pt-3 border-t border-[#E4E7DC] dark:border-white/10 flex flex-wrap items-center justify-between gap-2 text-xs">
                         <button
                           type="button"
                           onClick={() => handleOpenJobModal(matchItem || job)}

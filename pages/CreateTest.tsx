@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { addDoc, collection, getDocs, orderBy, query, serverTimestamp } from 'firebase/firestore';
+import { addDoc, collection, doc, getDoc, getDocs, orderBy, query, serverTimestamp, updateDoc } from 'firebase/firestore';
 import { db, auth } from '../services/firebase';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   ArrowLeft,
   Bot,
@@ -31,6 +31,11 @@ import { getRateLimitReachedMessage, isRateLimitReached, RateLimitResource } fro
 const CreateTest: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { testId: paramTestId } = useParams();
+  const editId = searchParams.get('editId') || paramTestId;
+  const isEditing = Boolean(editId);
+  const [loadingExistingTest, setLoadingExistingTest] = useState(Boolean(editId));
+
   const { showError, showSuccess } = useMessageBox();
   const { status: rateLimitStatus, loading: rateLimitLoading, refresh: refreshRateLimit } = useCompanyRateLimits();
   
@@ -50,17 +55,55 @@ const CreateTest: React.FC = () => {
   const [externalAccessCode, setExternalAccessCode] = useState('');
   
   const activeLimitResource: RateLimitResource = type === 'coding' ? 'codingAssessments' : 'assessments';
-  const activeLimitReached = isRateLimitReached(rateLimitStatus, activeLimitResource);
+  const activeLimitReached = !isEditing && isRateLimitReached(rateLimitStatus, activeLimitResource);
 
   const [manualQ, setManualQ] = useState({ question: '', options: ['', '', '', ''], correct: 0 });
   const [manualCodeQ, setManualCodeQ] = useState({ title: '', description: '', testCases: '' });
 
   useEffect(() => {
-    const requestedType = searchParams.get('type');
-    if (requestedType === 'aptitude' || requestedType === 'coding') {
-      setType(requestedType);
+    if (!editId) {
+      const requestedType = searchParams.get('type');
+      if (requestedType === 'aptitude' || requestedType === 'coding') {
+        setType(requestedType);
+      }
     }
-  }, [searchParams]);
+  }, [searchParams, editId]);
+
+  useEffect(() => {
+    if (!editId) return;
+    const fetchExistingTest = async () => {
+      setLoadingExistingTest(true);
+      try {
+        const testSnap = await getDoc(doc(db, 'tests', editId));
+        if (testSnap.exists()) {
+          const data = testSnap.data();
+          setTitle(data.title || '');
+          if (data.type === 'coding' || data.type === 'aptitude') {
+            setType(data.type);
+          }
+          if (data.duration) setDuration(Number(data.duration));
+          if (data.passingScore !== undefined) setPassingScore(Number(data.passingScore));
+          if (Array.isArray(data.questions)) setQuestions(data.questions);
+          if (data.nextInterviewId) setNextInterviewId(data.nextInterviewId);
+          if (data.externalInterviewLink) {
+            setAutomationType('external');
+            setExternalLink(data.externalInterviewLink);
+            setExternalAccessCode(data.externalAccessCode || '');
+          }
+        } else {
+          showError('Assessment not found.');
+          navigate('/recruiter/tests');
+        }
+      } catch (err) {
+        console.error('Error fetching test for edit:', err);
+        showError('Unable to load assessment for editing.');
+      } finally {
+        setLoadingExistingTest(false);
+      }
+    };
+
+    fetchExistingTest();
+  }, [editId, navigate, showError]);
 
   useEffect(() => {
     const fetchInterviews = async () => {
@@ -174,14 +217,16 @@ const CreateTest: React.FC = () => {
   const handleSave = async (event: React.FormEvent) => {
     event.preventDefault();
 
-    const latestRateLimit = await refreshRateLimit();
-    if (!latestRateLimit) {
-      showError('Unable to verify the company assessment limit. Please try again.');
-      return;
-    }
-    if (isRateLimitReached(latestRateLimit, activeLimitResource)) {
-      showError(getRateLimitReachedMessage(activeLimitResource));
-      return;
+    if (!isEditing) {
+      const latestRateLimit = await refreshRateLimit();
+      if (!latestRateLimit) {
+        showError('Unable to verify the company assessment limit. Please try again.');
+        return;
+      }
+      if (isRateLimitReached(latestRateLimit, activeLimitResource)) {
+        showError(getRateLimitReachedMessage(activeLimitResource));
+        return;
+      }
     }
 
     if (!title.trim()) {
@@ -195,31 +240,41 @@ const CreateTest: React.FC = () => {
 
     setSaving(true);
     try {
-      const accessCode = Math.random().toString(36).substring(2, 8).toUpperCase();
       const testData: any = {
-        recruiterUID: auth.currentUser?.uid,
         title: title.trim(),
         type,
         duration: Number(duration),
         questions,
-        accessCode,
         passingScore: Number(passingScore),
-        createdAt: serverTimestamp(),
       };
 
       if (automationType === 'internal' && nextInterviewId) {
         testData.nextInterviewId = nextInterviewId;
+        testData.externalInterviewLink = null;
+        testData.externalAccessCode = null;
       } else if (automationType === 'external' && externalLink.trim()) {
         testData.externalInterviewLink = externalLink.trim();
         testData.externalAccessCode = externalAccessCode.trim();
+        testData.nextInterviewId = null;
       }
 
-      await addDoc(collection(db, 'tests'), testData);
-      showSuccess('Assessment created successfully!');
+      if (isEditing && editId) {
+        testData.updatedAt = serverTimestamp();
+        await updateDoc(doc(db, 'tests', editId), testData);
+        showSuccess('Assessment updated successfully!');
+      } else {
+        const accessCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+        testData.accessCode = accessCode;
+        testData.recruiterUID = auth.currentUser?.uid;
+        testData.createdAt = serverTimestamp();
+        await addDoc(collection(db, 'tests'), testData);
+        showSuccess('Assessment created successfully!');
+      }
+
       navigate('/recruiter/tests');
     } catch (error) {
       console.error(error);
-      showError('Failed to create assessment.');
+      showError(isEditing ? 'Failed to update assessment.' : 'Failed to create assessment.');
     } finally {
       setSaving(false);
     }
@@ -250,17 +305,19 @@ const CreateTest: React.FC = () => {
               </button>
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 text-[11px] font-bold text-[#111215] dark:text-[#F8F9F5] shadow-2xs">
                 <span className="size-2 rounded-full bg-[#8FB305] dark:bg-[#D4F82C] animate-pulse"></span>
-                <span className="font-mono uppercase text-[10px] text-[#73766C] dark:text-neutral-400">STUDIO</span>
+                <span className="font-mono uppercase text-[10px] text-[#73766C] dark:text-neutral-400">{isEditing ? 'EDIT MODE' : 'STUDIO'}</span>
                 <span className="text-[#E4E7DC] dark:text-white/20">|</span>
                 <span>{type === 'coding' ? 'Technical Coding Screen' : 'Aptitude & Logic Screen'}</span>
               </div>
             </div>
             
             <h1 className="text-2xl sm:text-3xl font-black text-[#111215] dark:text-[#F8F9F5] tracking-tight">
-              Create Assessment
+              {isEditing ? 'Edit Assessment' : 'Create Assessment'}
             </h1>
             <p className="text-xs sm:text-sm text-[#575A51] dark:text-neutral-400 mt-1 max-w-2xl leading-relaxed">
-              Build a focused candidate screen, configure passing criteria, auto-generate questions with AI, and automate routing into the next interview round.
+              {isEditing
+                ? 'Update assessment configuration, adjust questions bank, scoring benchmarks, or candidate routing.'
+                : 'Build a focused candidate screen, configure passing criteria, auto-generate questions with AI, and automate routing into the next interview round.'}
             </p>
           </div>
 
@@ -275,11 +332,11 @@ const CreateTest: React.FC = () => {
             <button
               type="submit"
               form="create-assessment-form"
-              disabled={saving || generating || questions.length === 0 || rateLimitLoading || activeLimitReached}
+              disabled={saving || generating || questions.length === 0 || (!isEditing && (rateLimitLoading || activeLimitReached))}
               className={primaryButtonClass}
             >
               <Save size={16} />
-              <span>{saving ? 'Saving...' : activeLimitReached ? 'Limit Reached' : 'Create Assessment'}</span>
+              <span>{saving ? 'Saving...' : isEditing ? 'Save Changes' : activeLimitReached ? 'Limit Reached' : 'Save Assessment'}</span>
             </button>
           </div>
         </div>
@@ -951,11 +1008,11 @@ const CreateTest: React.FC = () => {
               </button>
               <button
                 type="submit"
-                disabled={saving || generating || questions.length === 0 || rateLimitLoading || activeLimitReached}
+                disabled={saving || generating || questions.length === 0 || (!isEditing && (rateLimitLoading || activeLimitReached))}
                 className={primaryButtonClass}
               >
                 <Save size={16} />
-                <span>{saving ? 'Creating Assessment...' : activeLimitReached ? 'Limit Reached' : 'Publish Assessment'}</span>
+                <span>{saving ? 'Saving...' : isEditing ? 'Save Changes' : activeLimitReached ? 'Limit Reached' : 'Publish Assessment'}</span>
               </button>
             </div>
 
