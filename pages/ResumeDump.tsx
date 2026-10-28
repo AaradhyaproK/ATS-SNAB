@@ -3994,7 +3994,7 @@ const ResumeDump: React.FC = () => {
                       {getHighIntentJobInviteMessage({
                         candidateName: (selectedCandidateIds.length > 0 ? candidates.find(c => selectedCandidateIds.includes(c.id))?.name : filteredCandidates[0]?.name) || 'Candidate Name',
                         jobTitle: activeSelectedJob.title || activeSelectedJob.jobRole || 'Open Position',
-                        jobLink: `${window.location.origin}/candidate?job=${activeSelectedJob.id}`,
+                        jobLink: `${window.location.origin}/candidate?job=${activeSelectedJob.id}${((selectedCandidateIds.length > 0 ? candidates.find(c => selectedCandidateIds.includes(c.id))?.email : filteredCandidates[0]?.email)) ? `&email=${encodeURIComponent((selectedCandidateIds.length > 0 ? candidates.find(c => selectedCandidateIds.includes(c.id))?.email : filteredCandidates[0]?.email) || '')}` : ''}`,
                         location: activeSelectedJob.location || activeSelectedJob.city,
                         experience: activeSelectedJob.experience,
                         salary: activeSelectedJob.salary,
@@ -4038,7 +4038,7 @@ const ResumeDump: React.FC = () => {
                         const targetCand = targetCandidates[0];
                         const candName = targetCand?.name || 'Candidate';
                         const jobTitle = activeSelectedJob.title || activeSelectedJob.jobRole || 'Open Position';
-                        const jobLink = `${window.location.origin}/candidate?job=${activeSelectedJob.id}`;
+                        const jobLink = `${window.location.origin}/candidate?job=${activeSelectedJob.id}${targetCand?.email ? `&email=${encodeURIComponent(targetCand.email)}` : ''}`;
                         const messageText = getHighIntentJobInviteMessage({
                           candidateName: candName,
                           jobTitle,
@@ -4098,7 +4098,7 @@ const ResumeDump: React.FC = () => {
                           customMessageText: (cand: { name: string; phone: string; email?: string }) => getHighIntentJobInviteMessage({
                             candidateName: cand.name || 'Candidate',
                             jobTitle,
-                            jobLink,
+                            jobLink: cand.email ? `${window.location.origin}/candidate?job=${activeSelectedJob.id}&email=${encodeURIComponent(cand.email)}` : jobLink,
                             location: activeSelectedJob.location || activeSelectedJob.city,
                             experience: activeSelectedJob.experience,
                             salary: activeSelectedJob.salary,
@@ -4219,10 +4219,11 @@ const ResumeDump: React.FC = () => {
                         if (inviteDeliveryMode === 'whatsapp_web') {
                           const targetCand = targetCandidates[0];
                           const candName = targetCand?.name || 'Candidate';
+                          const candJobLink = targetCand?.email ? `${interviewLink}&email=${encodeURIComponent(targetCand.email)}` : interviewLink;
                           const messageText = getHighIntentJobInviteMessage({
                             candidateName: candName,
                             jobTitle,
-                            jobLink: interviewLink,
+                            jobLink: candJobLink,
                             location: activeSelectedJob.location || activeSelectedJob.city,
                             experience: activeSelectedJob.experience,
                             salary: activeSelectedJob.salary,
@@ -4273,7 +4274,7 @@ const ResumeDump: React.FC = () => {
                                 customMessageText: (cand: { name: string; phone: string; email?: string }) => getHighIntentJobInviteMessage({
                                   candidateName: cand.name || 'Candidate',
                                   jobTitle,
-                                  jobLink: interviewLink,
+                                  jobLink: cand.email ? `${interviewLink}&email=${encodeURIComponent(cand.email)}` : interviewLink,
                                   location: activeSelectedJob.location || activeSelectedJob.city,
                                   experience: activeSelectedJob.experience,
                                   salary: activeSelectedJob.salary,

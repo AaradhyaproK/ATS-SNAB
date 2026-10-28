@@ -465,8 +465,8 @@ export default function HotLeads() {
           companyName: job?.companyName || job?.company || userProfile?.company || 'Company',
           accessCode: job?.accessCode || job?.jobNo || '',
           interviewLink: (job?.interviewLink && !job.interviewLink.includes('/interview/'))
-            ? job.interviewLink
-            : `${window.location.origin}/candidate?job=${jobId}`,
+            ? (job.interviewLink.includes('?') ? `${job.interviewLink}&email=${encodeURIComponent(email)}` : `${job.interviewLink}?email=${encodeURIComponent(email)}`)
+            : `${window.location.origin}/candidate?job=${jobId}&email=${encodeURIComponent(email)}`,
           deadline,
           isJobActive: job ? isJobStatusActive(job) : true,
           appliedAt: app.appliedAt || app.createdAt,
@@ -503,8 +503,8 @@ export default function HotLeads() {
               companyName: job.companyName || job.company || userProfile?.company || 'Company',
               accessCode: job.accessCode || job.jobNo || '',
               interviewLink: (job.interviewLink && !job.interviewLink.includes('/interview/'))
-                ? job.interviewLink
-                : `${window.location.origin}/candidate?job=${job.id}`,
+                ? (job.interviewLink.includes('?') ? `${job.interviewLink}&email=${encodeURIComponent(email)}` : `${job.interviewLink}?email=${encodeURIComponent(email)}`)
+                : `${window.location.origin}/candidate?job=${job.id}&email=${encodeURIComponent(email)}`,
               deadline,
               isJobActive: isJobStatusActive(job),
               appliedAt: c.appliedAt || c.invitedAt || job.createdAt,
@@ -535,8 +535,8 @@ export default function HotLeads() {
               companyName: job.companyName || job.company || userProfile?.company || 'Company',
               accessCode: job.accessCode || job.jobNo || '',
               interviewLink: (job.interviewLink && !job.interviewLink.includes('/interview/'))
-                ? job.interviewLink
-                : `${window.location.origin}/candidate?job=${job.id}`,
+                ? (job.interviewLink.includes('?') ? `${job.interviewLink}&email=${encodeURIComponent(email)}` : `${job.interviewLink}?email=${encodeURIComponent(email)}`)
+                : `${window.location.origin}/candidate?job=${job.id}&email=${encodeURIComponent(email)}`,
               deadline,
               isJobActive: isJobStatusActive(job),
               appliedAt: job.createdAt,
@@ -1003,7 +1003,7 @@ export default function HotLeads() {
           recruiterName: userProfile?.name || userProfile?.fullname || (user as any)?.displayName || 'Recruiter',
           recruiterPhone: userProfile?.phone || '',
           recruiterEmail: userProfile?.email || user?.email,
-          candidatePortalLink: `${window.location.origin}/candidate?job=${lead.jobId}`,
+          candidatePortalLink: `${window.location.origin}/candidate?job=${lead.jobId}${lead.candidateEmail ? `&email=${encodeURIComponent(lead.candidateEmail)}` : ''}`,
         });
         emailDispatched = emailRes.success;
       }
@@ -1048,7 +1048,7 @@ export default function HotLeads() {
                 scheduleDetails: options?.scheduleDetails,
                 recruiterNotes: options?.recruiterNotes,
                 recruiterName: userProfile?.name || userProfile?.fullname || (user as any)?.displayName || 'Recruiter',
-                candidatePortalLink: `${window.location.origin}/candidate?job=${lead.jobId}`,
+                candidatePortalLink: `${window.location.origin}/candidate?job=${lead.jobId}${lead.candidateEmail ? `&email=${encodeURIComponent(lead.candidateEmail)}` : ''}`,
                 sessionId: activeSessionId,
                 passcode: activePasscode,
               });

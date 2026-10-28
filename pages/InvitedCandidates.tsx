@@ -174,8 +174,8 @@ const InvitedCandidates: React.FC = () => {
                 candidateName: email.split('@')[0] || 'Candidate',
                 jobTitle: selectedInterview.title,
                 interviewLink: (selectedInterview.interviewLink && !selectedInterview.interviewLink.includes('/interview/') && !selectedInterview.interviewLink.includes('/#/interview/'))
-                    ? selectedInterview.interviewLink
-                    : `${window.location.origin}/candidate?job=${selectedInterview.id}`,
+                    ? (selectedInterview.interviewLink.includes('?') ? `${selectedInterview.interviewLink}&email=${encodeURIComponent(email)}` : `${selectedInterview.interviewLink}?email=${encodeURIComponent(email)}`)
+                    : `${window.location.origin}/candidate?job=${selectedInterview.id}&email=${encodeURIComponent(email)}`,
                 accessCode: selectedInterview.accessCode,
                 options: {
                     gender: (selectedInterview as any).gender || (selectedInterview as any).genderRequirement,
@@ -1142,7 +1142,7 @@ const InvitedCandidates: React.FC = () => {
                                                                  onClick={() => {
                                                                      const selectedInterview = interviews.find(i => i.id === candidate.interviewId);
                                                                      if (!selectedInterview) return;
-                                                                     const link = `${window.location.origin}/candidate?job=${selectedInterview.id}`;
+                                                                     const link = `${window.location.origin}/candidate?job=${selectedInterview.id}${candidate.email ? `&email=${encodeURIComponent(candidate.email)}` : ''}`;
                                                                      const msg = `👋 Hi there!\n\nWe're actively hiring for the *${selectedInterview.title}* role and we'd love to invite you to apply for the role! 🌟\n\n🚀 *Apply here:* \n${link}\n\n🔑 *Your Access Code:* \n${selectedInterview.accessCode}\n\nIt only takes a few minutes and you can complete it whenever you're ready. Best of luck! 🎉`;
                                                                      setWhatsappModal({
                                                                          isOpen: true,
