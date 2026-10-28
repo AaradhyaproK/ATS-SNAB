@@ -213,29 +213,29 @@ const RecruiterTests: React.FC = () => {
     };
   }, [tests, submissionsMap]);
 
-  const secondaryButtonClass = "inline-flex h-10 items-center justify-center rounded-full border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-white/5 px-4 font-bold text-xs text-[#111215] dark:text-white transition-all hover:bg-[#F1F3EB] dark:hover:bg-white/10 cursor-pointer shadow-2xs gap-2 disabled:cursor-not-allowed disabled:opacity-40";
-  const primaryButtonClass = "inline-flex h-10 items-center justify-center rounded-full bg-[#111215] text-white hover:bg-[#202227] dark:bg-[#D4F82C] dark:text-[#111215] dark:hover:bg-[#c5ea24] px-5 font-bold text-xs sm:text-sm transition-all shadow-md cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 gap-2";
+  const secondaryButtonClass = "inline-flex h-9 sm:h-10 items-center justify-center rounded-full border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-white/5 px-3 sm:px-4 font-bold text-xs text-[#111215] dark:text-white transition-all hover:bg-[#F1F3EB] dark:hover:bg-white/10 cursor-pointer shadow-2xs gap-1.5 sm:gap-2 shrink-0 disabled:cursor-not-allowed disabled:opacity-40";
+  const primaryButtonClass = "inline-flex h-9 sm:h-10 items-center justify-center rounded-full bg-[#111215] text-white hover:bg-[#202227] dark:bg-[#D4F82C] dark:text-[#111215] dark:hover:bg-[#c5ea24] px-4 sm:px-5 font-bold text-xs sm:text-sm transition-all shadow-md cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 gap-1.5 sm:gap-2 shrink-0";
 
   return (
     <div className="w-full min-h-screen bg-[#F8F9F5] dark:bg-[#0D0E11] text-[#111215] dark:text-[#F8F9F5] font-sans antialiased selection:bg-[#D4F82C] selection:text-[#111215]">
       
       {/* Header */}
-      <header className="border-b border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-[#0D0E11] px-4 py-6 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-3 mb-2">
+      <header className="border-b border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-[#0D0E11] px-4 py-5 sm:py-6 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div className="min-w-0">
+            <div className="flex items-center flex-wrap gap-2 sm:gap-3 mb-2">
               <Link
                 to="/recruiter/jobs"
-                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-white dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 text-[#575A51] dark:text-neutral-300 hover:text-[#111215] dark:hover:text-white hover:border-[#111215] dark:hover:border-white/30 transition-all shadow-2xs"
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-white dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 text-[#575A51] dark:text-neutral-300 hover:text-[#111215] dark:hover:text-white hover:border-[#111215] dark:hover:border-white/30 transition-all shadow-2xs shrink-0"
               >
                 <ArrowLeft size={13} />
                 <span>Dashboard</span>
               </Link>
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 text-[11px] font-bold text-[#111215] dark:text-[#F8F9F5] shadow-2xs">
-                <span className="size-2 rounded-full bg-[#8FB305] dark:bg-[#D4F82C] animate-pulse"></span>
-                <span className="font-mono uppercase text-[10px] text-[#73766C] dark:text-neutral-400">ASSESSMENT STUDIO</span>
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 text-[11px] font-bold text-[#111215] dark:text-[#F8F9F5] shadow-2xs max-w-full">
+                <span className="size-2 rounded-full bg-[#8FB305] dark:bg-[#D4F82C] animate-pulse shrink-0"></span>
+                <span className="font-mono uppercase text-[10px] text-[#73766C] dark:text-neutral-400 shrink-0">ASSESSMENT STUDIO</span>
                 <span className="text-[#E4E7DC] dark:text-white/20">|</span>
-                <span>Screening & Evaluation Hub</span>
+                <span className="truncate">Screening & Evaluation Hub</span>
               </div>
             </div>
 
@@ -247,7 +247,7 @@ const RecruiterTests: React.FC = () => {
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2.5">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 shrink-0">
             <Link
               to="/recruiter/tests/create?type=aptitude"
               onClick={(event) => guardCreateLink(event, 'assessments')}
@@ -279,108 +279,108 @@ const RecruiterTests: React.FC = () => {
         </div>
 
         {assessmentLimitReached && (
-          <div className="max-w-7xl mx-auto mt-4 rounded-2xl border border-red-500/20 bg-red-500/10 p-4 text-xs sm:text-sm font-semibold text-red-600 dark:text-red-400 flex items-center gap-2.5">
-            <AlertCircle size={18} className="shrink-0" />
-            <span>{getRateLimitReachedMessage('assessments')}</span>
+          <div className="max-w-7xl mx-auto mt-4 rounded-2xl border border-red-500/20 bg-red-500/10 p-3.5 sm:p-4 text-xs sm:text-sm font-semibold text-red-600 dark:text-red-400 flex items-start sm:items-center gap-2.5">
+            <AlertCircle size={18} className="shrink-0 mt-0.5 sm:mt-0" />
+            <span className="min-w-0 flex-1 leading-snug">{getRateLimitReachedMessage('assessments')}</span>
           </div>
         )}
       </header>
 
       {/* Main Container */}
-      <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8 space-y-6">
+      <div className="max-w-7xl mx-auto px-4 py-6 sm:py-8 sm:px-6 lg:px-8 space-y-6">
 
         {/* 6 Bento Metric Stat Cards */}
-        <section className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5 sm:gap-4">
+        <section className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3 sm:gap-4">
           
           {/* Total */}
-          <div className="rounded-2xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] p-4 sm:p-5 shadow-xs flex flex-col justify-between">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-[11px] font-bold text-[#73766C] dark:text-neutral-400 uppercase tracking-wider">Total Tests</span>
-              <div className="size-7 rounded-lg bg-[#F8F9F5] dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 flex items-center justify-center text-[#111215] dark:text-white">
-                <Layers size={14} />
+          <div className="rounded-2xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] p-3.5 sm:p-4 xl:p-5 shadow-xs flex flex-col justify-between min-w-0">
+            <div className="flex items-center justify-between mb-2 sm:mb-3 gap-1">
+              <span className="text-[10px] sm:text-[11px] font-bold text-[#73766C] dark:text-neutral-400 uppercase tracking-wider truncate">Total Tests</span>
+              <div className="size-6 sm:size-7 rounded-lg bg-[#F8F9F5] dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 flex items-center justify-center text-[#111215] dark:text-white shrink-0">
+                <Layers size={13} className="sm:w-3.5 sm:h-3.5" />
               </div>
             </div>
-            <div>
-              <p className="text-2xl sm:text-3xl font-black font-mono text-[#111215] dark:text-white">{tests.length}</p>
-              <p className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">Active in bank</p>
+            <div className="min-w-0">
+              <p className="text-xl sm:text-2xl xl:text-3xl font-black font-mono text-[#111215] dark:text-white truncate">{tests.length}</p>
+              <p className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 mt-0.5 truncate">Active in bank</p>
             </div>
           </div>
 
           {/* Aptitude */}
-          <div className="rounded-2xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] p-4 sm:p-5 shadow-xs flex flex-col justify-between">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-[11px] font-bold text-[#73766C] dark:text-neutral-400 uppercase tracking-wider">Aptitude</span>
-              <div className="size-7 rounded-lg bg-[#F4F9EB] dark:bg-emerald-950/20 border border-[#D2E7B3] dark:border-emerald-800/40 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
-                <FileText size={14} />
+          <div className="rounded-2xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] p-3.5 sm:p-4 xl:p-5 shadow-xs flex flex-col justify-between min-w-0">
+            <div className="flex items-center justify-between mb-2 sm:mb-3 gap-1">
+              <span className="text-[10px] sm:text-[11px] font-bold text-[#73766C] dark:text-neutral-400 uppercase tracking-wider truncate">Aptitude</span>
+              <div className="size-6 sm:size-7 rounded-lg bg-[#F4F9EB] dark:bg-emerald-950/20 border border-[#D2E7B3] dark:border-emerald-800/40 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
+                <FileText size={13} className="sm:w-3.5 sm:h-3.5" />
               </div>
             </div>
-            <div>
-              <p className="text-2xl sm:text-3xl font-black font-mono text-[#111215] dark:text-white">{overviewStats.aptitude}</p>
-              <p className="text-[10px] font-medium text-[#73766C] dark:text-neutral-400 mt-0.5">MCQ evaluations</p>
+            <div className="min-w-0">
+              <p className="text-xl sm:text-2xl xl:text-3xl font-black font-mono text-[#111215] dark:text-white truncate">{overviewStats.aptitude}</p>
+              <p className="text-[10px] font-medium text-[#73766C] dark:text-neutral-400 mt-0.5 truncate">MCQ evaluations</p>
             </div>
           </div>
 
           {/* Coding */}
-          <div className="rounded-2xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] p-4 sm:p-5 shadow-xs flex flex-col justify-between">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-[11px] font-bold text-[#73766C] dark:text-neutral-400 uppercase tracking-wider">Coding</span>
-              <div className="size-7 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800/40 flex items-center justify-center text-blue-600 dark:text-blue-400">
-                <Code size={14} />
+          <div className="rounded-2xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] p-3.5 sm:p-4 xl:p-5 shadow-xs flex flex-col justify-between min-w-0">
+            <div className="flex items-center justify-between mb-2 sm:mb-3 gap-1">
+              <span className="text-[10px] sm:text-[11px] font-bold text-[#73766C] dark:text-neutral-400 uppercase tracking-wider truncate">Coding</span>
+              <div className="size-6 sm:size-7 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800/40 flex items-center justify-center text-blue-600 dark:text-blue-400 shrink-0">
+                <Code size={13} className="sm:w-3.5 sm:h-3.5" />
               </div>
             </div>
-            <div>
-              <p className="text-2xl sm:text-3xl font-black font-mono text-[#111215] dark:text-white">{overviewStats.coding}</p>
-              <p className="text-[10px] font-medium text-[#73766C] dark:text-neutral-400 mt-0.5">Coding challenges</p>
+            <div className="min-w-0">
+              <p className="text-xl sm:text-2xl xl:text-3xl font-black font-mono text-[#111215] dark:text-white truncate">{overviewStats.coding}</p>
+              <p className="text-[10px] font-medium text-[#73766C] dark:text-neutral-400 mt-0.5 truncate">Coding challenges</p>
             </div>
           </div>
 
           {/* Submissions */}
-          <div className="rounded-2xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] p-4 sm:p-5 shadow-xs flex flex-col justify-between">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-[11px] font-bold text-[#73766C] dark:text-neutral-400 uppercase tracking-wider">Submissions</span>
-              <div className="size-7 rounded-lg bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-800/40 flex items-center justify-center text-purple-600 dark:text-purple-400">
-                <Users size={14} />
+          <div className="rounded-2xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] p-3.5 sm:p-4 xl:p-5 shadow-xs flex flex-col justify-between min-w-0">
+            <div className="flex items-center justify-between mb-2 sm:mb-3 gap-1">
+              <span className="text-[10px] sm:text-[11px] font-bold text-[#73766C] dark:text-neutral-400 uppercase tracking-wider truncate">Submissions</span>
+              <div className="size-6 sm:size-7 rounded-lg bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-800/40 flex items-center justify-center text-purple-600 dark:text-purple-400 shrink-0">
+                <Users size={13} className="sm:w-3.5 sm:h-3.5" />
               </div>
             </div>
-            <div>
-              <p className="text-2xl sm:text-3xl font-black font-mono text-[#111215] dark:text-white">{overviewStats.submissions}</p>
-              <p className="text-[10px] font-medium text-[#73766C] dark:text-neutral-400 mt-0.5">Candidates tested</p>
+            <div className="min-w-0">
+              <p className="text-xl sm:text-2xl xl:text-3xl font-black font-mono text-[#111215] dark:text-white truncate">{overviewStats.submissions}</p>
+              <p className="text-[10px] font-medium text-[#73766C] dark:text-neutral-400 mt-0.5 truncate">Candidates tested</p>
             </div>
           </div>
 
           {/* Passed */}
-          <div className="rounded-2xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] p-4 sm:p-5 shadow-xs flex flex-col justify-between">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-[11px] font-bold text-[#73766C] dark:text-neutral-400 uppercase tracking-wider">Passed</span>
-              <div className="size-7 rounded-lg bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800/40 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
-                <CheckCircle2 size={14} />
+          <div className="rounded-2xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] p-3.5 sm:p-4 xl:p-5 shadow-xs flex flex-col justify-between min-w-0">
+            <div className="flex items-center justify-between mb-2 sm:mb-3 gap-1">
+              <span className="text-[10px] sm:text-[11px] font-bold text-[#73766C] dark:text-neutral-400 uppercase tracking-wider truncate">Passed</span>
+              <div className="size-6 sm:size-7 rounded-lg bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800/40 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
+                <CheckCircle2 size={13} className="sm:w-3.5 sm:h-3.5" />
               </div>
             </div>
-            <div>
-              <p className="text-2xl sm:text-3xl font-black font-mono text-emerald-600 dark:text-emerald-400">{overviewStats.passed}</p>
-              <p className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">{overviewStats.passRate}% pass rate</p>
+            <div className="min-w-0">
+              <p className="text-xl sm:text-2xl xl:text-3xl font-black font-mono text-emerald-600 dark:text-emerald-400 truncate">{overviewStats.passed}</p>
+              <p className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 mt-0.5 truncate">{overviewStats.passRate}% pass rate</p>
             </div>
           </div>
 
           {/* Avg Score */}
-          <div className="rounded-2xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] p-4 sm:p-5 shadow-xs flex flex-col justify-between">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-[11px] font-bold text-[#73766C] dark:text-neutral-400 uppercase tracking-wider">Avg Score</span>
-              <div className="size-7 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40 flex items-center justify-center text-amber-600 dark:text-amber-400">
-                <TrendingUp size={14} />
+          <div className="rounded-2xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] p-3.5 sm:p-4 xl:p-5 shadow-xs flex flex-col justify-between min-w-0">
+            <div className="flex items-center justify-between mb-2 sm:mb-3 gap-1">
+              <span className="text-[10px] sm:text-[11px] font-bold text-[#73766C] dark:text-neutral-400 uppercase tracking-wider truncate">Avg Score</span>
+              <div className="size-6 sm:size-7 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40 flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0">
+                <TrendingUp size={13} className="sm:w-3.5 sm:h-3.5" />
               </div>
             </div>
-            <div>
-              <p className="text-2xl sm:text-3xl font-black font-mono text-amber-600 dark:text-amber-400">{overviewStats.averageScore}%</p>
-              <p className="text-[10px] font-medium text-[#73766C] dark:text-neutral-400 mt-0.5">Overall cohort</p>
+            <div className="min-w-0">
+              <p className="text-xl sm:text-2xl xl:text-3xl font-black font-mono text-amber-600 dark:text-amber-400 truncate">{overviewStats.averageScore}%</p>
+              <p className="text-[10px] font-medium text-[#73766C] dark:text-neutral-400 mt-0.5 truncate">Overall cohort</p>
             </div>
           </div>
 
         </section>
 
         {/* Filter and Search Bar */}
-        <section className="rounded-2xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] p-3 sm:p-4 shadow-xs flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <div className="relative flex-1 max-w-md">
+        <section className="rounded-2xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] p-3 sm:p-4 shadow-xs flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+          <div className="relative w-full md:flex-1 md:max-w-md min-w-0">
             <Search className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[#73766C]" size={15} />
             <input
               type="text"
@@ -391,9 +391,9 @@ const RecruiterTests: React.FC = () => {
             />
           </div>
 
-          <div className="flex items-center flex-wrap gap-2">
-            <span className="text-xs font-bold text-[#73766C] dark:text-neutral-400 mr-1">Format:</span>
-            <div className="flex p-1 rounded-full border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-[#101114]">
+          <div className="flex items-center flex-wrap gap-2 shrink-0">
+            <span className="text-xs font-bold text-[#73766C] dark:text-neutral-400 mr-1 shrink-0">Format:</span>
+            <div className="flex p-1 rounded-full border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-[#101114] shrink-0">
               {(['All', 'aptitude', 'coding'] as const).map((filter) => (
                 <button
                   key={filter}
@@ -414,7 +414,7 @@ const RecruiterTests: React.FC = () => {
               <button
                 type="button"
                 onClick={() => { setSearchQuery(''); setTypeFilter('All'); }}
-                className="px-3 py-1 text-xs font-bold rounded-full bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400 border border-red-200 dark:border-red-500/20 hover:bg-red-100 transition-colors cursor-pointer"
+                className="px-3 py-1 text-xs font-bold rounded-full bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400 border border-red-200 dark:border-red-500/20 hover:bg-red-100 transition-colors cursor-pointer shrink-0"
               >
                 Clear Filters
               </button>
@@ -478,11 +478,11 @@ const RecruiterTests: React.FC = () => {
               return (
                 <article
                   key={test.id}
-                  className="rounded-3xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] p-5 sm:p-6 shadow-xs hover:shadow-md transition-all space-y-4 hover:border-[#111215]/30 dark:hover:border-white/20"
+                  className="rounded-3xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] p-4 sm:p-6 shadow-xs hover:shadow-md transition-all space-y-4 hover:border-[#111215]/30 dark:hover:border-white/20 min-w-0"
                 >
                   {/* Top Bar: Title, Badges, Actions */}
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-[#E4E7DC] dark:border-white/10">
-                    <div className="flex items-center gap-3">
+                  <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 pb-3 border-b border-[#E4E7DC] dark:border-white/10">
+                    <div className="flex items-start sm:items-center gap-3 min-w-0 flex-1">
                       <div className={`size-10 rounded-2xl flex items-center justify-center font-bold shadow-2xs shrink-0 ${
                         isCoding
                           ? 'bg-blue-50 text-blue-600 dark:bg-blue-950/30 dark:text-blue-400 border border-blue-200 dark:border-blue-800/40'
@@ -491,16 +491,17 @@ const RecruiterTests: React.FC = () => {
                         {isCoding ? <Code size={18} /> : <FileText size={18} />}
                       </div>
 
-                      <div>
+                      <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 flex-wrap">
                           <button
                             type="button"
                             onClick={() => navigate(`/recruiter/tests/${test.id}/results`)}
-                            className="text-base sm:text-lg font-black text-[#111215] dark:text-white hover:text-emerald-600 dark:hover:text-[#D4F82C] text-left transition-colors cursor-pointer"
+                            className="text-base sm:text-lg font-black text-[#111215] dark:text-white hover:text-emerald-600 dark:hover:text-[#D4F82C] text-left transition-colors cursor-pointer truncate max-w-full"
+                            title={test.title}
                           >
                             {test.title}
                           </button>
-                          <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider ${
+                          <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider shrink-0 ${
                             isCoding
                               ? 'bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400 border border-blue-200 dark:border-blue-800/50'
                               : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/50'
@@ -508,13 +509,13 @@ const RecruiterTests: React.FC = () => {
                             {isCoding ? 'Coding' : 'Aptitude'}
                           </span>
                         </div>
-                        <p className="text-xs text-[#73766C] dark:text-neutral-400 mt-0.5">
+                        <p className="text-xs text-[#73766C] dark:text-neutral-400 mt-0.5 truncate">
                           Created on {formatDate(test.createdAt)} • {test.questions?.length || 0} questions
                         </p>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2 shrink-0">
+                    <div className="flex items-center flex-wrap gap-2 shrink-0">
                       <button
                         type="button"
                         onClick={() => navigate(`/recruiter/tests/${test.id}/edit`)}
@@ -535,7 +536,7 @@ const RecruiterTests: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => handleDelete(test.id)}
-                        className="size-10 rounded-full flex items-center justify-center text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 border border-transparent hover:border-red-200 dark:hover:border-red-500/20 transition-all cursor-pointer"
+                        className="size-9 sm:size-10 rounded-full flex items-center justify-center text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 border border-transparent hover:border-red-200 dark:hover:border-red-500/20 transition-all cursor-pointer shrink-0"
                         title="Delete assessment"
                       >
                         <Trash2 size={16} />
@@ -543,36 +544,36 @@ const RecruiterTests: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Metrics & Shareable Link Grid */}
-                  <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
+                  {/* Metrics & Shareable Link Row */}
+                  <div className="flex flex-col 2xl:flex-row 2xl:items-center gap-3 sm:gap-4 pt-1">
                     
-                    {/* Left: Stats Pill Strip (6 cols) */}
-                    <div className="md:col-span-6 grid grid-cols-4 gap-2">
-                      <div className="p-3 rounded-2xl bg-[#F8F9F5] dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 text-center">
-                        <span className="text-[10px] font-bold text-[#73766C] dark:text-neutral-400 block uppercase">Duration</span>
-                        <span className="text-xs sm:text-sm font-black font-mono text-[#111215] dark:text-white">{test.duration || 10}m</span>
+                    {/* Left: Stats Pill Strip */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 2xl:w-auto 2xl:shrink-0 min-w-0">
+                      <div className="p-2 sm:p-2.5 rounded-2xl bg-[#F8F9F5] dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 text-center min-w-[70px]">
+                        <span className="text-[10px] font-bold text-[#73766C] dark:text-neutral-400 block uppercase truncate">Duration</span>
+                        <span className="text-xs sm:text-sm font-black font-mono text-[#111215] dark:text-white truncate block">{test.duration || 10}m</span>
                       </div>
-                      <div className="p-3 rounded-2xl bg-[#F8F9F5] dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 text-center">
-                        <span className="text-[10px] font-bold text-[#73766C] dark:text-neutral-400 block uppercase">Pass Score</span>
-                        <span className="text-xs sm:text-sm font-black font-mono text-emerald-600 dark:text-emerald-400">{test.passingScore || 70}%</span>
+                      <div className="p-2 sm:p-2.5 rounded-2xl bg-[#F8F9F5] dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 text-center min-w-[70px]">
+                        <span className="text-[10px] font-bold text-[#73766C] dark:text-neutral-400 block uppercase truncate">Pass Score</span>
+                        <span className="text-xs sm:text-sm font-black font-mono text-emerald-600 dark:text-emerald-400 truncate block">{test.passingScore || 70}%</span>
                       </div>
-                      <div className="p-3 rounded-2xl bg-[#F8F9F5] dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 text-center">
-                        <span className="text-[10px] font-bold text-[#73766C] dark:text-neutral-400 block uppercase">Submissions</span>
-                        <span className="text-xs sm:text-sm font-black font-mono text-[#111215] dark:text-white">{stats.submissions}</span>
+                      <div className="p-2 sm:p-2.5 rounded-2xl bg-[#F8F9F5] dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 text-center min-w-[70px]">
+                        <span className="text-[10px] font-bold text-[#73766C] dark:text-neutral-400 block uppercase truncate">Submissions</span>
+                        <span className="text-xs sm:text-sm font-black font-mono text-[#111215] dark:text-white truncate block">{stats.submissions}</span>
                       </div>
-                      <div className="p-3 rounded-2xl bg-[#F8F9F5] dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 text-center">
-                        <span className="text-[10px] font-bold text-[#73766C] dark:text-neutral-400 block uppercase">Avg Score</span>
-                        <span className="text-xs sm:text-sm font-black font-mono text-amber-600 dark:text-amber-400">{stats.averageScore}%</span>
+                      <div className="p-2 sm:p-2.5 rounded-2xl bg-[#F8F9F5] dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 text-center min-w-[70px]">
+                        <span className="text-[10px] font-bold text-[#73766C] dark:text-neutral-400 block uppercase truncate">Avg Score</span>
+                        <span className="text-xs sm:text-sm font-black font-mono text-amber-600 dark:text-amber-400 truncate block">{stats.averageScore}%</span>
                       </div>
                     </div>
 
-                    {/* Right: Candidate Links & Access Code (6 cols) */}
-                    <div className="md:col-span-6 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                    {/* Right: Candidate Links & Access Code */}
+                    <div className="flex-1 flex flex-col sm:flex-row items-stretch sm:items-center gap-2 min-w-0">
                       {/* Copy Link Pill */}
-                      <div className="flex-1 flex items-center justify-between px-3.5 py-2.5 rounded-2xl bg-[#F8F9F5] dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10">
-                        <div className="flex items-center gap-2 min-w-0 mr-2">
+                      <div className="flex-1 min-w-0 flex items-center justify-between px-3 py-2 sm:px-3.5 sm:py-2.5 rounded-2xl bg-[#F8F9F5] dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10">
+                        <div className="flex items-center gap-2 min-w-0 mr-2 flex-1 overflow-hidden">
                           <Share2 size={13} className="text-[#8FB305] dark:text-[#D4F82C] shrink-0" />
-                          <span className="text-xs font-mono text-[#575A51] dark:text-neutral-300 truncate">
+                          <span className="text-xs font-mono text-[#575A51] dark:text-neutral-300 truncate select-all">
                             {testLink}
                           </span>
                         </div>
@@ -580,7 +581,7 @@ const RecruiterTests: React.FC = () => {
                           <button
                             type="button"
                             onClick={() => copyToClipboard(testLink, 'Candidate test link copied to clipboard.')}
-                            className="p-1.5 rounded-lg bg-white dark:bg-white/10 hover:bg-[#E4E7DC] text-[#111215] dark:text-white transition-colors cursor-pointer"
+                            className="p-1.5 rounded-lg bg-white dark:bg-white/5 hover:bg-[#E4E7DC] dark:hover:bg-white/15 text-[#111215] dark:text-white transition-colors cursor-pointer border border-[#E4E7DC]/60 dark:border-white/10"
                             title="Copy candidate URL"
                           >
                             <Copy size={13} />
@@ -589,7 +590,7 @@ const RecruiterTests: React.FC = () => {
                             href={testLink}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="p-1.5 rounded-lg bg-white dark:bg-white/10 hover:bg-[#E4E7DC] text-[#111215] dark:text-white transition-colors"
+                            className="p-1.5 rounded-lg bg-white dark:bg-white/5 hover:bg-[#E4E7DC] dark:hover:bg-white/15 text-[#111215] dark:text-white transition-colors border border-[#E4E7DC]/60 dark:border-white/10"
                             title="Preview test in new tab"
                           >
                             <ExternalLink size={13} />
@@ -598,10 +599,10 @@ const RecruiterTests: React.FC = () => {
                       </div>
 
                       {/* Access Code Pill */}
-                      <div className="flex items-center justify-between px-3.5 py-2.5 rounded-2xl bg-[#F8F9F5] dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 shrink-0">
-                        <div className="mr-2">
-                          <span className="text-[9px] font-bold text-[#73766C] dark:text-neutral-400 uppercase block">Code</span>
-                          <span className="text-xs font-mono font-black text-[#111215] dark:text-white">
+                      <div className="flex items-center justify-between px-3 py-2 sm:px-3.5 sm:py-2.5 rounded-2xl bg-[#F8F9F5] dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 shrink-0">
+                        <div className="mr-2.5">
+                          <span className="text-[9px] font-bold text-[#73766C] dark:text-neutral-400 uppercase block leading-none mb-0.5">Code</span>
+                          <span className="text-xs font-mono font-black text-[#111215] dark:text-white leading-none">
                             {test.accessCode || 'NONE'}
                           </span>
                         </div>
@@ -609,7 +610,7 @@ const RecruiterTests: React.FC = () => {
                           <button
                             type="button"
                             onClick={() => copyToClipboard(test.accessCode, 'Access code copied.')}
-                            className="p-1.5 rounded-lg bg-white dark:bg-white/10 hover:bg-[#E4E7DC] text-[#111215] dark:text-white transition-colors cursor-pointer"
+                            className="p-1.5 rounded-lg bg-white dark:bg-white/5 hover:bg-[#E4E7DC] dark:hover:bg-white/15 text-[#111215] dark:text-white transition-colors cursor-pointer border border-[#E4E7DC]/60 dark:border-white/10"
                             title="Copy access code"
                           >
                             <Copy size={13} />

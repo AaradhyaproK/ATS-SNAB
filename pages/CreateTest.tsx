@@ -291,23 +291,23 @@ const CreateTest: React.FC = () => {
     <div className="w-full min-h-screen bg-[#F8F9F5] dark:bg-[#0D0E11] text-[#111215] dark:text-[#F8F9F5] font-sans antialiased selection:bg-[#D4F82C] selection:text-[#111215]">
       
       {/* Top Header */}
-      <header className="border-b border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-[#0D0E11] px-4 py-6 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-3 mb-2">
+      <header className="border-b border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-[#0D0E11] px-4 py-5 sm:py-6 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div className="min-w-0">
+            <div className="flex items-center flex-wrap gap-2 sm:gap-3 mb-2">
               <button
                 type="button"
                 onClick={() => navigate('/recruiter/tests')}
-                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-white dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 text-[#575A51] dark:text-neutral-300 hover:text-[#111215] dark:hover:text-white hover:border-[#111215] dark:hover:border-white/30 transition-all shadow-2xs"
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-white dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 text-[#575A51] dark:text-neutral-300 hover:text-[#111215] dark:hover:text-white hover:border-[#111215] dark:hover:border-white/30 transition-all shadow-2xs shrink-0"
               >
                 <ArrowLeft size={13} />
                 <span>Assessments</span>
               </button>
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 text-[11px] font-bold text-[#111215] dark:text-[#F8F9F5] shadow-2xs">
-                <span className="size-2 rounded-full bg-[#8FB305] dark:bg-[#D4F82C] animate-pulse"></span>
-                <span className="font-mono uppercase text-[10px] text-[#73766C] dark:text-neutral-400">{isEditing ? 'EDIT MODE' : 'STUDIO'}</span>
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 text-[11px] font-bold text-[#111215] dark:text-[#F8F9F5] shadow-2xs max-w-full">
+                <span className="size-2 rounded-full bg-[#8FB305] dark:bg-[#D4F82C] animate-pulse shrink-0"></span>
+                <span className="font-mono uppercase text-[10px] text-[#73766C] dark:text-neutral-400 shrink-0">{isEditing ? 'EDIT MODE' : 'STUDIO'}</span>
                 <span className="text-[#E4E7DC] dark:text-white/20">|</span>
-                <span>{type === 'coding' ? 'Technical Coding Screen' : 'Aptitude & Logic Screen'}</span>
+                <span className="truncate">{type === 'coding' ? 'Technical Coding Screen' : 'Aptitude & Logic Screen'}</span>
               </div>
             </div>
             
@@ -321,7 +321,7 @@ const CreateTest: React.FC = () => {
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
             <button
               type="button"
               onClick={() => navigate('/recruiter/tests')}
@@ -342,19 +342,19 @@ const CreateTest: React.FC = () => {
         </div>
 
         {activeLimitReached && (
-          <div className="max-w-7xl mx-auto mt-4 rounded-2xl border border-red-500/20 bg-red-500/10 p-4 text-xs sm:text-sm font-semibold text-red-600 dark:text-red-400 flex items-center gap-2.5">
-            <AlertCircle size={18} className="shrink-0" />
-            <span>{getRateLimitReachedMessage(activeLimitResource)}</span>
+          <div className="max-w-7xl mx-auto mt-4 rounded-2xl border border-red-500/20 bg-red-500/10 p-3.5 sm:p-4 text-xs sm:text-sm font-semibold text-red-600 dark:text-red-400 flex items-start sm:items-center gap-2.5">
+            <AlertCircle size={18} className="shrink-0 mt-0.5 sm:mt-0" />
+            <span className="min-w-0 flex-1 leading-snug">{getRateLimitReachedMessage(activeLimitResource)}</span>
           </div>
         )}
       </header>
 
       {/* Main 2-Column Bento Workspace */}
-      <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+      <div className="max-w-7xl mx-auto px-4 py-6 sm:py-8 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 lg:gap-8 items-start">
 
           {/* Left Column: Progress & Draft Summary (4 cols) */}
-          <aside className="lg:col-span-4 space-y-6 lg:sticky lg:top-6">
+          <aside className="xl:col-span-4 space-y-6 xl:sticky xl:top-6 min-w-0">
             
             {/* Workflow Card */}
             <div className="rounded-3xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] p-5 sm:p-6 shadow-xs space-y-5">
@@ -455,7 +455,7 @@ const CreateTest: React.FC = () => {
           </aside>
 
           {/* Right Column: Main Form (8 cols) */}
-          <form id="create-assessment-form" onSubmit={handleSave} className="lg:col-span-8 space-y-6">
+          <form id="create-assessment-form" onSubmit={handleSave} className="xl:col-span-8 space-y-6 min-w-0">
 
             {/* SECTION 1: Assessment Profile */}
             <section className="rounded-3xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] p-6 sm:p-8 shadow-xs space-y-6">

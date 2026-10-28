@@ -140,7 +140,7 @@ const TestResults: React.FC = () => {
     const flagged = submissions.filter(
       (s) =>
         s.status === 'terminated' ||
-        (Number(s.tabSwitchCount) || 0) > 0 ||
+        (Number(s.tabSwitchCount ?? s.meta?.tabSwitchCount) || 0) > 0 ||
         (Number(s.copyPasteAttempts) || 0) > 0 ||
         (Number(s.screenshotAttempts) || 0) > 0
     ).length;
@@ -174,7 +174,7 @@ const TestResults: React.FC = () => {
         const isPassed = submission.status === 'passed' || Number(submission.score) >= passingScore;
         const isTerminated = submission.status === 'terminated';
         const hasViolations =
-          (Number(submission.tabSwitchCount) || 0) > 0 ||
+          (Number(submission.tabSwitchCount ?? submission.meta?.tabSwitchCount) || 0) > 0 ||
           (Number(submission.copyPasteAttempts) || 0) > 0 ||
           (Number(submission.screenshotAttempts) || 0) > 0;
 
@@ -314,102 +314,102 @@ const TestResults: React.FC = () => {
       {/* Main Content Area */}
       <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8 space-y-6">
         {/* 5 Bento Metric Stat Cards */}
-        <section className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5 sm:gap-4">
+        <section className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4">
           {/* Card 1: Total Tested */}
-          <div className="rounded-2xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] p-4 sm:p-5 shadow-xs flex flex-col justify-between">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-[11px] font-bold text-[#73766C] dark:text-neutral-400 uppercase tracking-wider">
+          <div className="rounded-2xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] p-3.5 sm:p-4 xl:p-5 shadow-xs flex flex-col justify-between min-w-0">
+            <div className="flex items-center justify-between mb-2 sm:mb-3 gap-1">
+              <span className="text-[10px] sm:text-[11px] font-bold text-[#73766C] dark:text-neutral-400 uppercase tracking-wider truncate">
                 Candidates
               </span>
-              <div className="size-7 rounded-lg bg-[#F8F9F5] dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 flex items-center justify-center text-[#111215] dark:text-white">
-                <Users size={14} />
+              <div className="size-6 sm:size-7 rounded-lg bg-[#F8F9F5] dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 flex items-center justify-center text-[#111215] dark:text-white shrink-0">
+                <Users size={13} className="sm:w-3.5 sm:h-3.5" />
               </div>
             </div>
-            <div>
-              <p className="text-2xl sm:text-3xl font-black font-mono text-[#111215] dark:text-white">
+            <div className="min-w-0">
+              <p className="text-xl sm:text-2xl xl:text-3xl font-black font-mono text-[#111215] dark:text-white truncate">
                 {overviewStats.total}
               </p>
-              <p className="text-[10px] font-medium text-[#73766C] dark:text-neutral-400 mt-0.5">
+              <p className="text-[10px] font-medium text-[#73766C] dark:text-neutral-400 mt-0.5 truncate">
                 Submissions recorded
               </p>
             </div>
           </div>
 
           {/* Card 2: Passed */}
-          <div className="rounded-2xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] p-4 sm:p-5 shadow-xs flex flex-col justify-between">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-[11px] font-bold text-[#73766C] dark:text-neutral-400 uppercase tracking-wider">
+          <div className="rounded-2xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] p-3.5 sm:p-4 xl:p-5 shadow-xs flex flex-col justify-between min-w-0">
+            <div className="flex items-center justify-between mb-2 sm:mb-3 gap-1">
+              <span className="text-[10px] sm:text-[11px] font-bold text-[#73766C] dark:text-neutral-400 uppercase tracking-wider truncate">
                 Passed
               </span>
-              <div className="size-7 rounded-lg bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800/40 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
-                <CheckCircle2 size={14} />
+              <div className="size-6 sm:size-7 rounded-lg bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800/40 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
+                <CheckCircle2 size={13} className="sm:w-3.5 sm:h-3.5" />
               </div>
             </div>
-            <div>
-              <p className="text-2xl sm:text-3xl font-black font-mono text-emerald-600 dark:text-emerald-400">
+            <div className="min-w-0">
+              <p className="text-xl sm:text-2xl xl:text-3xl font-black font-mono text-emerald-600 dark:text-emerald-400 truncate">
                 {overviewStats.passed}
               </p>
-              <p className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">
+              <p className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 mt-0.5 truncate">
                 {overviewStats.passRate}% pass rate
               </p>
             </div>
           </div>
 
           {/* Card 3: Average Score */}
-          <div className="rounded-2xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] p-4 sm:p-5 shadow-xs flex flex-col justify-between">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-[11px] font-bold text-[#73766C] dark:text-neutral-400 uppercase tracking-wider">
+          <div className="rounded-2xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] p-3.5 sm:p-4 xl:p-5 shadow-xs flex flex-col justify-between min-w-0">
+            <div className="flex items-center justify-between mb-2 sm:mb-3 gap-1">
+              <span className="text-[10px] sm:text-[11px] font-bold text-[#73766C] dark:text-neutral-400 uppercase tracking-wider truncate">
                 Avg Score
               </span>
-              <div className="size-7 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40 flex items-center justify-center text-amber-600 dark:text-amber-400">
-                <TrendingUp size={14} />
+              <div className="size-6 sm:size-7 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40 flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0">
+                <TrendingUp size={13} className="sm:w-3.5 sm:h-3.5" />
               </div>
             </div>
-            <div>
-              <p className="text-2xl sm:text-3xl font-black font-mono text-amber-600 dark:text-amber-400">
+            <div className="min-w-0">
+              <p className="text-xl sm:text-2xl xl:text-3xl font-black font-mono text-amber-600 dark:text-amber-400 truncate">
                 {overviewStats.averageScore}%
               </p>
-              <p className="text-[10px] font-medium text-[#73766C] dark:text-neutral-400 mt-0.5">
+              <p className="text-[10px] font-medium text-[#73766C] dark:text-neutral-400 mt-0.5 truncate">
                 Cohort benchmark
               </p>
             </div>
           </div>
 
           {/* Card 4: Passing Threshold */}
-          <div className="rounded-2xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] p-4 sm:p-5 shadow-xs flex flex-col justify-between">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-[11px] font-bold text-[#73766C] dark:text-neutral-400 uppercase tracking-wider">
+          <div className="rounded-2xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] p-3.5 sm:p-4 xl:p-5 shadow-xs flex flex-col justify-between min-w-0">
+            <div className="flex items-center justify-between mb-2 sm:mb-3 gap-1">
+              <span className="text-[10px] sm:text-[11px] font-bold text-[#73766C] dark:text-neutral-400 uppercase tracking-wider truncate">
                 Pass Mark
               </span>
-              <div className="size-7 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800/40 flex items-center justify-center text-blue-600 dark:text-blue-400">
-                <Target size={14} />
+              <div className="size-6 sm:size-7 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800/40 flex items-center justify-center text-blue-600 dark:text-blue-400 shrink-0">
+                <Target size={13} className="sm:w-3.5 sm:h-3.5" />
               </div>
             </div>
-            <div>
-              <p className="text-2xl sm:text-3xl font-black font-mono text-[#111215] dark:text-white">
+            <div className="min-w-0">
+              <p className="text-xl sm:text-2xl xl:text-3xl font-black font-mono text-[#111215] dark:text-white truncate">
                 {passingScore}%
               </p>
-              <p className="text-[10px] font-medium text-[#73766C] dark:text-neutral-400 mt-0.5">
+              <p className="text-[10px] font-medium text-[#73766C] dark:text-neutral-400 mt-0.5 truncate">
                 {test?.duration || 10}m duration
               </p>
             </div>
           </div>
 
           {/* Card 5: Integrity Violations */}
-          <div className="rounded-2xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] p-4 sm:p-5 shadow-xs flex flex-col justify-between col-span-2 sm:col-span-1">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-[11px] font-bold text-[#73766C] dark:text-neutral-400 uppercase tracking-wider">
+          <div className="rounded-2xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] p-3.5 sm:p-4 xl:p-5 shadow-xs flex flex-col justify-between col-span-2 sm:col-span-1 min-w-0">
+            <div className="flex items-center justify-between mb-2 sm:mb-3 gap-1">
+              <span className="text-[10px] sm:text-[11px] font-bold text-[#73766C] dark:text-neutral-400 uppercase tracking-wider truncate">
                 Integrity Alerts
               </span>
-              <div className="size-7 rounded-lg bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-800/40 flex items-center justify-center text-purple-600 dark:text-purple-400">
-                <ShieldCheck size={14} />
+              <div className="size-6 sm:size-7 rounded-lg bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-800/40 flex items-center justify-center text-purple-600 dark:text-purple-400 shrink-0">
+                <ShieldCheck size={13} className="sm:w-3.5 sm:h-3.5" />
               </div>
             </div>
-            <div>
-              <p className={`text-2xl sm:text-3xl font-black font-mono ${overviewStats.flagged > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+            <div className="min-w-0">
+              <p className={`text-xl sm:text-2xl xl:text-3xl font-black font-mono truncate ${overviewStats.flagged > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
                 {overviewStats.flagged}
               </p>
-              <p className="text-[10px] font-medium text-[#73766C] dark:text-neutral-400 mt-0.5">
+              <p className="text-[10px] font-medium text-[#73766C] dark:text-neutral-400 mt-0.5 truncate">
                 {overviewStats.flagged > 0 ? 'Tab switches / alerts' : 'Clean proctoring'}
               </p>
             </div>
@@ -417,8 +417,8 @@ const TestResults: React.FC = () => {
         </section>
 
         {/* Filter and Search Bar */}
-        <section className="rounded-2xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] p-3 sm:p-4 shadow-xs flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <div className="relative flex-1 max-w-md">
+        <section className="rounded-2xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] p-3 sm:p-4 shadow-xs flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+          <div className="relative w-full md:flex-1 md:max-w-md min-w-0">
             <Search className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[#73766C]" size={15} />
             <input
               type="text"
@@ -551,7 +551,7 @@ const TestResults: React.FC = () => {
                     const score = Number(submission.score) || 0;
                     const isTerminated = submission.status === 'terminated';
                     const isPassed = !isTerminated && (submission.status === 'passed' || score >= passingScore);
-                    const tabSwitchCount = Number(submission.tabSwitchCount) || 0;
+                    const tabSwitchCount = Number(submission.tabSwitchCount ?? submission.meta?.tabSwitchCount) || 0;
 
                     return (
                       <tr
@@ -619,7 +619,7 @@ const TestResults: React.FC = () => {
                                 <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400 border border-amber-200 dark:border-amber-800/30">
                                   <AlertTriangle size={11} />
                                   <span>
-                                    {tabSwitchCount} switch{tabSwitchCount === 1 ? '' : 'es'}
+                                    {tabSwitchCount} tab switch{tabSwitchCount === 1 ? '' : 'es'}
                                   </span>
                                 </span>
                               )}
@@ -643,7 +643,7 @@ const TestResults: React.FC = () => {
                           ) : (
                             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/30">
                               <ShieldCheck size={12} />
-                              <span>Clean</span>
+                              <span>0 tab switches (Clean)</span>
                             </span>
                           )}
                         </td>
@@ -756,6 +756,19 @@ const TestResults: React.FC = () => {
               <div className="flex items-center gap-3">
                 <div className="text-right">
                   <span className="text-[10px] uppercase font-bold text-[#73766C] dark:text-neutral-400 block">
+                    Tab Switches
+                  </span>
+                  <span className={`font-mono text-sm font-black flex items-center justify-end gap-1 ${
+                    Number(selectedSubmission.tabSwitchCount ?? selectedSubmission.meta?.tabSwitchCount ?? 0) > 0
+                      ? 'text-amber-600 dark:text-amber-400'
+                      : 'text-emerald-600 dark:text-emerald-400'
+                  }`}>
+                    {Number(selectedSubmission.tabSwitchCount ?? selectedSubmission.meta?.tabSwitchCount ?? 0)}
+                  </span>
+                </div>
+
+                <div className="text-right">
+                  <span className="text-[10px] uppercase font-bold text-[#73766C] dark:text-neutral-400 block">
                     Final Score
                   </span>
                   <span className="font-mono text-lg font-black text-[#111215] dark:text-[#D4F82C]">
@@ -774,6 +787,17 @@ const TestResults: React.FC = () => {
 
             {/* Questions Sheet Content */}
             <div className="p-5 sm:p-6 max-h-[70vh] overflow-y-auto space-y-4">
+              {Number(selectedSubmission.tabSwitchCount ?? selectedSubmission.meta?.tabSwitchCount ?? 0) > 0 && (
+                <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/25 text-amber-800 dark:text-amber-300 flex items-center justify-between text-xs font-bold">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle size={16} className="text-amber-500 shrink-0" />
+                    <span>Candidate switched tabs or lost window focus during this assessment.</span>
+                  </div>
+                  <span className="px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-300 font-mono text-[11px]">
+                    {Number(selectedSubmission.tabSwitchCount ?? selectedSubmission.meta?.tabSwitchCount ?? 0)} tab switch{Number(selectedSubmission.tabSwitchCount ?? selectedSubmission.meta?.tabSwitchCount ?? 0) === 1 ? '' : 'es'}
+                  </span>
+                </div>
+              )}
               {test.questions?.map((question: any, index: number) => {
                 const candidateAnswerIndex = selectedSubmission.answers?.[index];
                 const isCorrectAnswer = question.correctIndex !== undefined && candidateAnswerIndex === question.correctIndex;
