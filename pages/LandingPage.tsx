@@ -255,7 +255,7 @@ const FAQ_ITEMS = [
   },
   {
     q: 'How does the AI Video Interview work and what does it cost?',
-    a: 'Our autonomous AI interviewer conducts live, interactive spoken video interviews with candidates 24/7. It asks dynamic technical cross-questions, records full-length HD video with live word-for-word transcripts, enforces anti-cheat verification, and automatically generates personalized evaluation reports with executive scorecards. Pricing is fully dynamic: starting at ₹149 per interview for low volume, scaling down to ₹119 per interview for volume screening (1,000+ candidates) — saving you over 80% compared to manual recruiter calls.',
+    a: 'Our autonomous AI interviewer conducts live, interactive spoken video interviews with candidates 24/7. It asks dynamic technical cross-questions, records full-length HD video with live word-for-word transcripts, enforces anti-cheat verification, and automatically generates personalized evaluation reports with executive scorecards. Pricing is fully dynamic: starting at ₹149 per interview for low volume, scaling down to ₹119 per interview for volume screening (1,000+ candidates) — saving you over 80% compared to manual recruiter phone interviews.',
   },
   {
     q: 'How is candidate data secured and privacy preserved?',
@@ -2503,7 +2503,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── SECTION 6: PRICING ESTIMATOR CARD ── */}
-      <section id="pricing" className="relative z-60 min-h-[auto] sm:min-h-[calc(100vh-4.5rem)] flex flex-col justify-center bg-[#F8F9F5] scroll-mt-18 transition-all duration-300 overflow-x-clip py-10 sm:py-16">
+      <section id="pricing" className="relative z-60 min-h-[auto] sm:min-h-[calc(100vh-4.5rem)] flex flex-col justify-center bg-[#F8F9F5] scroll-mt-24 transition-all duration-300 overflow-x-clip pt-16 sm:pt-24 pb-12 sm:pb-20">
         <OrganicSectionCurve index={6} progress={sectionProgresses[6]} />
         <div className="flex-1 flex flex-col justify-center py-6 sm:py-8 px-4 sm:px-8 lg:px-12 max-w-7xl mx-auto w-full relative z-10">
           
@@ -2559,30 +2559,44 @@ export default function LandingPage() {
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 items-start">
               
               {/* Left: AI Interview Volume Calculator */}
-              <div className="lg:col-span-7 bg-white rounded-2xl border border-[#E4E7DC] p-5 sm:p-6 space-y-5 shadow-sm">
-                <div className="flex items-center justify-between pb-3 border-b border-[#E4E7DC]">
+              <div className="lg:col-span-7 bg-white rounded-3xl border border-[#E4E7DC] p-6 sm:p-7 space-y-6 shadow-sm">
+                
+                {/* Header with Title & Rate Badge */}
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-4 border-b border-[#E4E7DC]">
                   <div>
-                    <h3 className="text-base font-black text-[#111215]">Estimate Your AI Screening Investment</h3>
-                    <p className="text-xs text-[#73766C]">Dynamic volume rates: ₹149 for low volume, scaling down to ₹119 for 1,000+ volume.</p>
+                    <h3 className="text-lg font-black text-[#111215] tracking-tight">Estimate Your AI Interview Investment</h3>
+                    <p className="text-xs text-[#73766C] mt-0.5">Dynamic volume rates: ₹149 for low volume, scaling down to ₹119 for 1,000+ volume.</p>
                   </div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="px-2.5 py-1 rounded-full bg-[#111215] text-[#D4F82C] text-xs font-black shadow-xs">
-                      ₹{aiInterviewCalc.ratePerInterview} / Interview
-                    </span>
+                  <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
                     {aiInterviewCalc.ratePerInterview < 149 && (
-                      <span className="hidden sm:inline-flex px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold">
-                        Save ₹{149 - aiInterviewCalc.ratePerInterview}/int.
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-[11px] font-bold">
+                        <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                        <span>Save ₹{149 - aiInterviewCalc.ratePerInterview} / interview</span>
                       </span>
                     )}
+                    <div className="px-3.5 py-1.5 rounded-xl bg-[#111215] text-[#D4F82C] text-xs font-black shadow-xs flex items-baseline gap-1">
+                      <span>₹{aiInterviewCalc.ratePerInterview}</span>
+                      <span className="text-[10px] font-medium text-neutral-300">/ interview</span>
+                    </div>
                   </div>
                 </div>
 
-                {/* Candidate Interview Volume Slider & Input */}
-                <div>
-                  <div className="flex items-center justify-between text-xs font-bold mb-2">
+                {/* Candidate Interview Volume Slider & Custom Number Stepper */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between text-xs font-bold">
                     <span className="text-[#111215]">Planned Candidate Interviews</span>
-                    <div className="flex items-center gap-2">
-                      <div className="flex items-center rounded-lg border border-[#E4E7DC] bg-[#F8F9F5] px-2 py-0.5 focus-within:border-black focus-within:bg-white transition-all shadow-2xs">
+                    
+                    {/* Stepper / Input Control */}
+                    <div className="flex items-center gap-1.5 bg-[#F8F9F5] p-1 rounded-xl border border-[#E4E7DC] shadow-2xs">
+                      <button
+                        type="button"
+                        onClick={() => setCalcAiInterviews(Math.max(10, calcAiInterviews - 10))}
+                        className="size-7 rounded-lg bg-white border border-[#E4E7DC] hover:border-black/30 text-[#111215] font-black flex items-center justify-center transition-colors cursor-pointer text-sm"
+                        title="Decrease by 10 interviews"
+                      >
+                        –
+                      </button>
+                      <div className="flex items-center px-1">
                         <input
                           type="number"
                           min={1}
@@ -2592,84 +2606,122 @@ export default function LandingPage() {
                             const val = parseInt(e.target.value);
                             setCalcAiInterviews(isNaN(val) ? 1 : Math.max(1, Math.min(5000, val)));
                           }}
-                          className="w-16 bg-transparent text-right font-mono text-xs font-bold text-[#111215] outline-none"
+                          className="w-14 bg-transparent text-center font-mono text-xs font-bold text-[#111215] outline-none"
                         />
-                        <span className="ml-1 text-[11px] text-[#73766C] font-semibold">calls</span>
+                        <span className="text-[11px] font-semibold text-[#73766C]">interviews</span>
                       </div>
-                      <span className="px-2.5 py-1 rounded bg-[#111215] text-[#D4F82C] font-black text-xs">
-                        ₹{aiInterviewCalc.ratePerInterview} INR / interview
-                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setCalcAiInterviews(Math.min(5000, calcAiInterviews + 10))}
+                        className="size-7 rounded-lg bg-white border border-[#E4E7DC] hover:border-black/30 text-[#111215] font-black flex items-center justify-center transition-colors cursor-pointer text-sm"
+                        title="Increase by 10 interviews"
+                      >
+                        +
+                      </button>
                     </div>
                   </div>
-                  <input
-                    type="range"
-                    min={10}
-                    max={1000}
-                    step={10}
-                    value={Math.min(1000, calcAiInterviews)}
-                    onChange={(e) => setCalcAiInterviews(parseInt(e.target.value))}
-                    className="w-full accent-[#111215] cursor-pointer"
-                  />
-                  <div className="flex justify-between text-[10px] text-[#73766C] mt-1.5 font-mono">
-                    <span>10 (₹149)</span>
-                    <span>50 (₹139)</span>
-                    <span>200 (₹129)</span>
-                    <span>500 (₹124)</span>
-                    <span className="font-bold text-[#111215]">1,000+ (₹119)</span>
+
+                  {/* Filled Dynamic Range Slider */}
+                  <div className="relative pt-2 pb-1">
+                    <input
+                      type="range"
+                      min={10}
+                      max={1000}
+                      step={10}
+                      value={Math.min(1000, calcAiInterviews)}
+                      onChange={(e) => setCalcAiInterviews(parseInt(e.target.value))}
+                      style={{
+                        background: `linear-gradient(to right, #111215 ${Math.min(100, Math.max(0, ((calcAiInterviews - 10) / (1000 - 10)) * 100))}%, #E4E7DC ${Math.min(100, Math.max(0, ((calcAiInterviews - 10) / (1000 - 10)) * 100))}%)`
+                      }}
+                      className="w-full h-2 rounded-full appearance-none cursor-pointer accent-[#111215]"
+                    />
+                  </div>
+
+                  {/* Interactive Milestone Ticks */}
+                  <div className="grid grid-cols-5 text-center gap-1 pt-0.5">
+                    {[
+                      { count: 10, rate: '₹149' },
+                      { count: 50, rate: '₹139' },
+                      { count: 200, rate: '₹129' },
+                      { count: 500, rate: '₹124' },
+                      { count: 1000, rate: '₹119' },
+                    ].map(tick => {
+                      const isActive = calcAiInterviews === tick.count;
+                      return (
+                        <button
+                          key={tick.count}
+                          type="button"
+                          onClick={() => setCalcAiInterviews(tick.count)}
+                          className={`py-1 rounded-lg text-[10px] font-mono transition-all cursor-pointer ${
+                            isActive
+                              ? 'bg-[#111215] text-[#D4F82C] font-black shadow-xs'
+                              : 'text-[#73766C] hover:text-[#111215] hover:bg-slate-100'
+                          }`}
+                        >
+                          <span className="block font-bold">{tick.count >= 1000 ? '1,000+' : tick.count}</span>
+                          <span className="text-[9px] opacity-80">({tick.rate})</span>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 
                 {/* Quick Preset Packs */}
                 <div>
-                  <span className="text-[11px] font-bold text-[#73766C] uppercase tracking-wider block mb-2">Popular Volume Packs</span>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  <span className="text-[11px] font-bold text-[#73766C] uppercase tracking-wider block mb-2.5">Popular Volume Packs</span>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                     {[
-                      { count: 10, label: 'Starter Pack', rate: '₹149 INR / int.', price: '₹1,490 INR', badge: 'Base' },
-                      { count: 50, label: 'Growth Pack', rate: '₹139 INR / int.', price: '₹6,950 INR', badge: 'Save ₹500' },
-                      { count: 200, label: 'Scale Pack', rate: '₹129 INR / int.', price: '₹25,800 INR', badge: 'Save ₹4,000' },
-                      { count: 1000, label: 'Enterprise', rate: '₹119 INR / int.', price: '₹1,19,000 INR', badge: 'Save ₹30,000' }
-                    ].map(pack => (
-                      <button
-                        key={pack.count}
-                        type="button"
-                        onClick={() => setCalcAiInterviews(pack.count)}
-                        className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
-                          calcAiInterviews === pack.count
-                            ? 'border-[#111215] bg-[#111215] text-white shadow-xs'
-                            : 'border-[#E4E7DC] bg-[#F8F9F5] text-[#111215] hover:border-black/30'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <p className="text-[11px] font-bold">{pack.label}</p>
-                          <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded ${
-                            calcAiInterviews === pack.count ? 'bg-[#D4F82C] text-[#111215]' : 'bg-[#E4E7DC] text-[#575A51]'
-                          }`}>
-                            {pack.badge}
-                          </span>
-                        </div>
-                        <p className={`text-xs font-black mt-1 ${calcAiInterviews === pack.count ? 'text-[#D4F82C]' : 'text-neutral-900'}`}>{pack.price}</p>
-                        <p className="text-[10px] opacity-75">{pack.count} calls • {pack.rate}</p>
-                      </button>
-                    ))}
+                      { count: 10, label: 'Starter Pack', rate: '₹149 / interview', price: '₹1,490 INR', badge: 'Base Tier' },
+                      { count: 50, label: 'Growth Pack', rate: '₹139 / interview', price: '₹6,950 INR', badge: 'Save ₹500' },
+                      { count: 200, label: 'Scale Pack', rate: '₹129 / interview', price: '₹25,800 INR', badge: 'Save ₹4,000' },
+                      { count: 1000, label: 'Enterprise', rate: '₹119 / interview', price: '₹1,19,000 INR', badge: 'Save ₹30,000' }
+                    ].map(pack => {
+                      const isSelected = calcAiInterviews === pack.count;
+                      return (
+                        <button
+                          key={pack.count}
+                          type="button"
+                          onClick={() => setCalcAiInterviews(pack.count)}
+                          className={`p-3 rounded-2xl border text-left transition-all cursor-pointer relative flex flex-col justify-between ${
+                            isSelected
+                              ? 'border-[#111215] bg-[#111215] text-white shadow-md ring-1 ring-black'
+                              : 'border-[#E4E7DC] bg-[#F8F9F5] text-[#111215] hover:bg-white hover:border-black/30'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between mb-1.5">
+                            <p className="text-[11px] font-bold tracking-tight">{pack.label}</p>
+                            <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-md ${
+                              isSelected ? 'bg-[#D4F82C] text-[#111215]' : 'bg-[#E4E7DC] text-[#575A51]'
+                            }`}>
+                              {pack.badge}
+                            </span>
+                          </div>
+                          <p className={`text-sm font-black ${isSelected ? 'text-[#D4F82C]' : 'text-neutral-900'}`}>{pack.price}</p>
+                          <p className={`text-[10px] mt-0.5 ${isSelected ? 'text-neutral-300' : 'text-[#73766C]'}`}>
+                            {pack.count >= 1000 ? '1,000' : pack.count} interviews • {pack.rate}
+                          </p>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 
                 {/* Direct ROI Comparison */}
-                <div className="p-4 rounded-xl bg-[#F8F9F5] border border-[#E4E7DC] space-y-2">
+                <div className="p-4 sm:p-5 rounded-2xl bg-[#F8F9F5] border border-[#E4E7DC] space-y-2.5">
                   <div className="flex items-center justify-between text-xs">
-                    <span className="text-[#73766C]">Manual Recruiter Screening Cost (~₹750/call):</span>
-                    <span className="line-through text-rose-600 font-bold">₹{aiInterviewCalc.manualScreeningCost.toLocaleString('en-IN')}</span>
+                    <span className="text-[#73766C]">Manual Recruiter Screening (~₹750 / interview):</span>
+                    <span className="line-through text-rose-600 font-bold">₹{aiInterviewCalc.manualScreeningCost.toLocaleString('en-IN')} INR</span>
                   </div>
                   <div className="flex items-center justify-between text-xs">
-                    <span className="text-[#73766C]">InterviewXpert Dynamic AI Screening:</span>
-                    <span className="text-emerald-700 font-black text-sm">₹{aiInterviewCalc.totalCost.toLocaleString('en-IN')} INR</span>
+                    <span className="text-[#73766C]">InterviewXpert Autonomous AI Video:</span>
+                    <span className="text-[#111215] font-black text-sm">₹{aiInterviewCalc.totalCost.toLocaleString('en-IN')} INR</span>
                   </div>
-                  <div className="pt-2 border-t border-[#E4E7DC] flex items-center justify-between text-xs font-bold text-[#111215]">
-                    <span className="flex items-center gap-1.5 text-emerald-700 font-black">
-                      <Zap size={14} className="fill-current" />
+                  <div className="pt-2.5 border-t border-[#E4E7DC] flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-xs">
+                    <span className="flex items-center gap-1.5 text-emerald-800 font-black">
+                      <Zap size={14} className="fill-emerald-600 text-emerald-600" />
                       <span>Net Savings ({aiInterviewCalc.savingsPercent}%):</span>
                     </span>
-                    <span className="text-emerald-700 font-black">
+                    <span className="text-emerald-800 font-black">
                       Save ₹{aiInterviewCalc.savingsAmount.toLocaleString('en-IN')} INR & {aiInterviewCalc.recruiterHoursSaved} Recruiter Hours!
                     </span>
                   </div>
@@ -2678,82 +2730,71 @@ export default function LandingPage() {
               </div>
 
               {/* Right: AI Interview Plan Details Card */}
-              <div className="lg:col-span-5 rounded-2xl border border-[#111215] bg-[#111215] text-white p-5 sm:p-6 space-y-4 shadow-xl">
-                <div className="flex items-center justify-between pb-3 border-b border-white/10">
+              <div className="lg:col-span-5 rounded-3xl border border-white/10 bg-gradient-to-b from-[#181B22] to-[#0E1015] text-white p-6 sm:p-7 space-y-5 shadow-2xl relative overflow-hidden">
+                {/* Subtle Ambient Accent Glow */}
+                <div className="absolute top-0 right-0 w-48 h-48 bg-[#D4F82C]/10 rounded-full blur-2xl pointer-events-none -mr-16 -mt-16" />
+
+                <div className="flex items-center justify-between pb-3.5 border-b border-white/10 relative z-10">
                   <div>
-                    <span className="text-[10px] uppercase tracking-wider text-[#D4F82C] font-bold">Dynamic Pay-Per-Interview</span>
-                    <h3 className="text-xl font-black text-white">AI Video Screening Pack</h3>
+                    <span className="text-[10px] uppercase tracking-wider text-[#D4F82C] font-black">Dynamic Pay-Per-Interview</span>
+                    <h3 className="text-xl font-black text-white tracking-tight">AI Video Screening Pack</h3>
                   </div>
-                  <div className="px-2.5 py-1 rounded bg-[#D4F82C] text-[#111215] text-xs font-black">
+                  <div className="px-3 py-1.5 rounded-xl bg-[#D4F82C] text-[#111215] text-xs font-black shadow-xs">
                     ₹{aiInterviewCalc.ratePerInterview} INR / interview
                   </div>
                 </div>
 
-                <div>
-                  <div className="text-3xl font-black text-white">
-                    ₹{aiInterviewCalc.totalCost.toLocaleString('en-IN')}
-                    <span className="text-xs text-slate-400 font-normal"> for {aiInterviewCalc.count} interviews</span>
+                <div className="relative z-10 space-y-1">
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-3xl sm:text-4xl font-black text-white tracking-tight">
+                      ₹{aiInterviewCalc.totalCost.toLocaleString('en-IN')}
+                    </span>
+                    <span className="text-xs text-neutral-400 font-normal">for {aiInterviewCalc.count} interviews</span>
                   </div>
-                  <div className="text-xs text-[#D4F82C] font-semibold mt-1">
-                    Pay strictly per completed interview • Credits never expire
+                  <div className="text-xs text-[#D4F82C] font-semibold flex items-center gap-1.5 pt-0.5">
+                    <span className="size-1.5 rounded-full bg-[#D4F82C] animate-pulse" />
+                    <span>Pay strictly per completed interview • Credits never expire</span>
                   </div>
                   {aiInterviewCalc.volumeDiscount > 0 ? (
-                    <div className="text-[11px] text-emerald-400 font-semibold mt-0.5">
+                    <div className="text-[11px] text-emerald-400 font-semibold pt-1">
                       Volume discount unlocked: Saved ₹{aiInterviewCalc.volumeDiscount.toLocaleString('en-IN')} vs base rate (₹149)!
                     </div>
                   ) : (
-                    <div className="text-[11px] text-slate-400 font-normal mt-0.5">
-                      Base rate applied (₹149/interview). Scale up to 1,000+ interviews to unlock ₹119/interview.
+                    <div className="text-[11px] text-neutral-400 font-normal pt-1">
+                      Base rate applied (₹149 / interview). Scale up to 1,000+ interviews to unlock ₹119 / interview.
                     </div>
                   )}
                   {calcAiInterviews >= 1000 && (
-                    <div className="text-[11px] text-[#D4F82C] font-bold mt-1">
+                    <div className="text-[11px] text-[#D4F82C] font-bold">
                       ★ Max Volume Tier Active (₹119 / interview)
                     </div>
                   )}
                 </div>
 
-                {/* What's Included (100% Promotional Benefits, Zero tech jargon) */}
-                <div className="space-y-2 text-xs text-slate-300 pt-3 border-t border-white/10">
-                  <div className="flex items-center gap-2">
-                    <Check className="size-3.5 text-[#D4F82C] shrink-0" />
-                    <span>Personalised candidate evaluation reports & scorecards</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Check className="size-3.5 text-[#D4F82C] shrink-0" />
-                    <span>Real-time searchable word-for-word live transcripts</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Check className="size-3.5 text-[#D4F82C] shrink-0" />
-                    <span>Permanent 1080p HD video & audio cloud storage</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Check className="size-3.5 text-[#D4F82C] shrink-0" />
-                    <span>Complete anti-cheat evidence & tab-switch audit logs</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Check className="size-3.5 text-[#D4F82C] shrink-0" />
-                    <span>Automated WhatsApp & email invitations & smart reminders</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Check className="size-3.5 text-[#D4F82C] shrink-0" />
-                    <span>Dynamic in-depth technical cross-questioning</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Check className="size-3.5 text-[#D4F82C] shrink-0" />
-                    <span>Communication fluency, speaking pace (WPM) & filler metrics</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Check className="size-3.5 text-[#D4F82C] shrink-0" />
-                    <span>Instant 1-click shareable client dossier link</span>
-                  </div>
+                {/* What's Included */}
+                <div className="space-y-2.5 text-xs text-neutral-300 pt-3.5 border-t border-white/10 relative z-10">
+                  {[
+                    'Personalised candidate evaluation reports & scorecards',
+                    'Real-time searchable word-for-word live transcripts',
+                    'Permanent 1080p HD video & audio cloud storage',
+                    'Complete anti-cheat evidence & tab-switch audit logs',
+                    'Automated WhatsApp & email invitations & smart reminders',
+                    'Dynamic in-depth technical cross-questioning',
+                    'Communication fluency, speaking pace (WPM) & filler metrics',
+                    'Instant 1-click shareable client dossier link',
+                  ].map((feature, i) => (
+                    <div key={i} className="flex items-center gap-2.5">
+                      <CheckCircle2 size={15} className="text-[#D4F82C] shrink-0" />
+                      <span>{feature}</span>
+                    </div>
+                  ))}
                 </div>
 
-                <div className="pt-3 border-t border-white/10 space-y-2">
+                <div className="pt-3.5 border-t border-white/10 space-y-2.5 relative z-10">
                   <button
                     type="button"
                     onClick={() => setBookingModalOpen(true)}
-                    className="w-full py-3 rounded-full bg-[#D4F82C] hover:bg-[#bde023] text-[#111215] text-xs font-black transition-all cursor-pointer shadow-sm flex items-center justify-center gap-2"
+                    className="w-full py-3.5 rounded-full bg-[#D4F82C] hover:bg-[#bde023] text-[#111215] text-xs font-black transition-all cursor-pointer shadow-md shadow-[#D4F82C]/10 flex items-center justify-center gap-2 hover:scale-[1.01] active:scale-[0.99]"
                   >
                     <span>Get Started • Buy AI Interview Credits</span>
                     <ArrowRight size={14} />
