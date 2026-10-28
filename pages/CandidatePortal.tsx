@@ -3869,6 +3869,24 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
 
                   <button
                     type="button"
+                    onClick={() => setActiveTab('matches')}
+                    className={`w-full flex items-center justify-between px-3 py-2 rounded-xl transition-all cursor-pointer ${
+                      activeTab === 'matches'
+                        ? 'bg-[#111215] text-white dark:bg-[#D4F82C] dark:text-[#111215]'
+                        : 'hover:bg-[#F8F9F5] dark:hover:bg-white/5 text-[#575A51] dark:text-neutral-300'
+                    }`}
+                  >
+                    <span className="flex items-center gap-2">
+                      <Sparkles size={14} />
+                      <span>Matched Roles</span>
+                    </span>
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-black/10 dark:bg-white/10">
+                      {matchedJobs.length}
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
                     onClick={() => setActiveTab('applied')}
                     className={`w-full flex items-center justify-between px-3 py-2 rounded-xl transition-all cursor-pointer ${
                       activeTab === 'applied'
@@ -3912,24 +3930,6 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
                     <span className="flex items-center gap-2">
                       <Award size={14} />
                       <span>Assessment Results</span>
-                    </span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('matches')}
-                    className={`w-full flex items-center justify-between px-3 py-2 rounded-xl transition-all cursor-pointer ${
-                      activeTab === 'matches'
-                        ? 'bg-[#111215] text-white dark:bg-[#D4F82C] dark:text-[#111215]'
-                        : 'hover:bg-[#F8F9F5] dark:hover:bg-white/5 text-[#575A51] dark:text-neutral-300'
-                    }`}
-                  >
-                    <span className="flex items-center gap-2">
-                      <Sparkles size={14} />
-                      <span>Matched Roles</span>
-                    </span>
-                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-black/10 dark:bg-white/10">
-                      {matchedJobs.length}
                     </span>
                   </button>
 
@@ -3995,7 +3995,7 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
               Candidate Desk
             </span>
 
-            {/* Item 0: Dashboard (NEW!) */}
+            {/* Item 0: Dashboard */}
             <button
               type="button"
               onClick={() => setActiveTab('dashboard')}
@@ -4016,7 +4016,28 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
               <span className="text-xs truncate">Dashboard</span>
             </button>
 
-            {/* Item 1: Applications */}
+            {/* Item 1: Matched Jobs (Directly after Dashboard) */}
+            <button
+              type="button"
+              onClick={() => setActiveTab('matches')}
+              className={`group flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left transition-all duration-150 active:scale-[0.98] select-none cursor-pointer ${
+                activeTab === 'matches'
+                  ? 'bg-[#111215] text-white dark:bg-[#D4F82C] dark:text-[#111215] font-bold shadow-xs'
+                  : 'text-[#575A51] dark:text-neutral-400 hover:bg-[#F8F9F5] dark:hover:bg-white/5 hover:text-[#111215] dark:hover:text-white font-medium'
+              }`}
+            >
+              <Sparkles
+                className={`size-4 shrink-0 transition-colors ${
+                  activeTab === 'matches'
+                    ? 'text-[#D4F82C] dark:text-[#111215]'
+                    : 'text-[#73766C] group-hover:text-[#111215] dark:group-hover:text-white'
+                }`}
+                strokeWidth={1.8}
+              />
+              <span className="text-xs truncate">Matched Jobs</span>
+            </button>
+
+            {/* Item 2: Applications */}
             <button
               type="button"
               onClick={() => {
@@ -4040,7 +4061,7 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
               <span className="text-xs truncate">Applications</span>
             </button>
 
-            {/* Item 2: Shortlisted Rounds */}
+            {/* Item 3: Shortlisted Rounds */}
             <button
               type="button"
               onClick={() => {
@@ -4064,7 +4085,7 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
               <span className="text-xs truncate">Shortlisted</span>
             </button>
 
-            {/* Item 3: Assessments */}
+            {/* Item 4: Assessments */}
             <button
               type="button"
               onClick={() => setActiveTab('assessments')}
@@ -4085,7 +4106,7 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
               <span className="text-xs truncate">Assessments</span>
             </button>
 
-            {/* Item 4: Assessment Results */}
+            {/* Item 5: Assessment Results */}
             <button
               type="button"
               onClick={() => setActiveTab('assessment-results')}
@@ -4104,27 +4125,6 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
                 strokeWidth={1.8}
               />
               <span className="text-xs truncate">Assessment Results</span>
-            </button>
-
-            {/* Item 3: Matched Jobs */}
-            <button
-              type="button"
-              onClick={() => setActiveTab('matches')}
-              className={`group flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left transition-all duration-150 active:scale-[0.98] select-none cursor-pointer ${
-                activeTab === 'matches'
-                  ? 'bg-[#111215] text-white dark:bg-[#D4F82C] dark:text-[#111215] font-bold shadow-xs'
-                  : 'text-[#575A51] dark:text-neutral-400 hover:bg-[#F8F9F5] dark:hover:bg-white/5 hover:text-[#111215] dark:hover:text-white font-medium'
-              }`}
-            >
-              <Sparkles
-                className={`size-4 shrink-0 transition-colors ${
-                  activeTab === 'matches'
-                    ? 'text-[#D4F82C] dark:text-[#111215]'
-                    : 'text-[#73766C] group-hover:text-[#111215] dark:group-hover:text-white'
-                }`}
-                strokeWidth={1.8}
-              />
-              <span className="text-xs truncate">Matched Jobs</span>
             </button>
 
             {/* Item 4: My Resume */}
@@ -4510,41 +4510,50 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
-                  {matchedJobs.slice(0, 3).map((job) => (
-                    <div
-                      key={job.id}
-                      onClick={() => {
-                        setSelectedJobModal(job);
-                        hasDismissedJobModalRef.current = true;
-                      }}
-                      className="p-4 rounded-2xl border border-[#E4E7DC] dark:border-white/10 hover:border-[#111215]/30 dark:hover:border-white/20 bg-[#F8F9F5] dark:bg-white/5 transition-all cursor-pointer group flex flex-col justify-between"
-                    >
-                      <div>
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-[#D4F82C] text-[#111215]">
-                            {job.overallScore}% Fit
+                  {matchedJobs.slice(0, 3).map((matchItem) => {
+                    const job = matchItem.job;
+                    const jobTitle = job?.title || 'Job Opportunity';
+                    const jobCompany = job?.company || 'Company';
+                    const jobLocation = job?.location || 'Nashik';
+                    const jobSalary = job?.salary || 'Competitive';
+                    const jobType = job?.jobType || job?.employmentType || 'Full-Time';
+
+                    return (
+                      <div
+                        key={job?.id || matchItem.overallScore}
+                        onClick={() => {
+                          setSelectedJobModal(matchItem);
+                          hasDismissedJobModalRef.current = true;
+                        }}
+                        className="p-4 rounded-2xl border border-[#E4E7DC] dark:border-white/10 hover:border-[#111215]/30 dark:hover:border-white/20 bg-[#F8F9F5] dark:bg-white/5 transition-all cursor-pointer group flex flex-col justify-between"
+                      >
+                        <div>
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-[#D4F82C] text-[#111215]">
+                              {matchItem.overallScore}% Fit
+                            </span>
+                            <span className="text-[10px] text-[#73766C] dark:text-neutral-400 font-medium">
+                              {jobType}
+                            </span>
+                          </div>
+                          <h4 className="text-sm font-bold text-[#111215] dark:text-white group-hover:text-[#8FB305] dark:group-hover:text-[#D4F82C] transition-colors truncate">
+                            {jobTitle}
+                          </h4>
+                          <p className="text-xs text-[#73766C] dark:text-neutral-400 mt-0.5 truncate">
+                            {jobCompany} • {jobLocation}
+                          </p>
+                        </div>
+                        <div className="mt-3 pt-3 border-t border-[#E4E7DC] dark:border-white/10 flex items-center justify-between text-[11px]">
+                          <span className="font-semibold text-[#111215] dark:text-white">
+                            {jobSalary}
                           </span>
-                          <span className="text-[10px] text-[#73766C] dark:text-neutral-400 font-medium">
-                            {job.employmentType || 'Full-Time'}
+                          <span className="font-bold text-[#8FB305] dark:text-[#D4F82C] group-hover:translate-x-0.5 transition-transform">
+                            View Details →
                           </span>
                         </div>
-                        <h4 className="text-sm font-bold text-[#111215] dark:text-white group-hover:text-[#8FB305] dark:group-hover:text-[#D4F82C] transition-colors truncate">
-                          {job.title}
-                        </h4>
-                        <p className="text-xs text-[#73766C] dark:text-neutral-400 mt-0.5 truncate">
-                          {job.company} • {job.location}
-                        </p>
                       </div>
-                      <div className="mt-3 pt-3 border-t border-[#E4E7DC] dark:border-white/10 flex items-center justify-between text-[11px]">
-                        <span className="font-semibold text-[#111215] dark:text-white">
-                          {job.salary || 'Competitive'}
-                        </span>
-                        <span className="font-bold text-[#8FB305] dark:text-[#D4F82C] group-hover:translate-x-0.5 transition-transform">
-                          View Details →
-                        </span>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -4574,40 +4583,47 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
                 </div>
 
                 <div className="space-y-2">
-                  {myApplicationsList.slice(0, 3).map((app) => (
-                    <div
-                      key={app.id}
-                      onClick={() => {
-                        setActiveTab('applied');
-                        setAppliedStageFilter('all');
-                      }}
-                      className="p-3.5 rounded-2xl border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-white/5 flex items-center justify-between gap-3 cursor-pointer hover:bg-white dark:hover:bg-white/10 transition-colors"
-                    >
-                      <div className="min-w-0">
-                        <h4 className="text-xs font-bold text-[#111215] dark:text-white truncate">
-                          {app.jobTitle}
-                        </h4>
-                        <p className="text-[11px] text-[#73766C] dark:text-neutral-400 truncate">
-                          {app.company} • Applied {app.appliedAt ? new Date(app.appliedAt).toLocaleDateString() : 'Recently'}
-                        </p>
+                  {myApplicationsList.slice(0, 3).map((item) => {
+                    const { job, appInfo } = item;
+                    const jobTitle = job?.title || 'Job Application';
+                    const jobCompany = job?.company || 'Company';
+                    const status = appInfo?.status || 'Under Review';
+                    const appliedDateStr = appInfo?.appliedAt
+                      ? new Date(appInfo.appliedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+                      : 'Recently';
+
+                    const isScheduled = status.toLowerCase().includes('interview') || status.toLowerCase().includes('shortlist');
+                    const isSelected = status.toLowerCase().includes('hired') || status.toLowerCase().includes('offer') || status.toLowerCase().includes('selected');
+
+                    return (
+                      <div
+                        key={job?.id || item.job?.id || status}
+                        onClick={() => {
+                          setActiveTab('applied');
+                          setAppliedStageFilter('all');
+                        }}
+                        className="p-3.5 rounded-2xl border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-white/5 flex items-center justify-between gap-3 cursor-pointer hover:bg-white dark:hover:bg-white/10 transition-colors"
+                      >
+                        <div className="min-w-0">
+                          <h4 className="text-xs sm:text-sm font-bold text-[#111215] dark:text-white truncate">
+                            {jobTitle}
+                          </h4>
+                          <p className="text-[11px] text-[#73766C] dark:text-neutral-400 truncate mt-0.5">
+                            {jobCompany} • Applied {appliedDateStr}
+                          </p>
+                        </div>
+                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold shrink-0 shadow-2xs ${
+                          isScheduled
+                            ? 'bg-[#D4F82C] text-[#111215] border border-[#8FB305]/40 animate-pulse'
+                            : isSelected
+                            ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
+                            : 'bg-[#E4E7DC] dark:bg-white/10 text-[#111215] dark:text-white'
+                        }`}>
+                          {status}
+                        </span>
                       </div>
-                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold shrink-0 ${
-                        app.status === 'interview_scheduled' || app.status === 'shortlisted'
-                          ? 'bg-[#D4F82C] text-[#111215]'
-                          : app.status === 'selected'
-                          ? 'bg-emerald-100 text-emerald-800'
-                          : 'bg-[#E4E7DC] dark:bg-white/10 text-[#111215] dark:text-white'
-                      }`}>
-                        {app.status === 'interview_scheduled'
-                          ? 'Interview Scheduled'
-                          : app.status === 'shortlisted'
-                          ? 'Shortlisted'
-                          : app.status === 'selected'
-                          ? 'Selected'
-                          : 'Under Review'}
-                      </span>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}
