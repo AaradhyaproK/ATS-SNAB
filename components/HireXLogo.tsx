@@ -48,14 +48,14 @@ export const HireXLogo: React.FC<HireXLogoProps> = ({
   const getWordmarkClasses = () => {
     if (isDark === true) {
       return {
-        brandPrefix: 'text-white',
-        brandSuffix: 'text-[#D4F82C]',
+        brandPrefix: '!text-white',
+        brandSuffix: '!text-[#D4F82C]',
       };
     }
     if (isDark === false) {
       return {
-        brandPrefix: 'text-[#111215]',
-        brandSuffix: 'text-[#8FB305]',
+        brandPrefix: '!text-[#111215]',
+        brandSuffix: '!text-[#8FB305]',
       };
     }
     // Adaptive mode when isDark is not explicitly passed
