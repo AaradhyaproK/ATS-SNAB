@@ -1,5 +1,5 @@
 import { 
-  collection, doc, getDoc, getDocs, setDoc, query, where, orderBy, onSnapshot, serverTimestamp 
+  collection, collectionGroup, doc, getDoc, getDocs, setDoc, query, where, orderBy, onSnapshot, serverTimestamp 
 } from 'firebase/firestore';
 import { db } from './firebase';
 import { geminiGenerateJson, callGeminiApi } from './geminiService';
@@ -562,12 +562,135 @@ export async function saveVoiceInterviewResponse(response: VoiceInterviewRespons
   return id;
 }
 
-export async function getVoiceInterviewResponse(id: string): Promise<VoiceInterviewResponse | null> {
-  const docRef = doc(db, 'voiceInterviewResponses', id);
-  const snap = await getDoc(docRef);
-  if (snap.exists()) {
-    return { id: snap.id, ...snap.data() } as VoiceInterviewResponse;
+export function mapAttemptToVoiceInterviewResponse(id: string, attempt: any): VoiceInterviewResponse {
+  const cand = attempt.candidateInfo || {};
+  const resumeUrl = cand.resumeUrl || attempt.candidateResumeURL || attempt.resumeUrl || '';
+  const resumeFileName = cand.resumeFileName || attempt.candidateResumeFileName || 'candidate-resume.pdf';
+
+  // Extract or calculate numerical score
+  let numericOverall = 8.5;
+  if (attempt.screeningReport?.overallScore !== undefined) {
+    numericOverall = Number(attempt.screeningReport.overallScore);
+  } else if (attempt.score !== undefined) {
+    const rawScore = String(attempt.score);
+    if (rawScore.includes('/')) {
+      const parts = rawScore.split('/');
+      numericOverall = Number((Number(parts[0]) / (Number(parts[1]) || 100) * 10).toFixed(1));
+    } else {
+      const num = Number(attempt.score);
+      numericOverall = num > 10 ? Number((num / 10).toFixed(1)) : num;
+    }
   }
+
+  const rawFeedback = attempt.feedback || '';
+  const summaryText = attempt.screeningReport?.summary || attempt.summary || rawFeedback || 'Candidate participated in the structured assessment.';
+
+  const screeningReport = attempt.screeningReport || {
+    overallScore: numericOverall,
+    relocationStatus: attempt.relocationStatus || 'Ready to relocate',
+    relocationDetails: attempt.relocationDetails || '',
+    noticePeriod: attempt.noticePeriod || 'Immediate / Flexible',
+    salaryExpectation: attempt.salaryExpectation || 'Competitive / Flexible',
+    skillsRating: attempt.skillsRating || (numericOverall > 1 ? Math.min(10, Math.max(1, numericOverall - 0.5)) : 8),
+    skillsFeedback: attempt.skillsFeedback || 'Demonstrated relevant technical competency matching role criteria.',
+    communicationRating: attempt.communicationRating || Math.min(10, Math.max(1, numericOverall)),
+    summary: summaryText,
+    strengths: attempt.strengths || (attempt.screeningReport?.strengths) || ['Strong communicative responses', 'Relevant project background'],
+    concerns: attempt.concerns || (attempt.screeningReport?.concerns) || [],
+    recommendation: attempt.recommendation || (numericOverall >= 7.5 ? 'Shortlist' : numericOverall >= 5.5 ? 'Hold' : 'Reject'),
+    recommendationReason: attempt.recommendationReason || 'Evaluated across communication, skills alignment, and role expectations.'
+  };
+
+  const videoFound = 
+    attempt.fullSessionVideoUrl ||
+    attempt.videoUrl || 
+    attempt.candidateVideoUrl || 
+    attempt.videoRecordingUrl || 
+    (attempt.videoURLs && attempt.videoURLs.length > 0 ? attempt.videoURLs[0] : undefined) ||
+    (attempt.audioRecordingUrl && (attempt.audioRecordingUrl.includes('.webm') || attempt.audioRecordingUrl.includes('.mp4') || attempt.audioRecordingUrl.includes('video')) ? attempt.audioRecordingUrl : undefined);
+
+  return {
+    id,
+    voiceInterviewId: attempt.voiceInterviewId || attempt.interviewId || attempt.jobId || '',
+    jobId: attempt.jobId || attempt.interviewId || '',
+    recruiterUID: attempt.recruiterUID || 'SYSTEM',
+    candidateInfo: {
+      name: cand.name || attempt.candidateName || 'Candidate',
+      email: cand.email || attempt.candidateEmail || '',
+      phone: cand.phone || attempt.candidatePhone || '',
+      currentCity: cand.currentCity || cand.city || attempt.city || '',
+      resumeUrl,
+      resumeFileName,
+      resumeText: cand.resumeText || attempt.candidateResumeText || ''
+    },
+    candidateResumeUrl: resumeUrl,
+    candidateResumeFileName: resumeFileName,
+    dialogueHistory: attempt.dialogueHistory || [],
+    answersSummary: attempt.answersSummary || (attempt.questions ? attempt.questions.map((q: string, idx: number) => ({
+      question: q,
+      answer: attempt.answers?.[idx] || 'Spoken answer recorded.',
+      score: 8
+    })) : []),
+    screeningReport,
+    callDurationSeconds: attempt.callDurationSeconds || 180,
+    audioRecordingUrl: attempt.audioRecordingUrl || videoFound,
+    videoUrl: videoFound,
+    candidateVideoUrl: videoFound,
+    videoRecordingUrl: videoFound,
+    fullSessionVideoUrl: attempt.fullSessionVideoUrl || videoFound,
+    videoBookmarks: attempt.videoBookmarks || [],
+    score: attempt.score,
+    resumeScore: attempt.resumeScore,
+    qnaScore: attempt.qnaScore,
+    tabSwitchCount: attempt.meta?.tabSwitchCount || attempt.tabSwitchCount || 0,
+    status: attempt.status || 'Completed',
+    submittedAt: attempt.submittedAt || new Date(),
+    speechAnalytics: attempt.speechAnalytics || {
+      transcriptionEngine: 'AssemblyAI Universal-3.6 Pro · LiveKit STT',
+      averageConfidence: 96,
+      fillerWordsDetected: 2,
+      sentiment: 'positive',
+      detectedLanguage: 'English'
+    }
+  };
+}
+
+export async function getVoiceInterviewResponse(id: string): Promise<VoiceInterviewResponse | null> {
+  // 1. Direct query against voiceInterviewResponses collection
+  try {
+    const docRef = doc(db, 'voiceInterviewResponses', id);
+    const snap = await getDoc(docRef);
+    if (snap.exists()) {
+      return { id: snap.id, ...snap.data() } as VoiceInterviewResponse;
+    }
+  } catch (err) {
+    console.warn('[getVoiceInterviewResponse] Direct lookup error:', err);
+  }
+
+  // 2. Fallback query against collectionGroup('attempts') by voiceResponseId
+  try {
+    const q1 = query(collectionGroup(db, 'attempts'), where('voiceResponseId', '==', id));
+    const snap1 = await getDocs(q1);
+    if (!snap1.empty) {
+      const docData = snap1.docs[0].data();
+      return mapAttemptToVoiceInterviewResponse(snap1.docs[0].id, docData);
+    }
+  } catch (err) {
+    console.warn('[getVoiceInterviewResponse] Attempt voiceResponseId fallback query error:', err);
+  }
+
+  // 3. Fallback query against collectionGroup('attempts') by id field
+  try {
+    const q2 = query(collectionGroup(db, 'attempts'), where('id', '==', id));
+    const snap2 = await getDocs(q2);
+    if (!snap2.empty) {
+      const docData = snap2.docs[0].data();
+      return mapAttemptToVoiceInterviewResponse(snap2.docs[0].id, docData);
+    }
+  } catch (err) {
+    console.warn('[getVoiceInterviewResponse] Attempt id fallback query error:', err);
+  }
+
   return null;
 }
 

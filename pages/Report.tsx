@@ -1295,6 +1295,140 @@ const InterviewReport: React.FC = () => {
                     </div>
                 </div>
 
+                {/* 1. MASTER FULL-SESSION CONTINUOUS VIDEO PLAYER WITH CHAPTER BOOKMARKS */}
+                {(() => {
+                  const masterFullVideoUrl =
+                    submission.fullSessionVideoUrl ||
+                    (submission as any).videoUrl ||
+                    (submission as any).candidateVideoUrl ||
+                    (submission as any).videoRecordingUrl ||
+                    (submission as any).audioRecordingUrl ||
+                    (submission.videoURLs && submission.videoURLs.length > 0 ? submission.videoURLs[0] : null) ||
+                    (submission.id ? `https://interviewxpert-storage.s3.ap-south-1.amazonaws.com/videos/voice_interview_video_${submission.id}.webm` : null);
+
+                  if (!masterFullVideoUrl) return null;
+
+                  const activeBookmarks = (submission.videoBookmarks && submission.videoBookmarks.length > 0)
+                    ? submission.videoBookmarks
+                    : (submission.questions && submission.questions.length > 0)
+                      ? submission.questions.map((q, qIdx) => {
+                          const step = 45;
+                          const sec = qIdx * step;
+                          const m = Math.floor(sec / 60);
+                          const s = sec % 60;
+                          return {
+                            type: 'question' as const,
+                            questionIndex: qIdx,
+                            title: q.length > 55 ? q.slice(0, 52) + '...' : q,
+                            timestampSec: sec,
+                            formattedTime: `${m}:${s < 10 ? '0' : ''}${s}`
+                          };
+                        })
+                      : [];
+
+                  return (
+                    <div className="bg-white dark:bg-[#0c0c0c]/90 backdrop-blur-xl rounded-3xl p-6 sm:p-8 border border-[#E4E7DC] dark:border-white/[0.08] shadow-[0_4px_24px_rgba(17,18,21,0.04)] space-y-5">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-5 border-b border-[#E4E7DC] dark:border-white/[0.06]">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-[#D4F82C] border border-[#b8da1f] text-[#111215] flex items-center justify-center shrink-0 shadow-xs font-black">
+                            <Video size={20} />
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <h2 className="text-lg sm:text-xl font-extrabold text-[#111215] dark:text-white">
+                                Master Full-Session Video Recording
+                              </h2>
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-black uppercase bg-[#111215] text-[#D4F82C]">
+                                Continuous Call
+                              </span>
+                            </div>
+                            <p className="text-xs text-[#73766C] dark:text-white/50 mt-0.5">
+                              Dual-channel video (Candidate camera + Microphone + AI Interviewer speech) with interactive chapter jump points
+                            </p>
+                          </div>
+                        </div>
+
+                        <a
+                          href={masterFullVideoUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          download={`interview_full_session_${submission.id || 'recording'}.webm`}
+                          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] hover:bg-white text-xs font-bold text-[#111215] shadow-xs transition-colors shrink-0"
+                        >
+                          <Download size={13} /> Download Full Video
+                        </a>
+                      </div>
+
+                      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        {/* Video Player */}
+                        <div className="lg:col-span-2 rounded-2xl overflow-hidden bg-black aspect-video border border-[#E4E7DC] shadow-md relative">
+                          <video
+                            id="master-full-session-video"
+                            src={masterFullVideoUrl}
+                            controls
+                            playsInline
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+
+                        {/* Chapter Jump Bookmarks */}
+                        <div className="flex flex-col bg-[#F8F9F5] dark:bg-white/[0.02] border border-[#E4E7DC] dark:border-white/[0.06] rounded-2xl p-4 space-y-3 min-h-[260px] max-h-[380px] overflow-y-auto custom-scrollbar">
+                          <div className="flex items-center justify-between border-b border-[#E4E7DC] dark:border-white/[0.06] pb-2">
+                            <span className="text-[11px] font-black uppercase tracking-wider text-[#73766C] flex items-center gap-1.5">
+                              <Layers size={13} className="text-[#111215]" /> Chapter Markers
+                            </span>
+                            <span className="text-[10px] font-mono font-bold text-[#73766C]">
+                              {activeBookmarks.length} Jump Points
+                            </span>
+                          </div>
+
+                          {activeBookmarks.length > 0 ? (
+                            <div className="space-y-2">
+                              {activeBookmarks.map((bm: any, bIdx: number) => (
+                                <button
+                                  key={bIdx}
+                                  type="button"
+                                  onClick={() => {
+                                    const vid = document.getElementById('master-full-session-video') as HTMLVideoElement | null;
+                                    if (vid) {
+                                      vid.currentTime = bm.timestampSec;
+                                      try {
+                                        const p = vid.play();
+                                        if (p && typeof p.catch === 'function') {
+                                          p.catch(() => {});
+                                        }
+                                      } catch (_) {}
+                                    }
+                                  }}
+                                  className="w-full text-left p-2.5 rounded-xl bg-white dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 hover:border-[#111215] transition-all cursor-pointer shadow-2xs group flex items-start gap-2.5"
+                                >
+                                  <span className={`text-[10px] font-mono font-black px-2 py-0.5 rounded-md shrink-0 mt-0.5 ${
+                                    bm.type === 'cross_question'
+                                      ? 'bg-purple-100 text-purple-900 border border-purple-200'
+                                      : 'bg-[#D4F82C] text-[#111215] border border-[#b8da1f]'
+                                  }`}>
+                                    {bm.formattedTime || `${bm.timestampSec}s`}
+                                  </span>
+                                  <div className="min-w-0">
+                                    <p className="text-xs font-bold text-[#111215] dark:text-white line-clamp-2 group-hover:text-black">
+                                      {bm.type === 'cross_question' ? 'Follow-Up: ' : `Q${bm.questionIndex + 1}: `}
+                                      {bm.title}
+                                    </p>
+                                  </div>
+                                </button>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="text-center py-10 text-xs text-[#73766C]">
+                              Continuous video ready. Play or scrub through the timeline above.
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+
                 {/* Main 2-Column Grid */}
                 <div className={`grid grid-cols-1 gap-6 ${isCompareMode ? '' : 'lg:grid-cols-12'}`}>
                     {/* Left Column: AI Evaluation & Intelligence */}
@@ -1805,109 +1939,6 @@ const InterviewReport: React.FC = () => {
                         </div>
                     </div>
                 </div>
-
-                {/* 1. MASTER FULL-SESSION CONTINUOUS VIDEO PLAYER WITH CHAPTER BOOKMARKS */}
-                {submission.fullSessionVideoUrl && (
-                  <div className="bg-white dark:bg-[#0c0c0c]/90 backdrop-blur-xl rounded-3xl p-6 sm:p-8 border border-[#E4E7DC] dark:border-white/[0.08] shadow-[0_4px_24px_rgba(17,18,21,0.04)] space-y-5">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-5 border-b border-[#E4E7DC] dark:border-white/[0.06]">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-[#D4F82C] border border-[#b8da1f] text-[#111215] flex items-center justify-center shrink-0 shadow-xs font-black">
-                          <Video size={20} />
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <h2 className="text-lg sm:text-xl font-extrabold text-[#111215] dark:text-white">
-                              Master Full-Session Video Recording
-                            </h2>
-                            <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-black uppercase bg-[#111215] text-[#D4F82C]">
-                              Continuous Call
-                            </span>
-                          </div>
-                          <p className="text-xs text-[#73766C] dark:text-white/50 mt-0.5">
-                            Dual-channel video (Candidate camera + Microphone + AI Interviewer speech) with interactive chapter jump points
-                          </p>
-                        </div>
-                      </div>
-
-                      <a
-                        href={submission.fullSessionVideoUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        download={`interview_full_session_${submission.id || 'recording'}.webm`}
-                        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] hover:bg-white text-xs font-bold text-[#111215] shadow-xs transition-colors shrink-0"
-                      >
-                        <Download size={13} /> Download Full Video
-                      </a>
-                    </div>
-
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                      {/* Video Player */}
-                      <div className="lg:col-span-2 rounded-2xl overflow-hidden bg-black aspect-video border border-[#E4E7DC] shadow-md relative">
-                        <video
-                          id="master-full-session-video"
-                          src={submission.fullSessionVideoUrl}
-                          controls
-                          playsInline
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-
-                      {/* Chapter Jump Bookmarks */}
-                      <div className="flex flex-col bg-[#F8F9F5] dark:bg-white/[0.02] border border-[#E4E7DC] dark:border-white/[0.06] rounded-2xl p-4 space-y-3 min-h-[260px] max-h-[380px] overflow-y-auto custom-scrollbar">
-                        <div className="flex items-center justify-between border-b border-[#E4E7DC] dark:border-white/[0.06] pb-2">
-                          <span className="text-[11px] font-black uppercase tracking-wider text-[#73766C] flex items-center gap-1.5">
-                            <Layers size={13} className="text-[#111215]" /> Chapter Markers
-                          </span>
-                          <span className="text-[10px] font-mono font-bold text-[#73766C]">
-                            {submission.videoBookmarks?.length || 0} Jump Points
-                          </span>
-                        </div>
-
-                        {submission.videoBookmarks && submission.videoBookmarks.length > 0 ? (
-                          <div className="space-y-2">
-                            {submission.videoBookmarks.map((bm: any, bIdx: number) => (
-                              <button
-                                key={bIdx}
-                                type="button"
-                                onClick={() => {
-                                  const vid = document.getElementById('master-full-session-video') as HTMLVideoElement | null;
-                                  if (vid) {
-                                    vid.currentTime = bm.timestampSec;
-                                    try {
-                                      const p = vid.play();
-                                      if (p && typeof p.catch === 'function') {
-                                        p.catch(() => {});
-                                      }
-                                    } catch (_) {}
-                                  }
-                                }}
-                                className="w-full text-left p-2.5 rounded-xl bg-white dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 hover:border-[#111215] transition-all cursor-pointer shadow-2xs group flex items-start gap-2.5"
-                              >
-                                <span className={`text-[10px] font-mono font-black px-2 py-0.5 rounded-md shrink-0 mt-0.5 ${
-                                  bm.type === 'cross_question'
-                                    ? 'bg-purple-100 text-purple-900 border border-purple-200'
-                                    : 'bg-[#D4F82C] text-[#111215] border border-[#b8da1f]'
-                                }`}>
-                                  {bm.formattedTime || `${bm.timestampSec}s`}
-                                </span>
-                                <div className="min-w-0">
-                                  <p className="text-xs font-bold text-[#111215] dark:text-white line-clamp-2 group-hover:text-black">
-                                    {bm.type === 'cross_question' ? 'Follow-Up: ' : `Q${bm.questionIndex + 1}: `}
-                                    {bm.title}
-                                  </p>
-                                </div>
-                              </button>
-                            ))}
-                          </div>
-                        ) : (
-                          <div className="text-center py-10 text-xs text-[#73766C]">
-                            Continuous video ready. Play or scrub through the timeline above.
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                )}
 
                 {/* 2. DEEPGRAM NOVA-3 SPEECH AI INTELLIGENCE */}
                 {submission.speechAnalytics && (

@@ -317,6 +317,18 @@ export interface VoiceInterviewResponse {
   videoUrl?: string;
   candidateVideoUrl?: string;
   videoRecordingUrl?: string;
+  fullSessionVideoUrl?: string;
+  videoBookmarks?: Array<{
+    type: 'question' | 'cross_question' | 'wrapup';
+    questionIndex: number;
+    title: string;
+    timestampSec: number;
+    formattedTime: string;
+  }>;
+  score?: string | number;
+  resumeScore?: string | number;
+  qnaScore?: string | number;
+  tabSwitchCount?: number;
   recordingStorageKey?: string;
   candidateResumeUrl?: string;
   candidateResumeFileName?: string;
