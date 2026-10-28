@@ -18,10 +18,37 @@ export default async function handler(req, res) {
     return res.status(200).end();
   }
 
-  const accessKeyId = (process.env.AWS_ACCESS_KEY_ID || process.env.VITE_AWS_ACCESS_KEY_ID || '').replace(/['"]/g, '').trim();
-  const secretAccessKey = (process.env.AWS_SECRET_ACCESS_KEY || process.env.VITE_AWS_SECRET_ACCESS_KEY || '').replace(/['"]/g, '').trim();
-  const region = process.env.AWS_S3_REGION || process.env.AWS_REGION || 'ap-south-1';
-  const bucketName = process.env.AWS_S3_BUCKET_NAME || 'interviewxpert-storage';
+  const accessKeyId = (
+    process.env.AWS_S3_ACCESS_KEY_ID ||
+    process.env.S3_ACCESS_KEY_ID ||
+    process.env.VITE_AWS_S3_ACCESS_KEY_ID ||
+    process.env.VITE_AWS_ACCESS_KEY_ID ||
+    process.env.AWS_ACCESS_KEY_ID ||
+    ''
+  ).replace(/['"]/g, '').trim();
+
+  const secretAccessKey = (
+    process.env.AWS_S3_SECRET_ACCESS_KEY ||
+    process.env.S3_SECRET_ACCESS_KEY ||
+    process.env.VITE_AWS_S3_SECRET_ACCESS_KEY ||
+    process.env.VITE_AWS_SECRET_ACCESS_KEY ||
+    process.env.AWS_SECRET_ACCESS_KEY ||
+    ''
+  ).replace(/['"]/g, '').trim();
+
+  const region = (
+    process.env.AWS_S3_REGION ||
+    process.env.VITE_AWS_S3_REGION ||
+    process.env.AWS_REGION ||
+    'ap-south-1'
+  ).replace(/['"]/g, '').trim();
+
+  const bucketName = (
+    process.env.AWS_S3_BUCKET_NAME ||
+    process.env.S3_BUCKET_NAME ||
+    process.env.VITE_AWS_S3_BUCKET_NAME ||
+    'interviewxpert-storage'
+  ).replace(/['"]/g, '').trim();
 
   if (!accessKeyId || !secretAccessKey) {
     return res.status(200).json({
@@ -87,10 +114,17 @@ export default async function handler(req, res) {
     }
   }
 
-  // 2. POST / DELETE: Delete S3 Objects
-  if (req.method === 'POST' && req.body?.action === 'delete') {
+  let body = req.body;
+  if (typeof body === 'string') {
     try {
-      const keys = req.body.keys;
+      body = JSON.parse(body);
+    } catch (_) {}
+  }
+
+  // 2. POST / DELETE: Delete S3 Objects
+  if (req.method === 'POST' && body?.action === 'delete') {
+    try {
+      const keys = body.keys;
       if (!keys || !Array.isArray(keys) || keys.length === 0) {
         return res.status(400).json({ success: false, error: 'keys array required' });
       }

@@ -6,6 +6,7 @@ import {
   deleteS3Object, 
   deleteS3Objects, 
   isS3Configured, 
+  checkS3Connection,
   S3FileItem 
 } from '../services/s3Service';
 import { useTheme } from '../context/ThemeContext';
@@ -46,6 +47,7 @@ export default function AdminStorage() {
   const [deleteConfirmKey, setDeleteConfirmKey] = useState<string | null>(null);
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState<boolean>(false);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
+  const [s3Status, setS3Status] = useState<{ ok: boolean; message: string; configured: boolean }>({ ok: true, message: 'Checking S3...', configured: true });
 
   // Test Upload State
   const [testFile, setTestFile] = useState<File | null>(null);
@@ -73,8 +75,12 @@ export default function AdminStorage() {
   const fetchFiles = async () => {
     setLoading(true);
     try {
-      const data = await listS3Objects();
+      const [data, conn] = await Promise.all([
+        listS3Objects(),
+        checkS3Connection()
+      ]);
       setFiles(data);
+      setS3Status(conn);
       setSelectedKeys(new Set());
     } catch (err) {
       console.error("Failed to load S3 objects:", err);
@@ -217,9 +223,9 @@ export default function AdminStorage() {
           </div>
 
           <div className="flex items-center gap-3">
-            <div className={`px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 border ${s3Configured ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30' : 'bg-amber-500/10 text-amber-600 border-amber-500/30'}`}>
-              <span className={`w-2 h-2 rounded-full ${s3Configured ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`}></span>
-              {s3Configured ? 'AWS S3 Connected' : 'S3 Keys Missing (.env)'}
+            <div className={`px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 border ${s3Status.ok ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30' : 'bg-amber-500/10 text-amber-600 border-amber-500/30'}`}>
+              <span className={`w-2 h-2 rounded-full ${s3Status.ok ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`}></span>
+              {s3Status.ok ? 'AWS S3 Connected' : 'S3 Disconnected'}
             </div>
 
             <button
@@ -235,12 +241,20 @@ export default function AdminStorage() {
       </div>
 
       <div className="max-w-7xl mx-auto p-6 space-y-6">
-        {!s3Configured && (
-          <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-2xl flex items-center gap-3 text-amber-700 dark:text-amber-400 text-sm font-semibold">
-            <AlertTriangle size={24} className="shrink-0" />
-            <div>
-              <p className="font-bold">AWS S3 Access Credentials Not Set</p>
-              <p className="text-xs opacity-90 mt-0.5">Add <code className="font-mono bg-amber-500/20 px-1 py-0.5 rounded">VITE_AWS_S3_ACCESS_KEY_ID</code> and <code className="font-mono bg-amber-500/20 px-1 py-0.5 rounded">VITE_AWS_S3_SECRET_ACCESS_KEY</code> in your <code className="font-mono">.env</code> file to enable direct bucket manipulation.</p>
+        {!s3Status.ok && (
+          <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-2xl flex items-start gap-3 text-amber-700 dark:text-amber-400 text-sm font-semibold">
+            <AlertTriangle size={24} className="shrink-0 mt-0.5" />
+            <div className="space-y-1">
+              <p className="font-bold">AWS S3 Connection Notice: {s3Status.message}</p>
+              <p className="text-xs opacity-90">
+                In production (Vercel / Hosting), add these Environment Variables under <strong>Project Settings &gt; Environment Variables</strong>:
+              </p>
+              <div className="font-mono text-[11px] bg-black/10 dark:bg-white/10 p-2.5 rounded-lg space-y-0.5 select-all">
+                <div>AWS_S3_ACCESS_KEY_ID = your_aws_s3_access_key_id</div>
+                <div>AWS_S3_SECRET_ACCESS_KEY = your_aws_s3_secret_access_key</div>
+                <div>AWS_S3_REGION = ap-south-1</div>
+                <div>AWS_S3_BUCKET_NAME = interviewxpert-storage</div>
+              </div>
             </div>
           </div>
         )}
