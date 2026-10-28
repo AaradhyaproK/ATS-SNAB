@@ -164,6 +164,7 @@ export default function HotLeads() {
   // Dynamic Unbiased Match Scoring & Profiles Cache
   const [candidateProfilesMap, setCandidateProfilesMap] = useState<Map<string, any>>(new Map());
   const [scoreModalData, setScoreModalData] = useState<{ lead: HotLeadItem; result: JobMatchResult } | null>(null);
+  const [showSideResume, setShowSideResume] = useState(false);
   const [scoreSortOrder, setScoreSortOrder] = useState<'default' | 'score_desc' | 'score_asc'>('default');
 
   // Candidate Details & Resume Modal
@@ -3356,230 +3357,427 @@ export default function HotLeads() {
         </div>
       )}
 
-      {/* ── Unbiased AI Candidate Match Breakdown Modal ── */}
-      {scoreModalData && (
-        <div
-          className="fixed inset-0 z-[70] flex items-center justify-center p-3 sm:p-4 bg-black/70 backdrop-blur-md animate-fadeIn"
-          onClick={() => setScoreModalData(null)}
-        >
+      {/* ── Candidate AI Match Score Analysis Modal with Side-by-Side Resume Comparison ── */}
+      {scoreModalData && (() => {
+        const cleanEmail = (scoreModalData.lead.candidateEmail || '').toLowerCase().trim();
+        const cleanPhone = (scoreModalData.lead.candidatePhone || '').replace(/[^0-9]/g, '').slice(-10);
+        const dumpCandidate = (cleanEmail ? candidateProfilesMap.get(cleanEmail) : null) || 
+                              (cleanPhone ? candidateProfilesMap.get(cleanPhone) : null) || {};
+        const resolvedResumeUrl = scoreModalData.lead.resumeUrl || 
+                                  dumpCandidate.resumeUrl || 
+                                  dumpCandidate.fileUrl || 
+                                  dumpCandidate.profile?.resumeUrl || 
+                                  scoreModalData.lead.candidateDetails?.resumeUrl || '';
+        const details = scoreModalData.lead.candidateDetails || dumpCandidate.profile || dumpCandidate || {};
+        const extractedText = details.extractedText || dumpCandidate.resumeText || dumpCandidate.extractedText || details.summary || dumpCandidate.summary || '';
+        const candidateSkills: string[] = Array.from(new Set([
+          ...(Array.isArray(details.skills) ? details.skills : []),
+          ...(Array.isArray(dumpCandidate.skills) ? dumpCandidate.skills : []),
+          ...(Array.isArray(scoreModalData.lead.skills) ? scoreModalData.lead.skills : [])
+        ].map(s => String(s).trim()).filter(Boolean)));
+        const candidateEdu = details.education || dumpCandidate.education || dumpCandidate.highestEducation || scoreModalData.lead.education || 'Not specified';
+        const candidateExp = details.experience ?? dumpCandidate.experience ?? dumpCandidate.totalExperienceYears ?? scoreModalData.lead.experience ?? 'Fresher / 0';
+        const candidateSummary = details.summary || dumpCandidate.summary || '';
+
+        return (
           <div
-            className="w-full max-w-2xl max-h-[90vh] flex flex-col rounded-2xl border border-gray-200 dark:border-white/[0.14] bg-white dark:bg-[#0c0c0e] text-slate-900 dark:text-white shadow-2xl overflow-hidden"
-            onClick={(e) => e.stopPropagation()}
+            className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-5 bg-black/75 backdrop-blur-md animate-fadeIn"
+            onClick={() => setScoreModalData(null)}
           >
-            {/* Modal Header */}
-            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-white/[0.1] bg-gray-50/80 dark:bg-[#111114]">
-              <div className="flex items-center gap-2.5">
-                <div className="size-9 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-500 text-white flex items-center justify-center shadow-md shadow-emerald-500/20">
-                  <Sparkles size={18} />
-                </div>
-                <div>
-                  <h3 className="font-bold text-sm sm:text-base text-gray-900 dark:text-white flex items-center gap-2">
-                    <span>Candidate AI Match Score Analysis</span>
-                  </h3>
-                  <p className="text-[11px] text-gray-500 dark:text-gray-400">
-                    Applied Role: <span className="font-semibold text-gray-800 dark:text-gray-200">{scoreModalData.lead.jobTitle}</span>
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setScoreModalData(null)}
-                className="size-8 rounded-lg border border-gray-200 dark:border-white/[0.1] bg-white dark:bg-white/[0.04] text-gray-500 hover:text-gray-900 dark:hover:text-white flex items-center justify-center transition-colors cursor-pointer"
-              >
-                <X size={16} />
-              </button>
-            </div>
-
-            {/* Modal Body */}
-            <div className="p-5 overflow-y-auto space-y-4 text-xs">
-              {/* Score Banner & Unbiased Merit Tag */}
-              <div className="p-4 rounded-xl border border-emerald-500/30 bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-blue-500/10 flex flex-col sm:flex-row items-center justify-between gap-4">
-                <div className="flex items-center gap-3.5">
-                  <div className="size-16 rounded-full border-4 border-emerald-500 bg-white dark:bg-[#111] flex flex-col items-center justify-center shadow-md shrink-0">
-                    <span className="font-mono text-lg font-black text-emerald-600 dark:text-emerald-400 leading-none">
-                      {scoreModalData.result.overallScore}%
-                    </span>
-                    <span className="text-[9px] font-bold text-gray-400 uppercase tracking-tighter">Fit</span>
+            <div
+              className={`w-full max-h-[94vh] flex flex-col rounded-3xl border border-[#E4E7DC] dark:border-white/[0.12] bg-[#FAFBF8] dark:bg-[#0E0F12] text-[#111215] dark:text-white shadow-2xl overflow-hidden font-sans transition-all duration-300 ${
+                showSideResume ? 'max-w-6xl xl:max-w-7xl' : 'max-w-2xl'
+              }`}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Modal Header */}
+              <div className="flex items-center justify-between px-6 py-4 border-b border-[#E4E7DC] dark:border-white/[0.08] bg-white dark:bg-[#121316]">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="size-10 rounded-2xl bg-[#111215] text-[#D4F82C] border border-[#8FB305]/40 flex items-center justify-center shadow-xs shrink-0">
+                    <Sparkles size={18} />
                   </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-bold text-gray-900 dark:text-white">
-                        {scoreModalData.lead.candidateName}
-                      </span>
-                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500 text-white">
-                        {scoreModalData.result.matchGrade}
+                  <div className="min-w-0">
+                    <h3 className="font-bold text-base text-[#111215] dark:text-white truncate">
+                      Candidate AI Match Score Analysis
+                    </h3>
+                    <div className="flex items-center gap-1.5 text-xs text-[#575A51] dark:text-[#9DA195] mt-0.5 truncate">
+                      <span>Applied Role:</span>
+                      <span className="font-semibold text-[#111215] dark:text-white truncate">
+                        {scoreModalData.lead.jobTitle}
                       </span>
                     </div>
-                    <p className="text-[11px] text-gray-600 dark:text-gray-300 mt-0.5">
-                      Algorithmic alignment with job requirements & candidate CV
-                    </p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 text-[11px] font-semibold shrink-0">
-                  <Scale size={14} className="text-emerald-500 shrink-0" />
-                  <span>100% Merit & Zero Bias Evaluated</span>
+                <div className="flex items-center gap-2.5 shrink-0 ml-3">
+                  {/* Side-by-Side Resume Toggle Button */}
+                  <button
+                    type="button"
+                    onClick={() => setShowSideResume((prev) => !prev)}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer border shadow-2xs ${
+                      showSideResume
+                        ? 'bg-[#111215] text-[#D4F82C] dark:bg-[#D4F82C] dark:text-[#111215] border-[#8FB305]/60 shadow-sm'
+                        : 'bg-[#FAFBF8] dark:bg-white/[0.05] text-[#575A51] dark:text-[#9DA195] border-[#E4E7DC] dark:border-white/[0.1] hover:text-[#111215] dark:hover:text-white hover:border-[#8FB305]/50'
+                    }`}
+                    title={showSideResume ? 'Hide side-by-side resume comparison' : 'View candidate resume side-by-side for comparison'}
+                  >
+                    <FileText size={14} className={showSideResume ? 'text-[#D4F82C] dark:text-[#111215]' : 'text-[#8FB305] dark:text-[#D4F82C]'} />
+                    <span>{showSideResume ? 'Hide Side Resume' : 'Compare with Resume'}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setScoreModalData(null)}
+                    className="size-8 rounded-full border border-[#E4E7DC] dark:border-white/[0.1] bg-white dark:bg-white/[0.05] text-[#575A51] dark:text-[#9DA195] hover:text-[#111215] dark:hover:text-white hover:bg-[#F8F9F5] dark:hover:bg-white/[0.1] flex items-center justify-center transition-colors cursor-pointer shrink-0"
+                    aria-label="Close modal"
+                  >
+                    <X size={16} />
+                  </button>
                 </div>
               </div>
 
-              {/* Four Assessment Pillars */}
-              <div className="space-y-3">
-                <h4 className="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                  Weighted Match Breakdown
-                </h4>
-
-                {/* Pillar 1: Skills (40%) */}
-                <div className="p-3.5 rounded-xl border border-gray-200 dark:border-white/[0.08] bg-gray-50/50 dark:bg-white/[0.02] space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
-                        <CheckCircle2 size={14} className="text-emerald-500" />
-                        Technical Skills Alignment
-                      </span>
-                      <span className="px-1.5 py-0.2 rounded text-[10px] bg-blue-500/10 text-blue-600 dark:text-blue-400 font-mono font-bold">
-                        40% Weight
-                      </span>
-                    </div>
-                    <span className="font-mono text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
-                      {scoreModalData.result.skillMatch.score}% ({scoreModalData.result.skillMatch.ratioText})
-                    </span>
-                  </div>
-
-                  {scoreModalData.result.skillMatch.matchedSkills.length > 0 && (
-                    <div className="space-y-1">
-                      <span className="text-[10px] text-gray-500 uppercase font-semibold">Matched Skills:</span>
-                      <div className="flex flex-wrap gap-1.5">
-                        {scoreModalData.result.skillMatch.matchedSkills.map((s, idx) => (
-                          <span key={idx} className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/25">
-                            <Check size={10} />
-                            {s}
+              {/* Modal Body: Single Column or Side-by-Side Split View */}
+              <div className={`flex-1 min-h-0 overflow-hidden ${showSideResume ? 'grid grid-cols-1 lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x divide-[#E4E7DC] dark:divide-white/[0.08]' : ''}`}>
+                {/* Left Column: AI Match Score Analysis Breakdown */}
+                <div className="p-6 overflow-y-auto max-h-[calc(94vh-130px)] space-y-4.5 text-xs">
+                  {/* Score Hero Banner */}
+                  <div className="p-5 rounded-2xl border border-[#E4E7DC] dark:border-white/[0.08] bg-white dark:bg-[#121316] shadow-xs space-y-3.5">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                      <div className="flex items-center gap-4 min-w-0">
+                        <div className="size-16 rounded-2xl bg-[#111215] text-[#D4F82C] border border-[#8FB305]/40 flex flex-col items-center justify-center shadow-sm shrink-0">
+                          <span className="font-mono text-2xl font-black text-[#D4F82C] leading-none">
+                            {scoreModalData.result.overallScore}%
                           </span>
-                        ))}
+                          <span className="text-[9px] font-bold tracking-wider text-white/70 uppercase mt-1">MATCH</span>
+                        </div>
+                        <div className="min-w-0 space-y-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-base font-bold text-[#111215] dark:text-white truncate">
+                              {scoreModalData.lead.candidateName}
+                            </span>
+                            <span
+                              className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold border shrink-0 ${
+                                scoreModalData.result.overallScore >= 80
+                                  ? 'bg-[#D4F82C] text-[#111215] border-[#8FB305]/40'
+                                  : scoreModalData.result.overallScore >= 60
+                                  ? 'bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 border-emerald-500/30'
+                                  : scoreModalData.result.overallScore >= 40
+                                  ? 'bg-blue-500/10 text-blue-800 dark:text-blue-300 border-blue-500/30'
+                                  : 'bg-amber-500/10 text-amber-800 dark:text-amber-300 border-amber-500/30'
+                              }`}
+                            >
+                              {scoreModalData.result.matchGrade}
+                            </span>
+                          </div>
+                          <p className="text-xs text-[#575A51] dark:text-[#9DA195]">
+                            Algorithmic alignment with job requirements & candidate CV
+                          </p>
+                        </div>
                       </div>
                     </div>
-                  )}
 
-                  {scoreModalData.result.skillMatch.missingSkills.length > 0 && (
+                    {/* Progress Bar Indicator */}
                     <div className="space-y-1">
-                      <span className="text-[10px] text-amber-600 dark:text-amber-400 uppercase font-semibold">Missing / Unverified Skills:</span>
-                      <div className="flex flex-wrap gap-1.5">
-                        {scoreModalData.result.skillMatch.missingSkills.map((s, idx) => (
-                          <span key={idx} className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/25">
-                            {s}
-                          </span>
-                        ))}
+                      <div className="w-full h-2 rounded-full bg-[#E4E7DC] dark:bg-white/[0.08] overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all duration-500 ${
+                            scoreModalData.result.overallScore >= 80
+                              ? 'bg-[#8FB305]'
+                              : scoreModalData.result.overallScore >= 60
+                              ? 'bg-emerald-500'
+                              : scoreModalData.result.overallScore >= 40
+                              ? 'bg-blue-500'
+                              : 'bg-amber-500'
+                          }`}
+                          style={{ width: `${Math.max(scoreModalData.result.overallScore, 4)}%` }}
+                        />
                       </div>
                     </div>
-                  )}
-                </div>
+                  </div>
 
-                {/* Pillar 2: Experience (25%) */}
-                <div className="p-3.5 rounded-xl border border-gray-200 dark:border-white/[0.08] bg-gray-50/50 dark:bg-white/[0.02] flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
-                        <Clock size={14} className="text-indigo-500" />
-                        Experience & Seniority Fit
-                      </span>
-                      <span className="px-1.5 py-0.2 rounded text-[10px] bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 font-mono font-bold">
-                        25% Weight
+                  {/* Assessment Dimensions */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between px-1">
+                      <h4 className="text-[11px] font-bold uppercase tracking-wider text-[#575A51] dark:text-[#9DA195]">
+                        Evaluation Breakdown
+                      </h4>
+                      <span className="text-[10px] font-semibold text-[#575A51] dark:text-[#9DA195]">
+                        4 Core Dimensions
                       </span>
                     </div>
-                    <p className="text-[11px] text-gray-500 dark:text-gray-400">
-                      Required: <span className="text-gray-800 dark:text-gray-200 font-medium">{scoreModalData.result.expMatch.requiredExp}</span> • Candidate: <span className="text-gray-800 dark:text-gray-200 font-medium">{scoreModalData.result.expMatch.candidateExp} Yrs</span>
-                    </p>
-                  </div>
-                  <span className={`px-2 py-0.5 rounded text-[11px] font-bold ${
-                    scoreModalData.result.expMatch.isMatch
-                      ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
-                      : 'bg-amber-500/15 text-amber-700 dark:text-amber-300'
-                  }`}>
-                    {scoreModalData.result.expMatch.label}
-                  </span>
-                </div>
 
-                {/* Pillar 3: Education (15%) */}
-                <div className="p-3.5 rounded-xl border border-gray-200 dark:border-white/[0.08] bg-gray-50/50 dark:bg-white/[0.02] flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
-                        <GraduationCap size={14} className="text-purple-500" />
-                        Academic & Qualification Fit
-                      </span>
-                      <span className="px-1.5 py-0.2 rounded text-[10px] bg-purple-500/10 text-purple-600 dark:text-purple-400 font-mono font-bold">
-                        15% Weight
+                    {/* Dimension 1: Technical Skills */}
+                    <div className="p-4 rounded-2xl border border-[#E4E7DC] dark:border-white/[0.08] bg-white dark:bg-[#121316] shadow-xs space-y-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <div className="size-6 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                            <CheckCircle2 size={14} />
+                          </div>
+                          <span className="font-bold text-sm text-[#111215] dark:text-white">
+                            Technical Skills Alignment
+                          </span>
+                        </div>
+                        <span className="font-mono text-xs font-bold text-emerald-700 dark:text-emerald-400 px-2 py-0.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                          {scoreModalData.result.skillMatch.score}% ({scoreModalData.result.skillMatch.ratioText})
+                        </span>
+                      </div>
+
+                      {scoreModalData.result.skillMatch.matchedSkills.length > 0 && (
+                        <div className="space-y-1.5">
+                          <span className="text-[10px] uppercase font-bold text-emerald-700 dark:text-emerald-400 tracking-wider">
+                            Matched Skills:
+                          </span>
+                          <div className="flex flex-wrap gap-1.5">
+                            {scoreModalData.result.skillMatch.matchedSkills.map((s, idx) => (
+                              <span
+                                key={idx}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 border border-emerald-500/25"
+                              >
+                                <Check size={11} className="text-emerald-600 dark:text-emerald-400" />
+                                {s}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {scoreModalData.result.skillMatch.missingSkills.length > 0 && (
+                        <div className="space-y-1.5 pt-1">
+                          <span className="text-[10px] uppercase font-bold text-amber-700 dark:text-amber-400 tracking-wider">
+                            Missing / Unverified Skills:
+                          </span>
+                          <div className="flex flex-wrap gap-1.5">
+                            {scoreModalData.result.skillMatch.missingSkills.map((s, idx) => (
+                              <span
+                                key={idx}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-amber-500/10 text-amber-800 dark:text-amber-300 border border-amber-500/25"
+                              >
+                                {s}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Dimension 2: Experience */}
+                    <div className="p-4 rounded-2xl border border-[#E4E7DC] dark:border-white/[0.08] bg-white dark:bg-[#121316] shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div className="space-y-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <div className="size-6 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+                            <Briefcase size={14} />
+                          </div>
+                          <span className="font-bold text-sm text-[#111215] dark:text-white">
+                            Experience & Seniority Fit
+                          </span>
+                        </div>
+                        <p className="text-xs text-[#575A51] dark:text-[#9DA195] pl-8">
+                          Required: <span className="text-[#111215] dark:text-white font-semibold">{scoreModalData.result.expMatch.requiredExp}</span> • Candidate: <span className="text-[#111215] dark:text-white font-semibold">{scoreModalData.result.expMatch.candidateExp} Yrs</span>
+                        </p>
+                      </div>
+                      <span
+                        className={`px-3 py-1 rounded-xl text-xs font-bold border shrink-0 sm:self-center ${
+                          scoreModalData.result.expMatch.isMatch
+                            ? 'bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 border-emerald-500/25'
+                            : 'bg-amber-500/10 text-amber-800 dark:text-amber-300 border-amber-500/25'
+                        }`}
+                      >
+                        {scoreModalData.result.expMatch.label}
                       </span>
                     </div>
-                    <p className="text-[11px] text-gray-500 dark:text-gray-400">
-                      Required: <span className="text-gray-800 dark:text-gray-200 font-medium">{scoreModalData.result.eduMatch.requiredEdu}</span> • Candidate: <span className="text-gray-800 dark:text-gray-200 font-medium">{scoreModalData.result.eduMatch.candidateEdu}</span>
-                    </p>
-                  </div>
-                  <span className={`px-2 py-0.5 rounded text-[11px] font-bold ${
-                    scoreModalData.result.eduMatch.isMatch
-                      ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
-                      : 'bg-blue-500/15 text-blue-700 dark:text-blue-300'
-                  }`}>
-                    {scoreModalData.result.eduMatch.label}
-                  </span>
-                </div>
 
-                {/* Pillar 4: Location (10%) */}
-                <div className="p-3.5 rounded-xl border border-gray-200 dark:border-white/[0.08] bg-gray-50/50 dark:bg-white/[0.02] flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
-                        <MapPin size={14} className="text-teal-500" />
-                        Work Location & Mode Fit
-                      </span>
-                      <span className="px-1.5 py-0.2 rounded text-[10px] bg-teal-500/10 text-teal-600 dark:text-teal-400 font-mono font-bold">
-                        10% Weight
+                    {/* Dimension 3: Education */}
+                    <div className="p-4 rounded-2xl border border-[#E4E7DC] dark:border-white/[0.08] bg-white dark:bg-[#121316] shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div className="space-y-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <div className="size-6 rounded-lg bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0">
+                            <GraduationCap size={14} />
+                          </div>
+                          <span className="font-bold text-sm text-[#111215] dark:text-white">
+                            Academic & Qualification Fit
+                          </span>
+                        </div>
+                        <p className="text-xs text-[#575A51] dark:text-[#9DA195] pl-8">
+                          Required: <span className="text-[#111215] dark:text-white font-semibold">{scoreModalData.result.eduMatch.requiredEdu}</span> • Candidate: <span className="text-[#111215] dark:text-white font-semibold">{scoreModalData.result.eduMatch.candidateEdu}</span>
+                        </p>
+                      </div>
+                      <span
+                        className={`px-3 py-1 rounded-xl text-xs font-bold border shrink-0 sm:self-center ${
+                          scoreModalData.result.eduMatch.isMatch
+                            ? 'bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 border-emerald-500/25'
+                            : 'bg-blue-500/10 text-blue-800 dark:text-blue-300 border-blue-500/25'
+                        }`}
+                      >
+                        {scoreModalData.result.eduMatch.label}
                       </span>
                     </div>
-                    <p className="text-[11px] text-gray-500 dark:text-gray-400">
-                      {scoreModalData.result.locationMatch.details}
+
+                    {/* Dimension 4: Location */}
+                    <div className="p-4 rounded-2xl border border-[#E4E7DC] dark:border-white/[0.08] bg-white dark:bg-[#121316] shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div className="space-y-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <div className="size-6 rounded-lg bg-teal-500/10 text-teal-600 dark:text-teal-400 flex items-center justify-center shrink-0">
+                            <MapPin size={14} />
+                          </div>
+                          <span className="font-bold text-sm text-[#111215] dark:text-white">
+                            Work Location & Mode Fit
+                          </span>
+                        </div>
+                        <p className="text-xs text-[#575A51] dark:text-[#9DA195] pl-8">
+                          {scoreModalData.result.locationMatch.details}
+                        </p>
+                      </div>
+                      <span className="px-3 py-1 rounded-xl text-xs font-bold bg-teal-500/10 text-teal-800 dark:text-teal-300 border border-teal-500/25 shrink-0 sm:self-center">
+                        {scoreModalData.result.locationMatch.label}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Objective AI Transparency Card */}
+                  <div className="p-4 rounded-2xl border border-[#8FB305]/30 bg-[#F8F9F5] dark:bg-white/[0.02] text-xs text-[#575A51] dark:text-[#9DA195] flex items-start gap-3">
+                    <ShieldCheck size={18} className="text-[#8FB305] dark:text-[#D4F82C] shrink-0 mt-0.5" />
+                    <p className="leading-relaxed">
+                      <strong className="font-bold text-[#111215] dark:text-white">Objective AI Guarantee:</strong> Evaluated strictly on job description criteria against verified candidate CV information (skills, experience years, education). Demographic attributes (age, gender, ethnicity, pedigree) are mathematically zero-weighted.
                     </p>
                   </div>
-                  <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">
-                    {scoreModalData.result.locationMatch.label}
-                  </span>
                 </div>
+
+                {/* Right Column: Side-by-Side Candidate Resume Viewer */}
+                {showSideResume && (
+                  <div className="flex flex-col h-full max-h-[calc(94vh-130px)] bg-white dark:bg-[#121316] overflow-hidden">
+                    {/* Resume Panel Sub-Header */}
+                    <div className="flex items-center justify-between px-5 py-3 border-b border-[#E4E7DC] dark:border-white/[0.08] bg-white dark:bg-[#121316] shrink-0">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <FileText size={16} className="text-[#8FB305] dark:text-[#D4F82C] shrink-0" />
+                        <div className="min-w-0">
+                          <span className="font-bold text-xs text-[#111215] dark:text-white block truncate">
+                            Candidate Resume Document
+                          </span>
+                          <span className="text-[10px] text-[#575A51] dark:text-[#9DA195] block truncate">
+                            {resolvedResumeUrl ? 'Live CV verification & side-by-side comparison' : 'Profile credentials'}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        {resolvedResumeUrl && (
+                          <a
+                            href={resolvedResumeUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-[#E4E7DC] dark:border-white/[0.1] bg-[#FAFBF8] dark:bg-white/[0.04] text-xs font-semibold text-[#575A51] dark:text-[#9DA195] hover:text-[#111215] dark:hover:text-white hover:border-[#8FB305]/40 transition-colors shadow-2xs"
+                            title="Open original resume in full tab"
+                          >
+                            <ExternalLink size={12} />
+                            <span>Open Tab</span>
+                          </a>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Resume Panel Content - Seamless Edge-to-Edge Document View */}
+                    {resolvedResumeUrl ? (
+                      <div className="flex-1 w-full h-full min-h-[540px] bg-white overflow-hidden flex flex-col">
+                        <iframe
+                          src={
+                            resolvedResumeUrl.endsWith('.docx')
+                              ? `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(resolvedResumeUrl)}`
+                              : resolvedResumeUrl
+                          }
+                          className="w-full h-full flex-1 border-0 bg-white"
+                          title="Candidate Resume Document"
+                        />
+                      </div>
+                    ) : (
+                      /* Fallback view only if no resume file was uploaded */
+                      <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-[#F8F9F5] dark:bg-[#07080A]">
+                        <div className="p-8 text-center rounded-2xl border border-dashed border-[#E4E7DC] dark:border-white/[0.1] bg-white dark:bg-white/[0.02]">
+                          <FileText className="size-10 mx-auto text-[#575A51] opacity-40 mb-2" />
+                          <h5 className="font-bold text-xs text-[#111215] dark:text-white">
+                            Resume Document Not Uploaded
+                          </h5>
+                          <p className="text-[11px] text-[#575A51] dark:text-[#9DA195] max-w-xs mx-auto mt-1">
+                            Candidate applied with verified profile credentials.
+                          </p>
+                        </div>
+
+                        {candidateSummary && (
+                          <div className="p-4 rounded-2xl border border-[#E4E7DC] dark:border-white/[0.08] bg-white dark:bg-[#121316] shadow-xs space-y-1.5">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-[#575A51] dark:text-[#9DA195]">
+                              Professional Summary
+                            </span>
+                            <p className="text-xs text-[#111215] dark:text-white leading-relaxed">
+                              {candidateSummary}
+                            </p>
+                          </div>
+                        )}
+
+                        {candidateSkills.length > 0 && (
+                          <div className="p-4 rounded-2xl border border-[#E4E7DC] dark:border-white/[0.08] bg-white dark:bg-[#121316] shadow-xs space-y-2">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-[#575A51] dark:text-[#9DA195]">
+                              Candidate Skills ({candidateSkills.length})
+                            </span>
+                            <div className="flex flex-wrap gap-1.5">
+                              {candidateSkills.map((s, idx) => (
+                                <span
+                                  key={idx}
+                                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-[#F8F9F5] dark:bg-white/[0.04] text-[#111215] dark:text-white border border-[#E4E7DC] dark:border-white/[0.08]"
+                                >
+                                  {s}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
-              {/* Zero-Bias Compliance Notice */}
-              <div className="p-3 rounded-lg border border-blue-500/20 bg-blue-50/50 dark:bg-blue-500/5 text-[11px] text-blue-700 dark:text-blue-300 flex items-start gap-2">
-                <ShieldCheck size={16} className="text-blue-500 shrink-0 mt-0.5" />
-                <p>
-                  <strong className="font-semibold">Unbiased AI Guarantee:</strong> This score is calculated purely on hard requirements — skills extracted from the candidate resume vs the job description, verified years of experience, and educational suitability. Demographics such as age, gender, ethnicity, and pedigree are strictly zero-weighted.
-                </p>
+              {/* Modal Footer */}
+              <div className="flex items-center justify-between px-6 py-4 border-t border-[#E4E7DC] dark:border-white/[0.08] bg-white dark:bg-[#121316] shrink-0">
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setScoreModalData(null)}
+                    className="px-4 py-2.5 rounded-xl border border-[#E4E7DC] dark:border-white/[0.12] bg-[#FAFBF8] dark:bg-white/[0.05] text-xs font-bold text-[#111215] dark:text-white hover:bg-[#F0F2EB] dark:hover:bg-white/[0.08] transition-colors cursor-pointer"
+                  >
+                    Close
+                  </button>
+
+                  {/* Footer Side-by-Side Resume Toggle */}
+                  <button
+                    type="button"
+                    onClick={() => setShowSideResume((prev) => !prev)}
+                    className={`hidden sm:inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
+                      showSideResume
+                        ? 'bg-[#111215] text-[#D4F82C] dark:bg-[#D4F82C] dark:text-[#111215] border-[#8FB305]/60'
+                        : 'bg-white dark:bg-white/[0.05] text-[#575A51] dark:text-[#9DA195] border-[#E4E7DC] dark:border-white/[0.1] hover:text-[#111215]'
+                    }`}
+                  >
+                    <FileText size={13} />
+                    <span>{showSideResume ? 'Close Split Resume' : 'Compare with Resume (Split View)'}</span>
+                  </button>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const lead = scoreModalData.lead;
+                    setScoreModalData(null);
+                    handleOpenCandidateModal(lead);
+                  }}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#111215] text-[#D4F82C] dark:bg-[#D4F82C] dark:text-[#111215] hover:opacity-95 font-bold text-xs border border-[#8FB305]/40 shadow-sm transition-all cursor-pointer"
+                >
+                  <FileText size={14} />
+                  <span>Open Full Candidate Profile & Resume</span>
+                </button>
               </div>
-            </div>
-
-            {/* Modal Footer */}
-            <div className="flex items-center justify-between px-5 py-3.5 border-t border-gray-200 dark:border-white/[0.1] bg-gray-50/80 dark:bg-[#111114]">
-              <button
-                type="button"
-                onClick={() => setScoreModalData(null)}
-                className="px-4 py-2 rounded-lg border border-gray-300 dark:border-white/[0.12] bg-white dark:bg-white/[0.05] text-xs font-bold text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/[0.08] transition-colors cursor-pointer"
-              >
-                Close
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  const lead = scoreModalData.lead;
-                  setScoreModalData(null);
-                  handleOpenCandidateModal(lead);
-                }}
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-md shadow-emerald-600/20 transition-all cursor-pointer"
-              >
-                <FileText size={13} />
-                <span>Open Full Candidate Profile & Resume</span>
-              </button>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Morph / Masked Resume (Blind Client Copy) Modal */}
       <MorphResumeModal
