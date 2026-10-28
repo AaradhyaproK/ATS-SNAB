@@ -3656,191 +3656,330 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
         </div>
       </header>
 
-      {/* ── Main Workspace Body with Sideway Navigation Layout ── */}
+      {/* ── Main Workspace Body with Fixed Sleek Sideway Navigation Layout ── */}
       <div className="flex-1 flex overflow-hidden min-h-[calc(100vh-61px)]">
-        {/* ── Left Sideway Sidebar (Desktop & Tablet) ── */}
-        <aside className="hidden md:flex w-64 lg:w-72 shrink-0 flex-col border-r border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] p-3.5 justify-between select-none overflow-y-auto">
-          <div className="space-y-4">
-            {/* Candidate Mini Profile Card */}
-            <div className="p-3.5 rounded-2xl bg-[#F8F9F5] dark:bg-[#1F232B] border border-[#E4E7DC] dark:border-white/10">
-              <div className="flex items-center gap-3">
-                <div className="relative">
-                  <div className="size-11 rounded-full ring-2 ring-[#D4F82C] bg-[#111215] p-0.5 overflow-hidden flex items-center justify-center">
-                    <img
-                      src={`https://ui-avatars.com/api/?name=${encodeURIComponent(candidateDisplayName)}&background=111215&color=D4F82C&bold=true`}
-                      alt={candidateDisplayName}
-                      className="w-full h-full rounded-full object-cover"
-                    />
-                  </div>
-                  <span className="absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full bg-[#8FB305] ring-2 ring-white dark:ring-[#1F232B]" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs font-black truncate text-[#111215] dark:text-white">{candidateDisplayName}</p>
-                  <p className="text-[10px] text-[#73766C] dark:text-neutral-400 truncate">{candidateDisplayEmail}</p>
-                  <span className="mt-1 inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider text-[#111215] bg-[#D4F82C] px-2 py-0.2 rounded-full">
-                    AI Verified
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Sideway Navigation Group */}
-            <div className="space-y-1">
-              <div className="px-3 py-1 text-[10px] font-black uppercase tracking-wider text-[#73766C] dark:text-neutral-400">
+        {/* ── Left Fixed Sleek Sidebar (Desktop & Tablet) ── */}
+        <aside className="hidden md:flex w-[205px] shrink-0 sticky top-[61px] h-[calc(100dvh-61px)] flex-col justify-between border-r border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] p-2.5 pt-3.5 select-none z-30 font-sans">
+          <div className="flex flex-1 flex-col gap-3 overflow-y-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <div className="flex flex-col gap-1">
+              <span className="mb-1 px-3 text-[10px] font-bold uppercase tracking-wider text-[#73766C]">
                 Candidate Portal
-              </div>
+              </span>
 
-              {/* Option 1: My Applications */}
+              {/* Item 1: My Applications */}
               <button
                 type="button"
-                onClick={() => setActiveTab('applied')}
-                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  activeTab === 'applied'
-                    ? 'bg-[#111215] text-white dark:bg-[#D4F82C] dark:text-[#111215] shadow-xs'
-                    : 'text-[#575A51] dark:text-neutral-400 hover:bg-[#F8F9F5] dark:hover:bg-white/5 hover:text-[#111215] dark:hover:text-white'
+                onClick={() => {
+                  setActiveTab('applied');
+                  setAppliedStageFilter('all');
+                }}
+                className={`group flex w-full items-center justify-between rounded-xl px-3 py-2 text-left transition-all duration-150 active:scale-[0.98] select-none cursor-pointer ${
+                  activeTab === 'applied' && appliedStageFilter === 'all'
+                    ? 'bg-[#111215] text-white dark:bg-[#D4F82C] dark:text-[#111215] font-bold shadow-xs'
+                    : 'text-[#575A51] dark:text-neutral-400 hover:bg-[#F8F9F5] dark:hover:bg-white/5 hover:text-[#111215] dark:hover:text-white font-medium'
                 }`}
               >
-                <span className="flex items-center gap-2.5">
-                  <Briefcase size={16} className={activeTab === 'applied' ? 'text-[#D4F82C] dark:text-[#111215]' : 'text-[#73766C]'} />
-                  <span>My Applications</span>
+                <span className="flex min-w-0 items-center gap-2.5">
+                  <Briefcase
+                    className={`size-4 shrink-0 transition-colors ${
+                      activeTab === 'applied' && appliedStageFilter === 'all'
+                        ? 'text-[#D4F82C] dark:text-[#111215]'
+                        : 'text-[#73766C] group-hover:text-[#111215] dark:group-hover:text-white'
+                    }`}
+                    strokeWidth={1.8}
+                  />
+                  <span className="text-xs truncate">Applications</span>
                 </span>
-                <span className="flex items-center gap-1.5">
-                  {shortlistedCount > 0 && <span className="size-2 rounded-full bg-[#8FB305] animate-pulse" />}
-                  <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${
-                    activeTab === 'applied'
-                      ? 'bg-white/20 text-white dark:bg-black/20 dark:text-[#111215]'
-                      : 'bg-[#E4E7DC] dark:bg-white/10 text-[#111215] dark:text-white'
+                <span className="flex h-5 min-w-5 items-center justify-center rounded-full border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-white/10 px-1.5 text-[10px] font-bold text-[#111215] dark:text-white">
+                  {myApplicationsList.length}
+                </span>
+              </button>
+
+              {/* Item 2: Shortlisted Rounds */}
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab('applied');
+                  setAppliedStageFilter('shortlisted');
+                }}
+                className={`group flex w-full items-center justify-between rounded-xl px-3 py-2 text-left transition-all duration-150 active:scale-[0.98] select-none cursor-pointer ${
+                  activeTab === 'applied' && appliedStageFilter === 'shortlisted'
+                    ? 'bg-[#111215] text-white dark:bg-[#D4F82C] dark:text-[#111215] font-bold shadow-xs'
+                    : 'text-[#575A51] dark:text-neutral-400 hover:bg-[#F8F9F5] dark:hover:bg-white/5 hover:text-[#111215] dark:hover:text-white font-medium'
+                }`}
+              >
+                <span className="flex min-w-0 items-center gap-2.5">
+                  <Calendar
+                    className={`size-4 shrink-0 transition-colors ${
+                      activeTab === 'applied' && appliedStageFilter === 'shortlisted'
+                        ? 'text-[#D4F82C] dark:text-[#111215]'
+                        : 'text-[#73766C] group-hover:text-[#111215] dark:group-hover:text-white'
+                    }`}
+                    strokeWidth={1.8}
+                  />
+                  <span className="text-xs truncate">Shortlisted</span>
+                </span>
+                <span className="flex items-center gap-1">
+                  {shortlistedCount > 0 && <span className="size-1.5 rounded-full bg-[#8FB305] animate-pulse" />}
+                  <span className={`flex h-5 min-w-5 items-center justify-center rounded-full border px-1.5 text-[10px] font-bold ${
+                    shortlistedCount > 0
+                      ? 'border-[#8FB305]/40 bg-[#D4F82C] text-[#111215]'
+                      : 'border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-white/10 text-[#111215] dark:text-white'
                   }`}>
-                    {myApplicationsList.length}
+                    {shortlistedCount}
                   </span>
                 </span>
               </button>
 
-              {/* Option 2: Matched Jobs */}
+              {/* Item 3: Matched Jobs */}
               <button
                 type="button"
                 onClick={() => setActiveTab('matches')}
-                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                className={`group flex w-full items-center justify-between rounded-xl px-3 py-2 text-left transition-all duration-150 active:scale-[0.98] select-none cursor-pointer ${
                   activeTab === 'matches'
-                    ? 'bg-[#111215] text-white dark:bg-[#D4F82C] dark:text-[#111215] shadow-xs'
-                    : 'text-[#575A51] dark:text-neutral-400 hover:bg-[#F8F9F5] dark:hover:bg-white/5 hover:text-[#111215] dark:hover:text-white'
+                    ? 'bg-[#111215] text-white dark:bg-[#D4F82C] dark:text-[#111215] font-bold shadow-xs'
+                    : 'text-[#575A51] dark:text-neutral-400 hover:bg-[#F8F9F5] dark:hover:bg-white/5 hover:text-[#111215] dark:hover:text-white font-medium'
                 }`}
               >
-                <span className="flex items-center gap-2.5">
-                  <Sparkles size={16} className={activeTab === 'matches' ? 'text-[#D4F82C] dark:text-[#111215]' : 'text-[#73766C]'} />
-                  <span>Matched Jobs</span>
+                <span className="flex min-w-0 items-center gap-2.5">
+                  <Sparkles
+                    className={`size-4 shrink-0 transition-colors ${
+                      activeTab === 'matches'
+                        ? 'text-[#D4F82C] dark:text-[#111215]'
+                        : 'text-[#73766C] group-hover:text-[#111215] dark:group-hover:text-white'
+                    }`}
+                    strokeWidth={1.8}
+                  />
+                  <span className="text-xs truncate">Matched Jobs</span>
                 </span>
-                <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${
-                  activeTab === 'matches'
-                    ? 'bg-white/20 text-white dark:bg-black/20 dark:text-[#111215]'
-                    : 'bg-[#E4E7DC] dark:bg-white/10 text-[#111215] dark:text-white'
-                }`}>
+                <span className="flex h-5 min-w-5 items-center justify-center rounded-full border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-white/10 px-1.5 text-[10px] font-bold text-[#111215] dark:text-white">
                   {matchedJobs.length}
                 </span>
               </button>
 
-              {/* Option 3: My Resume */}
+              {/* Item 4: My Resume */}
               <button
                 type="button"
                 onClick={() => setActiveTab('resume')}
-                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                className={`group flex w-full items-center justify-between rounded-xl px-3 py-2 text-left transition-all duration-150 active:scale-[0.98] select-none cursor-pointer ${
                   activeTab === 'resume'
-                    ? 'bg-[#111215] text-white dark:bg-[#D4F82C] dark:text-[#111215] shadow-xs'
-                    : 'text-[#575A51] dark:text-neutral-400 hover:bg-[#F8F9F5] dark:hover:bg-white/5 hover:text-[#111215] dark:hover:text-white'
+                    ? 'bg-[#111215] text-white dark:bg-[#D4F82C] dark:text-[#111215] font-bold shadow-xs'
+                    : 'text-[#575A51] dark:text-neutral-400 hover:bg-[#F8F9F5] dark:hover:bg-white/5 hover:text-[#111215] dark:hover:text-white font-medium'
                 }`}
               >
-                <span className="flex items-center gap-2.5">
-                  <FileText size={16} className={activeTab === 'resume' ? 'text-[#D4F82C] dark:text-[#111215]' : 'text-[#73766C]'} />
-                  <span>My Resume</span>
+                <span className="flex min-w-0 items-center gap-2.5">
+                  <FileText
+                    className={`size-4 shrink-0 transition-colors ${
+                      activeTab === 'resume'
+                        ? 'text-[#D4F82C] dark:text-[#111215]'
+                        : 'text-[#73766C] group-hover:text-[#111215] dark:group-hover:text-white'
+                    }`}
+                    strokeWidth={1.8}
+                  />
+                  <span className="text-xs truncate">My Resume</span>
                 </span>
                 <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
                   candidate?.resumeUrl
                     ? 'text-emerald-700 bg-emerald-100 dark:bg-emerald-950/60 dark:text-emerald-300'
                     : 'text-amber-700 bg-amber-100 dark:bg-amber-950/60 dark:text-amber-300'
                 }`}>
-                  {candidate?.resumeUrl ? '✓ Attached' : 'Missing'}
+                  {candidate?.resumeUrl ? '✓' : '!'}
                 </span>
               </button>
 
-              {/* Option 4: Edit Profile & Skills */}
+              {/* Item 5: Edit Profile & Skills */}
               <button
                 type="button"
                 onClick={() => setActiveTab('edit-profile')}
-                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                className={`group flex w-full items-center justify-between rounded-xl px-3 py-2 text-left transition-all duration-150 active:scale-[0.98] select-none cursor-pointer ${
                   activeTab === 'edit-profile'
-                    ? 'bg-[#111215] text-white dark:bg-[#D4F82C] dark:text-[#111215] shadow-xs'
-                    : 'text-[#575A51] dark:text-neutral-400 hover:bg-[#F8F9F5] dark:hover:bg-white/5 hover:text-[#111215] dark:hover:text-white'
+                    ? 'bg-[#111215] text-white dark:bg-[#D4F82C] dark:text-[#111215] font-bold shadow-xs'
+                    : 'text-[#575A51] dark:text-neutral-400 hover:bg-[#F8F9F5] dark:hover:bg-white/5 hover:text-[#111215] dark:hover:text-white font-medium'
                 }`}
               >
-                <span className="flex items-center gap-2.5">
-                  <Edit3 size={16} className={activeTab === 'edit-profile' ? 'text-[#D4F82C] dark:text-[#111215]' : 'text-[#73766C]'} />
-                  <span>Profile & Skills</span>
+                <span className="flex min-w-0 items-center gap-2.5">
+                  <Edit3
+                    className={`size-4 shrink-0 transition-colors ${
+                      activeTab === 'edit-profile'
+                        ? 'text-[#D4F82C] dark:text-[#111215]'
+                        : 'text-[#73766C] group-hover:text-[#111215] dark:group-hover:text-white'
+                    }`}
+                    strokeWidth={1.8}
+                  />
+                  <span className="text-xs truncate">Profile & Skills</span>
                 </span>
                 <ChevronRight size={13} className="text-[#73766C]" />
               </button>
             </div>
           </div>
 
-          {/* Sideway Sidebar Resume Widget & Quick Change */}
-          <div className="space-y-3 pt-3 border-t border-[#E4E7DC] dark:border-white/10">
-            <div className="p-3 rounded-2xl border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-[#1F232B] space-y-2">
-              <div className="flex items-center justify-between text-xs">
-                <span className="font-bold text-[11px] text-[#111215] dark:text-white flex items-center gap-1.5">
-                  <FileText size={13} className="text-[#8FB305]" />
-                  <span>Candidate CV</span>
-                </span>
-                {candidate?.resumeUrl && (
-                  <span className="text-[9px] font-black uppercase text-emerald-600 bg-emerald-50 dark:bg-emerald-950/60 px-1.5 py-0.5 rounded-full">
-                    Active
-                  </span>
-                )}
-              </div>
+          {/* Sleek Bottom Options: Change Resume & Sign Out */}
+          <div className="space-y-1 pt-2 border-t border-[#E4E7DC] dark:border-white/10 shrink-0">
+            {/* 1-Click Change Resume Pill */}
+            <label className="group flex w-full items-center justify-between rounded-xl px-3 py-2 text-left transition-all text-[#575A51] dark:text-neutral-400 hover:bg-[#F8F9F5] dark:hover:bg-white/5 hover:text-[#111215] dark:hover:text-white font-medium cursor-pointer">
+              <span className="flex items-center gap-2 truncate">
+                <UploadCloud size={14} className="text-[#8FB305] shrink-0" />
+                <span className="text-xs truncate">{isUploadingResume ? 'Saving…' : 'Change Resume'}</span>
+              </span>
+              <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-md bg-[#E4E7DC] dark:bg-white/10 text-[#111215] dark:text-white">CV</span>
+              <input
+                type="file"
+                accept=".pdf,.doc,.docx"
+                disabled={isUploadingResume}
+                onChange={handleUploadNewResume}
+                className="hidden"
+              />
+            </label>
 
-              <p className="text-[11px] text-[#73766C] dark:text-neutral-400 truncate">
-                {candidate?.resumeFileName || (candidate?.resumeUrl ? 'Attached Resume.pdf' : 'No CV uploaded yet')}
-              </p>
-
-              <div className="grid grid-cols-2 gap-1.5 pt-1">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setActiveTab('resume');
-                    if (candidate?.resumeUrl) setPreviewResumeModalUrl(candidate.resumeUrl);
-                  }}
-                  className="w-full py-1.5 rounded-lg text-[10px] font-bold bg-white dark:bg-[#15161A] border border-[#E4E7DC] dark:border-white/10 hover:border-[#111215] dark:hover:border-[#D4F82C] text-[#111215] dark:text-white transition-all flex items-center justify-center gap-1 cursor-pointer shadow-2xs"
-                >
-                  <Eye size={11} />
-                  <span>View</span>
-                </button>
-
-                <label className="w-full py-1.5 rounded-lg text-[10px] font-black bg-[#111215] text-[#D4F82C] hover:bg-black transition-all flex items-center justify-center gap-1 cursor-pointer shadow-2xs">
-                  <UploadCloud size={11} />
-                  <span>{isUploadingResume ? 'Saving…' : 'Change'}</span>
-                  <input
-                    type="file"
-                    accept=".pdf,.doc,.docx"
-                    disabled={isUploadingResume}
-                    onChange={handleUploadNewResume}
-                    className="hidden"
-                  />
-                </label>
-              </div>
-            </div>
-
-            {/* Sidebar Footer Sign Out */}
+            {/* Sign Out Button */}
             <button
               type="button"
               onClick={handleLogout}
-              className="w-full py-2 px-3 rounded-xl text-xs font-bold text-[#73766C] hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 dark:hover:text-red-400 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+              className="group flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left transition-all text-[#73766C] hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40 dark:hover:text-red-400 font-medium cursor-pointer text-xs"
             >
-              <LogOut size={13} />
+              <LogOut size={14} className="shrink-0" />
               <span>Sign Out</span>
             </button>
           </div>
         </aside>
 
-        {/* ── Main Content Area (Sideway Layout) ── */}
-        <main className="flex-1 min-w-0 bg-[#F8F9F5] dark:bg-[#0D0E11] p-4 sm:p-6 lg:p-8 overflow-y-auto space-y-6 pb-28 sm:pb-12">
+        {/* ── Main Content Area ── */}
+        <main className="flex-1 min-w-0 bg-[#F8F9F5] dark:bg-[#0D0E11] p-4 sm:p-6 lg:p-7 overflow-y-auto space-y-5 pb-28 sm:pb-12">
+          {/* ── All Numbers Across Dashboard (Sleek Metric Cards Grid) ── */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            {/* Card 1: Total Applications */}
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab('applied');
+                setAppliedStageFilter('all');
+              }}
+              className={`p-3.5 sm:p-4 rounded-2xl border text-left transition-all cursor-pointer relative overflow-hidden group ${
+                activeTab === 'applied' && appliedStageFilter === 'all'
+                  ? 'bg-white dark:bg-[#15161A] border-[#111215] dark:border-[#D4F82C] ring-2 ring-[#111215] dark:ring-[#D4F82C] shadow-md'
+                  : 'bg-white dark:bg-[#15161A] border-[#E4E7DC] dark:border-white/10 hover:border-[#111215]/30 dark:hover:border-white/20 shadow-xs'
+              }`}
+            >
+              <div className="flex items-center justify-between mb-2">
+                <div className="w-8 h-8 rounded-xl bg-[#111215] text-[#D4F82C] dark:bg-white/10 dark:text-[#D4F82C] flex items-center justify-center font-bold shadow-xs">
+                  <Briefcase size={15} />
+                </div>
+                <span className="text-[10px] sm:text-xs font-black uppercase tracking-wider text-[#575A51] dark:text-neutral-300 bg-[#E4E7DC]/60 dark:bg-white/10 px-2 py-0.5 rounded-full">
+                  Track
+                </span>
+              </div>
+              <div className="text-2xl sm:text-3xl font-black text-[#111215] dark:text-white leading-tight">
+                {myApplicationsList.length}
+              </div>
+              <div className="text-xs font-bold text-[#111215] dark:text-neutral-200 mt-0.5 truncate">
+                My Applications
+              </div>
+              <div className="text-[11px] text-[#73766C] dark:text-neutral-400 mt-0.5 truncate">
+                {underReviewCount > 0 ? `${underReviewCount} under review` : 'Total submitted roles'}
+              </div>
+            </button>
+
+            {/* Card 2: Shortlisted & Active Rounds */}
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab('applied');
+                setAppliedStageFilter('shortlisted');
+              }}
+              className={`p-3.5 sm:p-4 rounded-2xl border text-left transition-all cursor-pointer relative overflow-hidden group ${
+                activeTab === 'applied' && appliedStageFilter === 'shortlisted'
+                  ? 'bg-white dark:bg-[#15161A] border-[#111215] dark:border-[#D4F82C] ring-2 ring-[#111215] dark:ring-[#D4F82C] shadow-md'
+                  : 'bg-white dark:bg-[#15161A] border-[#E4E7DC] dark:border-white/10 hover:border-[#111215]/30 dark:hover:border-white/20 shadow-xs'
+              }`}
+            >
+              <div className="flex items-center justify-between mb-2">
+                <div className="w-8 h-8 rounded-xl bg-[#111215] text-[#D4F82C] dark:bg-white/10 dark:text-[#D4F82C] flex items-center justify-center font-bold shadow-xs">
+                  <Calendar size={15} />
+                </div>
+                {shortlistedCount > 0 ? (
+                  <span className="flex items-center gap-1 text-[10px] sm:text-xs font-black uppercase tracking-wider text-[#111215] bg-[#D4F82C] px-2 py-0.5 rounded-full shadow-xs animate-pulse">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#111215]" />
+                    Active
+                  </span>
+                ) : (
+                  <span className="text-[10px] sm:text-xs font-black uppercase tracking-wider text-[#73766C] dark:text-neutral-400 bg-[#E4E7DC]/60 dark:bg-white/10 px-2 py-0.5 rounded-full">
+                    Rounds
+                  </span>
+                )}
+              </div>
+              <div className="text-2xl sm:text-3xl font-black text-[#111215] dark:text-white leading-tight">
+                {shortlistedCount}
+              </div>
+              <div className="text-xs font-bold text-[#111215] dark:text-neutral-200 mt-0.5 truncate">
+                Shortlisted
+              </div>
+              <div className="text-[11px] text-[#73766C] dark:text-neutral-400 mt-0.5 truncate">
+                {shortlistedCount > 0 ? 'Upcoming interview rounds' : 'No active rounds'}
+              </div>
+            </button>
+
+            {/* Card 3: Matched Roles */}
+            <button
+              type="button"
+              onClick={() => setActiveTab('matches')}
+              className={`p-3.5 sm:p-4 rounded-2xl border text-left transition-all cursor-pointer relative overflow-hidden group ${
+                activeTab === 'matches'
+                  ? 'bg-white dark:bg-[#15161A] border-[#111215] dark:border-[#D4F82C] ring-2 ring-[#111215] dark:ring-[#D4F82C] shadow-md'
+                  : 'bg-white dark:bg-[#15161A] border-[#E4E7DC] dark:border-white/10 hover:border-[#111215]/30 dark:hover:border-white/20 shadow-xs'
+              }`}
+            >
+              <div className="flex items-center justify-between mb-2">
+                <div className="w-8 h-8 rounded-xl bg-[#D4F82C] text-[#111215] flex items-center justify-center font-bold shadow-xs">
+                  <Sparkles size={15} />
+                </div>
+                <span className="text-[10px] sm:text-xs font-black uppercase tracking-wider text-[#111215] bg-[#D4F82C] px-2.5 py-0.5 rounded-full shadow-xs">
+                  AI Match
+                </span>
+              </div>
+              <div className="text-2xl sm:text-3xl font-black text-[#111215] dark:text-white leading-tight">
+                {matchedJobs.length}
+              </div>
+              <div className="text-xs font-bold text-[#111215] dark:text-neutral-200 mt-0.5 truncate">
+                Matched Roles
+              </div>
+              <div className="text-[11px] text-[#73766C] dark:text-neutral-400 mt-0.5 truncate">
+                {matchedJobs.length > 0 ? `${matchedJobs[0].overallScore}% top fit score` : 'Open roles matching profile'}
+              </div>
+            </button>
+
+            {/* Card 4: Resume Status */}
+            <button
+              type="button"
+              onClick={() => setActiveTab('resume')}
+              className={`p-3.5 sm:p-4 rounded-2xl border text-left transition-all cursor-pointer relative overflow-hidden group ${
+                activeTab === 'resume'
+                  ? 'bg-white dark:bg-[#15161A] border-[#111215] dark:border-[#D4F82C] ring-2 ring-[#111215] dark:ring-[#D4F82C] shadow-md'
+                  : 'bg-white dark:bg-[#15161A] border-[#E4E7DC] dark:border-white/10 hover:border-[#111215]/30 dark:hover:border-white/20 shadow-xs'
+              }`}
+            >
+              <div className="flex items-center justify-between mb-2">
+                <div className="w-8 h-8 rounded-xl bg-[#111215] text-[#D4F82C] dark:bg-white/10 dark:text-[#D4F82C] flex items-center justify-center font-bold shadow-xs">
+                  <FileText size={15} />
+                </div>
+                <span className={`text-[10px] sm:text-xs font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${
+                  candidate?.resumeUrl
+                    ? 'text-emerald-700 bg-emerald-100 dark:bg-emerald-950/60 dark:text-emerald-300'
+                    : 'text-amber-700 bg-amber-100 dark:bg-amber-950/60 dark:text-amber-300'
+                }`}>
+                  {candidate?.resumeUrl ? 'Verified' : 'Upload'}
+                </span>
+              </div>
+              <div className="text-2xl sm:text-3xl font-black text-[#111215] dark:text-white leading-tight">
+                {candidate?.resumeUrl ? '1' : '0'}
+              </div>
+              <div className="text-xs font-bold text-[#111215] dark:text-neutral-200 mt-0.5 truncate">
+                Attached Resume
+              </div>
+              <div className="text-[11px] text-[#73766C] dark:text-neutral-400 mt-0.5 truncate">
+                {candidate?.resumeFileName || 'Click to view & replace'}
+              </div>
+            </button>
+          </div>
           {/* ── Direct Job Invitation Dossier Banner (When URL has ?job=...) ── */}
           {targetJobId && targetJobData && (
             <div className="p-4 sm:p-6 rounded-3xl bg-gradient-to-br from-[#D4F82C]/20 via-white to-white dark:from-[#D4F82C]/10 dark:via-[#15161A] dark:to-[#15161A] border-2 border-[#D4F82C] shadow-xl relative overflow-hidden">
@@ -3921,154 +4060,6 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
                   </button>
                 </div>
               </div>
-            </div>
-          )}
-
-          {/* Clean Welcome Header - ONLY on Home (Matched roles) tab */}
-          {activeTab === 'matches' && (
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-2">
-              <div>
-                <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-[#111215] dark:text-white">
-                  Welcome, {candidateDisplayName} 👋
-                </h1>
-                <p className="text-xs sm:text-sm text-[#575A51] dark:text-neutral-400 mt-1">
-                  Explore your personalized AI-matched job opportunities.
-                </p>
-              </div>
-            </div>
-          )}
-
-          {/* Quick App-like Metric Cards Grid - ONLY shown on Home (Matched roles) tab */}
-          {activeTab === 'matches' && (
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-              {/* Card 1: Matched Jobs */}
-              <button
-                type="button"
-                onClick={() => setActiveTab('matches')}
-                className={`p-4 sm:p-5 rounded-3xl border text-left transition-all cursor-pointer relative overflow-hidden group ${
-                  activeTab === 'matches'
-                    ? 'bg-white dark:bg-[#15161A] border-[#111215] dark:border-[#D4F82C] ring-2 ring-[#111215] dark:ring-[#D4F82C] shadow-md'
-                    : 'bg-white dark:bg-[#15161A] border-[#E4E7DC] dark:border-white/10 hover:border-[#111215]/30 dark:hover:border-white/20 shadow-xs'
-                }`}
-              >
-                <div className="flex items-center justify-between mb-2 sm:mb-3">
-                  <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-2xl bg-[#D4F82C] text-[#111215] flex items-center justify-center font-bold shadow-xs">
-                    <Sparkles size={16} />
-                  </div>
-                  <span className="text-[10px] sm:text-xs font-black uppercase tracking-wider text-[#111215] bg-[#D4F82C] px-2.5 py-0.5 rounded-full shadow-xs">
-                    AI Match
-                  </span>
-                </div>
-                <div className="text-2xl sm:text-3xl font-black text-[#111215] dark:text-white leading-tight">
-                  {matchedJobs.length}
-                </div>
-                <div className="text-xs font-bold text-[#111215] dark:text-neutral-200 mt-1 truncate">
-                  Matched Roles
-                </div>
-                <div className="hidden sm:block text-[11px] text-[#73766C] dark:text-neutral-400 mt-0.5 truncate">
-                  {matchedJobs.length > 0 ? `${matchedJobs[0].overallScore}% top fit score` : 'Open roles matching criteria'}
-                </div>
-              </button>
-
-              {/* Card 2: Applied Jobs */}
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveTab('applied');
-                  setAppliedStageFilter('all');
-                }}
-                className={`p-4 sm:p-5 rounded-3xl border text-left transition-all cursor-pointer relative overflow-hidden group ${
-                  activeTab === 'applied' && appliedStageFilter === 'all'
-                    ? 'bg-white dark:bg-[#15161A] border-[#111215] dark:border-[#D4F82C] ring-2 ring-[#111215] dark:ring-[#D4F82C] shadow-md'
-                    : 'bg-white dark:bg-[#15161A] border-[#E4E7DC] dark:border-white/10 hover:border-[#111215]/30 dark:hover:border-white/20 shadow-xs'
-                }`}
-              >
-                <div className="flex items-center justify-between mb-2 sm:mb-3">
-                  <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-2xl bg-[#111215] text-[#D4F82C] dark:bg-white/10 dark:text-[#D4F82C] flex items-center justify-center font-bold shadow-xs">
-                    <Briefcase size={16} />
-                  </div>
-                  <span className="text-[10px] sm:text-xs font-black uppercase tracking-wider text-[#575A51] dark:text-neutral-300 bg-[#E4E7DC]/60 dark:bg-white/10 px-2.5 py-0.5 rounded-full">
-                    Track
-                  </span>
-                </div>
-                <div className="text-2xl sm:text-3xl font-black text-[#111215] dark:text-white leading-tight">
-                  {myApplicationsList.length}
-                </div>
-                <div className="text-xs font-bold text-[#111215] dark:text-neutral-200 mt-1 truncate">
-                  My Applications
-                </div>
-                <div className="hidden sm:block text-[11px] text-[#73766C] dark:text-neutral-400 mt-0.5 truncate">
-                  {underReviewCount > 0 ? `${underReviewCount} under review` : 'Total submitted jobs'}
-                </div>
-              </button>
-
-              {/* Card 3: Shortlisted & Interviews */}
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveTab('applied');
-                  setAppliedStageFilter('shortlisted');
-                }}
-                className={`p-4 sm:p-5 rounded-3xl border text-left transition-all cursor-pointer relative overflow-hidden group ${
-                  activeTab === 'applied' && appliedStageFilter === 'shortlisted'
-                    ? 'bg-white dark:bg-[#15161A] border-[#111215] dark:border-[#D4F82C] ring-2 ring-[#111215] dark:ring-[#D4F82C] shadow-md'
-                    : 'bg-white dark:bg-[#15161A] border-[#E4E7DC] dark:border-white/10 hover:border-[#111215]/30 dark:hover:border-white/20 shadow-xs'
-                }`}
-              >
-                <div className="flex items-center justify-between mb-2 sm:mb-3">
-                  <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-2xl bg-[#111215] text-[#D4F82C] dark:bg-white/10 dark:text-[#D4F82C] flex items-center justify-center font-bold shadow-xs">
-                    <Calendar size={16} />
-                  </div>
-                  {shortlistedCount > 0 ? (
-                    <span className="flex items-center gap-1 text-[10px] sm:text-xs font-black uppercase tracking-wider text-[#111215] bg-[#D4F82C] px-2.5 py-0.5 rounded-full shadow-xs animate-pulse">
-                      <span className="w-1.5 h-1.5 rounded-full bg-[#111215]" />
-                      Active
-                    </span>
-                  ) : (
-                    <span className="text-[10px] sm:text-xs font-black uppercase tracking-wider text-[#73766C] dark:text-neutral-400 bg-[#E4E7DC]/60 dark:bg-white/10 px-2.5 py-0.5 rounded-full">
-                      Rounds
-                    </span>
-                  )}
-                </div>
-                <div className="text-2xl sm:text-3xl font-black text-[#111215] dark:text-white leading-tight">
-                  {shortlistedCount}
-                </div>
-                <div className="text-xs font-bold text-[#111215] dark:text-neutral-200 mt-1 truncate">
-                  Shortlisted
-                </div>
-                <div className="hidden sm:block text-[11px] text-[#73766C] dark:text-neutral-400 mt-0.5 truncate">
-                  {shortlistedCount > 0 ? 'Upcoming interview rounds' : 'No active rounds'}
-                </div>
-              </button>
-
-              {/* Card 4: Resume */}
-              <button
-                type="button"
-                onClick={() => setActiveTab('resume')}
-                className={`p-4 sm:p-5 rounded-3xl border text-left transition-all cursor-pointer relative overflow-hidden group ${
-                  activeTab === 'resume'
-                    ? 'bg-white dark:bg-[#15161A] border-[#111215] dark:border-[#D4F82C] ring-2 ring-[#111215] dark:ring-[#D4F82C] shadow-md'
-                    : 'bg-white dark:bg-[#15161A] border-[#E4E7DC] dark:border-white/10 hover:border-[#111215]/30 dark:hover:border-white/20 shadow-xs'
-                }`}
-              >
-                <div className="flex items-center justify-between mb-2 sm:mb-3">
-                  <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-2xl bg-[#111215] text-[#D4F82C] dark:bg-white/10 dark:text-[#D4F82C] flex items-center justify-center font-bold shadow-xs">
-                    <FileText size={16} />
-                  </div>
-                  <span className="text-[10px] sm:text-xs font-black uppercase tracking-wider text-[#575A51] dark:text-neutral-300 bg-[#E4E7DC]/60 dark:bg-white/10 px-2.5 py-0.5 rounded-full">
-                    CV
-                  </span>
-                </div>
-                <div className="text-base sm:text-xl font-black text-[#111215] dark:text-white leading-tight truncate">
-                  {candidate?.resumeUrl ? 'Attached' : 'Upload CV'}
-                </div>
-                <div className="text-xs font-bold text-[#111215] dark:text-neutral-200 mt-1 truncate">
-                  Resume CV
-                </div>
-                <div className="hidden sm:block text-[11px] text-[#73766C] dark:text-neutral-400 mt-0.5 truncate">
-                  {candidate?.resumeFileName || 'View, preview & replace'}
-                </div>
-              </button>
             </div>
           )}
 
