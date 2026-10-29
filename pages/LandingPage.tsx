@@ -134,16 +134,14 @@ const SECTION_JUNCTION_COORDS = [
 
 const OrganicSectionCurve: React.FC<{
   index: number;
-  progress: number;
+  progress?: number;
   isDark?: boolean;
 }> = ({ index, progress, isDark = false }) => {
   const pathD = SECTION_CURVE_PATHS[index] || SECTION_CURVE_PATHS[0];
-  const clampedProgress = Math.max(0, Math.min(1, progress));
-  // Standardized SVG pathLength (100) ensures 100% exact draw progress
-  const currentOffset = 100 * (1 - clampedProgress);
+  const initialOffset = progress !== undefined ? 100 * (1 - Math.max(0, Math.min(1, progress))) : (index === 0 ? 65 : 100);
 
   return (
-    <div className="absolute inset-0 pointer-events-none overflow-hidden select-none z-0">
+    <div className="hidden md:block absolute inset-0 pointer-events-none overflow-hidden select-none z-0">
       <svg
         viewBox="0 0 1440 900"
         preserveAspectRatio="none"
@@ -177,6 +175,7 @@ const OrganicSectionCurve: React.FC<{
 
         {/* Dynamic animated glow path that connects to previous section and draws as you scroll */}
         <path
+          id={`organic-curve-path-${index}`}
           d={pathD}
           pathLength={100}
           stroke={`url(#limeFlow-${index})`}
@@ -184,9 +183,9 @@ const OrganicSectionCurve: React.FC<{
           strokeLinecap="round"
           strokeLinejoin="round"
           strokeDasharray="100"
-          strokeDashoffset={currentOffset}
+          strokeDashoffset={initialOffset}
           filter={`url(#neonGlow-${index})`}
-          className="transition-all duration-75 ease-out"
+          className="transition-[stroke-dashoffset] duration-75 ease-out will-change-[stroke-dashoffset]"
         />
       </svg>
     </div>
@@ -551,72 +550,84 @@ export default function LandingPage() {
     }
   };
 
-  // ── Real-time Dynamic Scroll Progress for On-Page Animated Curves ──
-  const [sectionProgresses, setSectionProgresses] = useState<number[]>(() => {
-    const init = new Array(12).fill(0);
-    init[0] = 0.35; // Initial graceful crest on page 1
-    return init;
-  });
-
   useEffect(() => {
     document.title = 'InterviewXpert | #1 AI Applicant Tracking System (ATS) & Autonomous Voice Video Interview Platform';
   }, []);
 
+  // ── High-Performance Dynamic Scroll Tracking ──
+  // - On Mobile (< 768px): Curves are hidden and scroll execution is completely bypassed for 120 FPS native scrolling.
+  // - On Desktop (>= 768px): SVG strokeDashoffsets are updated directly via DOM without triggering React re-renders.
   useEffect(() => {
+    // If mobile, bypass scroll listeners completely
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      return;
+    }
+
+    const ids = [
+      'overview',
+      'services',
+      'process',
+      'pipeline',
+      'resume-matching',
+      'client-portal',
+      'productivity',
+      'ai-interview',
+      'comparison',
+      'pricing',
+      'faq',
+      'start-trial',
+    ];
+
+    let cachedTops: number[] = [];
+    let cachedHeights: number[] = [];
     let ticking = false;
+
+    const measureBounds = () => {
+      const scrollY = window.scrollY;
+      const vh = window.innerHeight;
+      cachedTops = [];
+      cachedHeights = [];
+      for (let i = 0; i < ids.length; i++) {
+        const el = document.getElementById(ids[i]);
+        if (el) {
+          const rect = el.getBoundingClientRect();
+          cachedTops.push(rect.top + scrollY);
+          cachedHeights.push(rect.height || vh);
+        } else {
+          cachedTops.push(i * vh);
+          cachedHeights.push(vh);
+        }
+      }
+    };
+
+    measureBounds();
 
     const handleScroll = () => {
       if (!ticking) {
         window.requestAnimationFrame(() => {
+          if (window.innerWidth < 768) {
+            ticking = false;
+            return;
+          }
+
           const vh = window.innerHeight;
           const scrollY = window.scrollY;
           const headerHeight = 72;
-
-          const ids = [
-            'overview',
-            'services',
-            'process',
-            'pipeline',
-            'resume-matching',
-            'client-portal',
-            'productivity',
-            'ai-interview',
-            'comparison',
-            'pricing',
-            'faq',
-            'start-trial',
-          ];
-
-          // Center of the visible viewing area in document space
           const viewCenter = scrollY + headerHeight + (vh - headerHeight) * 0.45;
 
-          const sectionElements = ids.map((id) => document.getElementById(id));
-          const sectionTops: number[] = [];
-          const sectionHeights: number[] = [];
-
-          for (let i = 0; i < ids.length; i++) {
-            const el = sectionElements[i];
-            if (el) {
-              const rect = el.getBoundingClientRect();
-              sectionTops.push(rect.top + scrollY);
-              sectionHeights.push(rect.height || vh);
-            } else {
-              sectionTops.push(i * vh);
-              sectionHeights.push(vh);
-            }
+          if (cachedTops.length === 0) {
+            measureBounds();
           }
 
-          // Compute continuous global progress T (from 0.35 to 9)
           let currentT = 0.35;
-
           if (scrollY <= 10) {
             currentT = 0.35;
           } else {
             let activeIdx = 0;
             for (let i = 0; i < ids.length; i++) {
-              const top = sectionTops[i];
-              const bottom = top + sectionHeights[i];
-              if (viewCenter >= top && (i === ids.length - 1 || viewCenter < sectionTops[i + 1])) {
+              const top = cachedTops[i];
+              const bottom = top + cachedHeights[i];
+              if (viewCenter >= top && (i === ids.length - 1 || viewCenter < cachedTops[i + 1])) {
                 activeIdx = i;
                 break;
               }
@@ -626,26 +637,35 @@ export default function LandingPage() {
             }
 
             if (activeIdx === 0) {
-              const nextTop = sectionTops[1] || (sectionTops[0] + sectionHeights[0]);
+              const nextTop = cachedTops[1] || (cachedTops[0] + cachedHeights[0]);
               const fraction = Math.max(0, Math.min(1, scrollY / (nextTop - headerHeight - 100)));
               currentT = 0.35 + (1 - 0.35) * fraction;
             } else {
-              const top = sectionTops[activeIdx];
-              const nextTop = sectionTops[activeIdx + 1] || (top + sectionHeights[activeIdx]);
+              const top = cachedTops[activeIdx];
+              const nextTop = cachedTops[activeIdx + 1] || (top + cachedHeights[activeIdx]);
               const range = Math.max(100, nextTop - top);
               const fraction = Math.max(0, Math.min(1, (viewCenter - top) / range));
               currentT = activeIdx + fraction;
             }
           }
 
-          // Strictly chained progression: zero gaps, no premature drawing, 100% continuous stream
-          const newProgresses = ids.map((_, i) => {
-            if (currentT >= i + 1) return 1;
-            if (currentT <= i) return 0;
-            return Math.max(0, Math.min(1, currentT - i));
-          });
+          // Directly update SVG path strokeDashoffset via DOM without triggering React re-renders!
+          for (let i = 0; i < ids.length; i++) {
+            let prog = 0;
+            if (currentT >= i + 1) prog = 1;
+            else if (currentT <= i) prog = 0;
+            else prog = Math.max(0, Math.min(1, currentT - i));
 
-          setSectionProgresses(newProgresses);
+            const pathEl = document.getElementById(`organic-curve-path-${i}`);
+            if (pathEl) {
+              const offset = (100 * (1 - prog)).toFixed(1);
+              if (pathEl.getAttribute('data-offset') !== offset) {
+                pathEl.setAttribute('data-offset', offset);
+                pathEl.style.strokeDashoffset = offset;
+              }
+            }
+          }
+
           ticking = false;
         });
         ticking = true;
@@ -653,11 +673,16 @@ export default function LandingPage() {
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
-    window.addEventListener('resize', handleScroll, { passive: true });
+    const handleResize = () => {
+      measureBounds();
+      handleScroll();
+    };
+    window.addEventListener('resize', handleResize, { passive: true });
     handleScroll();
+
     return () => {
       window.removeEventListener('scroll', handleScroll);
-      window.removeEventListener('resize', handleScroll);
+      window.removeEventListener('resize', handleResize);
     };
   }, []);
 
@@ -675,7 +700,7 @@ export default function LandingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8F9F5] text-[#111215] font-sans selection:bg-[#D4F82C] selection:text-[#111215]">
+    <div className="min-h-screen bg-[#F8F9F5] text-[#111215] font-sans selection:bg-[#D4F82C] selection:text-[#111215] mobile-touch-smooth overflow-x-clip">
       {/* ── Top Navigation Bar ── */}
       {/* ── Fixed Floating Top Navigation Bar ── */}
       <header className="sticky top-0 z-[100] bg-[#F8F9F5]/90 backdrop-blur-md border-b border-[#E4E7DC] transition-all">
@@ -1109,7 +1134,7 @@ export default function LandingPage() {
 
       {/* ── SECTION 1: DEDICATED FULL FRAME HERO CARD ── */}
       <section id="overview" className="relative z-10 min-h-[auto] sm:min-h-[calc(100vh-4.5rem)] flex flex-col justify-center bg-[#F8F9F5] overflow-x-clip scroll-mt-18 py-10 sm:py-16">
-        <OrganicSectionCurve index={0} progress={sectionProgresses[0]} />
+        <OrganicSectionCurve index={0} />
         <div className="flex-1 flex items-center max-w-7xl mx-auto px-4 sm:px-8 lg:px-12 w-full py-6 sm:py-12 relative z-10">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 sm:gap-12 items-center w-full">
             
@@ -1232,8 +1257,8 @@ export default function LandingPage() {
       </section>
 
       {/* ── SECTION: COMPREHENSIVE AI TALENT SERVICES & CAPABILITIES SUITE ── */}
-      <section id="services" className="relative z-15 min-h-[auto] flex flex-col justify-center bg-[#F8F9F5] scroll-mt-20 py-14 sm:py-24 border-b border-[#E4E7DC] overflow-x-clip">
-        <OrganicSectionCurve index={1} progress={sectionProgresses[1]} />
+      <section id="services" className="smooth-scroll-section relative z-15 min-h-[auto] flex flex-col justify-center bg-[#F8F9F5] scroll-mt-20 py-14 sm:py-24 border-b border-[#E4E7DC] overflow-x-clip">
+        <OrganicSectionCurve index={1} />
         <div className="max-w-7xl mx-auto px-4 sm:px-8 lg:px-12 w-full relative z-10">
           
           {/* Section Header */}
@@ -1540,8 +1565,8 @@ export default function LandingPage() {
       </section>
 
       {/* ── SECTION: STEP-BY-STEP PROCESS WORKFLOWS (AI INTERVIEW • CODING TEST • MOCK TEST) ── */}
-      <section id="process" className="relative z-18 min-h-[auto] flex flex-col justify-center bg-[#F1F3EB] scroll-mt-20 py-14 sm:py-24 border-b border-[#E4E7DC] overflow-x-clip">
-        <OrganicSectionCurve index={2} progress={sectionProgresses[2]} />
+      <section id="process" className="smooth-scroll-section relative z-18 min-h-[auto] flex flex-col justify-center bg-[#F1F3EB] scroll-mt-20 py-14 sm:py-24 border-b border-[#E4E7DC] overflow-x-clip">
+        <OrganicSectionCurve index={2} />
         <div className="max-w-7xl mx-auto px-4 sm:px-8 lg:px-12 w-full relative z-10">
           
           {/* Header */}
@@ -2039,8 +2064,8 @@ export default function LandingPage() {
       </section>
 
       {/* ── SECTION 2: DEDICATED FULL FRAME KANBAN PIPELINE CARD ── */}
-      <section id="pipeline" className="relative z-20 min-h-[auto] sm:min-h-[calc(100vh-4.5rem)] flex flex-col justify-center bg-[#F8F9F5] scroll-mt-18 transition-all duration-300 overflow-x-clip py-10 sm:py-16">
-        <OrganicSectionCurve index={3} progress={sectionProgresses[3]} />
+      <section id="pipeline" className="smooth-scroll-section relative z-20 min-h-[auto] sm:min-h-[calc(100vh-4.5rem)] flex flex-col justify-center bg-[#F8F9F5] scroll-mt-18 transition-all duration-300 overflow-x-clip py-10 sm:py-16">
+        <OrganicSectionCurve index={3} />
         <div className="flex-1 flex flex-col justify-center py-4 sm:py-6 px-4 sm:px-8 lg:px-12 max-w-7xl mx-auto w-full relative z-10">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 items-end mb-4">
             <div className="lg:col-span-7">
@@ -2329,8 +2354,8 @@ export default function LandingPage() {
       </section>
 
       {/* ── SECTION 3: AI RESUME EXTRACTION CARD ── */}
-      <section id="resume-matching" className="relative z-30 min-h-[auto] sm:min-h-[calc(100vh-4.5rem)] flex flex-col justify-center bg-[#F8F9F5] scroll-mt-18 transition-all duration-300 overflow-x-clip py-10 sm:py-16">
-        <OrganicSectionCurve index={4} progress={sectionProgresses[4]} />
+      <section id="resume-matching" className="smooth-scroll-section relative z-30 min-h-[auto] sm:min-h-[calc(100vh-4.5rem)] flex flex-col justify-center bg-[#F8F9F5] scroll-mt-18 transition-all duration-300 overflow-x-clip py-10 sm:py-16">
+        <OrganicSectionCurve index={4} />
         <div className="flex-1 flex flex-col justify-center py-4 sm:py-6 px-4 sm:px-8 lg:px-12 max-w-7xl mx-auto w-full relative z-10">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 sm:gap-12 items-center">
             
@@ -2404,6 +2429,8 @@ export default function LandingPage() {
                     <img
                       src={MOCKUP_CANDIDATES[0].avatar}
                       alt={MOCKUP_CANDIDATES[0].name}
+                      loading="lazy"
+                      decoding="async"
                       className="size-12 rounded-full object-cover border border-[#E4E7DC]"
                     />
                     <div>
@@ -2454,8 +2481,8 @@ export default function LandingPage() {
       </section>
 
       {/* ── SECTION 4: DARK CLIENT PORTAL CARD ── */}
-      <section id="client-portal" className="relative z-40 min-h-[auto] sm:min-h-[calc(100vh-4.5rem)] flex flex-col justify-center bg-[#111215] text-white scroll-mt-18 transition-all duration-300 overflow-x-clip py-10 sm:py-16">
-        <OrganicSectionCurve index={5} progress={sectionProgresses[5]} isDark={true} />
+      <section id="client-portal" className="smooth-scroll-section relative z-40 min-h-[auto] sm:min-h-[calc(100vh-4.5rem)] flex flex-col justify-center bg-[#111215] text-white scroll-mt-18 transition-all duration-300 overflow-x-clip py-10 sm:py-16">
+        <OrganicSectionCurve index={5} isDark={true} />
         <div className="flex-1 flex flex-col justify-center py-4 sm:py-6 px-4 sm:px-8 lg:px-12 max-w-7xl mx-auto w-full relative z-10">
           
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-end mb-4 sm:mb-6">
@@ -2523,6 +2550,8 @@ export default function LandingPage() {
                     <img
                       src={MOCKUP_CANDIDATES[0].avatar}
                       alt={MOCKUP_CANDIDATES[0].name}
+                      loading="lazy"
+                      decoding="async"
                       className="size-10 rounded-full object-cover border border-white/20"
                     />
                     <div>
@@ -2633,8 +2662,8 @@ export default function LandingPage() {
       </section>
 
       {/* ── SECTION 5: WHY RECRUITERS SWITCH (HEAD-TO-HEAD COMPARISON & ROI) ── */}
-      <section id="productivity" className="relative z-50 min-h-[auto] sm:min-h-[calc(100vh-4.5rem)] flex flex-col justify-center bg-[#F8F9F5] scroll-mt-18 transition-all duration-300 overflow-x-clip py-10 sm:py-16">
-        <OrganicSectionCurve index={6} progress={sectionProgresses[6]} />
+      <section id="productivity" className="smooth-scroll-section relative z-50 min-h-[auto] sm:min-h-[calc(100vh-4.5rem)] flex flex-col justify-center bg-[#F8F9F5] scroll-mt-18 transition-all duration-300 overflow-x-clip py-10 sm:py-16">
+        <OrganicSectionCurve index={6} />
         <div className="flex-1 flex flex-col justify-center px-4 sm:px-8 lg:px-12 max-w-7xl mx-auto w-full relative z-10 space-y-8 sm:space-y-10">
           
           {/* Section Header */}
@@ -3245,8 +3274,8 @@ export default function LandingPage() {
       </section>
 
       {/* ── SECTION: AI VIDEO & VOICE INTERVIEW SHOWCASE ── */}
-      <section id="ai-interview" className="relative z-55 min-h-[auto] sm:min-h-[calc(100vh-4.5rem)] flex flex-col justify-center bg-[#0B0D0F] text-white scroll-mt-18 transition-all duration-300 overflow-x-clip py-14 sm:py-20 border-y border-white/10">
-        <OrganicSectionCurve index={7} progress={sectionProgresses[7]} isDark={true} />
+      <section id="ai-interview" className="smooth-scroll-section relative z-55 min-h-[auto] sm:min-h-[calc(100vh-4.5rem)] flex flex-col justify-center bg-[#0B0D0F] text-white scroll-mt-18 transition-all duration-300 overflow-x-clip py-14 sm:py-20 border-y border-white/10">
+        <OrganicSectionCurve index={7} isDark={true} />
         <div className="flex-1 flex flex-col justify-center py-6 sm:py-10 px-4 sm:px-8 lg:px-12 max-w-7xl mx-auto w-full relative z-10">
           
           {/* Header */}
@@ -3310,6 +3339,8 @@ export default function LandingPage() {
                   <img
                     src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800&auto=format&fit=crop&q=80"
                     alt="Candidate video screening"
+                    loading="lazy"
+                    decoding="async"
                     className="w-full h-full object-cover opacity-85"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30 pointer-events-none"></div>
@@ -3727,8 +3758,8 @@ export default function LandingPage() {
       </section>
 
       {/* ── SECTION: COMPETITOR CAPABILITIES & PRICING COMPARISON ── */}
-      <section id="comparison" className="relative z-58 min-h-[auto] flex flex-col justify-center bg-[#F8F9F5] scroll-mt-20 py-14 sm:py-24 border-b border-[#E4E7DC] overflow-x-clip">
-        <OrganicSectionCurve index={8} progress={sectionProgresses[8]} />
+      <section id="comparison" className="smooth-scroll-section relative z-58 min-h-[auto] flex flex-col justify-center bg-[#F8F9F5] scroll-mt-20 py-14 sm:py-24 border-b border-[#E4E7DC] overflow-x-clip">
+        <OrganicSectionCurve index={8} />
         <div className="max-w-7xl mx-auto px-4 sm:px-8 lg:px-12 w-full relative z-10">
           
           {/* Header */}
@@ -4204,8 +4235,8 @@ export default function LandingPage() {
       </section>
 
       {/* ── SECTION 6: PRICING ESTIMATOR CARD ── */}
-      <section id="pricing" className="relative z-60 min-h-[auto] sm:min-h-[calc(100vh-4.5rem)] flex flex-col justify-center bg-[#F8F9F5] scroll-mt-24 transition-all duration-300 overflow-x-clip pt-16 sm:pt-24 pb-12 sm:pb-20">
-        <OrganicSectionCurve index={9} progress={sectionProgresses[9]} />
+      <section id="pricing" className="smooth-scroll-section relative z-60 min-h-[auto] sm:min-h-[calc(100vh-4.5rem)] flex flex-col justify-center bg-[#F8F9F5] scroll-mt-24 transition-all duration-300 overflow-x-clip pt-16 sm:pt-24 pb-12 sm:pb-20">
+        <OrganicSectionCurve index={9} />
         <div className="flex-1 flex flex-col justify-center py-6 sm:py-8 px-4 sm:px-8 lg:px-12 max-w-7xl mx-auto w-full relative z-10">
           
           {/* Pricing Header */}
@@ -4851,8 +4882,8 @@ export default function LandingPage() {
       </section>
 
       {/* ── SECTION 7: FAQ ACCORDION CARD ("A little more clarity.") ── */}
-      <section id="faq" className="relative z-70 min-h-[auto] sm:min-h-[calc(100vh-4.5rem)] flex flex-col justify-center bg-[#F8F9F5] scroll-mt-18 transition-all duration-300 overflow-x-clip py-10 sm:py-16">
-        <OrganicSectionCurve index={10} progress={sectionProgresses[10]} />
+      <section id="faq" className="smooth-scroll-section relative z-70 min-h-[auto] sm:min-h-[calc(100vh-4.5rem)] flex flex-col justify-center bg-[#F8F9F5] scroll-mt-18 transition-all duration-300 overflow-x-clip py-10 sm:py-16">
+        <OrganicSectionCurve index={10} />
         <div className="flex-1 flex flex-col justify-center py-6 sm:py-8 px-4 sm:px-8 lg:px-12 max-w-7xl mx-auto w-full relative z-10">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-10 items-start">
             
@@ -4904,8 +4935,8 @@ export default function LandingPage() {
       </section>
 
       {/* ── SECTION 8: DARK CTA CARD ("Your next great hire. A clearer way forward.") ── */}
-      <section id="start-trial" className="relative z-80 min-h-[auto] sm:min-h-[calc(100vh-4.5rem)] flex flex-col justify-center bg-[#111215] text-white scroll-mt-18 transition-all duration-300 overflow-x-clip py-12 sm:py-16">
-        <OrganicSectionCurve index={11} progress={sectionProgresses[11]} isDark={true} />
+      <section id="start-trial" className="smooth-scroll-section relative z-80 min-h-[auto] sm:min-h-[calc(100vh-4.5rem)] flex flex-col justify-center bg-[#111215] text-white scroll-mt-18 transition-all duration-300 overflow-x-clip py-12 sm:py-16">
+        <OrganicSectionCurve index={11} isDark={true} />
         <div className="flex-1 flex items-center py-8 sm:py-12 px-4 sm:px-8 lg:px-12 max-w-7xl mx-auto w-full relative z-10">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 sm:gap-12 w-full">
             
@@ -5135,6 +5166,8 @@ export default function LandingPage() {
                 <img
                   src={demoActiveCandidate.avatar}
                   alt={demoActiveCandidate.name}
+                  loading="lazy"
+                  decoding="async"
                   className="size-12 rounded-full object-cover border border-[#E4E7DC]"
                 />
                 <div>

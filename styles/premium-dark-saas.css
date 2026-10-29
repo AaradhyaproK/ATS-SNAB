@@ -3357,3 +3357,22 @@ html.dark {
   color: #0f172a !important;
 }
 
+/* ── High-Performance Smooth Mobile Scrolling & Rendering Optimization ── */
+.smooth-scroll-section {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 900px;
+}
+
+.mobile-touch-smooth {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: auto;
+  overflow-x: clip;
+}
+
+@media (max-width: 767px) {
+  html {
+    scroll-behavior: smooth;
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+

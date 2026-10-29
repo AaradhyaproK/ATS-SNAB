@@ -21,6 +21,7 @@ export const HireXMark: React.FC<{ size?: number; className?: string; isDark?: b
       alt="InterviewXpert"
       width={size}
       height={size}
+      decoding="async"
       style={{ width: size, height: size }}
       className={`shrink-0 object-contain rounded-xl transition-transform duration-200 hover:scale-105 select-none ${className}`}
     />
