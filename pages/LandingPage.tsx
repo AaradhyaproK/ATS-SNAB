@@ -54,7 +54,11 @@ import {
   Mic,
   Bot,
   Activity,
-  Volume2
+  Volume2,
+  GraduationCap,
+  Code2,
+  SlidersHorizontal,
+  Target
 } from 'lucide-react';
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { db } from '../services/firebase';
@@ -255,7 +259,7 @@ const FAQ_ITEMS = [
   },
   {
     q: 'How does the AI Video Interview work and what does it cost?',
-    a: 'Our autonomous AI interviewer conducts live, interactive spoken video interviews with candidates 24/7. It asks dynamic technical cross-questions, records full-length HD video with live word-for-word transcripts, enforces anti-cheat verification, and automatically generates personalized evaluation reports with executive scorecards. Pricing is fully dynamic: starting at ₹149 per interview for low volume, scaling down to ₹119 per interview for volume screening (1,000+ candidates) — saving you over 80% compared to manual recruiter phone interviews.',
+    a: 'Our autonomous AI interviewer conducts live, interactive spoken video interviews with candidates 24/7. It asks dynamic technical cross-questions, records full-length HD video with live word-for-word transcripts, enforces anti-cheat verification, and automatically generates personalized evaluation reports with executive scorecards. Pricing is fully dynamic: starting at ₹149 per interview for low volume, scaling down to ₹129 per interview for volume screening (1,000+ candidates), with modular add-ons for MCQ aptitude and cloud coding rounds — saving you over 80% compared to manual recruiter phone interviews.',
   },
   {
     q: 'How is candidate data secured and privacy preserved?',
@@ -315,46 +319,107 @@ export default function LandingPage() {
   const [calcVoiceScreening, setCalcVoiceScreening] = useState<boolean>(false);
   const [copiedQuote, setCopiedQuote] = useState<boolean>(false);
 
-  // Dynamic AI Interview Pricing Calculator State (₹149 down to ₹119 / interview)
+  // Process Workflows Tab State ('interview' | 'coding' | 'mock')
+  const [activeProcessTab, setActiveProcessTab] = useState<'interview' | 'coding' | 'mock'>('interview');
+
+  // Dynamic AI Interview Pricing Calculator State (₹149 down to ₹129 / interview + Modular Rounds)
   const [pricingTab, setPricingTab] = useState<'ai-interviews' | 'subscription'>('ai-interviews');
   const [calcAiInterviews, setCalcAiInterviews] = useState<number>(50);
 
+  // Modular Evaluation Round Checkmarks
+  const [includeVoiceRound, setIncludeVoiceRound] = useState<boolean>(true);
+  const [includeMcqRound, setIncludeMcqRound] = useState<boolean>(false);
+  const [includeCodingRound, setIncludeCodingRound] = useState<boolean>(false);
+
   const aiInterviewCalc = useMemo(() => {
     const count = Math.max(1, calcAiInterviews);
-    // Dynamic tiered pricing: ₹149 for low volume, scaling down to ₹119 for 1,000+ volume
-    let ratePerInterview = 149;
-    if (count >= 1000) {
-      ratePerInterview = 119;
-    } else if (count >= 500) {
-      ratePerInterview = 124;
-    } else if (count >= 200) {
-      ratePerInterview = 129;
-    } else if (count >= 50) {
-      ratePerInterview = 139;
-    } else {
-      ratePerInterview = 149;
-    }
+
+    // Dynamic tiered pricing:
+    // 1. AI Voice & Video Interview Round: ₹149 scaling down to ₹129 for 1,000+ volume
+    let voiceRate = 149;
+    if (count >= 1000) voiceRate = 129;
+    else if (count >= 500) voiceRate = 134;
+    else if (count >= 200) voiceRate = 139;
+    else if (count >= 50) voiceRate = 144;
+    else voiceRate = 149;
+
+    // 2. MCQ / Aptitude Round Add-on: +₹29 scaling down to +₹19 for volume
+    let mcqRate = 29;
+    if (count >= 1000) mcqRate = 19;
+    else if (count >= 500) mcqRate = 22;
+    else if (count >= 200) mcqRate = 25;
+    else mcqRate = 29;
+
+    // 3. Cloud IDE Coding Challenge Add-on: +₹49 scaling down to +₹39 for volume
+    let codingRate = 49;
+    if (count >= 1000) codingRate = 39;
+    else if (count >= 500) codingRate = 42;
+    else if (count >= 200) codingRate = 45;
+    else codingRate = 49;
+
+    // Guarantee at least one round is active
+    const activeVoice = includeVoiceRound || (!includeMcqRound && !includeCodingRound);
+    const activeMcq = includeMcqRound;
+    const activeCoding = includeCodingRound;
+
+    const ratePerInterview =
+      (activeVoice ? voiceRate : 0) +
+      (activeMcq ? mcqRate : 0) +
+      (activeCoding ? codingRate : 0);
+
+    const baseRatePerInterview =
+      (activeVoice ? 149 : 0) +
+      (activeMcq ? 29 : 0) +
+      (activeCoding ? 49 : 0);
 
     const totalCost = count * ratePerInterview;
-    const baseCostAt149 = count * 149;
-    const volumeDiscount = baseCostAt149 - totalCost;
+    const baseTotalCost = count * baseRatePerInterview;
+    const volumeDiscount = Math.max(0, baseTotalCost - totalCost);
     const manualScreeningCost = count * 750;
     const recruiterHoursSaved = Math.round(count * 0.75);
-    const savingsAmount = manualScreeningCost - totalCost;
+    const savingsAmount = Math.max(0, manualScreeningCost - totalCost);
     const savingsPercent = Math.round((savingsAmount / manualScreeningCost) * 100);
+
+    const getRateForCount = (c: number) => {
+      let v = 149;
+      if (c >= 1000) v = 129;
+      else if (c >= 500) v = 134;
+      else if (c >= 200) v = 139;
+      else if (c >= 50) v = 144;
+
+      let m = 29;
+      if (c >= 1000) m = 19;
+      else if (c >= 500) m = 22;
+      else if (c >= 200) m = 25;
+
+      let cd = 49;
+      if (c >= 1000) cd = 39;
+      else if (c >= 500) cd = 42;
+      else if (c >= 200) cd = 45;
+
+      return (activeVoice ? v : 0) + (activeMcq ? m : 0) + (activeCoding ? cd : 0);
+    };
 
     return {
       count,
       ratePerInterview,
+      baseRatePerInterview,
+      voiceRate,
+      mcqRate,
+      codingRate,
+      activeVoice,
+      activeMcq,
+      activeCoding,
       totalCost,
-      baseCostAt149,
+      baseCostAt149: baseTotalCost,
       volumeDiscount,
       manualScreeningCost,
       recruiterHoursSaved,
       savingsAmount,
       savingsPercent,
+      getRateForCount,
     };
-  }, [calcAiInterviews]);
+  }, [calcAiInterviews, includeVoiceRound, includeMcqRound, includeCodingRound]);
 
   // Why Recruiters Switch & ROI State
   const [activeComparisonTab, setActiveComparisonTab] = useState<'matrix' | 'roi' | 'pipeline' | 'pillars'>('matrix');
@@ -609,20 +674,34 @@ export default function LandingPage() {
           </div>
 
           {/* Centered Desktop Navigation Links */}
-          <nav className="hidden lg:flex items-center gap-8 text-[13px] font-semibold text-[#575A51]">
+          <nav className="hidden lg:flex items-center gap-6 text-[13px] font-semibold text-[#575A51]">
+            <a
+              href="#services"
+              onClick={(e) => scrollToSection(e, 'services')}
+              className="hover:text-[#111215] transition-colors cursor-pointer"
+            >
+              Services
+            </a>
+            <a
+              href="#process"
+              onClick={(e) => scrollToSection(e, 'process')}
+              className="hover:text-[#111215] transition-colors cursor-pointer"
+            >
+              Process
+            </a>
+            <a
+              href="#ai-interview"
+              onClick={(e) => scrollToSection(e, 'ai-interview')}
+              className="hover:text-[#111215] transition-colors cursor-pointer"
+            >
+              AI Interview
+            </a>
             <a
               href="#pipeline"
               onClick={(e) => scrollToSection(e, 'pipeline')}
               className="hover:text-[#111215] transition-colors cursor-pointer"
             >
               Pipeline
-            </a>
-            <a
-              href="#resume-matching"
-              onClick={(e) => scrollToSection(e, 'resume-matching')}
-              className="hover:text-[#111215] transition-colors cursor-pointer"
-            >
-              AI Matching
             </a>
             <a
               href="#client-portal"
@@ -639,11 +718,11 @@ export default function LandingPage() {
               Why Switch
             </a>
             <a
-              href="#ai-interview"
-              onClick={(e) => scrollToSection(e, 'ai-interview')}
+              href="#comparison"
+              onClick={(e) => scrollToSection(e, 'comparison')}
               className="hover:text-[#111215] transition-colors cursor-pointer"
             >
-              AI Interview
+              Compare
             </a>
             <a
               href="#pricing"
@@ -752,6 +831,36 @@ export default function LandingPage() {
               </span>
               <div className="bg-white rounded-2xl border border-[#E4E7DC] divide-y divide-[#E4E7DC] overflow-hidden">
                 <a
+                  href="#services"
+                  onClick={(e) => {
+                    scrollToSection(e, 'services');
+                    setMobileMenuOpen(false);
+                  }}
+                  className="flex items-center justify-between px-3.5 py-2.5 text-xs font-bold text-[#111215] hover:bg-[#F8F9F5] transition-colors"
+                >
+                  <span className="flex items-center gap-2">
+                    <Sparkles className="size-3.5 text-[#8FB305]" />
+                    <span>00 • AI Services Suite</span>
+                  </span>
+                  <ChevronRight className="size-3.5 text-[#73766C]" />
+                </a>
+
+                <a
+                  href="#process"
+                  onClick={(e) => {
+                    scrollToSection(e, 'process');
+                    setMobileMenuOpen(false);
+                  }}
+                  className="flex items-center justify-between px-3.5 py-2.5 text-xs font-bold text-[#111215] hover:bg-[#F8F9F5] transition-colors"
+                >
+                  <span className="flex items-center gap-2">
+                    <Activity className="size-3.5 text-[#8FB305]" />
+                    <span>01 • Process Workflows (AI, Code, Mock)</span>
+                  </span>
+                  <ChevronRight className="size-3.5 text-[#73766C]" />
+                </a>
+
+                <a
                   href="#pipeline"
                   onClick={(e) => {
                     scrollToSection(e, 'pipeline');
@@ -822,6 +931,21 @@ export default function LandingPage() {
                   <span className="flex items-center gap-2">
                     <Video className="size-3.5 text-[#8FB305]" />
                     <span>05 • AI Video & Voice Interview</span>
+                  </span>
+                  <ChevronRight className="size-3.5 text-[#73766C]" />
+                </a>
+
+                <a
+                  href="#comparison"
+                  onClick={(e) => {
+                    scrollToSection(e, 'comparison');
+                    setMobileMenuOpen(false);
+                  }}
+                  className="flex items-center justify-between px-3.5 py-2.5 text-xs font-bold text-[#111215] hover:bg-[#F8F9F5] transition-colors"
+                >
+                  <span className="flex items-center gap-2">
+                    <SlidersHorizontal className="size-3.5 text-[#8FB305]" />
+                    <span>06 • Competitor Comparison Matrix</span>
                   </span>
                   <ChevronRight className="size-3.5 text-[#73766C]" />
                 </a>
@@ -1039,6 +1163,811 @@ export default function LandingPage() {
           </div>
         </div>
 
+      </section>
+
+      {/* ── SECTION: COMPREHENSIVE AI TALENT SERVICES & CAPABILITIES SUITE ── */}
+      <section id="services" className="relative z-15 min-h-[auto] flex flex-col justify-center bg-[#F8F9F5] scroll-mt-20 py-14 sm:py-24 border-b border-[#E4E7DC]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-8 lg:px-12 w-full">
+          
+          {/* Section Header */}
+          <div className="text-center max-w-3xl mx-auto mb-10 sm:mb-16">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-[#E4E7DC] text-[#111215] text-[10px] font-mono font-bold uppercase tracking-wider mb-3 shadow-2xs">
+              <span className="size-2 rounded-full bg-[#D4F82C]"></span>
+              <span>END-TO-END AUTONOMOUS TALENT ARCHITECTURE</span>
+            </div>
+            <h2 className="text-2xl sm:text-5xl font-black text-[#111215] tracking-tight leading-tight">
+              Six Comprehensive Services.<br />
+              One Autonomous Recruitment Engine.
+            </h2>
+            <p className="mt-3 text-xs sm:text-base text-[#575A51] leading-relaxed">
+              Whether you are an enterprise staffing agency placing hundreds of engineers, a high-growth startup screening 500+ applicants overnight, or a job seeker preparing for your dream engineering role — InterviewXpert delivers specialized, AI-powered solutions across the entire hiring lifecycle.
+            </p>
+          </div>
+
+          {/* 6 Core Services Bento Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            
+            {/* Service 1: Autonomous AI Video & Voice Interviewing */}
+            <div className="rounded-3xl border border-[#E4E7DC] bg-white p-6 sm:p-7 shadow-xs hover:border-[#111215] transition-all hover:shadow-lg flex flex-col justify-between group">
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="size-12 rounded-2xl bg-[#111215] text-[#D4F82C] flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform">
+                    <Video size={22} />
+                  </div>
+                  <span className="text-[10px] font-mono font-black uppercase px-2.5 py-1 rounded-full bg-[#F8F9F5] text-[#111215] border border-[#E4E7DC]">
+                    24/7 Screening
+                  </span>
+                </div>
+                <h3 className="text-lg font-black text-[#111215] mb-2">
+                  Autonomous AI Technical & Spoken Interviewing
+                </h3>
+                <p className="text-xs text-[#575A51] leading-relaxed mb-5">
+                  Eliminate 100+ hours of manual first-round recruiter phone calls. Conversational AI agent Alex conducts live, bidirectional spoken interviews with sub-300ms latency, asking dynamic technical follow-ups based on candidate logic.
+                </p>
+
+                <div className="space-y-2 pt-4 border-t border-[#E4E7DC] text-xs text-[#111215]">
+                  {[
+                    'Natural speech-to-speech with sub-300ms conversational latency',
+                    'Dynamic context-aware follow-up cross-questioning',
+                    'Searchable live word-for-word transcripts with timestamps',
+                    'Dual video/audio anti-cheat proctoring & tab-switch logs',
+                    '60-second multi-dimensional evaluation report & hire score',
+                  ].map((feat, i) => (
+                    <div key={i} className="flex items-start gap-2">
+                      <CheckCircle2 size={14} className="text-[#8FB305] shrink-0 mt-0.5" />
+                      <span className="leading-snug">{feat}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="pt-6 mt-6 border-t border-[#E4E7DC] flex items-center justify-between">
+                <Link
+                  to="/interview/demo"
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-[#111215] hover:text-[#8FB305] transition-colors"
+                >
+                  <span>Experience Live Interview</span>
+                  <ArrowRight size={13} />
+                </Link>
+                <span className="text-[10px] font-mono text-[#73766C]">Instant AI Dossier</span>
+              </div>
+            </div>
+
+            {/* Service 2: AI Mock Interview & Candidate Preparation Hub */}
+            <div className="rounded-3xl border border-[#E4E7DC] bg-white p-6 sm:p-7 shadow-xs hover:border-[#111215] transition-all hover:shadow-lg flex flex-col justify-between group">
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="size-12 rounded-2xl bg-[#D4F82C] text-[#111215] flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform">
+                    <GraduationCap size={22} />
+                  </div>
+                  <span className="text-[10px] font-mono font-black uppercase px-2.5 py-1 rounded-full bg-[#111215] text-[#D4F82C]">
+                    Job Seekers & Students
+                  </span>
+                </div>
+                <h3 className="text-lg font-black text-[#111215] mb-2">
+                  AI Mock Interview & Candidate Career Hub
+                </h3>
+                <p className="text-xs text-[#575A51] leading-relaxed mb-5">
+                  A high-impact simulation suite designed for candidates, universities, and bootcamps. Practice real-world technical and behavioral rounds with realistic voice agents and receive instant diagnostic feedback before actual job interviews.
+                </p>
+
+                <div className="space-y-2 pt-4 border-t border-[#E4E7DC] text-xs text-[#111215]">
+                  {[
+                    'Specialized tracks: Frontend, Backend, Fullstack, AI/ML & System Design',
+                    'Real-time speaking pace (WPM), pause intervals & filler word tracking',
+                    'AI STAR method behavioral response coaching & rewrites',
+                    'Architectural model answer breakdowns with code optimizations',
+                    'Verified digital assessment scorecards ready for LinkedIn sharing',
+                  ].map((feat, i) => (
+                    <div key={i} className="flex items-start gap-2">
+                      <CheckCircle2 size={14} className="text-[#8FB305] shrink-0 mt-0.5" />
+                      <span className="leading-snug">{feat}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="pt-6 mt-6 border-t border-[#E4E7DC] flex items-center justify-between">
+                <Link
+                  to="/candidate"
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-[#111215] hover:text-[#8FB305] transition-colors"
+                >
+                  <span>Launch Candidate Hub</span>
+                  <ArrowRight size={13} />
+                </Link>
+                <span className="text-[10px] font-mono text-[#73766C]">Instant Feedback</span>
+              </div>
+            </div>
+
+            {/* Service 3: AI Assessments & Coding Engine with Syllabus Upload */}
+            <div className="rounded-3xl border border-[#E4E7DC] bg-white p-6 sm:p-7 shadow-xs hover:border-[#111215] transition-all hover:shadow-lg flex flex-col justify-between group">
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="size-12 rounded-2xl bg-[#111215] text-[#D4F82C] flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform">
+                    <Code2 size={22} />
+                  </div>
+                  <span className="text-[10px] font-mono font-black uppercase px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
+                    Syllabus Upload Grounded
+                  </span>
+                </div>
+                <h3 className="text-lg font-black text-[#111215] mb-2">
+                  AI Technical Assessments & Cloud IDE Engine
+                </h3>
+                <p className="text-xs text-[#575A51] leading-relaxed mb-5">
+                  Generate aptitude and coding challenges strictly formulated around your internal curriculum. Attach any syllabus or training PDF, and the AI guarantees zero off-topic questions with built-in multi-language code execution.
+                </p>
+
+                <div className="space-y-2 pt-4 border-t border-[#E4E7DC] text-xs text-[#111215]">
+                  {[
+                    '1-Click PDF Syllabus / Curriculum ingestion for strict question grounding',
+                    'In-browser IDE supporting 15+ languages (Python, TS, Java, C++, Go)',
+                    'Automated algorithmic time & space complexity verification O(n)',
+                    'Fullscreen enforcement, copy-paste block & developer tool lockout',
+                    'Mix Aptitude, DSA problem solving, bugfix, and low-level system design',
+                  ].map((feat, i) => (
+                    <div key={i} className="flex items-start gap-2">
+                      <CheckCircle2 size={14} className="text-[#8FB305] shrink-0 mt-0.5" />
+                      <span className="leading-snug">{feat}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="pt-6 mt-6 border-t border-[#E4E7DC] flex items-center justify-between">
+                <Link
+                  to="/auth"
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-[#111215] hover:text-[#8FB305] transition-colors"
+                >
+                  <span>Create Assessment</span>
+                  <ArrowRight size={13} />
+                </Link>
+                <span className="text-[10px] font-mono text-[#73766C]">Multi-Lang IDE</span>
+              </div>
+            </div>
+
+            {/* Service 4: Interactive Client Review & Shortlist Portal */}
+            <div className="rounded-3xl border border-[#E4E7DC] bg-white p-6 sm:p-7 shadow-xs hover:border-[#111215] transition-all hover:shadow-lg flex flex-col justify-between group">
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="size-12 rounded-2xl bg-[#111215] text-[#D4F82C] flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform">
+                    <Share2 size={22} />
+                  </div>
+                  <span className="text-[10px] font-mono font-black uppercase px-2.5 py-1 rounded-full bg-[#F8F9F5] text-[#111215] border border-[#E4E7DC]">
+                    Zero Login Needed
+                  </span>
+                </div>
+                <h3 className="text-lg font-black text-[#111215] mb-2">
+                  Interactive Client Review & Shortlist Portal
+                </h3>
+                <p className="text-xs text-[#575A51] leading-relaxed mb-5">
+                  Stop emailing plain PDF resumes that get ignored. Provide external clients and enterprise hiring managers with sleek, interactive candidate dossiers featuring audio answer clips, proctoring scorecards, and 1-click approvals.
+                </p>
+
+                <div className="space-y-2 pt-4 border-t border-[#E4E7DC] text-xs text-[#111215]">
+                  {[
+                    'Embedded spoken audio answer playback — hear candidate voice in 10s',
+                    'Complete dossier overview: technical scores, anti-cheat confidence & CV',
+                    '1-click hiring manager actions: "Approve & Advance" or "Decline" with notes',
+                    'Two-way real-time status synchronization to recruiter ATS Kanban board',
+                    'Anti-poaching blind masking protects recruiter candidate contact ownership',
+                  ].map((feat, i) => (
+                    <div key={i} className="flex items-start gap-2">
+                      <CheckCircle2 size={14} className="text-[#8FB305] shrink-0 mt-0.5" />
+                      <span className="leading-snug">{feat}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="pt-6 mt-6 border-t border-[#E4E7DC] flex items-center justify-between">
+                <a
+                  href="#client-portal"
+                  onClick={(e) => scrollToSection(e, 'client-portal')}
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-[#111215] hover:text-[#8FB305] transition-colors cursor-pointer"
+                >
+                  <span>Explore Client Portal Demo</span>
+                  <ArrowRight size={13} />
+                </a>
+                <span className="text-[10px] font-mono text-[#73766C]">Audio Playback</span>
+              </div>
+            </div>
+
+            {/* Service 5: Smart Resume Matching & Semantic Talent Search */}
+            <div className="rounded-3xl border border-[#E4E7DC] bg-white p-6 sm:p-7 shadow-xs hover:border-[#111215] transition-all hover:shadow-lg flex flex-col justify-between group">
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="size-12 rounded-2xl bg-[#111215] text-[#D4F82C] flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform">
+                    <Brain size={22} />
+                  </div>
+                  <span className="text-[10px] font-mono font-black uppercase px-2.5 py-1 rounded-full bg-[#F8F9F5] text-[#111215] border border-[#E4E7DC]">
+                    Semantic Vector Match
+                  </span>
+                </div>
+                <h3 className="text-lg font-black text-[#111215] mb-2">
+                  Smart Resume Matching & Semantic Talent Search
+                </h3>
+                <p className="text-xs text-[#575A51] leading-relaxed mb-5">
+                  High-speed resume ingestion for PDF, DOCX, and TXT files. Contextual semantic matching extracts skills, career trajectories, and calculates a 0–100% precision fit score against your custom job description in seconds.
+                </p>
+
+                <div className="space-y-2 pt-4 border-t border-[#E4E7DC] text-xs text-[#111215]">
+                  {[
+                    'Instant multi-format parsing for PDF, DOCX & TXT with zero data loss',
+                    'Contextual understanding of equivalent tech stacks (FastAPI vs Express)',
+                    'Unbiased 0–100% candidate fit ranking against open requisitions',
+                    'Natural language candidate rediscovery across legacy talent pools',
+                    'Slide-over PDF resume previewer with highlighted skill match badges',
+                  ].map((feat, i) => (
+                    <div key={i} className="flex items-start gap-2">
+                      <CheckCircle2 size={14} className="text-[#8FB305] shrink-0 mt-0.5" />
+                      <span className="leading-snug">{feat}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="pt-6 mt-6 border-t border-[#E4E7DC] flex items-center justify-between">
+                <a
+                  href="#resume-matching"
+                  onClick={(e) => scrollToSection(e, 'resume-matching')}
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-[#111215] hover:text-[#8FB305] transition-colors cursor-pointer"
+                >
+                  <span>View Resume Matcher</span>
+                  <ArrowRight size={13} />
+                </a>
+                <span className="text-[10px] font-mono text-[#73766C]">0-100% Scoring</span>
+              </div>
+            </div>
+
+            {/* Service 6: Automated WhatsApp Candidate Engagement & Outreach */}
+            <div className="rounded-3xl border border-[#E4E7DC] bg-white p-6 sm:p-7 shadow-xs hover:border-[#111215] transition-all hover:shadow-lg flex flex-col justify-between group">
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="size-12 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform">
+                    <MessageCircle size={22} />
+                  </div>
+                  <span className="text-[10px] font-mono font-black uppercase px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800">
+                    82%+ Open Rate
+                  </span>
+                </div>
+                <h3 className="text-lg font-black text-[#111215] mb-2">
+                  Automated WhatsApp & Multi-Channel Outreach
+                </h3>
+                <p className="text-xs text-[#575A51] leading-relaxed mb-5">
+                  Reach candidates where they actually open messages. Trigger 1-click WhatsApp invitations, scheduled reminder sequences, and status updates directly from your Kanban pipeline with 4x higher completion rates than cold emails.
+                </p>
+
+                <div className="space-y-2 pt-4 border-t border-[#E4E7DC] text-xs text-[#111215]">
+                  {[
+                    'Native WhatsApp Business API integration for instant candidate outreach',
+                    'Automated 1-click interview invitation links sent straight to WhatsApp',
+                    'Smart reminder sequences (2hr / 30m) to minimize interview no-shows',
+                    'High-deliverability AWS SES email workflows as automated redundancy',
+                    'Two-way sync: candidate confirmation updates ATS Kanban cards instantly',
+                  ].map((feat, i) => (
+                    <div key={i} className="flex items-start gap-2">
+                      <CheckCircle2 size={14} className="text-[#8FB305] shrink-0 mt-0.5" />
+                      <span className="leading-snug">{feat}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="pt-6 mt-6 border-t border-[#E4E7DC] flex items-center justify-between">
+                <a
+                  href="https://wa.me/919511779317?text=Hi%20InterviewXpert%20team,%20I%20would%20like%20to%20know%20more%20about%20the%20platform%20and%20request%20a%20demo."
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 hover:text-emerald-800 transition-colors"
+                >
+                  <MessageCircle size={13} />
+                  <span>Connect on WhatsApp</span>
+                </a>
+                <span className="text-[10px] font-mono text-[#73766C]">+91 95117 79317</span>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+      </section>
+
+      {/* ── SECTION: STEP-BY-STEP PROCESS WORKFLOWS (AI INTERVIEW • CODING TEST • MOCK TEST) ── */}
+      <section id="process" className="relative z-18 min-h-[auto] flex flex-col justify-center bg-[#F1F3EB] scroll-mt-20 py-14 sm:py-24 border-b border-[#E4E7DC]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-8 lg:px-12 w-full">
+          
+          {/* Header */}
+          <div className="text-center max-w-3xl mx-auto mb-10 sm:mb-14">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-[#E4E7DC] text-[#111215] text-[10px] font-mono font-bold uppercase tracking-wider mb-3 shadow-2xs">
+              <span className="size-2 rounded-full bg-[#8FB305]"></span>
+              <span>STEP-BY-STEP EXECUTION PLAYBOOK</span>
+            </div>
+            <h2 className="text-2xl sm:text-5xl font-black text-[#111215] tracking-tight leading-tight">
+              How It Works: Clear, Autonomous Workflows
+            </h2>
+            <p className="mt-3 text-xs sm:text-base text-[#575A51] leading-relaxed">
+              Explore the exact step-by-step lifecycle for our primary engines: autonomous AI interviews for recruiters, syllabus-grounded coding assessments, and self-serve mock test coaching for candidates.
+            </p>
+
+            {/* Interactive Process Switcher Tabs */}
+            <div className="mt-8 inline-flex items-center p-1.5 rounded-2xl bg-white border border-[#E4E7DC] shadow-sm max-w-full overflow-x-auto">
+              <button
+                type="button"
+                onClick={() => setActiveProcessTab('interview')}
+                className={`px-4 sm:px-5 py-2.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${
+                  activeProcessTab === 'interview'
+                    ? 'bg-[#111215] text-[#D4F82C] shadow-md'
+                    : 'text-[#575A51] hover:text-[#111215] hover:bg-[#F8F9F5]'
+                }`}
+              >
+                <Video size={14} className={activeProcessTab === 'interview' ? 'text-[#D4F82C]' : 'text-[#73766C]'} />
+                <span>AI Video Interview Process</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveProcessTab('coding')}
+                className={`px-4 sm:px-5 py-2.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${
+                  activeProcessTab === 'coding'
+                    ? 'bg-[#111215] text-[#D4F82C] shadow-md'
+                    : 'text-[#575A51] hover:text-[#111215] hover:bg-[#F8F9F5]'
+                }`}
+              >
+                <Code2 size={14} className={activeProcessTab === 'coding' ? 'text-[#D4F82C]' : 'text-[#73766C]'} />
+                <span>Coding Assessment Process</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveProcessTab('mock')}
+                className={`px-4 sm:px-5 py-2.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${
+                  activeProcessTab === 'mock'
+                    ? 'bg-[#111215] text-[#D4F82C] shadow-md'
+                    : 'text-[#575A51] hover:text-[#111215] hover:bg-[#F8F9F5]'
+                }`}
+              >
+                <GraduationCap size={14} className={activeProcessTab === 'mock' ? 'text-[#D4F82C]' : 'text-[#73766C]'} />
+                <span>Mock Interview & Prep Process</span>
+              </button>
+            </div>
+          </div>
+
+          {/* TAB 1: AI VIDEO INTERVIEW PROCESS */}
+          {activeProcessTab === 'interview' && (
+            <div className="space-y-6 animate-in fade-in duration-200">
+              <div className="p-4 sm:p-5 rounded-2xl bg-white border border-[#E4E7DC] flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
+                <div>
+                  <span className="text-[10px] font-mono font-bold uppercase text-[#8FB305] tracking-wider">
+                    Recruiter-to-Candidate Pipeline
+                  </span>
+                  <h3 className="text-base font-black text-[#111215]">
+                    5-Stage Autonomous Spoken Video Screening Flow
+                  </h3>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="px-3 py-1 rounded-full bg-[#111215] text-[#D4F82C] text-xs font-mono font-bold">
+                    Total Time: &lt; 20 Mins / Candidate
+                  </span>
+                </div>
+              </div>
+
+              {/* 5 Process Steps Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                
+                {/* Step 1 */}
+                <div className="p-5 rounded-3xl bg-white border border-[#E4E7DC] hover:border-[#111215] transition-all flex flex-col justify-between shadow-xs">
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="size-8 rounded-xl bg-[#111215] text-[#D4F82C] text-xs font-mono font-black flex items-center justify-center">
+                        01
+                      </span>
+                      <Bot size={18} className="text-[#8FB305]" />
+                    </div>
+                    <h4 className="text-sm font-black text-[#111215] mb-1.5">
+                      Configure Requisition & Questions
+                    </h4>
+                    <p className="text-xs text-[#575A51] leading-relaxed">
+                      Recruiter inputs job title, seniority, tech stack, or attaches a curriculum/JD PDF. AI formulates custom architecture & scenario questions in 60s.
+                    </p>
+                  </div>
+                  <div className="mt-4 pt-3 border-t border-[#E4E7DC] text-[10px] font-mono text-[#73766C]">
+                    Setup: 90 Seconds
+                  </div>
+                </div>
+
+                {/* Step 2 */}
+                <div className="p-5 rounded-3xl bg-white border border-[#E4E7DC] hover:border-[#111215] transition-all flex flex-col justify-between shadow-xs">
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="size-8 rounded-xl bg-[#111215] text-[#D4F82C] text-xs font-mono font-black flex items-center justify-center">
+                        02
+                      </span>
+                      <Send size={18} className="text-emerald-600" />
+                    </div>
+                    <h4 className="text-sm font-black text-[#111215] mb-1.5">
+                      Automated WhatsApp & Email Invite
+                    </h4>
+                    <p className="text-xs text-[#575A51] leading-relaxed">
+                      Candidates receive personalized WhatsApp invites with dynamic session links, calendar sync, and automated reminder sequences 2 hours before the cutoff.
+                    </p>
+                  </div>
+                  <div className="mt-4 pt-3 border-t border-[#E4E7DC] text-[10px] font-mono text-[#73766C]">
+                    82%+ Open Rate
+                  </div>
+                </div>
+
+                {/* Step 3 */}
+                <div className="p-5 rounded-3xl bg-white border border-[#E4E7DC] hover:border-[#111215] transition-all flex flex-col justify-between shadow-xs">
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="size-8 rounded-xl bg-[#111215] text-[#D4F82C] text-xs font-mono font-black flex items-center justify-center">
+                        03
+                      </span>
+                      <Mic size={18} className="text-blue-600" />
+                    </div>
+                    <h4 className="text-sm font-black text-[#111215] mb-1.5">
+                      24/7 Spoken Session with Alex
+                    </h4>
+                    <p className="text-xs text-[#575A51] leading-relaxed">
+                      Candidate joins via browser anytime. Conversational AI agent Alex speaks naturally with sub-300ms latency. Fullscreen & tab proctoring active throughout.
+                    </p>
+                  </div>
+                  <div className="mt-4 pt-3 border-t border-[#E4E7DC] text-[10px] font-mono text-[#73766C]">
+                    Zero Recruiter Effort
+                  </div>
+                </div>
+
+                {/* Step 4 */}
+                <div className="p-5 rounded-3xl bg-white border border-[#E4E7DC] hover:border-[#111215] transition-all flex flex-col justify-between shadow-xs">
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="size-8 rounded-xl bg-[#111215] text-[#D4F82C] text-xs font-mono font-black flex items-center justify-center">
+                        04
+                      </span>
+                      <Brain size={18} className="text-purple-600" />
+                    </div>
+                    <h4 className="text-sm font-black text-[#111215] mb-1.5">
+                      Contextual Dynamic Cross-Questioning
+                    </h4>
+                    <p className="text-xs text-[#575A51] leading-relaxed">
+                      Alex listens to candidate explanations and poses spontaneous follow-up questions probing edge cases and architectural logic. Live transcript indexed with timestamps.
+                    </p>
+                  </div>
+                  <div className="mt-4 pt-3 border-t border-[#E4E7DC] text-[10px] font-mono text-[#73766C]">
+                    Anti-Cheat Immunity
+                  </div>
+                </div>
+
+                {/* Step 5 */}
+                <div className="p-5 rounded-3xl bg-white border border-[#E4E7DC] hover:border-[#111215] transition-all flex flex-col justify-between shadow-xs">
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="size-8 rounded-xl bg-[#D4F82C] text-[#111215] text-xs font-mono font-black flex items-center justify-center">
+                        05
+                      </span>
+                      <Share2 size={18} className="text-[#8FB305]" />
+                    </div>
+                    <h4 className="text-sm font-black text-[#111215] mb-1.5">
+                      60s Dossier & 1-Click Client Portal
+                    </h4>
+                    <p className="text-xs text-[#575A51] leading-relaxed">
+                      System generates multi-factor evaluation dossier in 60s. Recruiter shares zero-login client link with audio answer clips and 1-click hiring manager approvals.
+                    </p>
+                  </div>
+                  <div className="mt-4 pt-3 border-t border-[#E4E7DC] text-[10px] font-mono text-[#73766C]">
+                    Auto-Graded Report
+                  </div>
+                </div>
+
+              </div>
+
+              {/* Action Callout */}
+              <div className="pt-2 flex flex-wrap items-center justify-between gap-4">
+                <span className="text-xs text-[#575A51]">
+                  Want to see this live from a candidate's perspective?
+                </span>
+                <Link
+                  to="/interview/demo"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#111215] text-[#D4F82C] text-xs font-bold hover:bg-black transition-all shadow-xs"
+                >
+                  <Play size={12} className="fill-current" />
+                  <span>Launch 2-Minute Candidate Test Drive</span>
+                </Link>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 2: CODING ASSESSMENT PROCESS */}
+          {activeProcessTab === 'coding' && (
+            <div className="space-y-6 animate-in fade-in duration-200">
+              <div className="p-4 sm:p-5 rounded-2xl bg-white border border-[#E4E7DC] flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
+                <div>
+                  <span className="text-[10px] font-mono font-bold uppercase text-[#8FB305] tracking-wider">
+                    Technical Assessment Engine
+                  </span>
+                  <h3 className="text-base font-black text-[#111215]">
+                    5-Stage Algorithmic & Cloud IDE Evaluation Flow
+                  </h3>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="px-3 py-1 rounded-full bg-[#111215] text-[#D4F82C] text-xs font-mono font-bold">
+                    15+ Languages • Cloud Compiler
+                  </span>
+                </div>
+              </div>
+
+              {/* 5 Process Steps Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                
+                {/* Step 1 */}
+                <div className="p-5 rounded-3xl bg-white border border-[#E4E7DC] hover:border-[#111215] transition-all flex flex-col justify-between shadow-xs">
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="size-8 rounded-xl bg-[#111215] text-[#D4F82C] text-xs font-mono font-black flex items-center justify-center">
+                        01
+                      </span>
+                      <FileText size={18} className="text-[#8FB305]" />
+                    </div>
+                    <h4 className="text-sm font-black text-[#111215] mb-1.5">
+                      Syllabus & PDF Curriculum Ingestion
+                    </h4>
+                    <p className="text-xs text-[#575A51] leading-relaxed">
+                      Recruiter selects programming language and attaches a course syllabus or technical specification PDF. AI guarantees challenges are strictly formulated from that material.
+                    </p>
+                  </div>
+                  <div className="mt-4 pt-3 border-t border-[#E4E7DC] text-[10px] font-mono text-[#73766C]">
+                    Zero Generic Trivia
+                  </div>
+                </div>
+
+                {/* Step 2 */}
+                <div className="p-5 rounded-3xl bg-white border border-[#E4E7DC] hover:border-[#111215] transition-all flex flex-col justify-between shadow-xs">
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="size-8 rounded-xl bg-[#111215] text-[#D4F82C] text-xs font-mono font-black flex items-center justify-center">
+                        02
+                      </span>
+                      <Lock size={18} className="text-rose-600" />
+                    </div>
+                    <h4 className="text-sm font-black text-[#111215] mb-1.5">
+                      Proctored Browser IDE Lockdown
+                    </h4>
+                    <p className="text-xs text-[#575A51] leading-relaxed">
+                      Candidate launches the IDE under strict proctoring: fullscreen enforcement, clipboard paste disablement, browser window blur logging, and devtools block.
+                    </p>
+                  </div>
+                  <div className="mt-4 pt-3 border-t border-[#E4E7DC] text-[10px] font-mono text-[#73766C]">
+                    Anti-Cheat Enforcement
+                  </div>
+                </div>
+
+                {/* Step 3 */}
+                <div className="p-5 rounded-3xl bg-white border border-[#E4E7DC] hover:border-[#111215] transition-all flex flex-col justify-between shadow-xs">
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="size-8 rounded-xl bg-[#111215] text-[#D4F82C] text-xs font-mono font-black flex items-center justify-center">
+                        03
+                      </span>
+                      <Code2 size={18} className="text-blue-600" />
+                    </div>
+                    <h4 className="text-sm font-black text-[#111215] mb-1.5">
+                      Live Compilation & Test Execution
+                    </h4>
+                    <p className="text-xs text-[#575A51] leading-relaxed">
+                      Candidate writes code and executes tests against sample and hidden test suites. Real-time compiler outputs stdout, memory consumption, and runtime metrics.
+                    </p>
+                  </div>
+                  <div className="mt-4 pt-3 border-t border-[#E4E7DC] text-[10px] font-mono text-[#73766C]">
+                    Sub-Second Compilation
+                  </div>
+                </div>
+
+                {/* Step 4 */}
+                <div className="p-5 rounded-3xl bg-white border border-[#E4E7DC] hover:border-[#111215] transition-all flex flex-col justify-between shadow-xs">
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="size-8 rounded-xl bg-[#111215] text-[#D4F82C] text-xs font-mono font-black flex items-center justify-center">
+                        04
+                      </span>
+                      <Zap size={18} className="text-amber-500" />
+                    </div>
+                    <h4 className="text-sm font-black text-[#111215] mb-1.5">
+                      Complexity & Cleanliness Analysis
+                    </h4>
+                    <p className="text-xs text-[#575A51] leading-relaxed">
+                      Engine analyzes Time Complexity O(n) and Space Complexity, identifying brute-force solutions, memory leaks, and adherence to clean coding principles.
+                    </p>
+                  </div>
+                  <div className="mt-4 pt-3 border-t border-[#E4E7DC] text-[10px] font-mono text-[#73766C]">
+                    Algorithmic Efficiency
+                  </div>
+                </div>
+
+                {/* Step 5 */}
+                <div className="p-5 rounded-3xl bg-white border border-[#E4E7DC] hover:border-[#111215] transition-all flex flex-col justify-between shadow-xs">
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="size-8 rounded-xl bg-[#D4F82C] text-[#111215] text-xs font-mono font-black flex items-center justify-center">
+                        05
+                      </span>
+                      <Kanban size={18} className="text-[#8FB305]" />
+                    </div>
+                    <h4 className="text-sm font-black text-[#111215] mb-1.5">
+                      Automated Grading & Kanban Update
+                    </h4>
+                    <p className="text-xs text-[#575A51] leading-relaxed">
+                      Upon submission, test scores, code diffs, and execution logs immediately sync to the ATS Kanban pipeline, auto-advancing qualifying engineers to the voice round.
+                    </p>
+                  </div>
+                  <div className="mt-4 pt-3 border-t border-[#E4E7DC] text-[10px] font-mono text-[#73766C]">
+                    100% Automated Scoring
+                  </div>
+                </div>
+
+              </div>
+
+              {/* Action Callout */}
+              <div className="pt-2 flex flex-wrap items-center justify-between gap-4">
+                <span className="text-xs text-[#575A51]">
+                  Need custom assessments generated from your internal engineering syllabus?
+                </span>
+                <Link
+                  to="/auth"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#111215] text-[#D4F82C] text-xs font-bold hover:bg-black transition-all shadow-xs"
+                >
+                  <span>Build Assessment with Syllabus Upload</span>
+                  <ArrowRight size={13} />
+                </Link>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 3: MOCK TEST & CANDIDATE PREPARATION PROCESS */}
+          {activeProcessTab === 'mock' && (
+            <div className="space-y-6 animate-in fade-in duration-200">
+              <div className="p-4 sm:p-5 rounded-2xl bg-white border border-[#E4E7DC] flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
+                <div>
+                  <span className="text-[10px] font-mono font-bold uppercase text-[#8FB305] tracking-wider">
+                    Candidate & Student Career Hub
+                  </span>
+                  <h3 className="text-base font-black text-[#111215]">
+                    5-Stage Interactive Mock Interview & Diagnostic Coaching Flow
+                  </h3>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="px-3 py-1 rounded-full bg-[#111215] text-[#D4F82C] text-xs font-mono font-bold">
+                    For Job Seekers & Bootcamps
+                  </span>
+                </div>
+              </div>
+
+              {/* 5 Process Steps Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                
+                {/* Step 1 */}
+                <div className="p-5 rounded-3xl bg-white border border-[#E4E7DC] hover:border-[#111215] transition-all flex flex-col justify-between shadow-xs">
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="size-8 rounded-xl bg-[#111215] text-[#D4F82C] text-xs font-mono font-black flex items-center justify-center">
+                        01
+                      </span>
+                      <Target size={18} className="text-[#8FB305]" />
+                    </div>
+                    <h4 className="text-sm font-black text-[#111215] mb-1.5">
+                      Select Career Track & Seniority
+                    </h4>
+                    <p className="text-xs text-[#575A51] leading-relaxed">
+                      Candidate selects target discipline: Frontend, Backend, Fullstack, AI/ML, System Design, or HR Behavioral. Optionally pastes target job description.
+                    </p>
+                  </div>
+                  <div className="mt-4 pt-3 border-t border-[#E4E7DC] text-[10px] font-mono text-[#73766C]">
+                    Tailored Simulation
+                  </div>
+                </div>
+
+                {/* Step 2 */}
+                <div className="p-5 rounded-3xl bg-white border border-[#E4E7DC] hover:border-[#111215] transition-all flex flex-col justify-between shadow-xs">
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="size-8 rounded-xl bg-[#111215] text-[#D4F82C] text-xs font-mono font-black flex items-center justify-center">
+                        02
+                      </span>
+                      <Volume2 size={18} className="text-blue-600" />
+                    </div>
+                    <h4 className="text-sm font-black text-[#111215] mb-1.5">
+                      Live Spoken Voice Dialogue
+                    </h4>
+                    <p className="text-xs text-[#575A51] leading-relaxed">
+                      Candidate answers spoken questions naturally into their mic in a stress-free environment. AI prompts real-world scenarios and dynamic cross-questions.
+                    </p>
+                  </div>
+                  <div className="mt-4 pt-3 border-t border-[#E4E7DC] text-[10px] font-mono text-[#73766C]">
+                    Zero-Pressure Rehearsal
+                  </div>
+                </div>
+
+                {/* Step 3 */}
+                <div className="p-5 rounded-3xl bg-white border border-[#E4E7DC] hover:border-[#111215] transition-all flex flex-col justify-between shadow-xs">
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="size-8 rounded-xl bg-[#111215] text-[#D4F82C] text-xs font-mono font-black flex items-center justify-center">
+                        03
+                      </span>
+                      <Sliders size={18} className="text-purple-600" />
+                    </div>
+                    <h4 className="text-sm font-black text-[#111215] mb-1.5">
+                      Speech Analytics & Pacing Analysis
+                    </h4>
+                    <p className="text-xs text-[#575A51] leading-relaxed">
+                      System measures speaking rate in WPM (Words/Min), pause intervals, and counts verbal filler words ("um", "like", "you know") to optimize vocal delivery.
+                    </p>
+                  </div>
+                  <div className="mt-4 pt-3 border-t border-[#E4E7DC] text-[10px] font-mono text-[#73766C]">
+                    Quantified Fluency
+                  </div>
+                </div>
+
+                {/* Step 4 */}
+                <div className="p-5 rounded-3xl bg-white border border-[#E4E7DC] hover:border-[#111215] transition-all flex flex-col justify-between shadow-xs">
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="size-8 rounded-xl bg-[#111215] text-[#D4F82C] text-xs font-mono font-black flex items-center justify-center">
+                        04
+                      </span>
+                      <Sparkles size={18} className="text-amber-500" />
+                    </div>
+                    <h4 className="text-sm font-black text-[#111215] mb-1.5">
+                      AI STAR Method Model Rewrites
+                    </h4>
+                    <p className="text-xs text-[#575A51] leading-relaxed">
+                      AI breaks down candidate answers and provides step-by-step model rewrites using the STAR method (Situation, Task, Action, Result) with code optimization tips.
+                    </p>
+                  </div>
+                  <div className="mt-4 pt-3 border-t border-[#E4E7DC] text-[10px] font-mono text-[#73766C]">
+                    Actionable Coaching
+                  </div>
+                </div>
+
+                {/* Step 5 */}
+                <div className="p-5 rounded-3xl bg-white border border-[#E4E7DC] hover:border-[#111215] transition-all flex flex-col justify-between shadow-xs">
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="size-8 rounded-xl bg-[#D4F82C] text-[#111215] text-xs font-mono font-black flex items-center justify-center">
+                        05
+                      </span>
+                      <Award size={18} className="text-[#8FB305]" />
+                    </div>
+                    <h4 className="text-sm font-black text-[#111215] mb-1.5">
+                      Verified LinkedIn Skill Badge
+                    </h4>
+                    <p className="text-xs text-[#575A51] leading-relaxed">
+                      Candidate receives an interactive diagnostic performance radar and a verified digital skill badge ready to share on LinkedIn to attract hiring recruiters.
+                    </p>
+                  </div>
+                  <div className="mt-4 pt-3 border-t border-[#E4E7DC] text-[10px] font-mono text-[#73766C]">
+                    Shareable Credential
+                  </div>
+                </div>
+
+              </div>
+
+              {/* Action Callout */}
+              <div className="pt-2 flex flex-wrap items-center justify-between gap-4">
+                <span className="text-xs text-[#575A51]">
+                  Are you a student or developer looking to sharpen your technical interview skills?
+                </span>
+                <Link
+                  to="/candidate"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#111215] text-[#D4F82C] text-xs font-bold hover:bg-black transition-all shadow-xs"
+                >
+                  <GraduationCap size={14} />
+                  <span>Start Free Mock Interview Session</span>
+                </Link>
+              </div>
+            </div>
+          )}
+
+        </div>
       </section>
 
       {/* ── SECTION 2: DEDICATED FULL FRAME KANBAN PIPELINE CARD ── */}
@@ -2487,6 +3416,205 @@ export default function LandingPage() {
 
           </div>
 
+          {/* Detailed AI Interview Technical Capabilities & Architecture Table */}
+          <div id="interview-matrix" className="mb-14 rounded-3xl border border-white/10 bg-white/[0.02] p-5 sm:p-8 backdrop-blur-xl">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-white/10 mb-6">
+              <div>
+                <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-[#D4F82C]/10 border border-[#D4F82C]/20 text-[#D4F82C] text-[10px] font-mono font-bold uppercase tracking-wider mb-2">
+                  <Activity size={12} className="text-[#D4F82C]" />
+                  <span>DEEP ARCHITECTURE & CAPABILITIES MATRIX</span>
+                </div>
+                <h3 className="text-xl sm:text-2xl font-black text-white">
+                  AI Interview Engine Detailed Technical Specifications
+                </h3>
+                <p className="text-xs text-[#A1A79B] mt-1">
+                  How our neural audio, contextual reasoning, and proctoring pipelines outperform traditional phone screens.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-[11px] font-mono font-bold text-neutral-300">
+                  10 Enterprise Pillars
+                </span>
+              </div>
+            </div>
+
+            {/* Matrix Table */}
+            <div className="overflow-x-auto -mx-2 sm:mx-0">
+              <table className="w-full text-left text-xs border-collapse min-w-[760px]">
+                <thead>
+                  <tr className="border-b border-white/10 text-[10px] sm:text-[11px] font-mono uppercase tracking-wider text-[#A1A79B]">
+                    <th className="py-3 px-4 font-bold text-white">Dimension / Pipeline</th>
+                    <th className="py-3 px-4 font-bold text-white">InterviewXpert Architecture</th>
+                    <th className="py-3 px-4 font-bold text-[#D4F82C]">Benchmark / Spec</th>
+                    <th className="py-3 px-4 font-bold text-white">Recruiter & Quality Impact</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/5 text-neutral-200">
+                  <tr className="hover:bg-white/[0.02] transition-colors">
+                    <td className="py-3.5 px-4 font-bold text-white flex items-center gap-2">
+                      <Mic size={14} className="text-[#D4F82C] shrink-0" />
+                      <span>Speech-to-Speech Real-time Latency</span>
+                    </td>
+                    <td className="py-3.5 px-4 text-[#A1A79B]">
+                      Sub-300ms bidirectional edge voice processing with neural acoustic streaming.
+                    </td>
+                    <td className="py-3.5 px-4 font-mono font-bold text-[#D4F82C]">
+                      &lt; 300ms Turnaround
+                    </td>
+                    <td className="py-3.5 px-4 text-neutral-300">
+                      Eliminates awkward robotic pauses; creates a natural, human-like technical dialogue.
+                    </td>
+                  </tr>
+
+                  <tr className="hover:bg-white/[0.02] transition-colors">
+                    <td className="py-3.5 px-4 font-bold text-white flex items-center gap-2">
+                      <Brain size={14} className="text-emerald-400 shrink-0" />
+                      <span>Dynamic Contextual Cross-Questioning</span>
+                    </td>
+                    <td className="py-3.5 px-4 text-[#A1A79B]">
+                      Multi-turn conversational memory analyzes candidate claims and probes technical reasoning.
+                    </td>
+                    <td className="py-3.5 px-4 font-mono font-bold text-emerald-400">
+                      Multi-Turn Context
+                    </td>
+                    <td className="py-3.5 px-4 text-neutral-300">
+                      Probes real architecture choices; completely defeats memorized or AI-prompted cheat sheets.
+                    </td>
+                  </tr>
+
+                  <tr className="hover:bg-white/[0.02] transition-colors">
+                    <td className="py-3.5 px-4 font-bold text-white flex items-center gap-2">
+                      <FileText size={14} className="text-blue-400 shrink-0" />
+                      <span>Custom Syllabus & JD PDF Grounding</span>
+                    </td>
+                    <td className="py-3.5 px-4 text-[#A1A79B]">
+                      Vectorized PDF/DOCX ingestion with strict bounding rules to prevent off-topic questions.
+                    </td>
+                    <td className="py-3.5 px-4 font-mono font-bold text-blue-400">
+                      1-Click Syllabus PDF
+                    </td>
+                    <td className="py-3.5 px-4 text-neutral-300">
+                      Formulates questions strictly tailored to your engineering stack or curriculum.
+                    </td>
+                  </tr>
+
+                  <tr className="hover:bg-white/[0.02] transition-colors">
+                    <td className="py-3.5 px-4 font-bold text-white flex items-center gap-2">
+                      <ShieldCheck size={14} className="text-purple-400 shrink-0" />
+                      <span>Anti-Cheat & Tab-Switch Proctoring</span>
+                    </td>
+                    <td className="py-3.5 px-4 text-[#A1A79B]">
+                      Dual-stream video/audio proctoring, browser blur tracking, eye-tracking & multi-face alerts.
+                    </td>
+                    <td className="py-3.5 px-4 font-mono font-bold text-purple-400">
+                      99.8% Integrity Log
+                    </td>
+                    <td className="py-3.5 px-4 text-neutral-300">
+                      Provides indisputable evidence of candidate authenticity; prevents proxy test takers.
+                    </td>
+                  </tr>
+
+                  <tr className="hover:bg-white/[0.02] transition-colors">
+                    <td className="py-3.5 px-4 font-bold text-white flex items-center gap-2">
+                      <FileCheck size={14} className="text-amber-400 shrink-0" />
+                      <span>Word-for-Word Live Transcripts</span>
+                    </td>
+                    <td className="py-3.5 px-4 text-[#A1A79B]">
+                      Live streaming speech-to-text with word-level timestamps and searchable keyword anchors.
+                    </td>
+                    <td className="py-3.5 px-4 font-mono font-bold text-amber-400">
+                      100% Searchable
+                    </td>
+                    <td className="py-3.5 px-4 text-neutral-300">
+                      Review a 20-minute technical interview in 45 seconds by jumping straight to key questions.
+                    </td>
+                  </tr>
+
+                  <tr className="hover:bg-white/[0.02] transition-colors">
+                    <td className="py-3.5 px-4 font-bold text-white flex items-center gap-2">
+                      <Volume2 size={14} className="text-[#D4F82C] shrink-0" />
+                      <span>Speech Analytics & Fluency Metrics</span>
+                    </td>
+                    <td className="py-3.5 px-4 text-[#A1A79B]">
+                      Acoustic feature extraction measuring speaking rate (WPM), hesitation, and filler word frequency.
+                    </td>
+                    <td className="py-3.5 px-4 font-mono font-bold text-[#D4F82C]">
+                      Pace & Fluency Radar
+                    </td>
+                    <td className="py-3.5 px-4 text-neutral-300">
+                      Delivers objective communication metrics without subjective recruiter bias.
+                    </td>
+                  </tr>
+
+                  <tr className="hover:bg-white/[0.02] transition-colors">
+                    <td className="py-3.5 px-4 font-bold text-white flex items-center gap-2">
+                      <Video size={14} className="text-emerald-400 shrink-0" />
+                      <span>Permanent HD Video & Audio Cloud Storage</span>
+                    </td>
+                    <td className="py-3.5 px-4 text-[#A1A79B]">
+                      Secure cloud storage with encrypted permanent links for video and audio playback.
+                    </td>
+                    <td className="py-3.5 px-4 font-mono font-bold text-emerald-400">
+                      1080p HD Studio Audio
+                    </td>
+                    <td className="py-3.5 px-4 text-neutral-300">
+                      Share verified authentic video answers directly with hiring managers across the globe.
+                    </td>
+                  </tr>
+
+                  <tr className="hover:bg-white/[0.02] transition-colors">
+                    <td className="py-3.5 px-4 font-bold text-white flex items-center gap-2">
+                      <Sparkles size={14} className="text-rose-400 shrink-0" />
+                      <span>Automated Candidate Evaluation Dossier</span>
+                    </td>
+                    <td className="py-3.5 px-4 text-[#A1A79B]">
+                      Multi-dimensional rubric scoring technical depth, problem-solving, and hire recommendation.
+                    </td>
+                    <td className="py-3.5 px-4 font-mono font-bold text-rose-400">
+                      Generated in &lt; 60s
+                    </td>
+                    <td className="py-3.5 px-4 text-neutral-300">
+                      Screen hundreds of applicants in minutes instead of weeks of manual calendar calls.
+                    </td>
+                  </tr>
+
+                  <tr className="hover:bg-white/[0.02] transition-colors">
+                    <td className="py-3.5 px-4 font-bold text-white flex items-center gap-2">
+                      <MessageCircle size={14} className="text-emerald-400 shrink-0" />
+                      <span>Native WhatsApp Candidate Workflows</span>
+                    </td>
+                    <td className="py-3.5 px-4 text-[#A1A79B]">
+                      WhatsApp Business API integration for automatic test links, reminders, and notifications.
+                    </td>
+                    <td className="py-3.5 px-4 font-mono font-bold text-emerald-400">
+                      82%+ Response Rate
+                    </td>
+                    <td className="py-3.5 px-4 text-neutral-300">
+                      4x higher candidate completion rate compared to traditional cold email reminders.
+                    </td>
+                  </tr>
+
+                  <tr className="hover:bg-white/[0.02] transition-colors">
+                    <td className="py-3.5 px-4 font-bold text-white flex items-center gap-2">
+                      <Share2 size={14} className="text-blue-400 shrink-0" />
+                      <span>1-Click Interactive Client Review Links</span>
+                    </td>
+                    <td className="py-3.5 px-4 text-[#A1A79B]">
+                      Zero-login branded dossier links with audio answer playback and 1-click client decisioning.
+                    </td>
+                    <td className="py-3.5 px-4 font-mono font-bold text-blue-400">
+                      Instant Client Sync
+                    </td>
+                    <td className="py-3.5 px-4 text-neutral-300">
+                      Staffing agencies win more client placements by presenting interactive proof over raw CVs.
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
           {/* Client Demo & Walkthrough Action Bar */}
           <div className="rounded-2xl bg-gradient-to-r from-white/[0.05] via-white/[0.02] to-white/[0.05] border border-white/10 p-6 flex flex-wrap items-center justify-between gap-6">
             <div className="flex items-center gap-4">
@@ -2530,6 +3658,419 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ── SECTION: COMPETITOR CAPABILITIES & PRICING COMPARISON ── */}
+      <section id="comparison" className="relative z-58 min-h-[auto] flex flex-col justify-center bg-[#F8F9F5] scroll-mt-20 py-14 sm:py-24 border-b border-[#E4E7DC]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-8 lg:px-12 w-full">
+          
+          {/* Header */}
+          <div className="text-center max-w-3xl mx-auto mb-10 sm:mb-14">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-[#E4E7DC] text-[#111215] text-[10px] font-mono font-bold uppercase tracking-wider mb-3 shadow-2xs">
+              <SlidersHorizontal size={12} className="text-[#8FB305]" />
+              <span>MARKET BENCHMARK & COST TRANSPARENCY</span>
+            </div>
+            <h2 className="text-2xl sm:text-5xl font-black text-[#111215] tracking-tight leading-tight">
+              How InterviewXpert Compares to Legacy Platforms
+            </h2>
+            <p className="mt-3 text-xs sm:text-base text-[#575A51] leading-relaxed">
+              Why high-velocity engineering startups and boutique recruitment agencies are replacing $30,000+/year legacy enterprise contracts with InterviewXpert's autonomous conversational architecture.
+            </p>
+          </div>
+
+          {/* Comparison Table Container */}
+          <div className="rounded-3xl border border-[#E4E7DC] bg-white shadow-md overflow-hidden mb-10">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse min-w-[850px]">
+                <thead>
+                  <tr className="border-b border-[#E4E7DC] bg-[#FAFAF8]">
+                    <th className="py-4 px-4 sm:px-5 font-bold text-[#111215] w-[26%] text-xs uppercase font-mono tracking-wider">
+                      Capabilities & Pricing
+                    </th>
+                    {/* InterviewXpert Column Highlight */}
+                    <th className="py-4 px-4 sm:px-5 font-black text-[#111215] bg-[#D4F82C]/15 border-x border-[#D4F82C]/30 w-[24%]">
+                      <div className="flex items-center gap-1.5 mb-0.5">
+                        <span className="size-2 rounded-full bg-[#8FB305] animate-pulse"></span>
+                        <span className="text-sm font-black text-[#111215]">InterviewXpert</span>
+                      </div>
+                      <span className="text-[10px] font-mono font-bold text-[#575A51] uppercase">
+                        Autonomous AI Recruiter
+                      </span>
+                    </th>
+                    <th className="py-4 px-4 font-bold text-[#111215] w-[13%]">
+                      <div className="text-xs font-black">HireVue</div>
+                      <span className="text-[10px] font-mono text-[#73766C]">1-Way Video</span>
+                    </th>
+                    <th className="py-4 px-4 font-bold text-[#111215] w-[13%]">
+                      <div className="text-xs font-black">Karat</div>
+                      <span className="text-[10px] font-mono text-[#73766C]">Human Screeners</span>
+                    </th>
+                    <th className="py-4 px-4 font-bold text-[#111215] w-[12%]">
+                      <div className="text-xs font-black">Metaview</div>
+                      <span className="text-[10px] font-mono text-[#73766C]">Note Takers</span>
+                    </th>
+                    <th className="py-4 px-4 font-bold text-[#111215] w-[12%]">
+                      <div className="text-xs font-black">HackerRank</div>
+                      <span className="text-[10px] font-mono text-[#73766C]">Code Tests</span>
+                    </th>
+                  </tr>
+                </thead>
+
+                <tbody className="divide-y divide-[#E4E7DC] text-[#111215]">
+                  
+                  {/* Row 1: Autonomous Spoken AI */}
+                  <tr className="hover:bg-[#F8F9F5] transition-colors">
+                    <td className="py-3.5 px-4 sm:px-5 font-bold text-[#111215]">
+                      <div className="flex items-center gap-2">
+                        <Mic size={14} className="text-[#8FB305] shrink-0" />
+                        <span>Autonomous Spoken Voice AI</span>
+                      </div>
+                    </td>
+                    <td className="py-3.5 px-4 sm:px-5 bg-[#D4F82C]/5 border-x border-[#D4F82C]/20 font-bold text-[#111215]">
+                      <div className="flex items-center gap-1.5 text-emerald-700">
+                        <CheckCircle2 size={14} className="shrink-0" />
+                        <span>Yes • Sub-300ms Spoken Dialogue</span>
+                      </div>
+                    </td>
+                    <td className="py-3.5 px-4 text-[#73766C]">
+                      <div className="flex items-center gap-1.5 text-rose-600">
+                        <XCircle size={14} className="shrink-0" />
+                        <span>No (1-Way Recorded Video Only)</span>
+                      </div>
+                    </td>
+                    <td className="py-3.5 px-4 text-[#73766C]">
+                      <div className="flex items-center gap-1.5 text-rose-600">
+                        <XCircle size={14} className="shrink-0" />
+                        <span>No (Human Engineers Only)</span>
+                      </div>
+                    </td>
+                    <td className="py-3.5 px-4 text-[#73766C]">
+                      <div className="flex items-center gap-1.5 text-rose-600">
+                        <XCircle size={14} className="shrink-0" />
+                        <span>No (Transcribes Human Calls)</span>
+                      </div>
+                    </td>
+                    <td className="py-3.5 px-4 text-[#73766C]">
+                      <div className="flex items-center gap-1.5 text-rose-600">
+                        <XCircle size={14} className="shrink-0" />
+                        <span>No (Text/Code Testing Only)</span>
+                      </div>
+                    </td>
+                  </tr>
+
+                  {/* Row 2: Dynamic Cross-Questioning */}
+                  <tr className="hover:bg-[#F8F9F5] transition-colors">
+                    <td className="py-3.5 px-4 sm:px-5 font-bold text-[#111215]">
+                      <div className="flex items-center gap-2">
+                        <Brain size={14} className="text-[#8FB305] shrink-0" />
+                        <span>Dynamic Contextual Cross-Questioning</span>
+                      </div>
+                    </td>
+                    <td className="py-3.5 px-4 sm:px-5 bg-[#D4F82C]/5 border-x border-[#D4F82C]/20 font-bold text-[#111215]">
+                      <div className="flex items-center gap-1.5 text-emerald-700">
+                        <CheckCircle2 size={14} className="shrink-0" />
+                        <span>Yes • Probes logic & architecture</span>
+                      </div>
+                    </td>
+                    <td className="py-3.5 px-4 text-[#73766C]">
+                      <div className="flex items-center gap-1.5 text-rose-600">
+                        <XCircle size={14} className="shrink-0" />
+                        <span>No (Scripted static prompts)</span>
+                      </div>
+                    </td>
+                    <td className="py-3.5 px-4 text-[#73766C]">
+                      <div className="flex items-center gap-1.5 text-emerald-700">
+                        <CheckCircle2 size={14} className="shrink-0" />
+                        <span>Yes (Manual by humans)</span>
+                      </div>
+                    </td>
+                    <td className="py-3.5 px-4 text-[#73766C]">
+                      <div className="flex items-center gap-1.5 text-rose-600">
+                        <XCircle size={14} className="shrink-0" />
+                        <span>No (Passive listener)</span>
+                      </div>
+                    </td>
+                    <td className="py-3.5 px-4 text-[#73766C]">
+                      <div className="flex items-center gap-1.5 text-rose-600">
+                        <XCircle size={14} className="shrink-0" />
+                        <span>No (Rigid test cases only)</span>
+                      </div>
+                    </td>
+                  </tr>
+
+                  {/* Row 3: Candidate Mock Interview Hub */}
+                  <tr className="hover:bg-[#F8F9F5] transition-colors">
+                    <td className="py-3.5 px-4 sm:px-5 font-bold text-[#111215]">
+                      <div className="flex items-center gap-2">
+                        <GraduationCap size={14} className="text-[#8FB305] shrink-0" />
+                        <span>Candidate Mock Interview Hub</span>
+                      </div>
+                    </td>
+                    <td className="py-3.5 px-4 sm:px-5 bg-[#D4F82C]/5 border-x border-[#D4F82C]/20 font-bold text-[#111215]">
+                      <div className="flex items-center gap-1.5 text-emerald-700">
+                        <CheckCircle2 size={14} className="shrink-0" />
+                        <span>Yes • Built-in student & candidate hub</span>
+                      </div>
+                    </td>
+                    <td className="py-3.5 px-4 text-[#73766C]">
+                      <div className="flex items-center gap-1.5 text-rose-600">
+                        <XCircle size={14} className="shrink-0" />
+                        <span>No</span>
+                      </div>
+                    </td>
+                    <td className="py-3.5 px-4 text-[#73766C]">
+                      <div className="flex items-center gap-1.5 text-rose-600">
+                        <XCircle size={14} className="shrink-0" />
+                        <span>No</span>
+                      </div>
+                    </td>
+                    <td className="py-3.5 px-4 text-[#73766C]">
+                      <div className="flex items-center gap-1.5 text-rose-600">
+                        <XCircle size={14} className="shrink-0" />
+                        <span>No</span>
+                      </div>
+                    </td>
+                    <td className="py-3.5 px-4 text-[#73766C]">
+                      <div className="flex items-center gap-1.5 text-amber-600">
+                        <span>Limited (Coding practice only)</span>
+                      </div>
+                    </td>
+                  </tr>
+
+                  {/* Row 4: Syllabus / Custom PDF Ingestion */}
+                  <tr className="hover:bg-[#F8F9F5] transition-colors">
+                    <td className="py-3.5 px-4 sm:px-5 font-bold text-[#111215]">
+                      <div className="flex items-center gap-2">
+                        <FileText size={14} className="text-[#8FB305] shrink-0" />
+                        <span>Syllabus / Custom PDF Question Grounding</span>
+                      </div>
+                    </td>
+                    <td className="py-3.5 px-4 sm:px-5 bg-[#D4F82C]/5 border-x border-[#D4F82C]/20 font-bold text-[#111215]">
+                      <div className="flex items-center gap-1.5 text-emerald-700">
+                        <CheckCircle2 size={14} className="shrink-0" />
+                        <span>Yes • 1-Click PDF Syllabus Upload</span>
+                      </div>
+                    </td>
+                    <td className="py-3.5 px-4 text-[#73766C]">
+                      <div className="flex items-center gap-1.5 text-rose-600">
+                        <XCircle size={14} className="shrink-0" />
+                        <span>No (Manual complex form entry)</span>
+                      </div>
+                    </td>
+                    <td className="py-3.5 px-4 text-[#73766C]">
+                      <div className="flex items-center gap-1.5 text-rose-600">
+                        <XCircle size={14} className="shrink-0" />
+                        <span>No (Custom scoping call required)</span>
+                      </div>
+                    </td>
+                    <td className="py-3.5 px-4 text-[#73766C]">
+                      <span className="text-gray-400">N/A</span>
+                    </td>
+                    <td className="py-3.5 px-4 text-[#73766C]">
+                      <div className="flex items-center gap-1.5 text-rose-600">
+                        <XCircle size={14} className="shrink-0" />
+                        <span>No (Static library only)</span>
+                      </div>
+                    </td>
+                  </tr>
+
+                  {/* Row 5: Anti-Cheat & Proctoring */}
+                  <tr className="hover:bg-[#F8F9F5] transition-colors">
+                    <td className="py-3.5 px-4 sm:px-5 font-bold text-[#111215]">
+                      <div className="flex items-center gap-2">
+                        <ShieldCheck size={14} className="text-[#8FB305] shrink-0" />
+                        <span>Anti-Cheat & Tab-Switch Audit Logs</span>
+                      </div>
+                    </td>
+                    <td className="py-3.5 px-4 sm:px-5 bg-[#D4F82C]/5 border-x border-[#D4F82C]/20 font-bold text-[#111215]">
+                      <div className="flex items-center gap-1.5 text-emerald-700">
+                        <CheckCircle2 size={14} className="shrink-0" />
+                        <span>Yes • Full screen, tab, eye & face tracking</span>
+                      </div>
+                    </td>
+                    <td className="py-3.5 px-4 text-[#73766C]">
+                      <span className="text-amber-700">Basic (Manual review)</span>
+                    </td>
+                    <td className="py-3.5 px-4 text-[#73766C]">
+                      <span className="text-emerald-700">Yes (Human Proctored)</span>
+                    </td>
+                    <td className="py-3.5 px-4 text-[#73766C]">
+                      <div className="flex items-center gap-1.5 text-rose-600">
+                        <XCircle size={14} className="shrink-0" />
+                        <span>None</span>
+                      </div>
+                    </td>
+                    <td className="py-3.5 px-4 text-[#73766C]">
+                      <span className="text-amber-700">Basic (Window blur log)</span>
+                    </td>
+                  </tr>
+
+                  {/* Row 6: Native WhatsApp Integration */}
+                  <tr className="hover:bg-[#F8F9F5] transition-colors">
+                    <td className="py-3.5 px-4 sm:px-5 font-bold text-[#111215]">
+                      <div className="flex items-center gap-2">
+                        <MessageCircle size={14} className="text-[#8FB305] shrink-0" />
+                        <span>Native WhatsApp Candidate Workflows</span>
+                      </div>
+                    </td>
+                    <td className="py-3.5 px-4 sm:px-5 bg-[#D4F82C]/5 border-x border-[#D4F82C]/20 font-bold text-[#111215]">
+                      <div className="flex items-center gap-1.5 text-emerald-700">
+                        <CheckCircle2 size={14} className="shrink-0" />
+                        <span>Yes • Automated WhatsApp invites & reminders</span>
+                      </div>
+                    </td>
+                    <td className="py-3.5 px-4 text-[#73766C]">
+                      <div className="flex items-center gap-1.5 text-rose-600">
+                        <XCircle size={14} className="shrink-0" />
+                        <span>No (Email only)</span>
+                      </div>
+                    </td>
+                    <td className="py-3.5 px-4 text-[#73766C]">
+                      <div className="flex items-center gap-1.5 text-rose-600">
+                        <XCircle size={14} className="shrink-0" />
+                        <span>No (Email only)</span>
+                      </div>
+                    </td>
+                    <td className="py-3.5 px-4 text-[#73766C]">
+                      <div className="flex items-center gap-1.5 text-rose-600">
+                        <XCircle size={14} className="shrink-0" />
+                        <span>No</span>
+                      </div>
+                    </td>
+                    <td className="py-3.5 px-4 text-[#73766C]">
+                      <div className="flex items-center gap-1.5 text-rose-600">
+                        <XCircle size={14} className="shrink-0" />
+                        <span>No (Email only)</span>
+                      </div>
+                    </td>
+                  </tr>
+
+                  {/* Row 7: 1-Click Interactive Client Review Link */}
+                  <tr className="hover:bg-[#F8F9F5] transition-colors">
+                    <td className="py-3.5 px-4 sm:px-5 font-bold text-[#111215]">
+                      <div className="flex items-center gap-2">
+                        <Share2 size={14} className="text-[#8FB305] shrink-0" />
+                        <span>1-Click Interactive Client Review Portal</span>
+                      </div>
+                    </td>
+                    <td className="py-3.5 px-4 sm:px-5 bg-[#D4F82C]/5 border-x border-[#D4F82C]/20 font-bold text-[#111215]">
+                      <div className="flex items-center gap-1.5 text-emerald-700">
+                        <CheckCircle2 size={14} className="shrink-0" />
+                        <span>Yes • Audio snippets & 1-click approvals</span>
+                      </div>
+                    </td>
+                    <td className="py-3.5 px-4 text-[#73766C]">
+                      <div className="flex items-center gap-1.5 text-rose-600">
+                        <XCircle size={14} className="shrink-0" />
+                        <span>No (Requires enterprise login)</span>
+                      </div>
+                    </td>
+                    <td className="py-3.5 px-4 text-[#73766C]">
+                      <span className="text-amber-700">Static PDF summary</span>
+                    </td>
+                    <td className="py-3.5 px-4 text-[#73766C]">
+                      <div className="flex items-center gap-1.5 text-rose-600">
+                        <XCircle size={14} className="shrink-0" />
+                        <span>Internal notes only</span>
+                      </div>
+                    </td>
+                    <td className="py-3.5 px-4 text-[#73766C]">
+                      <span className="text-amber-700">Test score page only</span>
+                    </td>
+                  </tr>
+
+                  {/* Row 8: Evaluation Turnaround */}
+                  <tr className="hover:bg-[#F8F9F5] transition-colors">
+                    <td className="py-3.5 px-4 sm:px-5 font-bold text-[#111215]">
+                      <div className="flex items-center gap-2">
+                        <Clock size={14} className="text-[#8FB305] shrink-0" />
+                        <span>Evaluation Turnaround Time</span>
+                      </div>
+                    </td>
+                    <td className="py-3.5 px-4 sm:px-5 bg-[#D4F82C]/5 border-x border-[#D4F82C]/20 font-bold text-[#111215]">
+                      <span className="px-2 py-0.5 rounded bg-[#D4F82C] text-[#111215] font-black text-[11px]">
+                        ⚡ Under 60 Seconds
+                      </span>
+                    </td>
+                    <td className="py-3.5 px-4 text-[#73766C]">
+                      <span>2 to 5 Days (Manual review)</span>
+                    </td>
+                    <td className="py-3.5 px-4 text-[#73766C]">
+                      <span>24 to 48 Hours</span>
+                    </td>
+                    <td className="py-3.5 px-4 text-[#73766C]">
+                      <span>Post-call minutes</span>
+                    </td>
+                    <td className="py-3.5 px-4 text-[#73766C]">
+                      <span>Instant (Code only)</span>
+                    </td>
+                  </tr>
+
+                  {/* Row 9: Pricing Structure & Lock-in */}
+                  <tr className="bg-[#FAFBF7]">
+                    <td className="py-4 px-4 sm:px-5 font-black text-[#111215]">
+                      <div className="flex items-center gap-2">
+                        <IndianRupee size={14} className="text-[#8FB305] shrink-0" />
+                        <span>Pricing Model & Accessibility</span>
+                      </div>
+                    </td>
+                    <td className="py-4 px-4 sm:px-5 bg-[#D4F82C]/10 border-x border-[#D4F82C]/30 font-black text-[#111215]">
+                      <div className="text-xs font-black text-[#111215]">
+                        From ₹129 / Candidate
+                      </div>
+                      <div className="text-[10px] text-[#575A51] font-medium mt-0.5">
+                        Dynamic volume: ₹149 down to ₹129 (with modular MCQ & coding add-ons). 1-Month Free Trial. Zero annual lock-in.
+                      </div>
+                    </td>
+                    <td className="py-4 px-4 text-rose-700 font-bold">
+                      <div className="text-xs">$25,000 – $50,000+ / yr</div>
+                      <div className="text-[10px] text-[#73766C] font-normal">Rigid annual lock-in</div>
+                    </td>
+                    <td className="py-4 px-4 text-rose-700 font-bold">
+                      <div className="text-xs">$300 – $500+ / interview</div>
+                      <div className="text-[10px] text-[#73766C] font-normal">$3,000+ for 10 candidates</div>
+                    </td>
+                    <td className="py-4 px-4 text-[#73766C] font-bold">
+                      <div className="text-xs">$5,000+ / year</div>
+                      <div className="text-[10px] text-[#73766C] font-normal">Per recruiter seat</div>
+                    </td>
+                    <td className="py-4 px-4 text-[#73766C] font-bold">
+                      <div className="text-xs">$3,600 – $10,000+ / yr</div>
+                      <div className="text-[10px] text-[#73766C] font-normal">+ Candidate volume caps</div>
+                    </td>
+                  </tr>
+
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Bottom Value Comparison Banner */}
+          <div className="rounded-3xl bg-[#111215] text-white p-6 sm:p-8 flex flex-col sm:flex-row items-center justify-between gap-6 shadow-xl">
+            <div className="space-y-1.5 text-center sm:text-left">
+              <span className="text-[10px] uppercase font-mono font-bold tracking-wider text-[#D4F82C]">
+                Uncompromising Quality • 75%+ Cost Savings
+              </span>
+              <h3 className="text-lg sm:text-xl font-black text-white">
+                Why Pay $30,000+ For Rigid Legacy Tools That Still Require Manual Reviews?
+              </h3>
+              <p className="text-xs text-slate-300 max-w-2xl leading-relaxed">
+                InterviewXpert conducts real spoken technical interviews 24/7, verifies authenticity with proctoring audit trails, and delivers comprehensive candidate dossiers in 60 seconds — with dynamic rates scaling from ₹149 down to ₹129 per interview.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3 shrink-0 w-full sm:w-auto">
+              <a
+                href="#pricing"
+                onClick={(e) => scrollToSection(e, 'pricing')}
+                className="w-full sm:w-auto px-5 py-3 rounded-full bg-[#D4F82C] hover:bg-[#c2e424] text-[#111215] text-xs font-black transition-all shadow-md text-center cursor-pointer"
+              >
+                Calculate Team Pricing Below ↓
+              </a>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
       {/* ── SECTION 6: PRICING ESTIMATOR CARD ── */}
       <section id="pricing" className="relative z-60 min-h-[auto] sm:min-h-[calc(100vh-4.5rem)] flex flex-col justify-center bg-[#F8F9F5] scroll-mt-24 transition-all duration-300 overflow-x-clip pt-16 sm:pt-24 pb-12 sm:pb-20">
         <OrganicSectionCurve index={6} progress={sectionProgresses[6]} />
@@ -2563,8 +4104,8 @@ export default function LandingPage() {
                 }`}
               >
                 <Video size={14} className={pricingTab === 'ai-interviews' ? 'text-[#D4F82C]' : 'text-neutral-400'} />
-                <span>AI Video Interview</span>
-                <span className="px-1.5 py-0.2 rounded bg-[#D4F82C] text-[#111215] text-[9px] font-black uppercase">Popular</span>
+                <span>AI Interview & Assessment</span>
+                <span className="px-1.5 py-0.2 rounded bg-[#D4F82C] text-[#111215] text-[9px] font-black uppercase">From ₹129</span>
               </button>
 
               <button
@@ -2582,7 +4123,7 @@ export default function LandingPage() {
             </div>
           </div>
 
-          {/* TAB 1: AI VIDEO INTERVIEWS (DYNAMIC ₹149 TO ₹119 / INTERVIEW) */}
+          {/* TAB 1: AI VIDEO INTERVIEWS (DYNAMIC ₹149 TO ₹129 / INTERVIEW + MODULAR ROUNDS) */}
           {pricingTab === 'ai-interviews' && (
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 items-start">
               
@@ -2592,19 +4133,166 @@ export default function LandingPage() {
                 {/* Header with Title & Rate Badge */}
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-4 border-b border-[#E4E7DC]">
                   <div>
-                    <h3 className="text-lg font-black text-[#111215] tracking-tight">Estimate Your AI Interview Investment</h3>
-                    <p className="text-xs text-[#73766C] mt-0.5">Dynamic volume rates: ₹149 for low volume, scaling down to ₹119 for 1,000+ volume.</p>
+                    <h3 className="text-lg font-black text-[#111215] tracking-tight">Estimate Your Evaluation Rounds & Candidate Volume</h3>
+                    <p className="text-xs text-[#73766C] mt-0.5">Dynamic volume rates: ₹149 down to ₹129 for AI Video, plus modular add-ons for MCQ & Coding rounds.</p>
                   </div>
                   <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
-                    {aiInterviewCalc.ratePerInterview < 149 && (
+                    {aiInterviewCalc.baseRatePerInterview > aiInterviewCalc.ratePerInterview && (
                       <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-[11px] font-bold">
                         <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                        <span>Save ₹{149 - aiInterviewCalc.ratePerInterview} / interview</span>
+                        <span>Save ₹{aiInterviewCalc.baseRatePerInterview - aiInterviewCalc.ratePerInterview} / candidate</span>
                       </span>
                     )}
                     <div className="px-3.5 py-1.5 rounded-xl bg-[#111215] text-[#D4F82C] text-xs font-black shadow-xs flex items-baseline gap-1">
                       <span>₹{aiInterviewCalc.ratePerInterview}</span>
-                      <span className="text-[10px] font-medium text-neutral-300">/ interview</span>
+                      <span className="text-[10px] font-medium text-neutral-300">/ candidate</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Step 1: Select Assessment Rounds (Modular Checkmarks) */}
+                <div className="space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold text-[#73766C] uppercase tracking-wider">
+                      1. Select Evaluation Rounds
+                    </span>
+                    <span className="text-[10px] text-[#8FB305] font-black bg-[#D4F82C]/20 px-2 py-0.5 rounded-full">
+                      Mix & Match Any Rounds
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                    {/* Round 1: AI Video Interview (Base: ₹149 down to ₹129) */}
+                    <div
+                      onClick={() => {
+                        // Keep at least one round active
+                        if (includeVoiceRound && !includeMcqRound && !includeCodingRound) {
+                          return;
+                        }
+                        setIncludeVoiceRound(!includeVoiceRound);
+                      }}
+                      className={`p-3.5 rounded-2xl border transition-all cursor-pointer select-none flex flex-col justify-between ${
+                        includeVoiceRound
+                          ? 'border-[#111215] bg-[#FAFBF7] ring-1 ring-black/10 shadow-xs'
+                          : 'border-[#E4E7DC] bg-white opacity-60 hover:opacity-100'
+                      }`}
+                    >
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-1.5">
+                            <div className={`p-1.5 rounded-lg ${includeVoiceRound ? 'bg-[#111215] text-[#D4F82C]' : 'bg-neutral-100 text-neutral-400'}`}>
+                              <Video size={14} />
+                            </div>
+                            <span className="text-[10px] font-black uppercase tracking-wider text-[#575A51]">Core</span>
+                          </div>
+                          <div
+                            className={`size-5 rounded-md flex items-center justify-center transition-colors ${
+                              includeVoiceRound ? 'bg-[#111215] text-[#D4F82C]' : 'border-2 border-[#C8CCC0] bg-white'
+                            }`}
+                          >
+                            {includeVoiceRound && <Check size={12} strokeWidth={3} />}
+                          </div>
+                        </div>
+                        <h4 className="text-xs font-black text-[#111215]">AI Video Interview</h4>
+                        <p className="text-[10px] text-[#73766C] mt-0.5 leading-snug">
+                          Autonomous spoken voice Q&A, real-time proctoring & scorecard
+                        </p>
+                      </div>
+                      <div className="pt-2 mt-2 border-t border-[#E4E7DC] flex items-baseline justify-between">
+                        <span className="text-[10px] text-[#73766C]">Per candidate:</span>
+                        <span className="text-xs font-black text-[#111215]">
+                          ₹{aiInterviewCalc.voiceRate}
+                          <span className="text-[9px] font-normal text-[#73766C]"> / int</span>
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Round 2: MCQ Aptitude Round (+₹29 down to +₹19) */}
+                    <div
+                      onClick={() => {
+                        if (!includeVoiceRound && includeMcqRound && !includeCodingRound) {
+                          return;
+                        }
+                        setIncludeMcqRound(!includeMcqRound);
+                      }}
+                      className={`p-3.5 rounded-2xl border transition-all cursor-pointer select-none flex flex-col justify-between ${
+                        includeMcqRound
+                          ? 'border-[#111215] bg-[#FAFBF7] ring-1 ring-black/10 shadow-xs'
+                          : 'border-[#E4E7DC] bg-white opacity-60 hover:opacity-100'
+                      }`}
+                    >
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-1.5">
+                            <div className={`p-1.5 rounded-lg ${includeMcqRound ? 'bg-[#111215] text-[#D4F82C]' : 'bg-neutral-100 text-neutral-400'}`}>
+                              <Brain size={14} />
+                            </div>
+                            <span className="text-[10px] font-black uppercase tracking-wider text-[#575A51]">Add-on</span>
+                          </div>
+                          <div
+                            className={`size-5 rounded-md flex items-center justify-center transition-colors ${
+                              includeMcqRound ? 'bg-[#111215] text-[#D4F82C]' : 'border-2 border-[#C8CCC0] bg-white'
+                            }`}
+                          >
+                            {includeMcqRound && <Check size={12} strokeWidth={3} />}
+                          </div>
+                        </div>
+                        <h4 className="text-xs font-black text-[#111215]">MCQ & Aptitude Round</h4>
+                        <p className="text-[10px] text-[#73766C] mt-0.5 leading-snug">
+                          Adaptive cognitive & domain quiz banks, anti-cheat & instant grading
+                        </p>
+                      </div>
+                      <div className="pt-2 mt-2 border-t border-[#E4E7DC] flex items-baseline justify-between">
+                        <span className="text-[10px] text-[#73766C]">Add-on rate:</span>
+                        <span className="text-xs font-black text-[#111215]">
+                          +₹{aiInterviewCalc.mcqRate}
+                          <span className="text-[9px] font-normal text-[#73766C]"> / cand</span>
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Round 3: Live Cloud Coding IDE (+₹49 down to +₹39) */}
+                    <div
+                      onClick={() => {
+                        if (!includeVoiceRound && !includeMcqRound && includeCodingRound) {
+                          return;
+                        }
+                        setIncludeCodingRound(!includeCodingRound);
+                      }}
+                      className={`p-3.5 rounded-2xl border transition-all cursor-pointer select-none flex flex-col justify-between ${
+                        includeCodingRound
+                          ? 'border-[#111215] bg-[#FAFBF7] ring-1 ring-black/10 shadow-xs'
+                          : 'border-[#E4E7DC] bg-white opacity-60 hover:opacity-100'
+                      }`}
+                    >
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-1.5">
+                            <div className={`p-1.5 rounded-lg ${includeCodingRound ? 'bg-[#111215] text-[#D4F82C]' : 'bg-neutral-100 text-neutral-400'}`}>
+                              <Code2 size={14} />
+                            </div>
+                            <span className="text-[10px] font-black uppercase tracking-wider text-[#575A51]">Add-on</span>
+                          </div>
+                          <div
+                            className={`size-5 rounded-md flex items-center justify-center transition-colors ${
+                              includeCodingRound ? 'bg-[#111215] text-[#D4F82C]' : 'border-2 border-[#C8CCC0] bg-white'
+                            }`}
+                          >
+                            {includeCodingRound && <Check size={12} strokeWidth={3} />}
+                          </div>
+                        </div>
+                        <h4 className="text-xs font-black text-[#111215]">Cloud Coding Round</h4>
+                        <p className="text-[10px] text-[#73766C] mt-0.5 leading-snug">
+                          Live Monaco IDE, 40+ language runtimes & automated unit test suites
+                        </p>
+                      </div>
+                      <div className="pt-2 mt-2 border-t border-[#E4E7DC] flex items-baseline justify-between">
+                        <span className="text-[10px] text-[#73766C]">Add-on rate:</span>
+                        <span className="text-xs font-black text-[#111215]">
+                          +₹{aiInterviewCalc.codingRate}
+                          <span className="text-[9px] font-normal text-[#73766C]"> / cand</span>
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -2612,7 +4300,7 @@ export default function LandingPage() {
                 {/* Candidate Interview Volume Slider & Custom Number Stepper */}
                 <div className="space-y-3">
                   <div className="flex items-center justify-between text-xs font-bold">
-                    <span className="text-[#111215]">Planned Candidate Interviews</span>
+                    <span className="text-[#111215]">2. Planned Candidate Volume</span>
                     
                     {/* Stepper / Input Control */}
                     <div className="flex items-center gap-1.5 bg-[#F8F9F5] p-1 rounded-xl border border-[#E4E7DC] shadow-2xs">
@@ -2620,7 +4308,7 @@ export default function LandingPage() {
                         type="button"
                         onClick={() => setCalcAiInterviews(Math.max(10, calcAiInterviews - 10))}
                         className="size-7 rounded-lg bg-white border border-[#E4E7DC] hover:border-black/30 text-[#111215] font-black flex items-center justify-center transition-colors cursor-pointer text-sm"
-                        title="Decrease by 10 interviews"
+                        title="Decrease by 10 candidates"
                       >
                         –
                       </button>
@@ -2636,13 +4324,13 @@ export default function LandingPage() {
                           }}
                           className="w-14 bg-transparent text-center font-mono text-xs font-bold text-[#111215] outline-none"
                         />
-                        <span className="text-[11px] font-semibold text-[#73766C]">interviews</span>
+                        <span className="text-[11px] font-semibold text-[#73766C]">candidates</span>
                       </div>
                       <button
                         type="button"
                         onClick={() => setCalcAiInterviews(Math.min(5000, calcAiInterviews + 10))}
                         className="size-7 rounded-lg bg-white border border-[#E4E7DC] hover:border-black/30 text-[#111215] font-black flex items-center justify-center transition-colors cursor-pointer text-sm"
-                        title="Increase by 10 interviews"
+                        title="Increase by 10 candidates"
                       >
                         +
                       </button>
@@ -2668,11 +4356,11 @@ export default function LandingPage() {
                   {/* Interactive Milestone Ticks */}
                   <div className="grid grid-cols-5 text-center gap-1 pt-0.5">
                     {[
-                      { count: 10, rate: '₹149' },
-                      { count: 50, rate: '₹139' },
-                      { count: 200, rate: '₹129' },
-                      { count: 500, rate: '₹124' },
-                      { count: 1000, rate: '₹119' },
+                      { count: 10, rate: `₹${aiInterviewCalc.getRateForCount(10)}` },
+                      { count: 50, rate: `₹${aiInterviewCalc.getRateForCount(50)}` },
+                      { count: 200, rate: `₹${aiInterviewCalc.getRateForCount(200)}` },
+                      { count: 500, rate: `₹${aiInterviewCalc.getRateForCount(500)}` },
+                      { count: 1000, rate: `₹${aiInterviewCalc.getRateForCount(1000)}` },
                     ].map(tick => {
                       const isActive = calcAiInterviews === tick.count;
                       return (
@@ -2696,13 +4384,37 @@ export default function LandingPage() {
 
                 {/* Quick Preset Packs */}
                 <div>
-                  <span className="text-[11px] font-bold text-[#73766C] uppercase tracking-wider block mb-2.5">Popular Volume Packs</span>
+                  <span className="text-[11px] font-bold text-[#73766C] uppercase tracking-wider block mb-2.5">3. Popular Volume Packs</span>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                     {[
-                      { count: 10, label: 'Starter Pack', rate: '₹149 / interview', price: '₹1,490 INR', badge: 'Base Tier' },
-                      { count: 50, label: 'Growth Pack', rate: '₹139 / interview', price: '₹6,950 INR', badge: 'Save ₹500' },
-                      { count: 200, label: 'Scale Pack', rate: '₹129 / interview', price: '₹25,800 INR', badge: 'Save ₹4,000' },
-                      { count: 1000, label: 'Enterprise', rate: '₹119 / interview', price: '₹1,19,000 INR', badge: 'Save ₹30,000' }
+                      {
+                        count: 10,
+                        label: 'Starter Pack',
+                        rate: `₹${aiInterviewCalc.getRateForCount(10)} / cand`,
+                        price: `₹${(10 * aiInterviewCalc.getRateForCount(10)).toLocaleString('en-IN')} INR`,
+                        badge: 'Base Tier',
+                      },
+                      {
+                        count: 50,
+                        label: 'Growth Pack',
+                        rate: `₹${aiInterviewCalc.getRateForCount(50)} / cand`,
+                        price: `₹${(50 * aiInterviewCalc.getRateForCount(50)).toLocaleString('en-IN')} INR`,
+                        badge: `Save ₹${(50 * (aiInterviewCalc.baseRatePerInterview - aiInterviewCalc.getRateForCount(50))).toLocaleString('en-IN')}`,
+                      },
+                      {
+                        count: 200,
+                        label: 'Scale Pack',
+                        rate: `₹${aiInterviewCalc.getRateForCount(200)} / cand`,
+                        price: `₹${(200 * aiInterviewCalc.getRateForCount(200)).toLocaleString('en-IN')} INR`,
+                        badge: `Save ₹${(200 * (aiInterviewCalc.baseRatePerInterview - aiInterviewCalc.getRateForCount(200))).toLocaleString('en-IN')}`,
+                      },
+                      {
+                        count: 1000,
+                        label: 'Enterprise',
+                        rate: `₹${aiInterviewCalc.getRateForCount(1000)} / cand`,
+                        price: `₹${(1000 * aiInterviewCalc.getRateForCount(1000)).toLocaleString('en-IN')} INR`,
+                        badge: `Save ₹${(1000 * (aiInterviewCalc.baseRatePerInterview - aiInterviewCalc.getRateForCount(1000))).toLocaleString('en-IN')}`,
+                      },
                     ].map(pack => {
                       const isSelected = calcAiInterviews === pack.count;
                       return (
@@ -2726,7 +4438,7 @@ export default function LandingPage() {
                           </div>
                           <p className={`text-sm font-black ${isSelected ? 'text-[#D4F82C]' : 'text-neutral-900'}`}>{pack.price}</p>
                           <p className={`text-[10px] mt-0.5 ${isSelected ? 'text-neutral-300' : 'text-[#73766C]'}`}>
-                            {pack.count >= 1000 ? '1,000' : pack.count} interviews • {pack.rate}
+                            {pack.count >= 1000 ? '1,000' : pack.count} candidates • {pack.rate}
                           </p>
                         </button>
                       );
@@ -2741,7 +4453,7 @@ export default function LandingPage() {
                     <span className="line-through text-rose-600 font-bold">₹{aiInterviewCalc.manualScreeningCost.toLocaleString('en-IN')} INR</span>
                   </div>
                   <div className="flex items-center justify-between text-xs">
-                    <span className="text-[#73766C]">InterviewXpert Autonomous AI Video:</span>
+                    <span className="text-[#73766C]">InterviewXpert Autonomous AI Evaluation:</span>
                     <span className="text-[#111215] font-black text-sm">₹{aiInterviewCalc.totalCost.toLocaleString('en-IN')} INR</span>
                   </div>
                   <div className="pt-2.5 border-t border-[#E4E7DC] flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-xs">
@@ -2764,12 +4476,34 @@ export default function LandingPage() {
 
                 <div className="flex items-center justify-between pb-3.5 border-b border-white/10 relative z-10">
                   <div>
-                    <span className="text-[10px] uppercase tracking-wider text-[#D4F82C] font-black">Dynamic Pay-Per-Interview</span>
-                    <h3 className="text-xl font-black text-white tracking-tight">AI Video Screening Pack</h3>
+                    <span className="text-[10px] uppercase tracking-wider text-[#D4F82C] font-black">Dynamic Pay-Per-Candidate</span>
+                    <h3 className="text-xl font-black text-white tracking-tight">AI Evaluation Suite</h3>
                   </div>
                   <div className="px-3 py-1.5 rounded-xl bg-[#D4F82C] text-[#111215] text-xs font-black shadow-xs">
-                    ₹{aiInterviewCalc.ratePerInterview} INR / interview
+                    ₹{aiInterviewCalc.ratePerInterview} INR / candidate
                   </div>
+                </div>
+
+                {/* Selected Rounds Active Badges */}
+                <div className="relative z-10 flex flex-wrap gap-1.5">
+                  {aiInterviewCalc.activeVoice && (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/10 border border-white/15 text-[11px] font-bold text-white">
+                      <Video size={12} className="text-[#D4F82C]" />
+                      <span>AI Video (₹{aiInterviewCalc.voiceRate})</span>
+                    </span>
+                  )}
+                  {aiInterviewCalc.activeMcq && (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/10 border border-white/15 text-[11px] font-bold text-white">
+                      <Brain size={12} className="text-[#D4F82C]" />
+                      <span>MCQ Aptitude (+₹{aiInterviewCalc.mcqRate})</span>
+                    </span>
+                  )}
+                  {aiInterviewCalc.activeCoding && (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/10 border border-white/15 text-[11px] font-bold text-white">
+                      <Code2 size={12} className="text-[#D4F82C]" />
+                      <span>Cloud IDE (+₹{aiInterviewCalc.codingRate})</span>
+                    </span>
+                  )}
                 </div>
 
                 <div className="relative z-10 space-y-1">
@@ -2777,24 +4511,24 @@ export default function LandingPage() {
                     <span className="text-3xl sm:text-4xl font-black text-white tracking-tight">
                       ₹{aiInterviewCalc.totalCost.toLocaleString('en-IN')}
                     </span>
-                    <span className="text-xs text-neutral-400 font-normal">for {aiInterviewCalc.count} interviews</span>
+                    <span className="text-xs text-neutral-400 font-normal">for {aiInterviewCalc.count} candidates</span>
                   </div>
                   <div className="text-xs text-[#D4F82C] font-semibold flex items-center gap-1.5 pt-0.5">
                     <span className="size-1.5 rounded-full bg-[#D4F82C] animate-pulse" />
-                    <span>Pay strictly per completed interview • Credits never expire</span>
+                    <span>Pay strictly per completed assessment • Credits never expire</span>
                   </div>
                   {aiInterviewCalc.volumeDiscount > 0 ? (
                     <div className="text-[11px] text-emerald-400 font-semibold pt-1">
-                      Volume discount unlocked: Saved ₹{aiInterviewCalc.volumeDiscount.toLocaleString('en-IN')} vs base rate (₹149)!
+                      Volume discount unlocked: Saved ₹{aiInterviewCalc.volumeDiscount.toLocaleString('en-IN')} vs base tier!
                     </div>
                   ) : (
                     <div className="text-[11px] text-neutral-400 font-normal pt-1">
-                      Base rate applied (₹149 / interview). Scale up to 1,000+ interviews to unlock ₹119 / interview.
+                      Base rate applied (₹{aiInterviewCalc.baseRatePerInterview} / candidate). Scale up to 1,000+ candidates for maximum discount!
                     </div>
                   )}
                   {calcAiInterviews >= 1000 && (
                     <div className="text-[11px] text-[#D4F82C] font-bold">
-                      ★ Max Volume Tier Active (₹119 / interview)
+                      ★ Max Volume Tier Active (₹{aiInterviewCalc.ratePerInterview} / candidate)
                     </div>
                   )}
                 </div>
@@ -2802,15 +4536,15 @@ export default function LandingPage() {
                 {/* What's Included */}
                 <div className="space-y-2.5 text-xs text-neutral-300 pt-3.5 border-t border-white/10 relative z-10">
                   {[
-                    'Personalised candidate evaluation reports & scorecards',
-                    'Real-time searchable word-for-word live transcripts',
-                    'Permanent 1080p HD video & audio cloud storage',
-                    'Complete anti-cheat evidence & tab-switch audit logs',
-                    'Automated WhatsApp & email invitations & smart reminders',
-                    'Dynamic in-depth technical cross-questioning',
-                    'Communication fluency, speaking pace (WPM) & filler metrics',
-                    'Instant 1-click shareable client dossier link',
-                  ].map((feature, i) => (
+                    aiInterviewCalc.activeVoice ? 'Autonomous spoken conversational video interview with dynamic cross-questioning' : null,
+                    aiInterviewCalc.activeVoice ? 'Real-time searchable word-for-word live transcripts & 1080p cloud recordings' : null,
+                    aiInterviewCalc.activeMcq ? 'Curated MCQ aptitude test bank with negative marking & domain breakdown' : null,
+                    aiInterviewCalc.activeCoding ? 'Monaco Cloud IDE with 40+ language runtimes & automated unit tests' : null,
+                    'Personalised candidate evaluation reports & executive scorecards',
+                    'Multi-signal anti-cheat proctoring & tab-switch audit logs',
+                    'Automated candidate invites via WhatsApp & email with reminder triggers',
+                    'Instant 1-click shareable client dossier link (zero login required)',
+                  ].filter(Boolean).map((feature, i) => (
                     <div key={i} className="flex items-center gap-2.5">
                       <CheckCircle2 size={15} className="text-[#D4F82C] shrink-0" />
                       <span>{feature}</span>
@@ -2824,7 +4558,7 @@ export default function LandingPage() {
                     onClick={() => setBookingModalOpen(true)}
                     className="w-full py-3.5 rounded-full bg-[#D4F82C] hover:bg-[#bde023] text-[#111215] text-xs font-black transition-all cursor-pointer shadow-md shadow-[#D4F82C]/10 flex items-center justify-center gap-2 hover:scale-[1.01] active:scale-[0.99]"
                   >
-                    <span>Get Started • Buy AI Interview Credits</span>
+                    <span>Get Started • Buy Evaluation Credits</span>
                     <ArrowRight size={14} />
                   </button>
 
