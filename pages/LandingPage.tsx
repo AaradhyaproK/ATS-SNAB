@@ -76,38 +76,60 @@ import HireXLogo, { HireXMark } from '../components/HireXLogo';
 // 5: (440,0) -> (440,900)   [AI Interview]
 // 6: (440,0) -> (1080,900)  [Pricing]
 // 7: (1080,0) -> (520,900)  [FAQ]
-// 8: (520,0) -> (720,640)   [CTA finish]
+// ── Smooth Organic Continuous Bezier Paths for On-Page Journey Flow ──
+// Each section k starts at the exact X coordinate and vertical tangent where section k-1 ended!
+// 00: (180,0) -> (880,900)   [Hero Overview]
+// 01: (880,0) -> (420,900)   [Services Suite]
+// 02: (420,0) -> (880,900)   [Process Workflows]
+// 03: (880,0) -> (360,900)   [Pipeline Kanban]
+// 04: (360,0) -> (1120,900)  [AI Matching]
+// 05: (1120,0) -> (280,900)  [Client Portal]
+// 06: (280,0) -> (440,900)   [Productivity]
+// 07: (440,0) -> (440,900)   [AI Interview]
+// 08: (440,0) -> (440,900)   [Comparison Matrix]
+// 09: (440,0) -> (1080,900)  [Pricing Estimator]
+// 10: (1080,0) -> (520,900)  [FAQ Accordion]
+// 11: (520,0) -> (720,640)   [Start Trial Finish]
 const SECTION_CURVE_PATHS = [
-  // 01: Hero (gentle rounded S-curve looping down behind title, exiting vertically at 880,900)
+  // 00: Overview (Hero - gentle rounded S-curve looping down behind title, exiting vertically at 880,900)
   "M 180,0 C 180,120 360,200 560,180 C 780,150 920,80 1140,120 C 1340,160 1400,380 1320,540 C 1240,700 1040,680 940,740 C 880,780 880,840 880,900",
-  // 02: Pipeline (enters vertically at 880,0, sweeps around Kanban columns, exiting vertically at 360,900)
+  // 01: Services Suite (enters vertically at 880,0, sweeps around Bento service cards, exiting vertically at 420,900)
+  "M 880,0 C 880,140 1060,240 1180,340 C 1320,460 1280,640 1080,660 C 880,680 720,500 540,560 C 380,620 280,740 320,820 C 360,860 420,840 420,900",
+  // 02: Process Workflows (enters vertically at 420,0, weaves across step workflow tabs, exiting vertically at 880,900)
+  "M 420,0 C 420,120 260,220 220,360 C 180,500 340,600 560,580 C 800,560 1100,420 1240,540 C 1380,660 1300,800 1120,840 C 980,870 880,840 880,900",
+  // 03: Pipeline (enters vertically at 880,0, sweeps around Kanban columns, exiting vertically at 360,900)
   "M 880,0 C 880,120 1120,200 1260,300 C 1400,420 1340,620 1140,620 C 900,620 780,420 580,480 C 380,540 220,680 180,760 C 140,840 360,820 360,900",
-  // 03: AI Matching (enters vertically at 360,0, weaves through qualification pills & comparison, exiting vertically at 1120,900)
+  // 04: AI Matching (enters vertically at 360,0, weaves through qualification pills & comparison, exiting vertically at 1120,900)
   "M 360,0 C 360,100 180,240 200,380 C 220,540 520,520 740,460 C 980,400 1260,300 1340,460 C 1400,620 1280,760 1180,820 C 1140,840 1120,860 1120,900",
-  // 04: Client Portal (enters vertically at 1120,0, flows through dark review card & actions, exiting vertically at 280,900)
+  // 05: Client Portal (enters vertically at 1120,0, flows through dark review card & actions, exiting vertically at 280,900)
   "M 1120,0 C 1120,120 1300,240 1320,400 C 1340,560 1160,640 920,600 C 680,560 480,440 320,520 C 160,600 120,740 180,800 C 220,850 280,840 280,900",
-  // 05: Productivity (enters vertically at 280,0, loops around 14h badge & savings cards, exiting vertically at 440,900)
+  // 06: Productivity (enters vertically at 280,0, loops around 14h badge & savings cards, exiting vertically at 440,900)
   "M 280,0 C 280,120 180,260 220,380 C 260,520 480,440 700,460 C 940,480 1180,380 1260,540 C 1340,700 1220,820 1040,850 C 760,880 440,820 440,900",
-  // 06: AI Interview (enters vertically at 440,0, sweeps through simulator console, exiting vertically at 440,900)
+  // 07: AI Interview (enters vertically at 440,0, sweeps through simulator console, exiting vertically at 440,900)
   "M 440,0 C 440,120 720,180 960,260 C 1220,360 1340,540 1240,680 C 1140,800 880,780 680,820 C 520,850 440,840 440,900",
-  // 07: Pricing (enters vertically at 440,0, winds around team slider & calculator cards, exiting vertically at 1080,900)
+  // 08: Comparison (enters vertically at 440,0, arches around competitor matrix table, exiting vertically at 440,900)
+  "M 440,0 C 440,120 240,240 180,380 C 120,520 260,640 480,600 C 720,560 980,440 1180,500 C 1360,560 1340,740 1180,820 C 1040,880 440,830 440,900",
+  // 09: Pricing (enters vertically at 440,0, winds around team slider & calculator cards, exiting vertically at 1080,900)
   "M 440,0 C 440,120 220,240 160,380 C 100,520 220,660 460,620 C 700,580 920,440 1140,480 C 1340,520 1360,720 1240,820 C 1160,880 1080,840 1080,900",
-  // 08: FAQ (enters vertically at 1080,0, gracefully arches behind questions, exiting vertically at 520,900)
+  // 10: FAQ (enters vertically at 1080,0, gracefully arches behind questions, exiting vertically at 520,900)
   "M 1080,0 C 1080,120 1280,260 1240,420 C 1200,580 980,520 740,540 C 500,560 300,440 180,560 C 60,680 120,820 320,850 C 440,870 520,840 520,900",
-  // 09: Start Trial (enters vertically at 520,0, swirls into dark CTA hero, terminating right at trial CTA)
+  // 11: Start Trial (enters vertically at 520,0, swirls into dark CTA hero, terminating right at trial CTA)
   "M 520,0 C 520,120 320,260 280,420 C 240,580 440,700 660,680 C 880,660 1160,540 1220,380 C 1280,220 1080,160 900,240 C 720,320 680,520 720,640",
 ];
 
 const SECTION_JUNCTION_COORDS = [
-  { start: { x: 180, y: 0 }, end: { x: 880, y: 900 } },
-  { start: { x: 880, y: 0 }, end: { x: 360, y: 900 } },
-  { start: { x: 360, y: 0 }, end: { x: 1120, y: 900 } },
-  { start: { x: 1120, y: 0 }, end: { x: 280, y: 900 } },
-  { start: { x: 280, y: 0 }, end: { x: 440, y: 900 } },
-  { start: { x: 440, y: 0 }, end: { x: 440, y: 900 } }, // AI Interview
-  { start: { x: 440, y: 0 }, end: { x: 1080, y: 900 } }, // Pricing
-  { start: { x: 1080, y: 0 }, end: { x: 520, y: 900 } }, // FAQ
-  { start: { x: 520, y: 0 }, end: { x: 720, y: 640 } },  // CTA
+  { start: { x: 180, y: 0 }, end: { x: 880, y: 900 } },  // 00: Overview (Hero)
+  { start: { x: 880, y: 0 }, end: { x: 420, y: 900 } },  // 01: Services Suite
+  { start: { x: 420, y: 0 }, end: { x: 880, y: 900 } },  // 02: Process Workflows
+  { start: { x: 880, y: 0 }, end: { x: 360, y: 900 } },  // 03: Pipeline Kanban
+  { start: { x: 360, y: 0 }, end: { x: 1120, y: 900 } }, // 04: AI Matching
+  { start: { x: 1120, y: 0 }, end: { x: 280, y: 900 } }, // 05: Client Portal
+  { start: { x: 280, y: 0 }, end: { x: 440, y: 900 } },  // 06: Productivity
+  { start: { x: 440, y: 0 }, end: { x: 440, y: 900 } },  // 07: AI Interview
+  { start: { x: 440, y: 0 }, end: { x: 440, y: 900 } },  // 08: Comparison Matrix
+  { start: { x: 440, y: 0 }, end: { x: 1080, y: 900 } }, // 09: Pricing
+  { start: { x: 1080, y: 0 }, end: { x: 520, y: 900 } }, // 10: FAQ
+  { start: { x: 520, y: 0 }, end: { x: 720, y: 640 } },  // 11: Start Trial CTA
 ];
 
 const OrganicSectionCurve: React.FC<{
@@ -531,7 +553,7 @@ export default function LandingPage() {
 
   // ── Real-time Dynamic Scroll Progress for On-Page Animated Curves ──
   const [sectionProgresses, setSectionProgresses] = useState<number[]>(() => {
-    const init = new Array(9).fill(0);
+    const init = new Array(12).fill(0);
     init[0] = 0.35; // Initial graceful crest on page 1
     return init;
   });
@@ -552,11 +574,14 @@ export default function LandingPage() {
 
           const ids = [
             'overview',
+            'services',
+            'process',
             'pipeline',
             'resume-matching',
             'client-portal',
             'productivity',
             'ai-interview',
+            'comparison',
             'pricing',
             'faq',
             'start-trial',
@@ -652,21 +677,22 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-[#F8F9F5] text-[#111215] font-sans selection:bg-[#D4F82C] selection:text-[#111215]">
       {/* ── Top Navigation Bar ── */}
+      {/* ── Fixed Floating Top Navigation Bar ── */}
       <header className="sticky top-0 z-[100] bg-[#F8F9F5]/90 backdrop-blur-md border-b border-[#E4E7DC] transition-all">
         <div className="max-w-7xl mx-auto px-4 sm:px-8 h-18 flex items-center justify-between">
           
           {/* Logo & Product Badge */}
-          <div className="flex items-center gap-2.5 sm:gap-3">
-            <Link to="/" className="group inline-flex items-center" title="InterviewXpert - AI Recruitment Platform">
+          <div className="flex items-center gap-3 shrink-0">
+            <Link to="/" className="group inline-flex items-center shrink-0" title="InterviewXpert - AI Recruitment Platform">
               <HireXLogo size="md" variant="full" isDark={false} />
             </Link>
-            <div className="hidden sm:flex items-center gap-1.5 pl-3 border-l border-[#E4E7DC] text-[11px] font-medium text-[#73766C]">
+            <div className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#111215]/5 border border-[#E4E7DC] text-[10px] font-medium text-[#73766C] shrink-0">
               <span>by</span>
               <a
                 href="https://snab.co.in"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="font-bold text-[#111215] hover:underline"
+                className="font-bold text-[#111215] hover:text-[#8FB305] transition-colors"
               >
                 SNAB
               </a>
@@ -674,80 +700,120 @@ export default function LandingPage() {
           </div>
 
           {/* Centered Desktop Navigation Links */}
-          <nav className="hidden lg:flex items-center gap-6 text-[13px] font-semibold text-[#575A51]">
+          <nav className="hidden lg:flex items-center gap-3.5 xl:gap-6 text-xs xl:text-[13px] font-semibold text-[#575A51] shrink-0">
             <a
               href="#services"
               onClick={(e) => scrollToSection(e, 'services')}
-              className="hover:text-[#111215] transition-colors cursor-pointer"
+              className="hover:text-[#111215] transition-colors cursor-pointer whitespace-nowrap shrink-0"
             >
               Services
             </a>
             <a
               href="#process"
               onClick={(e) => scrollToSection(e, 'process')}
-              className="hover:text-[#111215] transition-colors cursor-pointer"
+              className="hover:text-[#111215] transition-colors cursor-pointer whitespace-nowrap shrink-0"
             >
               Process
             </a>
             <a
               href="#ai-interview"
               onClick={(e) => scrollToSection(e, 'ai-interview')}
-              className="hover:text-[#111215] transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 hover:text-[#111215] transition-colors cursor-pointer whitespace-nowrap shrink-0"
             >
-              AI Interview
+              <span>AI Interview</span>
+              <span className="size-1.5 rounded-full bg-[#8FB305] animate-pulse" />
             </a>
-            <a
-              href="#pipeline"
-              onClick={(e) => scrollToSection(e, 'pipeline')}
-              className="hover:text-[#111215] transition-colors cursor-pointer"
-            >
-              Pipeline
-            </a>
-            <a
-              href="#client-portal"
-              onClick={(e) => scrollToSection(e, 'client-portal')}
-              className="hover:text-[#111215] transition-colors cursor-pointer"
-            >
-              Client Portal
-            </a>
-            <a
-              href="#productivity"
-              onClick={(e) => scrollToSection(e, 'productivity')}
-              className="hover:text-[#111215] transition-colors cursor-pointer"
-            >
-              Why Switch
-            </a>
+
+            {/* Platform Dropdown */}
+            <div className="relative group py-2 shrink-0">
+              <a
+                href="#pipeline"
+                onClick={(e) => scrollToSection(e, 'pipeline')}
+                className="inline-flex items-center gap-1 hover:text-[#111215] transition-colors cursor-pointer whitespace-nowrap"
+              >
+                <span>Platform</span>
+                <ChevronDown className="size-3 text-[#73766C] group-hover:rotate-180 transition-transform duration-200" />
+              </a>
+
+              {/* Dropdown Menu */}
+              <div className="invisible opacity-0 translate-y-1 group-hover:visible group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-200 absolute top-full left-1/2 -translate-x-1/2 pt-2 w-72 pointer-events-none group-hover:pointer-events-auto z-50">
+                <div className="bg-white rounded-2xl border border-[#E4E7DC] p-2 shadow-xl ring-1 ring-black/5 divide-y divide-[#F1F3EB]">
+                  <a
+                    href="#pipeline"
+                    onClick={(e) => scrollToSection(e, 'pipeline')}
+                    className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-[#F8F9F5] transition-colors group/item"
+                  >
+                    <div className="size-8 rounded-lg bg-[#F8F9F5] border border-[#E4E7DC] flex items-center justify-center shrink-0 group-hover/item:border-[#111215] transition-colors">
+                      <Kanban className="size-4 text-[#8FB305]" />
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-[#111215] whitespace-nowrap">Visual Pipeline</div>
+                      <div className="text-[11px] text-[#73766C] font-normal leading-tight">Drag-and-drop Kanban ATS stages</div>
+                    </div>
+                  </a>
+
+                  <a
+                    href="#client-portal"
+                    onClick={(e) => scrollToSection(e, 'client-portal')}
+                    className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-[#F8F9F5] transition-colors group/item"
+                  >
+                    <div className="size-8 rounded-lg bg-[#F8F9F5] border border-[#E4E7DC] flex items-center justify-center shrink-0 group-hover/item:border-[#111215] transition-colors">
+                      <Share2 className="size-4 text-[#8FB305]" />
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-[#111215] whitespace-nowrap">Client Portal</div>
+                      <div className="text-[11px] text-[#73766C] font-normal leading-tight">Shareable candidate review links</div>
+                    </div>
+                  </a>
+
+                  <a
+                    href="#productivity"
+                    onClick={(e) => scrollToSection(e, 'productivity')}
+                    className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-[#F8F9F5] transition-colors group/item"
+                  >
+                    <div className="size-8 rounded-lg bg-[#F8F9F5] border border-[#E4E7DC] flex items-center justify-center shrink-0 group-hover/item:border-[#111215] transition-colors">
+                      <TrendingUp className="size-4 text-[#8FB305]" />
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-[#111215] whitespace-nowrap">Why Switch</div>
+                      <div className="text-[11px] text-[#73766C] font-normal leading-tight">80% faster hiring ROI breakdown</div>
+                    </div>
+                  </a>
+                </div>
+              </div>
+            </div>
+
             <a
               href="#comparison"
               onClick={(e) => scrollToSection(e, 'comparison')}
-              className="hover:text-[#111215] transition-colors cursor-pointer"
+              className="hover:text-[#111215] transition-colors cursor-pointer whitespace-nowrap shrink-0"
             >
               Compare
             </a>
             <a
               href="#pricing"
               onClick={(e) => scrollToSection(e, 'pricing')}
-              className="hover:text-[#111215] transition-colors cursor-pointer"
+              className="hover:text-[#111215] transition-colors cursor-pointer whitespace-nowrap shrink-0"
             >
               Pricing
             </a>
             <a
               href="#faq"
               onClick={(e) => scrollToSection(e, 'faq')}
-              className="hover:text-[#111215] transition-colors cursor-pointer"
+              className="hover:text-[#111215] transition-colors cursor-pointer whitespace-nowrap shrink-0"
             >
               FAQ
             </a>
             <Link
               to="/active-jobs"
-              className="hover:text-[#111215] transition-colors font-medium text-[#73766C]"
+              className="hover:text-[#111215] transition-colors font-medium text-[#73766C] whitespace-nowrap shrink-0"
             >
               Job Board
             </Link>
           </nav>
 
           {/* Right Action Buttons */}
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             {user ? (
               <Link
                 to={dashboardPath}
@@ -870,7 +936,7 @@ export default function LandingPage() {
                 >
                   <span className="flex items-center gap-2">
                     <Kanban className="size-3.5 text-[#8FB305]" />
-                    <span>01 • Visual Pipeline Kanban</span>
+                    <span>02 • Visual Pipeline Kanban</span>
                   </span>
                   <ChevronRight className="size-3.5 text-[#73766C]" />
                 </a>
@@ -885,7 +951,7 @@ export default function LandingPage() {
                 >
                   <span className="flex items-center gap-2">
                     <Brain className="size-3.5 text-[#8FB305]" />
-                    <span>02 • AI Resume Match Scoring</span>
+                    <span>03 • AI Resume Match Scoring</span>
                   </span>
                   <ChevronRight className="size-3.5 text-[#73766C]" />
                 </a>
@@ -900,7 +966,7 @@ export default function LandingPage() {
                 >
                   <span className="flex items-center gap-2">
                     <Share2 className="size-3.5 text-[#8FB305]" />
-                    <span>03 • Live Client Review Portal</span>
+                    <span>04 • Live Client Review Portal</span>
                   </span>
                   <ChevronRight className="size-3.5 text-[#73766C]" />
                 </a>
@@ -915,7 +981,7 @@ export default function LandingPage() {
                 >
                   <span className="flex items-center gap-2">
                     <TrendingUp className="size-3.5 text-[#8FB305]" />
-                    <span>04 • Why Switch & ROI Estimator</span>
+                    <span>05 • Why Switch & ROI Estimator</span>
                   </span>
                   <ChevronRight className="size-3.5 text-[#73766C]" />
                 </a>
@@ -930,7 +996,7 @@ export default function LandingPage() {
                 >
                   <span className="flex items-center gap-2">
                     <Video className="size-3.5 text-[#8FB305]" />
-                    <span>05 • AI Video & Voice Interview</span>
+                    <span>06 • AI Video & Voice Interview</span>
                   </span>
                   <ChevronRight className="size-3.5 text-[#73766C]" />
                 </a>
@@ -945,7 +1011,7 @@ export default function LandingPage() {
                 >
                   <span className="flex items-center gap-2">
                     <SlidersHorizontal className="size-3.5 text-[#8FB305]" />
-                    <span>06 • Competitor Comparison Matrix</span>
+                    <span>07 • Competitor Comparison Matrix</span>
                   </span>
                   <ChevronRight className="size-3.5 text-[#73766C]" />
                 </a>
@@ -960,7 +1026,7 @@ export default function LandingPage() {
                 >
                   <span className="flex items-center gap-2">
                     <IndianRupee className="size-3.5 text-[#8FB305]" />
-                    <span>05 • Transparent Team Pricing</span>
+                    <span>08 • Transparent Team Pricing</span>
                   </span>
                   <ChevronRight className="size-3.5 text-[#73766C]" />
                 </a>
@@ -975,7 +1041,7 @@ export default function LandingPage() {
                 >
                   <span className="flex items-center gap-2">
                     <HelpCircle className="size-3.5 text-[#8FB305]" />
-                    <span>06 • Frequently Asked Questions</span>
+                    <span>09 • Frequently Asked Questions</span>
                   </span>
                   <ChevronRight className="size-3.5 text-[#73766C]" />
                 </a>
@@ -1166,8 +1232,9 @@ export default function LandingPage() {
       </section>
 
       {/* ── SECTION: COMPREHENSIVE AI TALENT SERVICES & CAPABILITIES SUITE ── */}
-      <section id="services" className="relative z-15 min-h-[auto] flex flex-col justify-center bg-[#F8F9F5] scroll-mt-20 py-14 sm:py-24 border-b border-[#E4E7DC]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-8 lg:px-12 w-full">
+      <section id="services" className="relative z-15 min-h-[auto] flex flex-col justify-center bg-[#F8F9F5] scroll-mt-20 py-14 sm:py-24 border-b border-[#E4E7DC] overflow-x-clip">
+        <OrganicSectionCurve index={1} progress={sectionProgresses[1]} />
+        <div className="max-w-7xl mx-auto px-4 sm:px-8 lg:px-12 w-full relative z-10">
           
           {/* Section Header */}
           <div className="text-center max-w-3xl mx-auto mb-10 sm:mb-16">
@@ -1473,8 +1540,9 @@ export default function LandingPage() {
       </section>
 
       {/* ── SECTION: STEP-BY-STEP PROCESS WORKFLOWS (AI INTERVIEW • CODING TEST • MOCK TEST) ── */}
-      <section id="process" className="relative z-18 min-h-[auto] flex flex-col justify-center bg-[#F1F3EB] scroll-mt-20 py-14 sm:py-24 border-b border-[#E4E7DC]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-8 lg:px-12 w-full">
+      <section id="process" className="relative z-18 min-h-[auto] flex flex-col justify-center bg-[#F1F3EB] scroll-mt-20 py-14 sm:py-24 border-b border-[#E4E7DC] overflow-x-clip">
+        <OrganicSectionCurve index={2} progress={sectionProgresses[2]} />
+        <div className="max-w-7xl mx-auto px-4 sm:px-8 lg:px-12 w-full relative z-10">
           
           {/* Header */}
           <div className="text-center max-w-3xl mx-auto mb-10 sm:mb-14">
@@ -1972,7 +2040,7 @@ export default function LandingPage() {
 
       {/* ── SECTION 2: DEDICATED FULL FRAME KANBAN PIPELINE CARD ── */}
       <section id="pipeline" className="relative z-20 min-h-[auto] sm:min-h-[calc(100vh-4.5rem)] flex flex-col justify-center bg-[#F8F9F5] scroll-mt-18 transition-all duration-300 overflow-x-clip py-10 sm:py-16">
-        <OrganicSectionCurve index={1} progress={sectionProgresses[1]} />
+        <OrganicSectionCurve index={3} progress={sectionProgresses[3]} />
         <div className="flex-1 flex flex-col justify-center py-4 sm:py-6 px-4 sm:px-8 lg:px-12 max-w-7xl mx-auto w-full relative z-10">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 items-end mb-4">
             <div className="lg:col-span-7">
@@ -2262,7 +2330,7 @@ export default function LandingPage() {
 
       {/* ── SECTION 3: AI RESUME EXTRACTION CARD ── */}
       <section id="resume-matching" className="relative z-30 min-h-[auto] sm:min-h-[calc(100vh-4.5rem)] flex flex-col justify-center bg-[#F8F9F5] scroll-mt-18 transition-all duration-300 overflow-x-clip py-10 sm:py-16">
-        <OrganicSectionCurve index={2} progress={sectionProgresses[2]} />
+        <OrganicSectionCurve index={4} progress={sectionProgresses[4]} />
         <div className="flex-1 flex flex-col justify-center py-4 sm:py-6 px-4 sm:px-8 lg:px-12 max-w-7xl mx-auto w-full relative z-10">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 sm:gap-12 items-center">
             
@@ -2387,7 +2455,7 @@ export default function LandingPage() {
 
       {/* ── SECTION 4: DARK CLIENT PORTAL CARD ── */}
       <section id="client-portal" className="relative z-40 min-h-[auto] sm:min-h-[calc(100vh-4.5rem)] flex flex-col justify-center bg-[#111215] text-white scroll-mt-18 transition-all duration-300 overflow-x-clip py-10 sm:py-16">
-        <OrganicSectionCurve index={3} progress={sectionProgresses[3]} isDark={true} />
+        <OrganicSectionCurve index={5} progress={sectionProgresses[5]} isDark={true} />
         <div className="flex-1 flex flex-col justify-center py-4 sm:py-6 px-4 sm:px-8 lg:px-12 max-w-7xl mx-auto w-full relative z-10">
           
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-end mb-4 sm:mb-6">
@@ -2566,7 +2634,7 @@ export default function LandingPage() {
 
       {/* ── SECTION 5: WHY RECRUITERS SWITCH (HEAD-TO-HEAD COMPARISON & ROI) ── */}
       <section id="productivity" className="relative z-50 min-h-[auto] sm:min-h-[calc(100vh-4.5rem)] flex flex-col justify-center bg-[#F8F9F5] scroll-mt-18 transition-all duration-300 overflow-x-clip py-10 sm:py-16">
-        <OrganicSectionCurve index={4} progress={sectionProgresses[4]} />
+        <OrganicSectionCurve index={6} progress={sectionProgresses[6]} />
         <div className="flex-1 flex flex-col justify-center px-4 sm:px-8 lg:px-12 max-w-7xl mx-auto w-full relative z-10 space-y-8 sm:space-y-10">
           
           {/* Section Header */}
@@ -3178,7 +3246,7 @@ export default function LandingPage() {
 
       {/* ── SECTION: AI VIDEO & VOICE INTERVIEW SHOWCASE ── */}
       <section id="ai-interview" className="relative z-55 min-h-[auto] sm:min-h-[calc(100vh-4.5rem)] flex flex-col justify-center bg-[#0B0D0F] text-white scroll-mt-18 transition-all duration-300 overflow-x-clip py-14 sm:py-20 border-y border-white/10">
-        <OrganicSectionCurve index={5} progress={sectionProgresses[5]} isDark={true} />
+        <OrganicSectionCurve index={7} progress={sectionProgresses[7]} isDark={true} />
         <div className="flex-1 flex flex-col justify-center py-6 sm:py-10 px-4 sm:px-8 lg:px-12 max-w-7xl mx-auto w-full relative z-10">
           
           {/* Header */}
@@ -3659,31 +3727,32 @@ export default function LandingPage() {
       </section>
 
       {/* ── SECTION: COMPETITOR CAPABILITIES & PRICING COMPARISON ── */}
-      <section id="comparison" className="relative z-58 min-h-[auto] flex flex-col justify-center bg-[#F8F9F5] scroll-mt-20 py-14 sm:py-24 border-b border-[#E4E7DC]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-8 lg:px-12 w-full">
+      <section id="comparison" className="relative z-58 min-h-[auto] flex flex-col justify-center bg-[#F8F9F5] scroll-mt-20 py-14 sm:py-24 border-b border-[#E4E7DC] overflow-x-clip">
+        <OrganicSectionCurve index={8} progress={sectionProgresses[8]} />
+        <div className="max-w-7xl mx-auto px-4 sm:px-8 lg:px-12 w-full relative z-10">
           
           {/* Header */}
           <div className="text-center max-w-3xl mx-auto mb-10 sm:mb-14">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-[#E4E7DC] text-[#111215] text-[10px] font-mono font-bold uppercase tracking-wider mb-3 shadow-2xs">
               <SlidersHorizontal size={12} className="text-[#8FB305]" />
-              <span>MARKET BENCHMARK & COST TRANSPARENCY</span>
+              <span>MARKET BENCHMARK & REAL INR COST TRANSPARENCY</span>
             </div>
             <h2 className="text-2xl sm:text-5xl font-black text-[#111215] tracking-tight leading-tight">
               How InterviewXpert Compares to Legacy Platforms
             </h2>
             <p className="mt-3 text-xs sm:text-base text-[#575A51] leading-relaxed">
-              Why high-velocity engineering startups and boutique recruitment agencies are replacing $30,000+/year legacy enterprise contracts with InterviewXpert's autonomous conversational architecture.
+              Why high-velocity engineering startups, mid-market enterprises, and boutique recruitment agencies are replacing ₹20+ Lakh/year rigid legacy contracts with InterviewXpert's custom-tailored autonomous conversational architecture.
             </p>
           </div>
 
           {/* Comparison Table Container */}
           <div className="rounded-3xl border border-[#E4E7DC] bg-white shadow-md overflow-hidden mb-10">
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs border-collapse min-w-[850px]">
+              <table className="w-full text-left text-xs border-collapse min-w-[960px]">
                 <thead>
                   <tr className="border-b border-[#E4E7DC] bg-[#FAFAF8]">
-                    <th className="py-4 px-4 sm:px-5 font-bold text-[#111215] w-[26%] text-xs uppercase font-mono tracking-wider">
-                      Capabilities & Pricing
+                    <th className="py-4 px-4 sm:px-5 font-bold text-[#111215] w-[24%] text-xs uppercase font-mono tracking-wider">
+                      Enterprise Capabilities & Pricing (INR)
                     </th>
                     {/* InterviewXpert Column Highlight */}
                     <th className="py-4 px-4 sm:px-5 font-black text-[#111215] bg-[#D4F82C]/15 border-x border-[#D4F82C]/30 w-[24%]">
@@ -3696,20 +3765,20 @@ export default function LandingPage() {
                       </span>
                     </th>
                     <th className="py-4 px-4 font-bold text-[#111215] w-[13%]">
-                      <div className="text-xs font-black">HireVue</div>
-                      <span className="text-[10px] font-mono text-[#73766C]">1-Way Video</span>
+                      <div className="text-xs font-black">Mercer Mettl / BarRaiser</div>
+                      <span className="text-[10px] font-mono text-[#73766C]">Legacy Indian ATS</span>
                     </th>
                     <th className="py-4 px-4 font-bold text-[#111215] w-[13%]">
-                      <div className="text-xs font-black">Karat</div>
-                      <span className="text-[10px] font-mono text-[#73766C]">Human Screeners</span>
+                      <div className="text-xs font-black">HireVue</div>
+                      <span className="text-[10px] font-mono text-[#73766C]">1-Way Video Soft</span>
                     </th>
-                    <th className="py-4 px-4 font-bold text-[#111215] w-[12%]">
-                      <div className="text-xs font-black">Metaview</div>
-                      <span className="text-[10px] font-mono text-[#73766C]">Note Takers</span>
-                    </th>
-                    <th className="py-4 px-4 font-bold text-[#111215] w-[12%]">
+                    <th className="py-4 px-4 font-bold text-[#111215] w-[13%]">
                       <div className="text-xs font-black">HackerRank</div>
-                      <span className="text-[10px] font-mono text-[#73766C]">Code Tests</span>
+                      <span className="text-[10px] font-mono text-[#73766C]">Code Tests Only</span>
+                    </th>
+                    <th className="py-4 px-4 font-bold text-[#111215] w-[13%]">
+                      <div className="text-xs font-black">In-House Manual HR</div>
+                      <span className="text-[10px] font-mono text-[#73766C]">Phone/Video Screens</span>
                     </th>
                   </tr>
                 </thead>
@@ -3721,42 +3790,117 @@ export default function LandingPage() {
                     <td className="py-3.5 px-4 sm:px-5 font-bold text-[#111215]">
                       <div className="flex items-center gap-2">
                         <Mic size={14} className="text-[#8FB305] shrink-0" />
-                        <span>Autonomous Spoken Voice AI</span>
+                        <span>Autonomous 2-Way Spoken Voice AI</span>
                       </div>
                     </td>
                     <td className="py-3.5 px-4 sm:px-5 bg-[#D4F82C]/5 border-x border-[#D4F82C]/20 font-bold text-[#111215]">
                       <div className="flex items-center gap-1.5 text-emerald-700">
                         <CheckCircle2 size={14} className="shrink-0" />
-                        <span>Yes • Sub-300ms Spoken Dialogue</span>
+                        <span>Yes • Sub-300ms Conversational Voice Q&A</span>
                       </div>
                     </td>
                     <td className="py-3.5 px-4 text-[#73766C]">
                       <div className="flex items-center gap-1.5 text-rose-600">
                         <XCircle size={14} className="shrink-0" />
-                        <span>No (1-Way Recorded Video Only)</span>
+                        <span>No (Static test banks or manual panels)</span>
                       </div>
                     </td>
                     <td className="py-3.5 px-4 text-[#73766C]">
                       <div className="flex items-center gap-1.5 text-rose-600">
                         <XCircle size={14} className="shrink-0" />
-                        <span>No (Human Engineers Only)</span>
+                        <span>No (1-Way recorded video to camera)</span>
                       </div>
                     </td>
                     <td className="py-3.5 px-4 text-[#73766C]">
                       <div className="flex items-center gap-1.5 text-rose-600">
                         <XCircle size={14} className="shrink-0" />
-                        <span>No (Transcribes Human Calls)</span>
+                        <span>No (Code/text testing only, zero voice)</span>
                       </div>
                     </td>
                     <td className="py-3.5 px-4 text-[#73766C]">
-                      <div className="flex items-center gap-1.5 text-rose-600">
-                        <XCircle size={14} className="shrink-0" />
-                        <span>No (Text/Code Testing Only)</span>
+                      <div className="flex items-center gap-1.5 text-amber-700">
+                        <CheckCircle2 size={14} className="shrink-0" />
+                        <span>Yes, but manual (45m+ recruiter screen)</span>
                       </div>
                     </td>
                   </tr>
 
-                  {/* Row 2: Dynamic Cross-Questioning */}
+                  {/* Row 2: Custom Design According to Company Need */}
+                  <tr className="hover:bg-[#F8F9F5] transition-colors bg-[#FAFBF7]">
+                    <td className="py-3.5 px-4 sm:px-5 font-bold text-[#111215]">
+                      <div className="flex items-center gap-2">
+                        <Sliders size={14} className="text-[#8FB305] shrink-0" />
+                        <span>Custom Design According to Company Need</span>
+                      </div>
+                    </td>
+                    <td className="py-3.5 px-4 sm:px-5 bg-[#D4F82C]/10 border-x border-[#D4F82C]/30 font-bold text-[#111215]">
+                      <div className="flex items-center gap-1.5 text-emerald-800 font-black">
+                        <CheckCircle2 size={14} className="shrink-0 text-emerald-600" />
+                        <span>100% Tailored • Custom AI Personas, JD Rubrics & PDF Syllabus Grounding</span>
+                      </div>
+                    </td>
+                    <td className="py-3.5 px-4 text-[#73766C]">
+                      <div className="flex items-center gap-1.5 text-amber-700">
+                        <span>Partial (Generic question banks; custom rubrics require costly PS)</span>
+                      </div>
+                    </td>
+                    <td className="py-3.5 px-4 text-[#73766C]">
+                      <div className="flex items-center gap-1.5 text-rose-600">
+                        <XCircle size={14} className="shrink-0" />
+                        <span>Low (Rigid standard templates)</span>
+                      </div>
+                    </td>
+                    <td className="py-3.5 px-4 text-[#73766C]">
+                      <div className="flex items-center gap-1.5 text-rose-600">
+                        <XCircle size={14} className="shrink-0" />
+                        <span>Low (Standard LeetCode algorithmic test banks)</span>
+                      </div>
+                    </td>
+                    <td className="py-3.5 px-4 text-[#73766C]">
+                      <div className="flex items-center gap-1.5 text-amber-700">
+                        <span>Unstructured (Ad-hoc recruiter questions without standardization)</span>
+                      </div>
+                    </td>
+                  </tr>
+
+                  {/* Row 3: Connect with Companies' Legacy Platforms */}
+                  <tr className="hover:bg-[#F8F9F5] transition-colors bg-[#FAFBF7]">
+                    <td className="py-3.5 px-4 sm:px-5 font-bold text-[#111215]">
+                      <div className="flex items-center gap-2">
+                        <Layers size={14} className="text-[#8FB305] shrink-0" />
+                        <span>Connect with Companies' Legacy Platforms</span>
+                      </div>
+                    </td>
+                    <td className="py-3.5 px-4 sm:px-5 bg-[#D4F82C]/10 border-x border-[#D4F82C]/30 font-bold text-[#111215]">
+                      <div className="flex items-center gap-1.5 text-emerald-800 font-black">
+                        <CheckCircle2 size={14} className="shrink-0 text-emerald-600" />
+                        <span>Universal Legacy Connect • Workday, SAP, Greenhouse, Darwinbox & Zoho Sync</span>
+                      </div>
+                    </td>
+                    <td className="py-3.5 px-4 text-[#73766C]">
+                      <div className="flex items-center gap-1.5 text-amber-700">
+                        <span>Complex (Heavy IT integration & ₹50k–₹1.5L setup fees)</span>
+                      </div>
+                    </td>
+                    <td className="py-3.5 px-4 text-[#73766C]">
+                      <div className="flex items-center gap-1.5 text-amber-700">
+                        <span>Enterprise Only (Locked behind top-tier contracts)</span>
+                      </div>
+                    </td>
+                    <td className="py-3.5 px-4 text-[#73766C]">
+                      <div className="flex items-center gap-1.5 text-amber-700">
+                        <span>Limited (Export API on high enterprise tiers)</span>
+                      </div>
+                    </td>
+                    <td className="py-3.5 px-4 text-[#73766C]">
+                      <div className="flex items-center gap-1.5 text-rose-600">
+                        <XCircle size={14} className="shrink-0" />
+                        <span>Manual (Recruiter manually types notes into ATS spreadsheet)</span>
+                      </div>
+                    </td>
+                  </tr>
+
+                  {/* Row 4: Dynamic Cross-Questioning */}
                   <tr className="hover:bg-[#F8F9F5] transition-colors">
                     <td className="py-3.5 px-4 sm:px-5 font-bold text-[#111215]">
                       <div className="flex items-center gap-2">
@@ -3767,7 +3911,7 @@ export default function LandingPage() {
                     <td className="py-3.5 px-4 sm:px-5 bg-[#D4F82C]/5 border-x border-[#D4F82C]/20 font-bold text-[#111215]">
                       <div className="flex items-center gap-1.5 text-emerald-700">
                         <CheckCircle2 size={14} className="shrink-0" />
-                        <span>Yes • Probes logic & architecture</span>
+                        <span>Yes • Probes candidate logic, architecture & edge cases</span>
                       </div>
                     </td>
                     <td className="py-3.5 px-4 text-[#73766C]">
@@ -3777,133 +3921,91 @@ export default function LandingPage() {
                       </div>
                     </td>
                     <td className="py-3.5 px-4 text-[#73766C]">
+                      <div className="flex items-center gap-1.5 text-rose-600">
+                        <XCircle size={14} className="shrink-0" />
+                        <span>No (Static one-way prompt cards)</span>
+                      </div>
+                    </td>
+                    <td className="py-3.5 px-4 text-[#73766C]">
+                      <div className="flex items-center gap-1.5 text-rose-600">
+                        <XCircle size={14} className="shrink-0" />
+                        <span>No (Rigid unit test cases only)</span>
+                      </div>
+                    </td>
+                    <td className="py-3.5 px-4 text-[#73766C]">
                       <div className="flex items-center gap-1.5 text-emerald-700">
                         <CheckCircle2 size={14} className="shrink-0" />
-                        <span>Yes (Manual by humans)</span>
-                      </div>
-                    </td>
-                    <td className="py-3.5 px-4 text-[#73766C]">
-                      <div className="flex items-center gap-1.5 text-rose-600">
-                        <XCircle size={14} className="shrink-0" />
-                        <span>No (Passive listener)</span>
-                      </div>
-                    </td>
-                    <td className="py-3.5 px-4 text-[#73766C]">
-                      <div className="flex items-center gap-1.5 text-rose-600">
-                        <XCircle size={14} className="shrink-0" />
-                        <span>No (Rigid test cases only)</span>
+                        <span>Yes (Subjective human probing)</span>
                       </div>
                     </td>
                   </tr>
 
-                  {/* Row 3: Candidate Mock Interview Hub */}
+                  {/* Row 5: Multi-Round Unified Evaluation */}
                   <tr className="hover:bg-[#F8F9F5] transition-colors">
                     <td className="py-3.5 px-4 sm:px-5 font-bold text-[#111215]">
                       <div className="flex items-center gap-2">
-                        <GraduationCap size={14} className="text-[#8FB305] shrink-0" />
-                        <span>Candidate Mock Interview Hub</span>
+                        <Kanban size={14} className="text-[#8FB305] shrink-0" />
+                        <span>Multi-Round Unified Evaluation (Voice + MCQ + Coding)</span>
                       </div>
                     </td>
                     <td className="py-3.5 px-4 sm:px-5 bg-[#D4F82C]/5 border-x border-[#D4F82C]/20 font-bold text-[#111215]">
                       <div className="flex items-center gap-1.5 text-emerald-700">
                         <CheckCircle2 size={14} className="shrink-0" />
-                        <span>Yes • Built-in student & candidate hub</span>
+                        <span>All-in-One Suite • Voice Interview + MCQ + Monaco IDE in 1 link</span>
+                      </div>
+                    </td>
+                    <td className="py-3.5 px-4 text-[#73766C]">
+                      <div className="flex items-center gap-1.5 text-amber-700">
+                        <span>Fragmented (Separate modules & multiple links)</span>
                       </div>
                     </td>
                     <td className="py-3.5 px-4 text-[#73766C]">
                       <div className="flex items-center gap-1.5 text-rose-600">
                         <XCircle size={14} className="shrink-0" />
-                        <span>No</span>
+                        <span>Video Only (Requires 3rd-party tool for coding)</span>
                       </div>
                     </td>
                     <td className="py-3.5 px-4 text-[#73766C]">
-                      <div className="flex items-center gap-1.5 text-rose-600">
-                        <XCircle size={14} className="shrink-0" />
-                        <span>No</span>
+                      <div className="flex items-center gap-1.5 text-amber-700">
+                        <span>Code & MCQ Only (Zero spoken voice evaluation)</span>
                       </div>
                     </td>
                     <td className="py-3.5 px-4 text-[#73766C]">
-                      <div className="flex items-center gap-1.5 text-rose-600">
-                        <XCircle size={14} className="shrink-0" />
-                        <span>No</span>
-                      </div>
-                    </td>
-                    <td className="py-3.5 px-4 text-[#73766C]">
-                      <div className="flex items-center gap-1.5 text-amber-600">
-                        <span>Limited (Coding practice only)</span>
+                      <div className="flex items-center gap-1.5 text-amber-700">
+                        <span>Fragmented (3 separate rounds across 2–3 weeks)</span>
                       </div>
                     </td>
                   </tr>
 
-                  {/* Row 4: Syllabus / Custom PDF Ingestion */}
-                  <tr className="hover:bg-[#F8F9F5] transition-colors">
-                    <td className="py-3.5 px-4 sm:px-5 font-bold text-[#111215]">
-                      <div className="flex items-center gap-2">
-                        <FileText size={14} className="text-[#8FB305] shrink-0" />
-                        <span>Syllabus / Custom PDF Question Grounding</span>
-                      </div>
-                    </td>
-                    <td className="py-3.5 px-4 sm:px-5 bg-[#D4F82C]/5 border-x border-[#D4F82C]/20 font-bold text-[#111215]">
-                      <div className="flex items-center gap-1.5 text-emerald-700">
-                        <CheckCircle2 size={14} className="shrink-0" />
-                        <span>Yes • 1-Click PDF Syllabus Upload</span>
-                      </div>
-                    </td>
-                    <td className="py-3.5 px-4 text-[#73766C]">
-                      <div className="flex items-center gap-1.5 text-rose-600">
-                        <XCircle size={14} className="shrink-0" />
-                        <span>No (Manual complex form entry)</span>
-                      </div>
-                    </td>
-                    <td className="py-3.5 px-4 text-[#73766C]">
-                      <div className="flex items-center gap-1.5 text-rose-600">
-                        <XCircle size={14} className="shrink-0" />
-                        <span>No (Custom scoping call required)</span>
-                      </div>
-                    </td>
-                    <td className="py-3.5 px-4 text-[#73766C]">
-                      <span className="text-gray-400">N/A</span>
-                    </td>
-                    <td className="py-3.5 px-4 text-[#73766C]">
-                      <div className="flex items-center gap-1.5 text-rose-600">
-                        <XCircle size={14} className="shrink-0" />
-                        <span>No (Static library only)</span>
-                      </div>
-                    </td>
-                  </tr>
-
-                  {/* Row 5: Anti-Cheat & Proctoring */}
+                  {/* Row 6: Anti-Cheat & Proctoring */}
                   <tr className="hover:bg-[#F8F9F5] transition-colors">
                     <td className="py-3.5 px-4 sm:px-5 font-bold text-[#111215]">
                       <div className="flex items-center gap-2">
                         <ShieldCheck size={14} className="text-[#8FB305] shrink-0" />
-                        <span>Anti-Cheat & Tab-Switch Audit Logs</span>
+                        <span>Multi-Signal Anti-Cheat & Tab-Switch Audit Logs</span>
                       </div>
                     </td>
                     <td className="py-3.5 px-4 sm:px-5 bg-[#D4F82C]/5 border-x border-[#D4F82C]/20 font-bold text-[#111215]">
                       <div className="flex items-center gap-1.5 text-emerald-700">
                         <CheckCircle2 size={14} className="shrink-0" />
-                        <span>Yes • Full screen, tab, eye & face tracking</span>
+                        <span>Yes • Full screen lock, tab-switch audit logs & face detection</span>
                       </div>
                     </td>
                     <td className="py-3.5 px-4 text-[#73766C]">
-                      <span className="text-amber-700">Basic (Manual review)</span>
+                      <span className="text-emerald-700">Available (Charges extra for live proctoring)</span>
                     </td>
                     <td className="py-3.5 px-4 text-[#73766C]">
-                      <span className="text-emerald-700">Yes (Human Proctored)</span>
+                      <span className="text-amber-700">Basic (Manual post-video review)</span>
                     </td>
                     <td className="py-3.5 px-4 text-[#73766C]">
-                      <div className="flex items-center gap-1.5 text-rose-600">
-                        <XCircle size={14} className="shrink-0" />
-                        <span>None</span>
-                      </div>
+                      <span className="text-amber-700">Basic (Window blur & code similarity)</span>
                     </td>
                     <td className="py-3.5 px-4 text-[#73766C]">
-                      <span className="text-amber-700">Basic (Window blur log)</span>
+                      <span className="text-amber-700">Manual (Recruiter eyeball observation)</span>
                     </td>
                   </tr>
 
-                  {/* Row 6: Native WhatsApp Integration */}
+                  {/* Row 7: Native WhatsApp Integration */}
                   <tr className="hover:bg-[#F8F9F5] transition-colors">
                     <td className="py-3.5 px-4 sm:px-5 font-bold text-[#111215]">
                       <div className="flex items-center gap-2">
@@ -3914,7 +4016,19 @@ export default function LandingPage() {
                     <td className="py-3.5 px-4 sm:px-5 bg-[#D4F82C]/5 border-x border-[#D4F82C]/20 font-bold text-[#111215]">
                       <div className="flex items-center gap-1.5 text-emerald-700">
                         <CheckCircle2 size={14} className="shrink-0" />
-                        <span>Yes • Automated WhatsApp invites & reminders</span>
+                        <span>Yes • Automated WhatsApp invites & 2-hr reminder sequences</span>
+                      </div>
+                    </td>
+                    <td className="py-3.5 px-4 text-[#73766C]">
+                      <div className="flex items-center gap-1.5 text-rose-600">
+                        <XCircle size={14} className="shrink-0" />
+                        <span>No (Email only • High drop-off)</span>
+                      </div>
+                    </td>
+                    <td className="py-3.5 px-4 text-[#73766C]">
+                      <div className="flex items-center gap-1.5 text-rose-600">
+                        <XCircle size={14} className="shrink-0" />
+                        <span>No (Formal email notifications only)</span>
                       </div>
                     </td>
                     <td className="py-3.5 px-4 text-[#73766C]">
@@ -3924,60 +4038,44 @@ export default function LandingPage() {
                       </div>
                     </td>
                     <td className="py-3.5 px-4 text-[#73766C]">
-                      <div className="flex items-center gap-1.5 text-rose-600">
-                        <XCircle size={14} className="shrink-0" />
-                        <span>No (Email only)</span>
-                      </div>
-                    </td>
-                    <td className="py-3.5 px-4 text-[#73766C]">
-                      <div className="flex items-center gap-1.5 text-rose-600">
-                        <XCircle size={14} className="shrink-0" />
-                        <span>No</span>
-                      </div>
-                    </td>
-                    <td className="py-3.5 px-4 text-[#73766C]">
-                      <div className="flex items-center gap-1.5 text-rose-600">
-                        <XCircle size={14} className="shrink-0" />
-                        <span>No (Email only)</span>
+                      <div className="flex items-center gap-1.5 text-amber-700">
+                        <span>Manual (Recruiter texts from personal phone)</span>
                       </div>
                     </td>
                   </tr>
 
-                  {/* Row 7: 1-Click Interactive Client Review Link */}
+                  {/* Row 8: 1-Click Interactive Client Review Link */}
                   <tr className="hover:bg-[#F8F9F5] transition-colors">
                     <td className="py-3.5 px-4 sm:px-5 font-bold text-[#111215]">
                       <div className="flex items-center gap-2">
                         <Share2 size={14} className="text-[#8FB305] shrink-0" />
-                        <span>1-Click Interactive Client Review Portal</span>
+                        <span>1-Click Interactive Client Review Dossier</span>
                       </div>
                     </td>
                     <td className="py-3.5 px-4 sm:px-5 bg-[#D4F82C]/5 border-x border-[#D4F82C]/20 font-bold text-[#111215]">
                       <div className="flex items-center gap-1.5 text-emerald-700">
                         <CheckCircle2 size={14} className="shrink-0" />
-                        <span>Yes • Audio snippets & 1-click approvals</span>
+                        <span>Yes • Audio answer clips, live transcripts & 1-click approvals</span>
                       </div>
+                    </td>
+                    <td className="py-3.5 px-4 text-[#73766C]">
+                      <span className="text-amber-700">Static PDF report (No audio snippets)</span>
                     </td>
                     <td className="py-3.5 px-4 text-[#73766C]">
                       <div className="flex items-center gap-1.5 text-rose-600">
                         <XCircle size={14} className="shrink-0" />
-                        <span>No (Requires enterprise login)</span>
-                      </div>
-                    </td>
-                    <td className="py-3.5 px-4 text-[#73766C]">
-                      <span className="text-amber-700">Static PDF summary</span>
-                    </td>
-                    <td className="py-3.5 px-4 text-[#73766C]">
-                      <div className="flex items-center gap-1.5 text-rose-600">
-                        <XCircle size={14} className="shrink-0" />
-                        <span>Internal notes only</span>
+                        <span>No (Requires enterprise platform login)</span>
                       </div>
                     </td>
                     <td className="py-3.5 px-4 text-[#73766C]">
                       <span className="text-amber-700">Test score page only</span>
                     </td>
+                    <td className="py-3.5 px-4 text-[#73766C]">
+                      <span className="text-rose-600">Messy email chains with subjective notes</span>
+                    </td>
                   </tr>
 
-                  {/* Row 8: Evaluation Turnaround */}
+                  {/* Row 9: Evaluation Turnaround */}
                   <tr className="hover:bg-[#F8F9F5] transition-colors">
                     <td className="py-3.5 px-4 sm:px-5 font-bold text-[#111215]">
                       <div className="flex items-center gap-2">
@@ -3991,50 +4089,84 @@ export default function LandingPage() {
                       </span>
                     </td>
                     <td className="py-3.5 px-4 text-[#73766C]">
-                      <span>2 to 5 Days (Manual review)</span>
+                      <span>24 to 48 Hours for interview reviews</span>
                     </td>
                     <td className="py-3.5 px-4 text-[#73766C]">
-                      <span>24 to 48 Hours</span>
+                      <span>2 to 5 Days (Recruiters must watch videos)</span>
                     </td>
                     <td className="py-3.5 px-4 text-[#73766C]">
-                      <span>Post-call minutes</span>
+                      <span>Instant code score (Requires human follow-up)</span>
                     </td>
                     <td className="py-3.5 px-4 text-[#73766C]">
-                      <span>Instant (Code only)</span>
+                      <span>3 to 7 Days across panel calendars</span>
                     </td>
                   </tr>
 
-                  {/* Row 9: Pricing Structure & Lock-in */}
+                  {/* Row 10: Real Unit Pricing in INR */}
                   <tr className="bg-[#FAFBF7]">
                     <td className="py-4 px-4 sm:px-5 font-black text-[#111215]">
                       <div className="flex items-center gap-2">
                         <IndianRupee size={14} className="text-[#8FB305] shrink-0" />
-                        <span>Pricing Model & Accessibility</span>
+                        <span>Actual Unit Pricing (All in INR ₹)</span>
                       </div>
                     </td>
                     <td className="py-4 px-4 sm:px-5 bg-[#D4F82C]/10 border-x border-[#D4F82C]/30 font-black text-[#111215]">
                       <div className="text-xs font-black text-[#111215]">
                         From ₹129 / Candidate
                       </div>
-                      <div className="text-[10px] text-[#575A51] font-medium mt-0.5">
-                        Dynamic volume: ₹149 down to ₹129 (with modular MCQ & coding add-ons). 1-Month Free Trial. Zero annual lock-in.
+                      <div className="text-[10px] text-[#575A51] font-medium mt-0.5 leading-snug">
+                        Dynamic volume: ₹149 down to ₹129 INR. Modular add-ons: MCQ (+₹29/₹19), Coding (+₹49/₹39). Pay strictly per completed assessment.
                       </div>
                     </td>
                     <td className="py-4 px-4 text-rose-700 font-bold">
-                      <div className="text-xs">$25,000 – $50,000+ / yr</div>
-                      <div className="text-[10px] text-[#73766C] font-normal">Rigid annual lock-in</div>
+                      <div className="text-xs">₹650 – ₹1,500+ / Candidate</div>
+                      <div className="text-[10px] text-[#73766C] font-normal mt-0.5">₹2.5L – ₹8.0L+ annual base + setup</div>
                     </td>
                     <td className="py-4 px-4 text-rose-700 font-bold">
-                      <div className="text-xs">$300 – $500+ / interview</div>
-                      <div className="text-[10px] text-[#73766C] font-normal">$3,000+ for 10 candidates</div>
+                      <div className="text-xs">₹3,500 – ₹7,000+ / Interview</div>
+                      <div className="text-[10px] text-[#73766C] font-normal mt-0.5">Converted from $25k–$45k USD annual plan</div>
+                    </td>
+                    <td className="py-4 px-4 text-rose-700 font-bold">
+                      <div className="text-xs">₹450 – ₹800+ / Code Test</div>
+                      <div className="text-[10px] text-[#73766C] font-normal mt-0.5">High overages above strict quota caps</div>
+                    </td>
+                    <td className="py-4 px-4 text-rose-700 font-bold">
+                      <div className="text-xs">₹650 – ₹850+ / Interview</div>
+                      <div className="text-[10px] text-[#73766C] font-normal mt-0.5">In recruiter hours (~₹650/hr x 1.25 hrs)</div>
+                    </td>
+                  </tr>
+
+                  {/* Row 11: Annual Contract Commitment & Lock-in */}
+                  <tr className="bg-[#FAFBF7]">
+                    <td className="py-4 px-4 sm:px-5 font-black text-[#111215]">
+                      <div className="flex items-center gap-2">
+                        <Lock size={14} className="text-[#8FB305] shrink-0" />
+                        <span>Contract Terms & Annual Lock-in</span>
+                      </div>
+                    </td>
+                    <td className="py-4 px-4 sm:px-5 bg-[#D4F82C]/10 border-x border-[#D4F82C]/30 font-black text-[#111215]">
+                      <div className="text-xs font-black text-emerald-800">
+                        Zero Annual Lock-In • 1-Month Free Trial
+                      </div>
+                      <div className="text-[10px] text-[#575A51] font-medium mt-0.5">
+                        Pay as you go. Evaluation credits never expire.
+                      </div>
+                    </td>
+                    <td className="py-4 px-4 text-rose-700 font-bold">
+                      <div className="text-xs">₹2,50,000 – ₹8,00,000+ / Year</div>
+                      <div className="text-[10px] text-[#73766C] font-normal mt-0.5">Rigid 1-year enterprise contract</div>
+                    </td>
+                    <td className="py-4 px-4 text-rose-700 font-bold">
+                      <div className="text-xs">₹20,50,000 – ₹37,50,000+ / Year</div>
+                      <div className="text-[10px] text-[#73766C] font-normal mt-0.5">Strict 1-year or 3-year enterprise lock-in</div>
+                    </td>
+                    <td className="py-4 px-4 text-rose-700 font-bold">
+                      <div className="text-xs">₹3,00,000 – ₹8,30,000+ / Year</div>
+                      <div className="text-[10px] text-[#73766C] font-normal mt-0.5">Annual subscription with user seat caps</div>
                     </td>
                     <td className="py-4 px-4 text-[#73766C] font-bold">
-                      <div className="text-xs">$5,000+ / year</div>
-                      <div className="text-[10px] text-[#73766C] font-normal">Per recruiter seat</div>
-                    </td>
-                    <td className="py-4 px-4 text-[#73766C] font-bold">
-                      <div className="text-xs">$3,600 – $10,000+ / yr</div>
-                      <div className="text-[10px] text-[#73766C] font-normal">+ Candidate volume caps</div>
+                      <div className="text-xs">Fixed Monthly Salaries</div>
+                      <div className="text-[10px] text-[#73766C] font-normal mt-0.5">High fixed overhead regardless of hiring volume</div>
                     </td>
                   </tr>
 
@@ -4047,13 +4179,13 @@ export default function LandingPage() {
           <div className="rounded-3xl bg-[#111215] text-white p-6 sm:p-8 flex flex-col sm:flex-row items-center justify-between gap-6 shadow-xl">
             <div className="space-y-1.5 text-center sm:text-left">
               <span className="text-[10px] uppercase font-mono font-bold tracking-wider text-[#D4F82C]">
-                Uncompromising Quality • 75%+ Cost Savings
+                100% Custom Tailored • Legacy ATS Connectivity • Actual INR Transparency
               </span>
               <h3 className="text-lg sm:text-xl font-black text-white">
-                Why Pay $30,000+ For Rigid Legacy Tools That Still Require Manual Reviews?
+                Why Pay ₹20,00,000+ For Rigid Legacy Tools That Still Require Manual Reviews?
               </h3>
               <p className="text-xs text-slate-300 max-w-2xl leading-relaxed">
-                InterviewXpert conducts real spoken technical interviews 24/7, verifies authenticity with proctoring audit trails, and delivers comprehensive candidate dossiers in 60 seconds — with dynamic rates scaling from ₹149 down to ₹129 per interview.
+                InterviewXpert is custom-designed for your company's exact competencies, seamlessly integrates with your existing legacy ATS (Workday, SAP, Greenhouse, Darwinbox, Zoho Recruit), and delivers completed candidate dossiers in 60 seconds — with dynamic rates scaling from ₹149 down to ₹129 per interview in INR.
               </p>
             </div>
 
@@ -4073,7 +4205,7 @@ export default function LandingPage() {
 
       {/* ── SECTION 6: PRICING ESTIMATOR CARD ── */}
       <section id="pricing" className="relative z-60 min-h-[auto] sm:min-h-[calc(100vh-4.5rem)] flex flex-col justify-center bg-[#F8F9F5] scroll-mt-24 transition-all duration-300 overflow-x-clip pt-16 sm:pt-24 pb-12 sm:pb-20">
-        <OrganicSectionCurve index={6} progress={sectionProgresses[6]} />
+        <OrganicSectionCurve index={9} progress={sectionProgresses[9]} />
         <div className="flex-1 flex flex-col justify-center py-6 sm:py-8 px-4 sm:px-8 lg:px-12 max-w-7xl mx-auto w-full relative z-10">
           
           {/* Pricing Header */}
@@ -4720,7 +4852,7 @@ export default function LandingPage() {
 
       {/* ── SECTION 7: FAQ ACCORDION CARD ("A little more clarity.") ── */}
       <section id="faq" className="relative z-70 min-h-[auto] sm:min-h-[calc(100vh-4.5rem)] flex flex-col justify-center bg-[#F8F9F5] scroll-mt-18 transition-all duration-300 overflow-x-clip py-10 sm:py-16">
-        <OrganicSectionCurve index={7} progress={sectionProgresses[7]} />
+        <OrganicSectionCurve index={10} progress={sectionProgresses[10]} />
         <div className="flex-1 flex flex-col justify-center py-6 sm:py-8 px-4 sm:px-8 lg:px-12 max-w-7xl mx-auto w-full relative z-10">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-10 items-start">
             
@@ -4773,7 +4905,7 @@ export default function LandingPage() {
 
       {/* ── SECTION 8: DARK CTA CARD ("Your next great hire. A clearer way forward.") ── */}
       <section id="start-trial" className="relative z-80 min-h-[auto] sm:min-h-[calc(100vh-4.5rem)] flex flex-col justify-center bg-[#111215] text-white scroll-mt-18 transition-all duration-300 overflow-x-clip py-12 sm:py-16">
-        <OrganicSectionCurve index={8} progress={sectionProgresses[8]} isDark={true} />
+        <OrganicSectionCurve index={11} progress={sectionProgresses[11]} isDark={true} />
         <div className="flex-1 flex items-center py-8 sm:py-12 px-4 sm:px-8 lg:px-12 max-w-7xl mx-auto w-full relative z-10">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 sm:gap-12 w-full">
             

@@ -473,17 +473,17 @@ const ActiveJobsPage: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-8 h-18 flex items-center justify-between">
           
           {/* Logo & Product Badge */}
-          <div className="flex items-center gap-3">
-            <Link to="/" className="group inline-flex items-center">
+          <div className="flex items-center gap-3 shrink-0">
+            <Link to="/" className="group inline-flex items-center shrink-0">
               <HireXLogo size="md" variant="full" isDark={false} />
             </Link>
-            <div className="hidden sm:flex items-center gap-1.5 pl-3 border-l border-[#E4E7DC] text-[11px] font-medium text-[#73766C]">
+            <div className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#111215]/5 border border-[#E4E7DC] text-[10px] font-medium text-[#73766C] shrink-0">
               <span>by</span>
               <a
                 href="https://snab.co.in"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="font-bold text-[#111215] hover:underline"
+                className="font-bold text-[#111215] hover:text-[#8FB305] transition-colors"
               >
                 SNAB
               </a>
@@ -491,28 +491,28 @@ const ActiveJobsPage: React.FC = () => {
           </div>
 
           {/* Centered Navigation Links */}
-          <nav className="hidden lg:flex items-center gap-8 text-[13px] font-semibold text-[#575A51]">
-            <Link to="/#pipeline" className="hover:text-[#111215] transition-colors">
+          <nav className="hidden lg:flex items-center gap-6 xl:gap-8 text-xs xl:text-[13px] font-semibold text-[#575A51] shrink-0">
+            <Link to="/#pipeline" className="hover:text-[#111215] transition-colors whitespace-nowrap shrink-0">
               Pipeline
             </Link>
-            <Link to="/#resume-matching" className="hover:text-[#111215] transition-colors">
+            <Link to="/#resume-matching" className="hover:text-[#111215] transition-colors whitespace-nowrap shrink-0">
               AI Matching
             </Link>
-            <Link to="/#client-portal" className="hover:text-[#111215] transition-colors flex items-center gap-1.5">
+            <Link to="/#client-portal" className="hover:text-[#111215] transition-colors flex items-center gap-1.5 whitespace-nowrap shrink-0">
               <span>Client Portal</span>
               <span className="size-1.5 rounded-full bg-[#8FB305] animate-pulse"></span>
             </Link>
-            <Link to="/#pricing" className="hover:text-[#111215] transition-colors">
+            <Link to="/#pricing" className="hover:text-[#111215] transition-colors whitespace-nowrap shrink-0">
               Pricing
             </Link>
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#111215] text-white text-xs font-bold shadow-2xs">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#111215] text-white text-xs font-bold shadow-2xs whitespace-nowrap shrink-0">
               <span className="size-1.5 rounded-full bg-[#D4F82C] animate-pulse"></span>
               <span>Active Roles ({jobs.length})</span>
             </span>
           </nav>
 
           {/* Right Action Buttons */}
-          <div className="flex items-center gap-2.5 sm:gap-3">
+          <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
             <button
               type="button"
               onClick={handleOpenContactModal}
