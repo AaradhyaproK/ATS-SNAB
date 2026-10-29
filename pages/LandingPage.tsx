@@ -58,13 +58,15 @@ import {
   GraduationCap,
   Code2,
   SlidersHorizontal,
-  Target
+  Target,
+  Star
 } from 'lucide-react';
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { useForm, ValidationError } from '@formspree/react';
 import { useAuth } from '../context/AuthContext';
 import HireXLogo, { HireXMark } from '../components/HireXLogo';
+import CandidateWallOfLove from '../components/landing/CandidateWallOfLove';
 
 // ── Smooth Organic Continuous Bezier Paths for On-Page Journey Flow ──
 // Each section k starts at the exact X coordinate and vertical tangent where section k-1 ended!
@@ -87,9 +89,10 @@ import HireXLogo, { HireXMark } from '../components/HireXLogo';
 // 06: (280,0) -> (440,900)   [Productivity]
 // 07: (440,0) -> (440,900)   [AI Interview]
 // 08: (440,0) -> (440,900)   [Comparison Matrix]
-// 09: (440,0) -> (1080,900)  [Pricing Estimator]
-// 10: (1080,0) -> (520,900)  [FAQ Accordion]
-// 11: (520,0) -> (720,640)   [Start Trial Finish]
+// 09: (440,0) -> (440,900)   [Candidate Reviews Marquee & Wall of Love]
+// 10: (440,0) -> (1080,900)  [Pricing Estimator]
+// 11: (1080,0) -> (520,900)  [FAQ Accordion]
+// 12: (520,0) -> (720,640)   [Start Trial Finish]
 const SECTION_CURVE_PATHS = [
   // 00: Overview (Hero - gentle rounded S-curve looping down behind title, exiting vertically at 880,900)
   "M 180,0 C 180,120 360,200 560,180 C 780,150 920,80 1140,120 C 1340,160 1400,380 1320,540 C 1240,700 1040,680 940,740 C 880,780 880,840 880,900",
@@ -109,11 +112,13 @@ const SECTION_CURVE_PATHS = [
   "M 440,0 C 440,120 720,180 960,260 C 1220,360 1340,540 1240,680 C 1140,800 880,780 680,820 C 520,850 440,840 440,900",
   // 08: Comparison (enters vertically at 440,0, arches around competitor matrix table, exiting vertically at 440,900)
   "M 440,0 C 440,120 240,240 180,380 C 120,520 260,640 480,600 C 720,560 980,440 1180,500 C 1360,560 1340,740 1180,820 C 1040,880 440,830 440,900",
-  // 09: Pricing (enters vertically at 440,0, winds around team slider & calculator cards, exiting vertically at 1080,900)
+  // 09: Reviews (enters vertically at 440,0, flows through marquee review cards, exiting vertically at 440,900)
+  "M 440,0 C 440,120 720,200 980,300 C 1220,400 1280,580 1120,680 C 960,780 720,740 580,800 C 480,840 440,860 440,900",
+  // 10: Pricing (enters vertically at 440,0, winds around team slider & calculator cards, exiting vertically at 1080,900)
   "M 440,0 C 440,120 220,240 160,380 C 100,520 220,660 460,620 C 700,580 920,440 1140,480 C 1340,520 1360,720 1240,820 C 1160,880 1080,840 1080,900",
-  // 10: FAQ (enters vertically at 1080,0, gracefully arches behind questions, exiting vertically at 520,900)
+  // 11: FAQ (enters vertically at 1080,0, gracefully arches behind questions, exiting vertically at 520,900)
   "M 1080,0 C 1080,120 1280,260 1240,420 C 1200,580 980,520 740,540 C 500,560 300,440 180,560 C 60,680 120,820 320,850 C 440,870 520,840 520,900",
-  // 11: Start Trial (enters vertically at 520,0, swirls into dark CTA hero, terminating right at trial CTA)
+  // 12: Start Trial (enters vertically at 520,0, swirls into dark CTA hero, terminating right at trial CTA)
   "M 520,0 C 520,120 320,260 280,420 C 240,580 440,700 660,680 C 880,660 1160,540 1220,380 C 1280,220 1080,160 900,240 C 720,320 680,520 720,640",
 ];
 
@@ -127,9 +132,10 @@ const SECTION_JUNCTION_COORDS = [
   { start: { x: 280, y: 0 }, end: { x: 440, y: 900 } },  // 06: Productivity
   { start: { x: 440, y: 0 }, end: { x: 440, y: 900 } },  // 07: AI Interview
   { start: { x: 440, y: 0 }, end: { x: 440, y: 900 } },  // 08: Comparison Matrix
-  { start: { x: 440, y: 0 }, end: { x: 1080, y: 900 } }, // 09: Pricing
-  { start: { x: 1080, y: 0 }, end: { x: 520, y: 900 } }, // 10: FAQ
-  { start: { x: 520, y: 0 }, end: { x: 720, y: 640 } },  // 11: Start Trial CTA
+  { start: { x: 440, y: 0 }, end: { x: 440, y: 900 } },  // 09: Candidate Reviews Marquee
+  { start: { x: 440, y: 0 }, end: { x: 1080, y: 900 } }, // 10: Pricing
+  { start: { x: 1080, y: 0 }, end: { x: 520, y: 900 } }, // 11: FAQ
+  { start: { x: 520, y: 0 }, end: { x: 720, y: 640 } },  // 12: Start Trial CTA
 ];
 
 const OrganicSectionCurve: React.FC<{
@@ -573,6 +579,7 @@ export default function LandingPage() {
       'productivity',
       'ai-interview',
       'comparison',
+      'reviews',
       'pricing',
       'faq',
       'start-trial',
@@ -802,6 +809,20 @@ export default function LandingPage() {
                     <div>
                       <div className="text-xs font-bold text-[#111215] whitespace-nowrap">Why Switch</div>
                       <div className="text-[11px] text-[#73766C] font-normal leading-tight">80% faster hiring ROI breakdown</div>
+                    </div>
+                  </a>
+
+                  <a
+                    href="#reviews"
+                    onClick={(e) => scrollToSection(e, 'reviews')}
+                    className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-[#F8F9F5] transition-colors group/item"
+                  >
+                    <div className="size-8 rounded-lg bg-[#F8F9F5] border border-[#E4E7DC] flex items-center justify-center shrink-0 group-hover/item:border-[#111215] transition-colors">
+                      <Star className="size-4 text-[#8FB305]" />
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-[#111215] whitespace-nowrap">Candidate Reviews</div>
+                      <div className="text-[11px] text-[#73766C] font-normal leading-tight">Real verified candidate feedback</div>
                     </div>
                   </a>
                 </div>
@@ -1037,6 +1058,21 @@ export default function LandingPage() {
                   <span className="flex items-center gap-2">
                     <SlidersHorizontal className="size-3.5 text-[#8FB305]" />
                     <span>07 • Competitor Comparison Matrix</span>
+                  </span>
+                  <ChevronRight className="size-3.5 text-[#73766C]" />
+                </a>
+
+                <a
+                  href="#reviews"
+                  onClick={(e) => {
+                    scrollToSection(e, 'reviews');
+                    setMobileMenuOpen(false);
+                  }}
+                  className="flex items-center justify-between px-3.5 py-2.5 text-xs font-bold text-[#111215] hover:bg-[#F8F9F5] transition-colors"
+                >
+                  <span className="flex items-center gap-2">
+                    <Star className="size-3.5 text-[#8FB305]" />
+                    <span>08 • Verified Candidate Reviews</span>
                   </span>
                   <ChevronRight className="size-3.5 text-[#73766C]" />
                 </a>
@@ -3297,80 +3333,104 @@ export default function LandingPage() {
           </div>
 
           {/* Interactive Live Interview Simulator Mockup */}
+          {/* Interactive Live Interview Simulator Mockup with Real Recorded Video */}
           <div className="mb-14 rounded-3xl border border-white/15 bg-white/[0.02] p-4 sm:p-7 backdrop-blur-xl shadow-2xl">
             <div className="flex flex-wrap items-center justify-between gap-3 pb-4 mb-5 border-b border-white/10">
               <div className="flex items-center gap-3">
                 <div className="size-3 rounded-full bg-rose-500 animate-ping"></div>
                 <span className="text-xs font-mono font-bold text-white tracking-wide">LIVE INTERVIEW SESSION SIMULATOR</span>
                 <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold">
-                  Real-Time Spoken Dialogue • 100% Anti-Cheat Verified
+                  Actual Recorded Session • Real-Time Spoken Dialogue
                 </span>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <a
+                  href="/report/an6z8aq1wme/vresp_1793198102129_6eb6d7d4"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-3.5 py-1.5 rounded-full bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-xs font-bold transition-all flex items-center gap-1.5 shadow-2xs group cursor-pointer"
+                >
+                  <FileText size={12} className="text-emerald-400" />
+                  <span>View Candidate Report</span>
+                  <ExternalLink size={11} className="text-emerald-400 group-hover:translate-x-0.5 transition-transform" />
+                </a>
+                <a
+                  href="https://youtu.be/ZST9wB1iTHk"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/15 text-white text-xs font-bold transition-all flex items-center gap-1.5 border border-white/15"
+                >
+                  <Play size={12} className="text-[#D4F82C] fill-current" />
+                  <span>Watch on YouTube</span>
+                  <ExternalLink size={11} className="text-[#A1A79B]" />
+                </a>
                 <Link
                   to="/interview/demo"
                   className="px-3.5 py-1.5 rounded-full bg-[#D4F82C] hover:bg-[#c2e424] text-[#111215] text-xs font-black transition-all flex items-center gap-1.5 shadow-sm"
                 >
-                  <Play size={12} className="fill-current" />
                   <span>Launch Live Candidate Demo</span>
+                  <span>→</span>
                 </Link>
               </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
-              {/* Left: Candidate Video Feed & Real-time Speech Captions */}
-              <div className="lg:col-span-7 rounded-2xl bg-[#111215] border border-white/10 p-5 flex flex-col justify-between relative overflow-hidden">
+              {/* Left: Real Candidate Video Feed & Audio Interaction */}
+              <div className="lg:col-span-7 rounded-2xl bg-[#111215] border border-white/10 p-4 sm:p-5 flex flex-col justify-between relative overflow-hidden">
                 <div className="flex items-center justify-between text-xs mb-3">
                   <div className="flex items-center gap-2">
                     <span className="px-2 py-0.5 rounded bg-rose-500/20 text-rose-400 border border-rose-500/30 text-[10px] font-black flex items-center gap-1">
                       <span className="size-1.5 rounded-full bg-rose-500 animate-pulse"></span>
-                      <span>LIVE REC 1080p HD</span>
+                      <span>RECORDED REAL INTERVIEW</span>
                     </span>
                     <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold flex items-center gap-1">
                       <ShieldCheck size={11} />
-                      <span>FULLSCREEN PROCTOR & TAB-MONITOR ON</span>
+                      <span>100% UNEDITED SESSION</span>
                     </span>
                   </div>
-                  <span className="text-[11px] font-mono text-[#A1A79B]">QUESTION 1 OF 5 • 01:42</span>
+                  <a
+                    href="https://youtu.be/ZST9wB1iTHk"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[11px] font-mono text-[#D4F82C] hover:underline flex items-center gap-1"
+                  >
+                    <span>Full HD</span>
+                    <ExternalLink size={11} />
+                  </a>
                 </div>
 
-                {/* Candidate Video Simulation */}
-                <div className="relative aspect-video rounded-xl bg-neutral-900 border border-white/5 overflow-hidden flex items-center justify-center mb-4">
-                  <img
-                    src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800&auto=format&fit=crop&q=80"
-                    alt="Candidate video screening"
+                {/* Real Interactive Candidate Video Screening Player */}
+                <div className="relative aspect-video rounded-xl bg-black border border-white/15 overflow-hidden flex items-center justify-center mb-4 shadow-2xl">
+                  <iframe
+                    src="https://www.youtube-nocookie.com/embed/ZST9wB1iTHk?rel=0&modestbranding=1&playsinline=1"
+                    title="InterviewXpert Real Recorded AI Interview Session"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    allowFullScreen
+                    className="w-full h-full border-0 rounded-xl"
                     loading="lazy"
-                    decoding="async"
-                    className="w-full h-full object-cover opacity-85"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30 pointer-events-none"></div>
-                  
-                  {/* Focus tracking reticle */}
-                  <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2 py-1 rounded bg-black/60 backdrop-blur-md text-[10px] font-mono text-emerald-400 border border-white/10">
-                    <Activity size={11} className="text-emerald-400 animate-pulse" />
-                    <span>Candidate Eye-Contact: 98% Verified</span>
-                  </div>
-
-                  {/* Question Overlay Banner */}
-                  <div className="absolute bottom-3 inset-x-3 p-3 rounded-lg bg-black/80 backdrop-blur-md border border-white/15">
-                    <p className="text-[10px] font-bold uppercase text-[#D4F82C] mb-0.5">Current Core Question</p>
-                    <p className="text-xs sm:text-sm font-semibold text-white leading-snug">
-                      "How do you design a resilient caching layer to mitigate cache stampedes during flash sales?"
-                    </p>
-                  </div>
                 </div>
 
-                {/* Live Candidate Speech Caption Box */}
-                <div className="p-3.5 rounded-xl bg-white/[0.04] border border-white/10 backdrop-blur-xs">
-                  <div className="flex items-center justify-between mb-1">
+                {/* Real-time Session Narrative Box with Report Link */}
+                <div className="p-3.5 rounded-xl bg-white/[0.04] border border-white/10 backdrop-blur-xs space-y-1.5">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
                     <span className="flex items-center gap-1.5 text-[10px] font-mono font-bold text-emerald-400 uppercase">
                       <span className="size-2 rounded-full bg-emerald-500 animate-ping"></span>
-                      <span>Real-Time Searchable Transcript (Live Audio Feed)</span>
+                      <span>Actual Interview Session • Autonomous AI Questioning</span>
                     </span>
-                    <span className="text-[10px] text-[#A1A79B] font-mono">128 WPM</span>
+                    <a
+                      href="/report/an6z8aq1wme/vresp_1793198102129_6eb6d7d4"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-[11px] font-bold text-[#D4F82C] hover:underline"
+                    >
+                      <FileCheck size={12} className="text-[#D4F82C]" />
+                      <span>Open Candidate Evaluation Report</span>
+                      <ExternalLink size={10} />
+                    </a>
                   </div>
-                  <p className="text-xs font-medium text-neutral-200 italic leading-relaxed">
-                    "We implement a Redis cluster with probabilistic early expiration and mutex locks to ensure only one worker thread recalculates hot cache entries while secondary requests receive stale-while-revalidate data..."
+                  <p className="text-xs font-medium text-neutral-200 leading-relaxed">
+                    Watch the actual live recording above to see InterviewXpert conduct low-latency 2-way voice evaluation, dynamic cross-questioning, and automated objective scoring in real time.
                   </p>
                 </div>
               </div>
@@ -3433,12 +3493,27 @@ export default function LandingPage() {
                   </div>
                 </div>
 
-                {/* Scorecard Preview Callout */}
-                <div className="p-3 rounded-xl bg-black/40 border border-white/10 text-xs text-[#A1A79B] flex items-center justify-between">
-                  <span>Personalised Evaluation Report & Evidence Dossier Generated on Finish</span>
-                  <span className="font-bold text-white flex items-center gap-1">
-                    Auto-Graded <CheckCircle2 size={13} className="text-emerald-400" />
-                  </span>
+                {/* Scorecard Preview Callout with Live Report Button */}
+                <div className="p-3.5 rounded-xl bg-gradient-to-br from-emerald-500/15 via-white/[0.03] to-black/60 border border-emerald-500/30 text-xs text-[#A1A79B] flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
+                  <div className="space-y-0.5">
+                    <div className="flex items-center gap-1.5 text-white font-bold text-xs">
+                      <FileCheck size={14} className="text-emerald-400" />
+                      <span>Live Candidate Report Available</span>
+                      <span className="px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 text-[9px] font-mono font-bold uppercase">Real Session</span>
+                    </div>
+                    <p className="text-[11px] text-[#A1A79B]">
+                      Deep question rubrics, spoken audio transcript & verified anti-cheat integrity.
+                    </p>
+                  </div>
+                  <a
+                    href="/report/an6z8aq1wme/vresp_1793198102129_6eb6d7d4"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-lg bg-[#D4F82C] hover:bg-[#c2e424] text-[#111215] font-black text-xs transition-all shadow-xs shrink-0 cursor-pointer"
+                  >
+                    <span>View Real Report</span>
+                    <ExternalLink size={12} />
+                  </a>
                 </div>
               </div>
             </div>
@@ -4234,9 +4309,15 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ── SECTION: VERIFIED CANDIDATE WALL OF LOVE & REVIEWS ── */}
+      <section id="reviews" className="smooth-scroll-section relative z-59 min-h-[auto] flex flex-col justify-center bg-[#0D0F12] text-white scroll-mt-20 py-16 sm:py-24 border-b border-white/10 overflow-x-clip">
+        <OrganicSectionCurve index={9} isDark={true} />
+        <CandidateWallOfLove />
+      </section>
+
       {/* ── SECTION 6: PRICING ESTIMATOR CARD ── */}
       <section id="pricing" className="smooth-scroll-section relative z-60 min-h-[auto] sm:min-h-[calc(100vh-4.5rem)] flex flex-col justify-center bg-[#F8F9F5] scroll-mt-24 transition-all duration-300 overflow-x-clip pt-16 sm:pt-24 pb-12 sm:pb-20">
-        <OrganicSectionCurve index={9} />
+        <OrganicSectionCurve index={10} />
         <div className="flex-1 flex flex-col justify-center py-6 sm:py-8 px-4 sm:px-8 lg:px-12 max-w-7xl mx-auto w-full relative z-10">
           
           {/* Pricing Header */}
@@ -4883,7 +4964,7 @@ export default function LandingPage() {
 
       {/* ── SECTION 7: FAQ ACCORDION CARD ("A little more clarity.") ── */}
       <section id="faq" className="smooth-scroll-section relative z-70 min-h-[auto] sm:min-h-[calc(100vh-4.5rem)] flex flex-col justify-center bg-[#F8F9F5] scroll-mt-18 transition-all duration-300 overflow-x-clip py-10 sm:py-16">
-        <OrganicSectionCurve index={10} />
+        <OrganicSectionCurve index={11} />
         <div className="flex-1 flex flex-col justify-center py-6 sm:py-8 px-4 sm:px-8 lg:px-12 max-w-7xl mx-auto w-full relative z-10">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-10 items-start">
             
@@ -4936,7 +5017,7 @@ export default function LandingPage() {
 
       {/* ── SECTION 8: DARK CTA CARD ("Your next great hire. A clearer way forward.") ── */}
       <section id="start-trial" className="smooth-scroll-section relative z-80 min-h-[auto] sm:min-h-[calc(100vh-4.5rem)] flex flex-col justify-center bg-[#111215] text-white scroll-mt-18 transition-all duration-300 overflow-x-clip py-12 sm:py-16">
-        <OrganicSectionCurve index={11} isDark={true} />
+        <OrganicSectionCurve index={12} isDark={true} />
         <div className="flex-1 flex items-center py-8 sm:py-12 px-4 sm:px-8 lg:px-12 max-w-7xl mx-auto w-full relative z-10">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 sm:gap-12 w-full">
             
@@ -5057,6 +5138,8 @@ export default function LandingPage() {
               </div>
               <ul className="space-y-2 text-[#73766C]">
                 <li><Link to="/candidate" className="hover:text-[#111215] transition-colors font-medium text-[#111215] flex items-center gap-1"><span>Candidate Career Portal</span><span className="text-[9px] px-1.5 py-0.2 rounded-full bg-[#D4F82C] text-[#111215] font-bold">New</span></Link></li>
+                <li><a href="#reviews" onClick={(e) => scrollToSection(e, 'reviews')} className="hover:text-[#111215] transition-colors font-medium">Candidate Wall of Love</a></li>
+                <li><Link to="/reviews" className="hover:text-[#111215] transition-colors font-medium">Verified Reviews Hub</Link></li>
                 <li><Link to="/auth" className="hover:text-[#111215] transition-colors font-medium">Recruiter & ATS Login</Link></li>
                 <li><a href="#client-portal" onClick={(e) => scrollToSection(e, 'client-portal')} className="hover:text-[#111215] transition-colors">Client Review Gateway</a></li>
                 <li><Link to="/active-jobs" className="hover:text-[#111215] transition-colors">Public Job Board</Link></li>
@@ -5562,8 +5645,8 @@ export default function LandingPage() {
             {/* Video Iframe Container (16:9 ratio with YouTube embed) */}
             <div className="relative w-full aspect-video bg-black overflow-hidden">
               <iframe
-                src="https://www.youtube.com/embed/oEm2TFwcBas?autoplay=1&rel=0&modestbranding=1&playsinline=1"
-                title="InterviewXpert Autonomous AI Recruiter Demo"
+                src="https://www.youtube-nocookie.com/embed/ZST9wB1iTHk?autoplay=1&rel=0&modestbranding=1&playsinline=1"
+                title="InterviewXpert Real Recorded AI Interview Demo"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                 allowFullScreen
                 className="w-full h-full border-0"

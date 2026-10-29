@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { collection, getDocs, query, where, orderBy } from 'firebase/firestore';
 import { db } from '../services/firebase';
-import { Star, MessageSquare, Quote, User, Briefcase, ArrowLeft } from 'lucide-react';
+import { Star, MessageSquare, Quote, User, Briefcase, ArrowLeft, Search, CheckCircle2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import Navbar from '../components/landing/Navbar';
 import { ThemeProvider } from '../context/ThemeContext';
+
+import { VERIFIED_CANDIDATE_REVIEWS } from '../data/verifiedReviews';
 
 interface Review {
   id: string;
@@ -13,7 +15,20 @@ interface Review {
   rating: number;
   createdAt: any;
   userType?: 'student' | 'candidate' | 'recruiter';
+  tag?: string;
+  verified?: boolean;
 }
+
+const BASE_REVIEWS: Review[] = VERIFIED_CANDIDATE_REVIEWS.map(r => ({
+  id: r.id,
+  name: r.name,
+  review: r.review,
+  rating: r.rating,
+  createdAt: { toDate: () => new Date('2026-04-15') },
+  userType: 'candidate',
+  tag: r.tag,
+  verified: true,
+}));
 
 const StarDisplay: React.FC<{ rating: number }> = ({ rating }) => (
   <div className="flex gap-1">
@@ -29,9 +44,10 @@ const StarDisplay: React.FC<{ rating: number }> = ({ rating }) => (
 );
 
 const ReviewsPageContent: React.FC = () => {
-  const [reviews, setReviews] = useState<Review[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [reviews, setReviews] = useState<Review[]>(BASE_REVIEWS);
+  const [loading, setLoading] = useState(false);
   const [filter, setFilter] = useState<'all' | 'candidate' | 'recruiter'>('all');
+  const [search, setSearch] = useState('');
 
   useEffect(() => {
     document.title = "User Reviews | InterviewXpert";
@@ -47,11 +63,16 @@ const ReviewsPageContent: React.FC = () => {
           id: doc.id,
           ...doc.data(),
         })) as Review[];
-        setReviews(fetchedReviews);
+        
+        // Merge Firestore reviews with baseline verified reviews, avoiding duplicates
+        const merged = [
+          ...fetchedReviews,
+          ...BASE_REVIEWS.filter(br => !fetchedReviews.some(fr => fr.id === br.id))
+        ];
+        setReviews(merged);
       } catch (error) {
-        console.error("Error fetching reviews:", error);
-      } finally {
-        setLoading(false);
+        console.warn("Using baseline verified reviews due to fetch fallback:", error);
+        setReviews(BASE_REVIEWS);
       }
     };
 
@@ -59,9 +80,21 @@ const ReviewsPageContent: React.FC = () => {
   }, []);
 
   const filteredReviews = reviews.filter(review => {
-    if (filter === 'all') return true;
-    if (filter === 'candidate') return review.userType === 'candidate' || review.userType === 'student';
-    return review.userType === filter;
+    const matchesFilter = 
+      filter === 'all' 
+        ? true 
+        : filter === 'candidate' 
+          ? review.userType === 'candidate' || review.userType === 'student' 
+          : review.userType === filter;
+
+    const s = search.toLowerCase().trim();
+    const matchesSearch = 
+      !s || 
+      review.name.toLowerCase().includes(s) || 
+      review.review.toLowerCase().includes(s) ||
+      (review.tag && review.tag.toLowerCase().includes(s));
+
+    return matchesFilter && matchesSearch;
   });
 
   return (
@@ -92,11 +125,24 @@ const ReviewsPageContent: React.FC = () => {
           </div>
         </div>
 
-        {/* Filter Buttons */}
-        <div className="flex justify-center items-center gap-2 mb-12 p-1.5 bg-gray-100 dark:bg-white/5 rounded-full border border-gray-200 dark:border-white/10 animate-in fade-in slide-in-from-bottom-6 duration-700 delay-100 w-full max-w-md mx-auto">
-          <button onClick={() => setFilter('all')} className={`flex-1 px-4 py-2 text-sm font-bold rounded-full transition-all ${filter === 'all' ? 'bg-white dark:bg-white/10 text-primary shadow-md' : 'text-gray-500 dark:text-gray-400 hover:text-primary'}`}>All</button>
-          <button onClick={() => setFilter('candidate')} className={`flex-1 px-4 py-2 text-sm font-bold rounded-full transition-all flex items-center justify-center gap-2 ${filter === 'candidate' ? 'bg-white dark:bg-white/10 text-primary shadow-md' : 'text-gray-500 dark:text-gray-400 hover:text-primary'}`}><User size={14}/> Candidates</button>
-          <button onClick={() => setFilter('recruiter')} className={`flex-1 px-4 py-2 text-sm font-bold rounded-full transition-all flex items-center justify-center gap-2 ${filter === 'recruiter' ? 'bg-white dark:bg-white/10 text-primary shadow-md' : 'text-gray-500 dark:text-gray-400 hover:text-primary'}`}><Briefcase size={14}/> Recruiters</button>
+        {/* Filter Buttons & Search */}
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-12 max-w-2xl mx-auto">
+          <div className="flex items-center gap-2 p-1.5 bg-gray-100 dark:bg-white/5 rounded-full border border-gray-200 dark:border-white/10 w-full sm:w-auto">
+            <button onClick={() => setFilter('all')} className={`flex-1 sm:flex-initial px-4 py-2 text-sm font-bold rounded-full transition-all cursor-pointer ${filter === 'all' ? 'bg-white dark:bg-white/10 text-primary shadow-md' : 'text-gray-500 dark:text-gray-400 hover:text-primary'}`}>All Reviews</button>
+            <button onClick={() => setFilter('candidate')} className={`flex-1 sm:flex-initial px-4 py-2 text-sm font-bold rounded-full transition-all flex items-center justify-center gap-2 cursor-pointer ${filter === 'candidate' ? 'bg-white dark:bg-white/10 text-primary shadow-md' : 'text-gray-500 dark:text-gray-400 hover:text-primary'}`}><User size={14}/> Candidates</button>
+            <button onClick={() => setFilter('recruiter')} className={`flex-1 sm:flex-initial px-4 py-2 text-sm font-bold rounded-full transition-all flex items-center justify-center gap-2 cursor-pointer ${filter === 'recruiter' ? 'bg-white dark:bg-white/10 text-primary shadow-md' : 'text-gray-500 dark:text-gray-400 hover:text-primary'}`}><Briefcase size={14}/> Recruiters</button>
+          </div>
+
+          <div className="relative w-full sm:w-64">
+            <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search reviews..."
+              className="w-full pl-9 pr-3 py-2 text-sm bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-full focus:outline-hidden focus:border-blue-500 text-slate-800 dark:text-white placeholder:text-gray-400"
+            />
+          </div>
         </div>
 
         {loading ? (
@@ -106,33 +152,38 @@ const ReviewsPageContent: React.FC = () => {
         ) : (
           <div className="grid gap-8 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
             {filteredReviews.map((review, idx) => (
-              <div key={review.id} className="bg-white/80 dark:bg-white/5 backdrop-blur-sm border border-slate-200 dark:border-white/10 rounded-3xl p-8 flex flex-col transition-all duration-300 hover:shadow-2xl hover:shadow-blue-500/10 hover:-translate-y-2 hover:scale-[1.02] hover:border-blue-400 dark:hover:border-blue-500/50 group animate-in fade-in slide-in-from-bottom-4" style={{ animationDelay: `${(idx % 10) * 50}ms` }}>
-                <div className="flex-1 mb-8 relative">
-                  <Quote className="absolute -top-5 -left-5 w-16 h-16 text-gray-100 dark:text-white/5 transition-colors duration-300" />
-                  <StarDisplay rating={review.rating} />
-                  <p className="mt-5 text-gray-700 dark:text-gray-300 text-base leading-relaxed relative z-10">
-                    {review.review}
+              <div key={review.id} className="bg-white/80 dark:bg-white/5 backdrop-blur-sm border border-slate-200 dark:border-white/10 rounded-3xl p-8 flex flex-col justify-between transition-all duration-300 hover:shadow-2xl hover:shadow-blue-500/10 hover:-translate-y-2 hover:scale-[1.02] hover:border-blue-400 dark:hover:border-blue-500/50 group animate-in fade-in slide-in-from-bottom-4" style={{ animationDelay: `${(idx % 10) * 50}ms` }}>
+                <div className="flex-1 mb-6 relative">
+                  <Quote className="absolute -top-5 -left-5 w-16 h-16 text-gray-100 dark:text-white/5 transition-colors duration-300 pointer-events-none" />
+                  <div className="flex items-center justify-between mb-3 relative z-10">
+                    <StarDisplay rating={review.rating} />
+                    {review.tag && (
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-blue-50 dark:bg-white/10 text-blue-600 dark:text-[#D4F82C] border border-blue-200/50 dark:border-white/10">
+                        {review.tag}
+                      </span>
+                    )}
+                  </div>
+                  <p className="mt-3 text-gray-700 dark:text-gray-300 text-base leading-relaxed relative z-10 font-normal">
+                    "{review.review}"
                   </p>
                 </div>
-                <div className="flex items-center gap-4">
-                  <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-lg ${review.userType === 'recruiter' ? 'bg-gradient-to-br from-blue-500 to-indigo-600' : 'bg-gradient-to-br from-green-500 to-teal-600'}`}>
+                <div className="flex items-center gap-4 pt-4 border-t border-gray-100 dark:border-white/5">
+                  <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-lg shrink-0 ${review.userType === 'recruiter' ? 'bg-gradient-to-br from-blue-500 to-indigo-600' : 'bg-gradient-to-br from-emerald-500 to-teal-600'}`}>
                     {review.name.split(' ').map(n => n[0]).join('')}
                   </div>
-                  <div className="flex-1">
-                    <p className="font-bold text-gray-900 dark:text-white">{review.name}</p>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-gray-900 dark:text-white flex items-center gap-1.5 truncate">
+                      <span>{review.name}</span>
+                      <CheckCircle2 size={13} className="text-emerald-500 shrink-0" />
+                    </p>
                     <div className="flex items-center gap-2">
-                      {review.userType && (
-                          <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
-                              review.userType === 'recruiter' 
-                              ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300' 
-                              : 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
-                          }`}>
-                              {review.userType === 'student' || review.userType === 'candidate' ? 'Candidate' : review.userType.charAt(0).toUpperCase() + review.userType.slice(1)}
-                          </span>
-                      )}
-                      <p className="text-xs text-gray-500 dark:text-gray-400">
-                        {review.createdAt?.toDate().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-                      </p>
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
+                          review.userType === 'recruiter' 
+                          ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300' 
+                          : 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
+                      }`}>
+                          {review.userType === 'student' || review.userType === 'candidate' ? 'Candidate' : review.userType ? review.userType.charAt(0).toUpperCase() + review.userType.slice(1) : 'Candidate'}
+                      </span>
                     </div>
                   </div>
                 </div>
