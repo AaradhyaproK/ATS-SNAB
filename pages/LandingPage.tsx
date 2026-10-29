@@ -3355,7 +3355,7 @@ export default function LandingPage() {
                   <ExternalLink size={11} className="text-emerald-400 group-hover:translate-x-0.5 transition-transform" />
                 </a>
                 <a
-                  href="https://youtu.be/ZST9wB1iTHk"
+                  href="https://youtu.be/F07OzW1yi2k"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/15 text-white text-xs font-bold transition-all flex items-center gap-1.5 border border-white/15"
@@ -3389,7 +3389,7 @@ export default function LandingPage() {
                     </span>
                   </div>
                   <a
-                    href="https://youtu.be/ZST9wB1iTHk"
+                    href="https://youtu.be/F07OzW1yi2k"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-[11px] font-mono text-[#D4F82C] hover:underline flex items-center gap-1"
@@ -3402,7 +3402,7 @@ export default function LandingPage() {
                 {/* Real Interactive Candidate Video Screening Player */}
                 <div className="relative aspect-video rounded-xl bg-black border border-white/15 overflow-hidden flex items-center justify-center mb-4 shadow-2xl">
                   <iframe
-                    src="https://www.youtube-nocookie.com/embed/ZST9wB1iTHk?rel=0&modestbranding=1&playsinline=1"
+                    src="https://www.youtube-nocookie.com/embed/F07OzW1yi2k?rel=0&modestbranding=1&playsinline=1"
                     title="InterviewXpert Real Recorded AI Interview Session"
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                     allowFullScreen
@@ -5645,7 +5645,7 @@ export default function LandingPage() {
             {/* Video Iframe Container (16:9 ratio with YouTube embed) */}
             <div className="relative w-full aspect-video bg-black overflow-hidden">
               <iframe
-                src="https://www.youtube-nocookie.com/embed/ZST9wB1iTHk?autoplay=1&rel=0&modestbranding=1&playsinline=1"
+                src="https://www.youtube-nocookie.com/embed/F07OzW1yi2k?autoplay=1&rel=0&modestbranding=1&playsinline=1"
                 title="InterviewXpert Real Recorded AI Interview Demo"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                 allowFullScreen
