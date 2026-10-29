@@ -268,7 +268,24 @@ export default function LandingPage() {
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [bookingModalOpen, setBookingModalOpen] = useState(false);
+  const [videoModalOpen, setVideoModalOpen] = useState(false);
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setVideoModalOpen(false);
+      }
+    };
+    if (videoModalOpen) {
+      window.addEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = 'hidden';
+    }
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = '';
+    };
+  }, [videoModalOpen]);
 
   // Client Presentation Form State
   const [leadForm, setLeadForm] = useState({
@@ -879,13 +896,13 @@ export default function LandingPage() {
                   </button>
 
                   <a
-                    href="https://wa.me/919876543210?text=Hi%20hireX%20team,%20I%20would%20like%20a%20demo%20of%20the%20platform."
+                    href="https://wa.me/919511779317?text=Hi%20InterviewXpert%20team,%20I%20would%20like%20a%20demo%20of%20the%20platform."
                     target="_blank"
                     rel="noopener noreferrer"
                     className="w-full flex items-center justify-center gap-2 py-2.5 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs transition-colors"
                   >
                     <MessageCircle className="size-3.5" />
-                    <span>Chat on WhatsApp</span>
+                    <span>Chat on WhatsApp (+91 95117 79317)</span>
                   </a>
                 </>
               )}
@@ -938,14 +955,17 @@ export default function LandingPage() {
                   <span className="text-[#D4F82C] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform">↗</span>
                 </button>
 
-                <a
-                  href="#pipeline"
-                  onClick={(e) => scrollToSection(e, 'pipeline')}
-                  className="w-full sm:w-auto inline-flex h-12 items-center justify-center gap-2 px-5 text-sm font-bold text-[#111215] hover:text-[#575A51] transition-colors cursor-pointer"
+                <button
+                  type="button"
+                  onClick={() => setVideoModalOpen(true)}
+                  className="w-full sm:w-auto inline-flex h-12 items-center justify-center gap-2.5 px-6 rounded-full border border-[#E4E7DC] hover:border-[#111215] bg-white hover:bg-[#F8F9F5] text-sm font-bold text-[#111215] transition-all shadow-xs cursor-pointer group"
                 >
+                  <span className="size-6 rounded-full bg-[#111215] text-[#D4F82C] flex items-center justify-center shadow-xs group-hover:scale-110 transition-transform">
+                    <Play className="size-3 fill-current ml-0.5" />
+                  </span>
                   <span>Watch interactive demo</span>
-                  <span>↗</span>
-                </a>
+                  <span className="text-[10px] font-mono font-black px-1.5 py-0.5 rounded-full bg-[#D4F82C] text-[#111215]">30s</span>
+                </button>
               </div>
 
               <div className="text-xs text-[#73766C] flex items-center gap-2 pt-2">
@@ -2481,7 +2501,15 @@ export default function LandingPage() {
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setVideoModalOpen(true)}
+                className="px-5 py-2.5 rounded-full bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition-all border border-white/20 flex items-center gap-2 cursor-pointer shadow-sm group"
+              >
+                <Play size={12} className="fill-current text-[#D4F82C] group-hover:scale-110 transition-transform" />
+                <span>Watch 30s Video Demo</span>
+              </button>
               <Link
                 to="/interview/demo"
                 className="px-5 py-2.5 rounded-full bg-[#D4F82C] hover:bg-[#c2e424] text-[#111215] text-xs font-black transition-all shadow-sm flex items-center gap-1.5"
@@ -3170,9 +3198,9 @@ export default function LandingPage() {
                   </a>
                 </li>
                 <li>
-                  <a href="https://wa.me/919876543210" target="_blank" rel="noopener noreferrer" className="hover:text-[#111215] transition-colors flex items-center gap-1.5 text-emerald-700 font-bold">
+                  <a href="https://wa.me/919511779317?text=Hi%20InterviewXpert%20team,%20I%20would%20like%20to%20know%20more%20about%20the%20platform%20and%20request%20a%20demo." target="_blank" rel="noopener noreferrer" className="hover:text-[#111215] transition-colors flex items-center gap-1.5 text-emerald-700 font-bold">
                     <MessageCircle size={12} />
-                    <span>WhatsApp Business</span>
+                    <span>WhatsApp Business (+91 95117 79317)</span>
                   </a>
                 </li>
                 <li>
@@ -3582,6 +3610,99 @@ export default function LandingPage() {
               </div>
             )}
 
+          </div>
+        </div>
+      )}
+
+      {/* ── Best-in-Class Cinematic Demo Video Modal ── */}
+      {videoModalOpen && (
+        <div
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setVideoModalOpen(false);
+          }}
+          className="fixed inset-0 z-[250] flex items-center justify-center p-3 sm:p-6 md:p-8 bg-black/90 backdrop-blur-2xl animate-in fade-in duration-200"
+          role="dialog"
+          aria-modal="true"
+          aria-label="InterviewXpert Platform Demo Video"
+        >
+          {/* Ambient Lime Glow Aura */}
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] sm:w-[650px] h-[350px] bg-[#D4F82C]/15 rounded-full blur-[140px] pointer-events-none" />
+
+          <div
+            className="relative w-full max-w-4xl bg-[#0D0E12] rounded-2xl sm:rounded-3xl border border-[#D4F82C]/40 shadow-[0_0_80px_rgba(212,248,44,0.18),0_25px_60px_-15px_rgba(0,0,0,0.9)] overflow-hidden flex flex-col animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Top Control Bar */}
+            <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-3.5 bg-[#14151B] border-b border-white/10">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <span className="relative flex size-2.5 shrink-0">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#D4F82C] opacity-75"></span>
+                  <span className="relative inline-flex rounded-full size-2.5 bg-[#D4F82C]"></span>
+                </span>
+                <span className="text-xs sm:text-sm font-black text-white tracking-tight truncate">
+                  InterviewXpert <span className="text-[#D4F82C]">Platform Demo</span>
+                </span>
+                <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-white/5 border border-white/10 text-[10px] font-mono font-bold text-neutral-300">
+                  4K • 60 FPS
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setVideoModalOpen(false)}
+                  className="size-8 sm:size-8.5 rounded-full border border-white/10 bg-white/5 hover:bg-white/15 text-neutral-300 hover:text-white flex items-center justify-center transition-all cursor-pointer shadow-xs active:scale-95"
+                  title="Close Video (Esc)"
+                  aria-label="Close modal"
+                >
+                  <X className="size-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* Video Iframe Container (16:9 ratio with YouTube embed) */}
+            <div className="relative w-full aspect-video bg-black overflow-hidden">
+              <iframe
+                src="https://www.youtube.com/embed/oEm2TFwcBas?autoplay=1&rel=0&modestbranding=1&playsinline=1"
+                title="InterviewXpert Autonomous AI Recruiter Demo"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowFullScreen
+                className="w-full h-full border-0"
+              />
+            </div>
+
+            {/* Modal Bottom Interactive Action Strip */}
+            <div className="p-4 sm:p-5 bg-[#14151B] border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+              <div className="text-center sm:text-left">
+                <p className="font-bold text-white text-xs sm:text-sm">
+                  Ready to automate your engineering screening?
+                </p>
+                <p className="text-[11px] sm:text-xs text-neutral-400 mt-0.5">
+                  Full access included: AI Question Gen, Voice Interviewer, Anti-Cheat & Candidate Dossiers.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2.5 w-full sm:w-auto shrink-0">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setVideoModalOpen(false);
+                    setBookingModalOpen(true);
+                  }}
+                  className="flex-1 sm:flex-initial px-4 py-2.5 rounded-full bg-white/10 hover:bg-white/15 text-white font-bold transition-all border border-white/15 text-xs text-center cursor-pointer"
+                >
+                  Schedule 1-on-1 Demo
+                </button>
+                <Link
+                  to="/auth"
+                  onClick={() => setVideoModalOpen(false)}
+                  className="flex-1 sm:flex-initial px-5 py-2.5 rounded-full bg-[#D4F82C] hover:bg-[#c2e424] text-[#111215] font-black transition-all shadow-md text-xs text-center flex items-center justify-center gap-1.5"
+                >
+                  <span>Start Free Trial</span>
+                  <ArrowRight size={13} />
+                </Link>
+              </div>
+            </div>
           </div>
         </div>
       )}
