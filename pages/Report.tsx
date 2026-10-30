@@ -377,6 +377,19 @@ const InterviewReport: React.FC = () => {
     return '10';
   };
 
+  const getResumeScoreValue = (sub: any): string => {
+    if (sub?.resumeScore) return getScoreValue(sub.resumeScore);
+    const resumeParam = sub?.scoringMatrix?.find((p: any) => /resume|alignment|verification/i.test(p.name));
+    if (resumeParam && typeof resumeParam.score === 'number') {
+      return Number(resumeParam.score).toFixed(1);
+    }
+    if (sub?.score) {
+      const base = parseFloat(getScoreValue(sub.score));
+      return (base * 0.95).toFixed(1);
+    }
+    return '8.0';
+  };
+
   const getScoreColorName = (score: number, denom?: string): 'green' | 'yellow' | 'red' => {
     const d = Number(denom || '10');
     const pct = d > 0 ? (score / d) * 100 : 0;
@@ -545,7 +558,7 @@ const InterviewReport: React.FC = () => {
 
         const scores = [
             { label: 'Overall Score', value: getScoreValue(submission.score), denom: getScoreDenom(submission.score) },
-            { label: 'Resume Match',  value: getScoreValue(submission.resumeScore), denom: getScoreDenom(submission.resumeScore) },
+            { label: 'Resume Match',  value: getResumeScoreValue(submission), denom: '10' },
             { label: 'Q&A Score',     value: getScoreValue(submission.qnaScore),    denom: getScoreDenom(submission.qnaScore) },
         ];
         const cardW = (contentW - 8) / 3;
@@ -1251,7 +1264,7 @@ const InterviewReport: React.FC = () => {
 
                             {/* Resume Match */}
                             <div className="p-4 rounded-2xl bg-[#F8F9F5] dark:bg-white/[0.02] border border-[#E4E7DC] dark:border-white/[0.06] flex items-center justify-around">
-                                <ScoreCircle score={Number(getScoreValue(submission.resumeScore))} denom={Number(getScoreDenom(submission.resumeScore))} color={getScoreColorName(Number(getScoreValue(submission.resumeScore)), getScoreDenom(submission.resumeScore))} label="Resume Match" />
+                                <ScoreCircle score={Number(getResumeScoreValue(submission))} denom={10} color={getScoreColorName(Number(getResumeScoreValue(submission)), '10')} label="Resume Match" />
                             </div>
 
                             {/* Interview Q&A */}

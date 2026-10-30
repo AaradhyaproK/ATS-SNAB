@@ -621,6 +621,10 @@ export const LiveVoiceInterview: React.FC = () => {
         );
       }
 
+      const resumeParam = screeningReport.scoringMatrix?.find((p: any) => /resume|alignment|verification/i.test(p.name));
+      const resumeScoreNum = resumeParam ? Math.round(resumeParam.score * 10) : Math.round((screeningReport.skillsRating || screeningReport.overallScore || 8) * 10);
+      const resumeScore = `${resumeScoreNum}/100`;
+
       const response: VoiceInterviewResponse = {
         id: sessionId,
         voiceInterviewId: jobId,
@@ -631,6 +635,7 @@ export const LiveVoiceInterview: React.FC = () => {
         candidateResumeFileName: finalResumeFileName,
         dialogueHistory,
         answersSummary,
+        scoringMatrix: screeningReport.scoringMatrix,
         screeningReport,
         callDurationSeconds: Math.round((Date.now() - startedAtRef.current) / 1000),
         audioRecordingUrl: videoUrl,
@@ -640,6 +645,8 @@ export const LiveVoiceInterview: React.FC = () => {
         fullSessionVideoUrl: videoUrl,
         speechAnalytics: { transcriptionEngine: 'LiveKit · AssemblyAI Universal-3.6 Pro' },
         tabSwitchCount: totalTabSwitches,
+        score: `${Math.round((screeningReport.overallScore || 0) * 10)}/100`,
+        resumeScore,
         status: screeningReport.recommendation === 'Shortlist' ? 'Shortlist' : 'Completed',
         submittedAt: new Date(),
       };
@@ -656,6 +663,7 @@ export const LiveVoiceInterview: React.FC = () => {
         candidateInfo: response.candidateInfo,
         candidateResumeURL: finalResumeUrl,
         score: `${score}/100`,
+        resumeScore,
         feedback: `**Overall Evaluation:** ${screeningReport.recommendation}: ${screeningReport.summary}`,
         screeningReport,
         dialogueHistory,

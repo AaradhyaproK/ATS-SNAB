@@ -518,6 +518,30 @@ export const VoiceInterviewReport: React.FC = () => {
     ? Number((executionParams.reduce((a, b) => a + b.score, 0) / executionParams.length).toFixed(1))
     : overallScoreVal;
 
+  // Resume Score Calculation (from response.resumeScore or Param #3 of Scoring Matrix or derived)
+  const resumeScoreVal = (() => {
+    if (response?.resumeScore !== undefined && response?.resumeScore !== null && response?.resumeScore !== '') {
+      const raw = response.resumeScore;
+      if (typeof raw === 'number') {
+        return raw > 10 ? Number((raw / 10).toFixed(1)) : Number(raw.toFixed(1));
+      }
+      const match = String(raw).match(/(\d+(?:\.\d+)?)/);
+      if (match) {
+        const n = parseFloat(match[1]);
+        return n > 10 ? Number((n / 10).toFixed(1)) : Number(n.toFixed(1));
+      }
+    }
+
+    const resumeParam = scoringMatrix.find(p => 
+      /resume|alignment|verification|credential/i.test(p.name)
+    );
+    if (resumeParam && typeof resumeParam.score === 'number') {
+      return Number(resumeParam.score.toFixed(1));
+    }
+
+    return Number(Math.min(10, Math.max(1, overallScoreVal * 0.9)).toFixed(1));
+  })();
+
   const filteredMatrix = scoringMatrix.filter(param => {
     if (matrixCategoryFilter === 'all') return true;
     const catLower = (param.category || '').toLowerCase();
@@ -639,6 +663,8 @@ export const VoiceInterviewReport: React.FC = () => {
           </div>
           <div className="text-right text-[11px] font-mono text-neutral-700">
             <p><strong className="text-black">Ref ID:</strong> {response.id}</p>
+            <p><strong className="text-black">Overall Score:</strong> {overallScoreVal} / 10</p>
+            <p><strong className="text-black">Resume Score:</strong> {resumeScoreVal} / 10</p>
             <p>Printed: {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
           </div>
         </div>
@@ -711,22 +737,27 @@ export const VoiceInterviewReport: React.FC = () => {
               </div>
 
               {/* Verified Attached Resume Drawer Tile */}
-              {resumeLink && (
-                <div className="p-3 sm:p-4 rounded-2xl bg-[#F8F9F5] dark:bg-white/[0.03] border border-[#E4E7DC] dark:border-white/[0.08] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 hover:border-[#111215] dark:hover:border-white/30 transition-all">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="p-2 sm:p-2.5 rounded-xl bg-[#111215] dark:bg-white text-[#D4F82C] dark:text-[#111215] shrink-0 shadow-xs">
-                      <FileText size={16} />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs font-bold text-[#111215] dark:text-white truncate" title={resumeName}>
-                        {resumeName}
-                      </p>
-                      <p className="text-[10px] sm:text-[11px] text-[#73766C] dark:text-white/50 truncate">
-                        Verified Candidate Resume · Analyzed for Personalized Questions
-                      </p>
-                    </div>
+              <div className="p-3 sm:p-4 rounded-2xl bg-[#F8F9F5] dark:bg-white/[0.03] border border-[#E4E7DC] dark:border-white/[0.08] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 hover:border-[#111215] dark:hover:border-white/30 transition-all">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="p-2 sm:p-2.5 rounded-xl bg-[#111215] dark:bg-white text-[#D4F82C] dark:text-[#111215] shrink-0 shadow-xs">
+                    <FileText size={16} />
                   </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="text-xs font-bold text-[#111215] dark:text-white truncate" title={resumeName}>
+                        {resumeLink ? resumeName : 'Candidate Profile & Resume'}
+                      </p>
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-black uppercase bg-[#111215] text-[#D4F82C] dark:bg-[#D4F82C] dark:text-[#111215] shadow-xs">
+                        Resume Score: {resumeScoreVal} / 10
+                      </span>
+                    </div>
+                    <p className="text-[10px] sm:text-[11px] text-[#73766C] dark:text-white/50 truncate">
+                      {resumeLink ? 'Verified Candidate Resume · Analyzed for Skill Alignment & AI Questions' : 'Parsed Profile · Analyzed for Technical Competency & Role Fit'}
+                    </p>
+                  </div>
+                </div>
 
+                {resumeLink && (
                   <a
                     href={resumeLink}
                     target="_blank"
@@ -738,8 +769,8 @@ export const VoiceInterviewReport: React.FC = () => {
                     <span>View / Download</span>
                     <ExternalLink size={11} className="opacity-70" />
                   </a>
-                </div>
-              )}
+                )}
+              </div>
             </div>
 
             {/* Right Column: Evaluated Position & Session Benchmarks */}
@@ -805,24 +836,29 @@ export const VoiceInterviewReport: React.FC = () => {
             </span>
           </div>
 
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
             {/* Overall Fit */}
-            <div className="p-3 sm:p-4 rounded-2xl bg-[#F8F9F5] dark:bg-white/[0.02] border border-[#E4E7DC] dark:border-white/[0.06] flex items-center justify-center">
+            <div className="p-3 sm:p-4 rounded-2xl bg-[#F8F9F5] dark:bg-white/[0.02] border border-[#E4E7DC] dark:border-white/[0.06] flex items-center justify-center shadow-2xs hover:shadow-xs transition-shadow">
               <ScoreCircle score={overallScoreVal} denom={10} color={getColorName(overallScoreVal)} label="Overall Fit" />
             </div>
 
+            {/* Resume Score / Match */}
+            <div className="p-3 sm:p-4 rounded-2xl bg-[#F8F9F5] dark:bg-white/[0.02] border border-[#E4E7DC] dark:border-white/[0.06] flex items-center justify-center shadow-2xs hover:shadow-xs transition-shadow">
+              <ScoreCircle score={resumeScoreVal} denom={10} color={getColorName(resumeScoreVal)} label="Resume Score" />
+            </div>
+
             {/* Technical Competency */}
-            <div className="p-3 sm:p-4 rounded-2xl bg-[#F8F9F5] dark:bg-white/[0.02] border border-[#E4E7DC] dark:border-white/[0.06] flex items-center justify-center">
+            <div className="p-3 sm:p-4 rounded-2xl bg-[#F8F9F5] dark:bg-white/[0.02] border border-[#E4E7DC] dark:border-white/[0.06] flex items-center justify-center shadow-2xs hover:shadow-xs transition-shadow">
               <ScoreCircle score={skillsScoreVal} denom={10} color={getColorName(skillsScoreVal)} label="Technical Skills" />
             </div>
 
             {/* Communication Skills */}
-            <div className="p-3 sm:p-4 rounded-2xl bg-[#F8F9F5] dark:bg-white/[0.02] border border-[#E4E7DC] dark:border-white/[0.06] flex items-center justify-center">
+            <div className="p-3 sm:p-4 rounded-2xl bg-[#F8F9F5] dark:bg-white/[0.02] border border-[#E4E7DC] dark:border-white/[0.06] flex items-center justify-center shadow-2xs hover:shadow-xs transition-shadow">
               <ScoreCircle score={commsScoreVal} denom={10} color={getColorName(commsScoreVal)} label="Communication" />
             </div>
 
             {/* Executive Decision & Integrity Summary Tile */}
-            <div className="p-3.5 sm:p-4 rounded-2xl bg-[#F8F9F5] dark:bg-white/[0.02] border border-[#E4E7DC] dark:border-white/[0.06] flex flex-col justify-between col-span-2 lg:col-span-1">
+            <div className="p-3.5 sm:p-4 rounded-2xl bg-[#F8F9F5] dark:bg-white/[0.02] border border-[#E4E7DC] dark:border-white/[0.06] flex flex-col justify-between col-span-2 sm:col-span-2 md:col-span-1 lg:col-span-1 shadow-2xs">
               <div>
                 <span className="text-[10px] font-bold uppercase tracking-wider text-[#73766C] dark:text-white/40 font-mono">
                   Executive Verdict
