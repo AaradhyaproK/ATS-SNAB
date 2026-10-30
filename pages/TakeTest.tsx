@@ -502,6 +502,16 @@ export const TakeTest: React.FC = () => {
       const snap = await getDoc(doc(db, 'tests', testId));
       if (snap.exists()) {
         const testData = { id: snap.id, ...snap.data() } as any;
+        const isDeactivated =
+          testData.isActive === false ||
+          (typeof testData.status === 'string' &&
+            ['inactive', 'deactivated', 'closed', 'paused', 'expired'].includes(testData.status.toLowerCase().trim()));
+
+        if (isDeactivated) {
+          setRateLimitError('This assessment has been deactivated by the hiring team and is no longer accepting candidate submissions.');
+          return;
+        }
+
         const resource: RateLimitResource =
           testData.type === 'coding' ? 'codingAssessments' : 'assessments';
         const rateLimitStatus = await loadCompanyRateLimitStatus();

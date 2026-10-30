@@ -89,6 +89,16 @@ const TestAccess: React.FC = () => {
         const testDoc = await getDoc(doc(db, 'tests', testId));
         if (testDoc.exists()) {
           const testData = testDoc.data() as any;
+          const isDeactivated =
+            testData.isActive === false ||
+            (typeof testData.status === 'string' &&
+              ['inactive', 'deactivated', 'closed', 'paused', 'expired'].includes(testData.status.toLowerCase().trim()));
+
+          if (isDeactivated) {
+            setError('This assessment has been deactivated by the hiring team and is no longer accepting candidate submissions.');
+            return;
+          }
+
           setTestDetails({
             title: testData.title || 'Assessment',
             duration: testData.duration || 10,

@@ -37,7 +37,8 @@ import {
   FileSpreadsheet,
   Table,
   Clipboard,
-  FileUp
+  FileUp,
+  Loader2
 } from 'lucide-react';
 import { parseCandidateDocument, parseBulkCandidateTextInput } from '../services/candidateFileParser';
 import { useMessageBox } from '../components/MessageBox';
@@ -123,6 +124,17 @@ const getTestSkills = (test: any): string[] => {
   return tags.slice(0, 4);
 };
 
+export const isTestActive = (test: any): boolean => {
+  if (test.isActive === false) return false;
+  if (typeof test.status === 'string') {
+    const s = test.status.toLowerCase().trim();
+    if (s === 'inactive' || s === 'deactivated' || s === 'closed' || s === 'paused' || s === 'expired') {
+      return false;
+    }
+  }
+  return true;
+};
+
 const RecruiterTests: React.FC = () => {
   const { userProfile } = useAuth();
   const [tests, setTests] = useState<any[]>([]);
@@ -130,6 +142,8 @@ const RecruiterTests: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState<'All' | 'aptitude' | 'coding'>('All');
+  const [statusFilter, setStatusFilter] = useState<'All' | 'Active' | 'Inactive'>('All');
+  const [togglingTestId, setTogglingTestId] = useState<string | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -260,6 +274,71 @@ const RecruiterTests: React.FC = () => {
       console.error('Clipboard copy failed:', error);
       showError('Unable to copy to clipboard.');
     }
+  };
+
+  const handleToggleTestStatus = (test: any, e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation();
+    }
+    const currentIsActive = isTestActive(test);
+    const newStatus = currentIsActive ? 'Inactive' : 'Active';
+    const newIsActive = !currentIsActive;
+    const actionVerb = newIsActive ? 'activate' : 'deactivate';
+    const actionLabel = newIsActive ? 'activated' : 'deactivated';
+
+    showConfirm(
+      `Are you sure you want to ${actionVerb} "${test.title}"? ${
+        newIsActive
+          ? 'This will make the assessment active and available for candidates to take.'
+          : 'This will deactivate the assessment and candidates will no longer be able to access or start it.'
+      }`,
+      async () => {
+        setTogglingTestId(test.id);
+
+        // 1. Optimistic UI update
+        setTests((prevTests) =>
+          prevTests.map((t) => {
+            if (t.id === test.id) {
+              return {
+                ...t,
+                status: newStatus,
+                isActive: newIsActive,
+              };
+            }
+            return t;
+          })
+        );
+
+        try {
+          // 2. Sync to Firestore in 'tests' collection
+          await updateDoc(doc(db, 'tests', test.id), {
+            status: newStatus,
+            isActive: newIsActive,
+            updatedAt: serverTimestamp(),
+          });
+
+          showSuccess(`Assessment "${test.title}" has been successfully ${actionLabel}!`);
+        } catch (err: any) {
+          console.error('[handleToggleTestStatus] Error toggling status:', err);
+          // Revert optimistic update
+          setTests((prevTests) =>
+            prevTests.map((t) => {
+              if (t.id === test.id) {
+                return {
+                  ...t,
+                  status: currentIsActive ? 'Active' : 'Inactive',
+                  isActive: currentIsActive,
+                };
+              }
+              return t;
+            })
+          );
+          showError(`Failed to update assessment status: ${err?.message || 'Unknown error'}`);
+        } finally {
+          setTogglingTestId(null);
+        }
+      }
+    );
   };
 
   // Fetch candidate dump for AI recommendations when invite modal opens
@@ -933,16 +1012,26 @@ const RecruiterTests: React.FC = () => {
     return tests.filter((test) => {
       const matchesSearch = !search || `${test.title || ''} ${test.accessCode || ''} ${test.id || ''}`.toLowerCase().includes(search);
       const matchesType = typeFilter === 'All' || test.type === typeFilter;
-      return matchesSearch && matchesType;
+      const isCurrentActive = isTestActive(test);
+      const matchesStatus =
+        statusFilter === 'All' ||
+        (statusFilter === 'Active' && isCurrentActive) ||
+        (statusFilter === 'Inactive' && !isCurrentActive);
+
+      return matchesSearch && matchesType && matchesStatus;
     });
-  }, [tests, searchQuery, typeFilter]);
+  }, [tests, searchQuery, typeFilter, statusFilter]);
 
   const overviewStats = useMemo(() => {
     const allStats = tests.map((test) => getStats(test, submissionsMap[test.id] || []));
     const totalSubmissions = allStats.reduce((sum, stats) => sum + stats.submissions, 0);
     const totalPassed = allStats.reduce((sum, stats) => sum + stats.passed, 0);
+    const activeTestsCount = tests.filter(isTestActive).length;
 
     return {
+      total: tests.length,
+      active: activeTestsCount,
+      inactive: tests.length - activeTestsCount,
       coding: tests.filter(test => test.type === 'coding').length,
       aptitude: tests.filter(test => test.type !== 'coding').length,
       submissions: totalSubmissions,
@@ -1042,8 +1131,10 @@ const RecruiterTests: React.FC = () => {
               </div>
             </div>
             <div className="min-w-0">
-              <p className="text-xl sm:text-2xl xl:text-3xl font-black font-mono text-[#111215] dark:text-white truncate">{tests.length}</p>
-              <p className="text-[10px] font-bold text-[#575A51] dark:text-neutral-400 mt-0.5 truncate">Active in bank</p>
+              <p className="text-xl sm:text-2xl xl:text-3xl font-black font-mono text-[#111215] dark:text-white truncate">{overviewStats.total}</p>
+              <p className="text-[10px] font-bold text-[#575A51] dark:text-neutral-400 mt-0.5 truncate">
+                {overviewStats.active} active · {overviewStats.inactive} inactive
+              </p>
             </div>
           </div>
 
@@ -1132,29 +1223,53 @@ const RecruiterTests: React.FC = () => {
             />
           </div>
 
-          <div className="flex items-center flex-wrap gap-2 shrink-0">
-            <span className="text-xs font-bold text-[#73766C] dark:text-neutral-400 mr-1 shrink-0">Format:</span>
-            <div className="flex p-1 rounded-full border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-[#101114] shrink-0">
-              {(['All', 'aptitude', 'coding'] as const).map((filter) => (
-                <button
-                  key={filter}
-                  type="button"
-                  onClick={() => setTypeFilter(filter)}
-                  className={`px-3 py-1 text-xs font-bold rounded-full transition-all capitalize cursor-pointer ${
-                    typeFilter === filter
-                      ? 'bg-white text-[#111215] border border-[#E4E7DC] font-bold shadow-xs'
-                      : 'text-[#73766C] hover:text-[#111215] font-medium'
-                  }`}
-                >
-                  {filter}
-                </button>
-              ))}
+          <div className="flex items-center flex-wrap gap-2.5 shrink-0">
+            {/* Format Filter */}
+            <div className="flex items-center gap-1.5 shrink-0">
+              <span className="text-xs font-bold text-[#73766C] dark:text-neutral-400 shrink-0">Format:</span>
+              <div className="flex p-1 rounded-full border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-[#101114] shrink-0">
+                {(['All', 'aptitude', 'coding'] as const).map((filter) => (
+                  <button
+                    key={filter}
+                    type="button"
+                    onClick={() => setTypeFilter(filter)}
+                    className={`px-3 py-1 text-xs font-bold rounded-full transition-all capitalize cursor-pointer ${
+                      typeFilter === filter
+                        ? 'bg-white text-[#111215] border border-[#E4E7DC] font-bold shadow-xs'
+                        : 'text-[#73766C] hover:text-[#111215] font-medium'
+                    }`}
+                  >
+                    {filter}
+                  </button>
+                ))}
+              </div>
             </div>
 
-            {(searchQuery || typeFilter !== 'All') && (
+            {/* Status Filter (Exact All Jobs Style) */}
+            <div className="flex items-center gap-1.5 shrink-0">
+              <span className="text-xs font-bold text-[#73766C] dark:text-neutral-400 shrink-0">Status:</span>
+              <div className="flex p-1 rounded-full border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-[#101114] shrink-0">
+                {(['All', 'Active', 'Inactive'] as const).map((status) => (
+                  <button
+                    key={status}
+                    type="button"
+                    onClick={() => setStatusFilter(status)}
+                    className={`px-3 py-1 text-xs font-bold rounded-full transition-all cursor-pointer ${
+                      statusFilter === status
+                        ? 'bg-white text-[#111215] border border-[#E4E7DC] font-bold shadow-xs'
+                        : 'text-[#73766C] hover:text-[#111215] font-medium'
+                    }`}
+                  >
+                    {status}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {(searchQuery || typeFilter !== 'All' || statusFilter !== 'All') && (
               <button
                 type="button"
-                onClick={() => { setSearchQuery(''); setTypeFilter('All'); }}
+                onClick={() => { setSearchQuery(''); setTypeFilter('All'); setStatusFilter('All'); }}
                 className="px-3 py-1 text-xs font-bold rounded-full bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400 border border-red-200 dark:border-red-500/20 hover:bg-red-100 transition-colors cursor-pointer shrink-0"
               >
                 Clear Filters
@@ -1205,7 +1320,7 @@ const RecruiterTests: React.FC = () => {
             </p>
             <button
               type="button"
-              onClick={() => { setSearchQuery(''); setTypeFilter('All'); }}
+              onClick={() => { setSearchQuery(''); setTypeFilter('All'); setStatusFilter('All'); }}
               className="mt-4 px-4 py-2 rounded-full bg-[#111215] text-white text-xs font-bold cursor-pointer"
             >
               Reset Search & Filters
@@ -1215,6 +1330,7 @@ const RecruiterTests: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {filteredTests.map((test) => {
               const isCoding = test.type === 'coding';
+              const isCurrentActive = isTestActive(test);
               const stats = getStats(test, submissionsMap[test.id] || []);
               const testLink = getAssessmentLink(test.id);
               const invitedCount = (test.candidateEmails || []).length;
@@ -1224,7 +1340,11 @@ const RecruiterTests: React.FC = () => {
                 <article
                   key={test.id}
                   onClick={() => navigate(`/recruiter/tests/${test.id}/results`)}
-                  className="group rounded-3xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] p-5 sm:p-6 transition-all duration-200 hover:-translate-y-1 hover:border-[#111215]/30 dark:hover:border-white/20 hover:shadow-lg flex flex-col justify-between cursor-pointer"
+                  className={`group rounded-3xl border bg-white dark:bg-[#15161A] p-5 sm:p-6 transition-all duration-200 hover:-translate-y-1 hover:shadow-lg flex flex-col justify-between cursor-pointer ${
+                    !isCurrentActive
+                      ? 'border-red-200/80 dark:border-red-900/30 hover:border-red-300'
+                      : 'border-[#E4E7DC] dark:border-white/10 hover:border-[#111215]/30 dark:hover:border-white/20'
+                  }`}
                 >
                   <div>
                     {/* Top Row: Category & Status (Exact All Jobs Style) */}
@@ -1244,11 +1364,25 @@ const RecruiterTests: React.FC = () => {
                         )}
                       </div>
 
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 font-mono text-xs border border-emerald-300 bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800">
-                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-600 animate-pulse" />
-                          <span>Active</span>
-                        </span>
+                      <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
+                        <button
+                          type="button"
+                          onClick={(e) => handleToggleTestStatus(test, e)}
+                          disabled={togglingTestId === test.id}
+                          title={isCurrentActive ? "Click to Deactivate assessment" : "Click to Activate assessment"}
+                          className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 font-mono text-xs transition-all duration-150 cursor-pointer ${
+                            !isCurrentActive
+                              ? "border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 dark:bg-red-950/40 dark:text-red-300 dark:border-red-800"
+                              : "border border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800"
+                          } ${togglingTestId === test.id ? "opacity-60 cursor-not-allowed" : ""}`}
+                        >
+                          {togglingTestId === test.id ? (
+                            <Loader2 className="h-2.5 w-2.5 animate-spin text-current" />
+                          ) : (
+                            <span className={`h-1.5 w-1.5 rounded-full ${isCurrentActive ? 'bg-emerald-600 animate-pulse' : 'bg-red-500'}`} />
+                          )}
+                          <span>{isCurrentActive ? 'Active' : 'Inactive'}</span>
+                        </button>
                       </div>
                     </div>
 

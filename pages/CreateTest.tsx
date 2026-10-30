@@ -57,6 +57,7 @@ const CreateTest: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [aiPrompt, setAiPrompt] = useState('');
   const [passingScore, setPassingScore] = useState(70);
+  const [status, setStatus] = useState<'Active' | 'Inactive'>('Active');
   const [nextInterviewId, setNextInterviewId] = useState('');
   const [recruiterInterviews, setRecruiterInterviews] = useState<any[]>([]);
   const [automationType, setAutomationType] = useState<'internal' | 'external'>('internal');
@@ -163,6 +164,13 @@ const CreateTest: React.FC = () => {
           }
           if (data.duration) setDuration(Number(data.duration));
           if (data.passingScore !== undefined) setPassingScore(Number(data.passingScore));
+          if (data.status) {
+            setStatus(data.status === 'Inactive' ? 'Inactive' : 'Active');
+          } else if (data.isActive === false) {
+            setStatus('Inactive');
+          } else {
+            setStatus('Active');
+          }
           if (Array.isArray(data.questions)) setQuestions(data.questions);
           if (data.nextInterviewId) setNextInterviewId(data.nextInterviewId);
           if (data.externalInterviewLink) {
@@ -462,6 +470,8 @@ Return ONLY a valid JSON object matching this schema:
         duration: Number(duration),
         questions,
         passingScore: Number(passingScore),
+        status,
+        isActive: status === 'Active',
       };
 
       if (automationType === 'internal' && nextInterviewId) {
@@ -641,6 +651,17 @@ Return ONLY a valid JSON object matching this schema:
                   </span>
                 </div>
                 <div className="flex items-center justify-between text-xs py-1">
+                  <span className="text-[#73766C] dark:text-neutral-400 font-medium">Status</span>
+                  <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 font-mono text-[10px] font-bold ${
+                    status === 'Active'
+                      ? 'border border-emerald-300 bg-emerald-50 text-emerald-800'
+                      : 'border border-red-200 bg-red-50 text-red-700'
+                  }`}>
+                    <span className={`h-1.5 w-1.5 rounded-full ${status === 'Active' ? 'bg-emerald-600 animate-pulse' : 'bg-red-500'}`} />
+                    <span>{status}</span>
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-xs py-1">
                   <span className="text-[#73766C] dark:text-neutral-400 font-medium">Duration</span>
                   <span className="font-mono font-bold text-[#111215] dark:text-white">
                     {duration} Minutes
@@ -793,6 +814,40 @@ Return ONLY a valid JSON object matching this schema:
                     </span>
                   </div>
                   <p className="text-[11px] text-[#73766C] dark:text-neutral-400 mt-1.5">Scores at or above this trigger automated progression.</p>
+                </div>
+
+                {/* Status Toggle (Active / Inactive) */}
+                <div className="sm:col-span-2">
+                  <label className={labelClass}>
+                    <span>Assessment Status</span>
+                    <span className="text-[10px] text-[#73766C] font-normal">Controls candidate availability</span>
+                  </label>
+                  <div className="grid grid-cols-2 p-1 rounded-full border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-[#101114]">
+                    <button
+                      type="button"
+                      onClick={() => setStatus('Active')}
+                      className={`py-2 text-xs font-bold rounded-full transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                        status === 'Active'
+                          ? 'bg-emerald-50 text-emerald-800 border border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800 shadow-xs'
+                          : 'text-[#73766C] hover:text-[#111215] dark:hover:text-white font-medium'
+                      }`}
+                    >
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-600 animate-pulse" />
+                      <span>Active (Open for Candidates)</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setStatus('Inactive')}
+                      className={`py-2 text-xs font-bold rounded-full transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                        status === 'Inactive'
+                          ? 'bg-red-50 text-red-700 border border-red-200 dark:bg-red-950/40 dark:text-red-300 dark:border-red-800 shadow-xs'
+                          : 'text-[#73766C] hover:text-[#111215] dark:hover:text-white font-medium'
+                      }`}
+                    >
+                      <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
+                      <span>Inactive (Deactivated)</span>
+                    </button>
+                  </div>
                 </div>
 
               </div>
