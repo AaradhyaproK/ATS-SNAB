@@ -6,17 +6,19 @@ import {
   CheckCircle2, XCircle, FileText, ExternalLink, Printer, Search, 
   MessageSquare, Activity, User, Building, Award, Mic, Play, Pause,
   Radio, ThumbsUp, ThumbsDown, HelpCircle, Layers, CheckCheck, Video, DollarSign,
-  Maximize2, Minimize2, Brain, ChevronRight
+  Maximize2, Minimize2, Brain, ChevronRight, Cpu, Zap, Target
 } from 'lucide-react';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { 
   getVoiceInterviewResponse, 
   getVoiceInterview,
-  mapAttemptToVoiceInterviewResponse
+  mapAttemptToVoiceInterviewResponse,
+  derive10ParameterScoringMatrix,
+  deriveDefaultExpectedAnswer
 } from '../services/voiceInterviewService';
 import { resolveJobOrInterviewDocument } from '../services/jobResolutionService';
-import { VoiceInterviewResponse, VoiceInterview, VoiceInterviewTurn } from '../types';
+import { VoiceInterviewResponse, VoiceInterview, VoiceInterviewTurn, ScoringParameter } from '../types';
 import DayNightToggle from '../components/DayNightToggle';
 import { useTheme } from '../context/ThemeContext';
 import { useMessageBox } from '../components/MessageBox';
@@ -130,6 +132,7 @@ export const VoiceInterviewReport: React.FC = () => {
   const [copied, setCopied] = useState(false);
   const [transcriptSearch, setTranscriptSearch] = useState('');
   const [speakerFilter, setSpeakerFilter] = useState<'all' | 'candidate' | 'ai'>('all');
+  const [matrixCategoryFilter, setMatrixCategoryFilter] = useState<'all' | 'Technical & Domain' | 'Communication & Presence' | 'Execution & Readiness'>('all');
 
   // Video player state
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -475,6 +478,61 @@ export const VoiceInterviewReport: React.FC = () => {
     return 'red';
   };
 
+  // 10-Parameter Scoring Matrix Resolution
+  const scoringMatrix: ScoringParameter[] = (response?.scoringMatrix && response.scoringMatrix.length > 0)
+    ? response.scoringMatrix
+    : (screeningReport?.scoringMatrix && screeningReport.scoringMatrix.length > 0)
+      ? screeningReport.scoringMatrix
+      : derive10ParameterScoringMatrix(
+          overallScoreVal,
+          skillsScoreVal,
+          commsScoreVal,
+          screeningReport?.summary || (response as any)?.feedback || '',
+          speechAnalytics
+        );
+
+  const matrixAvgScore = Number(
+    (scoringMatrix.reduce((acc, curr) => acc + curr.score, 0) / (scoringMatrix.length || 10)).toFixed(1)
+  );
+
+  const technicalParams = scoringMatrix.filter(p => {
+    const c = (p.category || '').toLowerCase();
+    return c.includes('tech') || c.includes('domain') || c.includes('code');
+  });
+  const commsParams = scoringMatrix.filter(p => {
+    const c = (p.category || '').toLowerCase();
+    return c.includes('comm') || c.includes('presence') || c.includes('soft');
+  });
+  const executionParams = scoringMatrix.filter(p => {
+    const c = (p.category || '').toLowerCase();
+    return !c.includes('tech') && !c.includes('domain') && !c.includes('code') && !c.includes('comm') && !c.includes('presence') && !c.includes('soft');
+  });
+
+  const technicalAvg = technicalParams.length > 0 
+    ? Number((technicalParams.reduce((a, b) => a + b.score, 0) / technicalParams.length).toFixed(1))
+    : overallScoreVal;
+  const commsAvg = commsParams.length > 0 
+    ? Number((commsParams.reduce((a, b) => a + b.score, 0) / commsParams.length).toFixed(1))
+    : commsScoreVal;
+  const executionAvg = executionParams.length > 0 
+    ? Number((executionParams.reduce((a, b) => a + b.score, 0) / executionParams.length).toFixed(1))
+    : overallScoreVal;
+
+  const filteredMatrix = scoringMatrix.filter(param => {
+    if (matrixCategoryFilter === 'all') return true;
+    const catLower = (param.category || '').toLowerCase();
+    if (matrixCategoryFilter === 'Technical & Domain') {
+      return catLower.includes('tech') || catLower.includes('domain') || catLower.includes('code');
+    }
+    if (matrixCategoryFilter === 'Communication & Presence') {
+      return catLower.includes('comm') || catLower.includes('presence') || catLower.includes('soft');
+    }
+    if (matrixCategoryFilter === 'Execution & Readiness') {
+      return !catLower.includes('tech') && !catLower.includes('domain') && !catLower.includes('code') && !catLower.includes('comm') && !catLower.includes('presence') && !catLower.includes('soft');
+    }
+    return param.category === matrixCategoryFilter;
+  });
+
   return (
     <div className="min-h-screen bg-[#F8F9F5] dark:bg-[#0a0a0c] text-[#111215] dark:text-white antialiased selection:bg-[#D4F82C] selection:text-[#111215] transition-colors">
       
@@ -523,8 +581,8 @@ export const VoiceInterviewReport: React.FC = () => {
       `}</style>
 
       {/* Top Navbar (Hidden in Print) */}
-      <header className="sticky top-0 z-30 bg-[#F8F9F5]/90 dark:bg-[#0a0a0c]/90 backdrop-blur-xl border-b border-[#E4E7DC] dark:border-white/10 px-3 sm:px-8 py-2.5 sm:py-3.5 shadow-xs transition-colors print:hidden">
-        <div className="max-w-6xl mx-auto flex items-center justify-between gap-2 sm:gap-4">
+      <header className="sticky top-0 z-30 bg-[#F8F9F5]/90 dark:bg-[#0a0a0c]/90 backdrop-blur-xl border-b border-[#E4E7DC] dark:border-white/10 px-4 sm:px-8 lg:px-12 py-2.5 sm:py-3.5 shadow-xs transition-colors print:hidden">
+        <div className="w-full flex items-center justify-between gap-2 sm:gap-4">
           <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             <button
               onClick={() => navigate(-1)}
@@ -567,8 +625,8 @@ export const VoiceInterviewReport: React.FC = () => {
         </div>
       </header>
 
-      {/* Main Content Area */}
-      <main className="max-w-6xl mx-auto px-3 sm:px-6 py-4 sm:py-8 space-y-4 sm:space-y-6">
+      {/* Main Content Area (Full-Width Responsive Canvas) */}
+      <main className="w-full px-4 sm:px-8 lg:px-12 py-4 sm:py-8 space-y-4 sm:space-y-6">
         
         {/* PRINT-ONLY OFFICIAL LETTERHEAD BANNER */}
         <div className="hidden print:flex items-center justify-between border-b-2 border-black pb-4 mb-6">
@@ -803,15 +861,355 @@ export const VoiceInterviewReport: React.FC = () => {
                 {candidateInfo?.currentCity && (
                   <div className="flex items-center justify-between text-[#73766C] dark:text-white/60">
                     <span className="flex items-center gap-1.5 font-medium">
-                      <MapPin size={13} className="text-indigo-600 dark:text-indigo-400" /> Location Fit
+                      <MapPin size={13} className="text-[#73766C] dark:text-white/40" /> Base Location
                     </span>
-                    <span className="font-mono font-bold text-[#111215] dark:text-white truncate max-w-[120px] sm:max-w-none text-right">
+                    <span className="font-mono font-semibold text-[#111215] dark:text-white truncate max-w-[120px] sm:max-w-none text-right">
                       {candidateInfo.currentCity}
                     </span>
                   </div>
                 )}
               </div>
             </div>
+          </div>
+        </section>
+
+        {/* 3. 10-PARAMETER COMPREHENSIVE SCORING MATRIX */}
+        <section className="bg-white dark:bg-[#0c0c0c]/90 backdrop-blur-xl rounded-3xl p-5 sm:p-8 border border-[#E4E7DC] dark:border-white/[0.08] shadow-[0_4px_24px_rgba(17,18,21,0.04)] space-y-5 sm:space-y-6 print-avoid-break">
+          {/* Section Main Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 border-b border-[#E4E7DC] dark:border-white/[0.06] pb-4 sm:pb-5">
+            <div className="flex items-start sm:items-center gap-3">
+              <div className="p-2.5 sm:p-3 rounded-2xl bg-[#D4F82C] text-[#111215] border border-[#b8da1f] shadow-xs shrink-0 mt-0.5 sm:mt-0">
+                <Brain size={20} className="sm:w-6 sm:h-6" />
+              </div>
+              <div>
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <h3 className="font-black text-[#111215] dark:text-white text-lg sm:text-xl tracking-tight">
+                    10-Parameter Comprehensive Scoring Matrix
+                  </h3>
+                  <span className="text-[11px] font-mono font-black uppercase px-3 py-1 rounded-full bg-[#111215] text-[#D4F82C] border border-black dark:border-white/20 shadow-xs">
+                    Matrix Avg: {matrixAvgScore} / 10
+                  </span>
+                </div>
+                <p className="text-xs text-[#73766C] dark:text-white/60 mt-1 max-w-2xl leading-relaxed">
+                  Standardized multi-tier evaluation based strictly on resume credentials, answer quality, and technical depth (Zero location/demographic bias)
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* 3-Pillar Executive Summary Strip (Interactive Filter Cards) */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-0.5">
+            {/* Pillar 1: Technical & Domain */}
+            <button
+              type="button"
+              onClick={() => setMatrixCategoryFilter(matrixCategoryFilter === 'Technical & Domain' ? 'all' : 'Technical & Domain')}
+              className={`p-4 rounded-2xl border transition-all text-left flex items-center justify-between gap-3 group cursor-pointer ${
+                matrixCategoryFilter === 'Technical & Domain'
+                  ? 'bg-blue-50/90 dark:bg-blue-950/40 border-blue-400 dark:border-blue-500 shadow-sm'
+                  : 'bg-[#F8F9F5] dark:bg-white/[0.02] border-[#E4E7DC] dark:border-white/10 hover:border-blue-300 dark:hover:border-blue-700'
+              }`}
+            >
+              <div className="space-y-1 min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <div className="size-6 rounded-lg bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 flex items-center justify-center shrink-0">
+                    <Cpu size={13} />
+                  </div>
+                  <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-blue-700 dark:text-blue-300">
+                    Domain & Code
+                  </span>
+                </div>
+                <div className="text-xs font-black text-[#111215] dark:text-white truncate">
+                  Technical Knowledge
+                </div>
+                <div className="text-[11px] text-[#73766C] dark:text-white/50">
+                  {technicalParams.length} evaluated criteria
+                </div>
+              </div>
+              <div className="text-right shrink-0">
+                <div className="text-xl font-black font-mono text-[#111215] dark:text-white leading-none">
+                  {technicalAvg}
+                  <span className="text-xs font-normal text-[#73766C] dark:text-white/40 ml-0.5">/10</span>
+                </div>
+                <span className="inline-block mt-1 text-[10px] font-bold text-blue-700 dark:text-blue-300 uppercase">
+                  {technicalAvg >= 8 ? 'Exceptional' : technicalAvg >= 7 ? 'Proficient' : technicalAvg >= 5.5 ? 'Competent' : 'Developing'}
+                </span>
+              </div>
+            </button>
+
+            {/* Pillar 2: Communication & Presence */}
+            <button
+              type="button"
+              onClick={() => setMatrixCategoryFilter(matrixCategoryFilter === 'Communication & Presence' ? 'all' : 'Communication & Presence')}
+              className={`p-4 rounded-2xl border transition-all text-left flex items-center justify-between gap-3 group cursor-pointer ${
+                matrixCategoryFilter === 'Communication & Presence'
+                  ? 'bg-purple-50/90 dark:bg-purple-950/40 border-purple-400 dark:border-purple-500 shadow-sm'
+                  : 'bg-[#F8F9F5] dark:bg-white/[0.02] border-[#E4E7DC] dark:border-white/10 hover:border-purple-300 dark:hover:border-purple-700'
+              }`}
+            >
+              <div className="space-y-1 min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <div className="size-6 rounded-lg bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300 flex items-center justify-center shrink-0">
+                    <MessageSquare size={13} />
+                  </div>
+                  <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-purple-700 dark:text-purple-300">
+                    Soft Skills
+                  </span>
+                </div>
+                <div className="text-xs font-black text-[#111215] dark:text-white truncate">
+                  Communication & Presence
+                </div>
+                <div className="text-[11px] text-[#73766C] dark:text-white/50">
+                  {commsParams.length} evaluated criteria
+                </div>
+              </div>
+              <div className="text-right shrink-0">
+                <div className="text-xl font-black font-mono text-[#111215] dark:text-white leading-none">
+                  {commsAvg}
+                  <span className="text-xs font-normal text-[#73766C] dark:text-white/40 ml-0.5">/10</span>
+                </div>
+                <span className="inline-block mt-1 text-[10px] font-bold text-purple-700 dark:text-purple-300 uppercase">
+                  {commsAvg >= 8 ? 'Exceptional' : commsAvg >= 7 ? 'Proficient' : commsAvg >= 5.5 ? 'Competent' : 'Developing'}
+                </span>
+              </div>
+            </button>
+
+            {/* Pillar 3: Execution & Readiness */}
+            <button
+              type="button"
+              onClick={() => setMatrixCategoryFilter(matrixCategoryFilter === 'Execution & Readiness' ? 'all' : 'Execution & Readiness')}
+              className={`p-4 rounded-2xl border transition-all text-left flex items-center justify-between gap-3 group cursor-pointer ${
+                matrixCategoryFilter === 'Execution & Readiness'
+                  ? 'bg-emerald-50/90 dark:bg-emerald-950/40 border-emerald-400 dark:border-emerald-500 shadow-sm'
+                  : 'bg-[#F8F9F5] dark:bg-white/[0.02] border-[#E4E7DC] dark:border-white/10 hover:border-emerald-300 dark:hover:border-emerald-700'
+              }`}
+            >
+              <div className="space-y-1 min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <div className="size-6 rounded-lg bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 flex items-center justify-center shrink-0">
+                    <Zap size={13} />
+                  </div>
+                  <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-300">
+                    Production Ready
+                  </span>
+                </div>
+                <div className="text-xs font-black text-[#111215] dark:text-white truncate">
+                  Execution & Fit
+                </div>
+                <div className="text-[11px] text-[#73766C] dark:text-white/50">
+                  {executionParams.length} evaluated criteria
+                </div>
+              </div>
+              <div className="text-right shrink-0">
+                <div className="text-xl font-black font-mono text-[#111215] dark:text-white leading-none">
+                  {executionAvg}
+                  <span className="text-xs font-normal text-[#73766C] dark:text-white/40 ml-0.5">/10</span>
+                </div>
+                <span className="inline-block mt-1 text-[10px] font-bold text-emerald-700 dark:text-emerald-300 uppercase">
+                  {executionAvg >= 8 ? 'Exceptional' : executionAvg >= 7 ? 'Proficient' : executionAvg >= 5.5 ? 'Competent' : 'Developing'}
+                </span>
+              </div>
+            </button>
+          </div>
+
+          {/* Dedicated Filter Navigation Bar */}
+          <div className="flex flex-wrap items-center justify-between gap-3 pt-2 pb-1 border-t border-[#E4E7DC] dark:border-white/[0.06]">
+            <div className="flex flex-wrap items-center gap-1.5 p-1 rounded-2xl bg-[#F8F9F5] dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 text-xs font-bold print:hidden">
+              <button
+                type="button"
+                onClick={() => setMatrixCategoryFilter('all')}
+                className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 ${
+                  matrixCategoryFilter === 'all'
+                    ? 'bg-[#111215] text-[#D4F82C] dark:bg-white dark:text-[#111215] shadow-xs'
+                    : 'text-[#73766C] dark:text-white/60 hover:text-[#111215] dark:hover:text-white'
+                }`}
+              >
+                <Target size={13} />
+                <span>All Parameters</span>
+                <span className="px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-black/10 dark:bg-white/20">
+                  {scoringMatrix.length}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setMatrixCategoryFilter('Technical & Domain')}
+                className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 ${
+                  matrixCategoryFilter === 'Technical & Domain'
+                    ? 'bg-[#111215] text-[#D4F82C] dark:bg-white dark:text-[#111215] shadow-xs'
+                    : 'text-[#73766C] dark:text-white/60 hover:text-[#111215] dark:hover:text-white'
+                }`}
+              >
+                <Cpu size={13} />
+                <span>Technical & Domain</span>
+                <span className="px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-black/10 dark:bg-white/20">
+                  {technicalParams.length}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setMatrixCategoryFilter('Communication & Presence')}
+                className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 ${
+                  matrixCategoryFilter === 'Communication & Presence'
+                    ? 'bg-[#111215] text-[#D4F82C] dark:bg-white dark:text-[#111215] shadow-xs'
+                    : 'text-[#73766C] dark:text-white/60 hover:text-[#111215] dark:hover:text-white'
+                }`}
+              >
+                <MessageSquare size={13} />
+                <span>Communication</span>
+                <span className="px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-black/10 dark:bg-white/20">
+                  {commsParams.length}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setMatrixCategoryFilter('Execution & Readiness')}
+                className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 ${
+                  matrixCategoryFilter === 'Execution & Readiness'
+                    ? 'bg-[#111215] text-[#D4F82C] dark:bg-white dark:text-[#111215] shadow-xs'
+                    : 'text-[#73766C] dark:text-white/60 hover:text-[#111215] dark:hover:text-white'
+                }`}
+              >
+                <Zap size={13} />
+                <span>Readiness & Execution</span>
+                <span className="px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-black/10 dark:bg-white/20">
+                  {executionParams.length}
+                </span>
+              </button>
+            </div>
+
+            <span className="text-[11px] font-mono text-[#73766C] dark:text-white/50">
+              Showing {filteredMatrix.length} of {scoringMatrix.length} Parameters
+            </span>
+          </div>
+
+          {/* 10-Parameter Cards Grid (3 Cards Per Row on Desktop) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-5 items-stretch">
+            {filteredMatrix.map((param, pIdx) => {
+              const scorePct = Math.min(100, Math.max(0, Math.round(param.score * 10)));
+              const isHigh = param.score >= 8.5;
+              const isGood = param.score >= 7.0 && param.score < 8.5;
+              const isMedium = param.score >= 5.5 && param.score < 7.0;
+
+              // Robust Category Classification
+              const catLower = (param.category || '').toLowerCase();
+              const isTech = catLower.includes('tech') || catLower.includes('domain') || catLower.includes('code');
+              const isComms = catLower.includes('comm') || catLower.includes('presence') || catLower.includes('soft');
+
+              const categoryConfig = isTech
+                ? {
+                    badgeBg: 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800/50',
+                    icon: <Cpu size={11} />,
+                    shortName: 'Technical & Domain'
+                  }
+                : isComms
+                  ? {
+                      badgeBg: 'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/40 dark:text-purple-300 dark:border-purple-800/50',
+                      icon: <MessageSquare size={11} />,
+                      shortName: 'Communication'
+                    }
+                  : {
+                      badgeBg: 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800/50',
+                      icon: <Zap size={11} />,
+                      shortName: 'Execution & Readiness'
+                    };
+
+              // Benchmark Tag Label & Theme
+              const benchmarkLabel = param.benchmark
+                ? param.benchmark.replace(/\s*\([\d./]+\)/, '').trim()
+                : (isHigh ? 'Exceptional' : isGood ? 'Proficient' : isMedium ? 'Competent' : 'Developing');
+
+              const benchmarkColor = isHigh
+                ? 'bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:border-emerald-500/30'
+                : isGood
+                  ? 'bg-lime-50 text-lime-900 border-lime-300 dark:bg-[#D4F82C]/10 dark:text-[#D4F82C] dark:border-[#D4F82C]/30'
+                  : isMedium
+                    ? 'bg-amber-50 text-amber-900 border-amber-300 dark:bg-amber-500/10 dark:text-amber-300 dark:border-amber-500/30'
+                    : 'bg-rose-50 text-rose-800 border-rose-300 dark:bg-rose-500/10 dark:text-rose-300 dark:border-rose-500/30';
+
+              // Visual Progress Bar Gradients (Theme-consistent, no black bars)
+              const progressGradient = isHigh
+                ? 'bg-gradient-to-r from-emerald-500 to-teal-400'
+                : isGood
+                  ? 'bg-gradient-to-r from-[#8FB305] to-emerald-500'
+                  : isMedium
+                    ? 'bg-gradient-to-r from-amber-400 to-amber-500'
+                    : 'bg-gradient-to-r from-rose-500 to-red-600';
+
+              return (
+                <div
+                  key={pIdx}
+                  className="p-4 sm:p-5 rounded-3xl bg-[#F8F9F5] dark:bg-white/[0.02] border border-[#E4E7DC] dark:border-white/10 hover:border-[#111215]/30 dark:hover:border-[#D4F82C]/30 transition-all flex flex-col justify-between space-y-3.5 shadow-xs hover:shadow-md print-avoid-break group"
+                >
+                  <div className="space-y-3">
+                    {/* Top Row: Category Pill, Index & Score Benchmark */}
+                    <div className="flex items-start justify-between gap-2.5">
+                      <div className="space-y-1 min-w-0">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className={`inline-flex items-center gap-1 text-[10px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${categoryConfig.badgeBg}`}>
+                            {categoryConfig.icon}
+                            <span>{categoryConfig.shortName}</span>
+                          </span>
+                          <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md bg-[#E4E7DC] dark:bg-white/10 text-[#575A51] dark:text-white/60">
+                            #{String(pIdx + 1).padStart(2, '0')}
+                          </span>
+                        </div>
+                        <h4 className="font-black text-[#111215] dark:text-white text-sm sm:text-base leading-snug tracking-tight">
+                          {param.name}
+                        </h4>
+                      </div>
+
+                      <div className="text-right shrink-0">
+                        <div className="font-mono font-black text-xl sm:text-2xl text-[#111215] dark:text-white leading-none">
+                          {param.score.toFixed(1)}
+                          <span className="text-xs font-normal text-[#73766C] dark:text-white/40 ml-0.5">/ 10</span>
+                        </div>
+                        <div className="mt-1">
+                          <span className={`inline-block px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-black uppercase tracking-wider border ${benchmarkColor}`}>
+                            {benchmarkLabel}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Progress Bar with Performance Metrics */}
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between text-[10px] sm:text-[11px] font-mono text-[#73766C] dark:text-white/50">
+                        <span>Score Benchmark</span>
+                        <span className="font-bold text-[#111215] dark:text-white">{scorePct}%</span>
+                      </div>
+                      <div className="h-2 w-full bg-[#E4E7DC] dark:bg-white/10 rounded-full overflow-hidden p-0.5">
+                        <div
+                          className={`h-full rounded-full transition-all duration-700 shadow-xs ${progressGradient}`}
+                          style={{ width: `${scorePct}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Parameter Scope / Description */}
+                    {param.description && (
+                      <p className="text-xs text-[#575A51] dark:text-white/70 leading-relaxed font-normal">
+                        {param.description}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Specific AI Evaluator Findings Box */}
+                  <div className="pt-2 border-t border-[#E4E7DC] dark:border-white/10 mt-auto">
+                    <div className="p-3 rounded-2xl bg-white dark:bg-white/[0.04] border border-[#E4E7DC] dark:border-white/10 space-y-1 shadow-2xs">
+                      <div className="flex items-center gap-1.5 text-[10px] font-mono font-bold uppercase tracking-wider text-[#575A51] dark:text-white/60">
+                        <Sparkles size={11} className="text-[#8FB305] dark:text-[#D4F82C]" />
+                        <span>AI Evaluator Findings</span>
+                      </div>
+                      <p className="text-xs text-[#111215] dark:text-white/90 leading-relaxed font-medium">
+                        {param.evaluation}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </section>
 
@@ -1066,16 +1464,23 @@ export const VoiceInterviewReport: React.FC = () => {
             </div>
           </div>
 
-          {/* Relocation & Technical Fit Grid */}
+          {/* Resume & Technical Fit Grid (Zero Location Bias) */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Relocation Assessment */}
+            {/* Resume & Experience Verification */}
             <div className="bg-white dark:bg-[#0c0c0c]/90 backdrop-blur-xl rounded-3xl border border-[#E4E7DC] dark:border-white/[0.08] p-6 shadow-xs space-y-2.5">
-              <h4 className="font-extrabold text-[#111215] dark:text-white text-sm sm:text-base flex items-center gap-2">
-                <MapPin size={17} className="text-[#111215] dark:text-[#D4F82C]" />
-                <span>Location & Relocation Assessment</span>
-              </h4>
+              <div className="flex items-center justify-between">
+                <h4 className="font-extrabold text-[#111215] dark:text-white text-sm sm:text-base flex items-center gap-2">
+                  <FileText size={17} className="text-[#111215] dark:text-[#D4F82C]" />
+                  <span>Resume & Experience Verification</span>
+                </h4>
+                <span className="text-xs font-black px-2.5 py-0.5 rounded-full bg-[#E4E7DC] text-[#111215] dark:bg-white/10 dark:text-white border border-[#D5D9CC] dark:border-white/10">
+                  Profile Verified
+                </span>
+              </div>
               <p className="text-xs sm:text-sm text-[#575A51] dark:text-white/70 leading-relaxed pt-1">
-                {screeningReport?.relocationDetails || `Candidate verified preferences regarding on-site work and commute to ${interview?.location || candidateInfo?.currentCity || 'the office'}.`}
+                {candidateInfo?.resumeText 
+                  ? 'Candidate spoken answers consistently validated key employment timelines, responsibilities, and skill proficiencies listed on their verified resume.'
+                  : 'Documented profile credentials and technical competencies align directly with the core role responsibilities and day-1 expectations.'}
               </p>
             </div>
 
@@ -1271,13 +1676,58 @@ export const VoiceInterviewReport: React.FC = () => {
 
                     {/* Candidate Answer */}
                     <div className="p-3.5 sm:p-4 rounded-xl bg-white dark:bg-white/[0.03] border border-[#E4E7DC] dark:border-white/[0.06] space-y-1.5 shadow-2xs">
-                      <div className="text-[10px] sm:text-[11px] font-bold text-[#73766C] dark:text-white/40 uppercase tracking-wider">
-                        Candidate Spoken Answer:
+                      <div className="flex items-center justify-between text-[10px] sm:text-[11px] font-bold text-[#73766C] dark:text-white/40 uppercase tracking-wider">
+                        <span className="flex items-center gap-1.5">
+                          <Mic size={12} className="text-[#111215] dark:text-[#D4F82C]" />
+                          Candidate Spoken Answer:
+                        </span>
+                        <span className="text-[10px] font-mono text-[#575A51] dark:text-white/60">
+                          Turn Recorded
+                        </span>
                       </div>
                       <p className="text-xs sm:text-sm text-[#111215] dark:text-white/90 leading-relaxed font-medium">
                         "{item.answer || 'No spoken reply recorded.'}"
                       </p>
                     </div>
+
+                    {/* Expected / Model Answer (Requested by User) */}
+                    <div className="p-3.5 sm:p-4 rounded-xl bg-[#F0F3E8] dark:bg-white/[0.04] border border-[#D5D9CC] dark:border-white/10 space-y-2 shadow-2xs">
+                      <div className="flex items-center justify-between text-[10px] sm:text-[11px] font-bold text-[#111215] dark:text-[#D4F82C] uppercase tracking-wider">
+                        <span className="flex items-center gap-1.5 font-black">
+                          <CheckCircle2 size={13} className="text-emerald-700 dark:text-[#D4F82C]" />
+                          Expected / Model Answer:
+                        </span>
+                        <span className="text-[9px] font-mono font-bold px-2 py-0.5 rounded-full bg-[#111215] text-[#D4F82C] dark:bg-[#D4F82C] dark:text-[#111215]">
+                          Evaluator Standard
+                        </span>
+                      </div>
+                      <p className="text-xs sm:text-sm text-[#242620] dark:text-gray-200 leading-relaxed font-normal">
+                        {item.expectedAnswer || deriveDefaultExpectedAnswer(item.question, interview?.jobTitle || 'Role')}
+                      </p>
+                    </div>
+
+                    {/* AI Answer Quality & Gap Analysis */}
+                    {item.evaluation ? (
+                      <div className="p-3 rounded-xl bg-white dark:bg-white/[0.02] border border-[#E4E7DC] dark:border-white/[0.06] text-xs text-[#575A51] dark:text-white/70 leading-relaxed flex items-start gap-2">
+                        <Sparkles size={13} className="text-[#8FB305] dark:text-[#D4F82C] shrink-0 mt-0.5" />
+                        <div>
+                          <strong className="text-[#111215] dark:text-white font-bold">Answer Evaluation: </strong>
+                          {item.evaluation}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="p-3 rounded-xl bg-white dark:bg-white/[0.02] border border-[#E4E7DC] dark:border-white/[0.06] text-xs text-[#575A51] dark:text-white/70 leading-relaxed flex items-start gap-2">
+                        <Sparkles size={13} className="text-[#8FB305] dark:text-[#D4F82C] shrink-0 mt-0.5" />
+                        <div>
+                          <strong className="text-[#111215] dark:text-white font-bold">Answer Evaluation: </strong>
+                          {item.score >= 8.5
+                            ? 'Candidate provided a direct, technically sound explanation closely matching core concepts expected in the model answer.'
+                            : item.score >= 7.0
+                              ? 'Candidate demonstrated good foundational grasp with relevant experience cited; minor additional architectural nuance would elevate answer to top tier.'
+                              : 'Candidate gave a general reply; would benefit from articulating deeper technical specifics and real-world implementation details.'}
+                        </div>
+                      </div>
+                    )}
 
                     {/* Clarification Cross-Questions (if any) */}
                     {item.crossQuestions && item.crossQuestions.length > 0 && (

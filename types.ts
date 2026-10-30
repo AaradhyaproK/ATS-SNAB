@@ -273,6 +273,16 @@ export interface VoiceInterviewTurn {
   questionId?: string;
 }
 
+export interface ScoringParameter {
+  id?: string;
+  name: string;
+  category: 'Technical & Domain' | 'Communication & Presence' | 'Execution & Readiness';
+  score: number; // 0 to 10
+  benchmark: string; // e.g. "Exceptional (9.5/10)", "Proficient (8.0/10)"
+  description: string;
+  evaluation: string;
+}
+
 export interface VoiceInterviewResponse {
   id: string;
   voiceInterviewId: string;
@@ -291,12 +301,16 @@ export interface VoiceInterviewResponse {
   answersSummary: Array<{
     question: string;
     answer: string;
+    expectedAnswer?: string;
+    evaluation?: string;
     crossQuestions?: Array<{ question: string; answer: string }>;
     score?: number;
     notes?: string;
   }>;
+  scoringMatrix?: ScoringParameter[];
   screeningReport: {
     overallScore: number; // out of 10
+    scoringMatrix?: ScoringParameter[];
     relocationStatus: 'Ready to relocate' | 'Already local' | 'Not willing to relocate' | 'Negotiable' | 'Not applicable';
     relocationDetails?: string; // specific relocation confirmation (e.g. to Nashik)
     noticePeriod: string; // e.g. "Immediate", "15 days", "30 days"

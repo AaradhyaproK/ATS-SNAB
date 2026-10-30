@@ -9,6 +9,7 @@ import { useTheme } from '../context/ThemeContext';
 import HireXLogo from '../components/HireXLogo';
 import {
   AlertTriangle,
+  Loader2,
   Clock,
   Code,
   Terminal,
@@ -785,6 +786,19 @@ export const TakeTest: React.FC = () => {
     };
   }, [step, isTerminated, submitting, triggerCopyPasteAlert, triggerScreenshotAlert]);
 
+  // Prevent accidental page refresh / exit during active test or submitting
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if ((step === 'test' || submitting) && !resultData && !isTerminated) {
+        e.preventDefault();
+        e.returnValue = 'Your test is actively in progress or submitting. Please do NOT refresh or close this tab!';
+        return e.returnValue;
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [step, submitting, resultData, isTerminated]);
+
   // Answer handler with chunk paste detection
   const handleAnswer = (val: any) => {
     if (test?.type === 'coding' && typeof val === 'string') {
@@ -1081,6 +1095,39 @@ export const TakeTest: React.FC = () => {
       );
     }
     return null;
+  };
+
+  // Submitting Overlay with Strict Do Not Refresh Warning
+  const renderSubmittingOverlay = () => {
+    if (!submitting) return null;
+    return createPortal(
+      <div className="fixed inset-0 z-[250] bg-black/90 backdrop-blur-md flex items-center justify-center p-6 text-white text-center">
+        <div className="relative max-w-md w-full rounded-3xl border border-white/10 bg-[#15161A] p-8 shadow-2xl space-y-6">
+          <div className="relative mx-auto size-20 rounded-full bg-[#D4F82C]/10 border border-[#D4F82C]/30 flex items-center justify-center shadow-lg shadow-[#D4F82C]/10">
+            <Loader2 className="animate-spin text-[#D4F82C]" size={36} />
+            <span className="absolute size-2.5 rounded-full bg-[#D4F82C] animate-ping top-1 right-1" />
+          </div>
+          <div>
+            <h2 className="text-xl font-black tracking-tight text-white">Submitting & Grading Assessment</h2>
+            <p className="text-xs text-neutral-400 mt-2 leading-relaxed">
+              Evaluating your answers and compiling results into the recruiter dashboard…
+            </p>
+          </div>
+          <div className="p-4 rounded-2xl bg-amber-500/15 border-2 border-amber-500/40 text-amber-200 text-left flex items-start gap-3 shadow-lg">
+            <AlertTriangle size={20} className="text-amber-400 shrink-0 mt-0.5" />
+            <div className="space-y-1">
+              <p className="font-black text-amber-300 text-xs uppercase tracking-wider">
+                Do Not Refresh Or Close This Tab
+              </p>
+              <p className="text-[11px] text-amber-100/90 leading-relaxed font-medium">
+                Your assessment answers are being graded and recorded. Reloading or leaving will disrupt and invalidate your submission.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>,
+      document.body
+    );
   };
 
   // ----------------------------------------------------
@@ -1541,6 +1588,7 @@ export const TakeTest: React.FC = () => {
       `}</style>
 
       {renderFullscreenOverlay()}
+      {renderSubmittingOverlay()}
       {showCalculator && <Calculator onClose={() => setShowCalculator(false)} />}
 
       {/* Screen Shield against OS Snipping Tools / Area Screenshots */}

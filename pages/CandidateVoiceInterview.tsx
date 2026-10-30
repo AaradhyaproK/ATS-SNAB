@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { 
   Phone, PhoneOff, Mic, MicOff, Volume2, VolumeX, RotateCcw, FastForward, 
-  Sparkles, CheckCircle2, AlertCircle, Clock, Shield, MapPin, Briefcase, FileText, ArrowRight,
+  Sparkles, CheckCircle2, AlertCircle, AlertTriangle, Clock, Shield, MapPin, Briefcase, FileText, ArrowRight,
   UploadCloud, FileCheck, Trash2
 } from 'lucide-react';
 import { 
@@ -175,6 +175,19 @@ export const CandidateVoiceInterview: React.FC = () => {
 
     loadData();
   }, [voiceInterviewId]);
+
+  // Prevent accidental page refresh / exit during active call or saving report
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (callState === 'calling' || savingReport) {
+        e.preventDefault();
+        e.returnValue = 'Your screening interview is in progress or currently submitting. Please do NOT refresh or close this tab!';
+        return e.returnValue;
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [callState, savingReport]);
 
   // Lookup Candidate in Resume Dump when email is typed
   useEffect(() => {
@@ -1718,9 +1731,22 @@ export const CandidateVoiceInterview: React.FC = () => {
             </div>
 
             {savingReport ? (
-              <div className="p-5 rounded-2xl bg-[#F8F9F5] border border-[#E4E7DC] flex items-center justify-center gap-3 text-sm font-semibold text-[#111215]">
-                <span className="h-4 w-4 border-2 border-[#111215]/30 border-t-[#111215] rounded-full animate-spin" />
-                <span>Finalizing your screening evaluation report...</span>
+              <div className="space-y-3.5 max-w-md mx-auto">
+                <div className="p-5 rounded-2xl bg-[#F8F9F5] border border-[#E4E7DC] flex items-center justify-center gap-3 text-sm font-semibold text-[#111215] shadow-sm">
+                  <span className="h-4 w-4 border-2 border-[#111215]/30 border-t-[#111215] rounded-full animate-spin" />
+                  <span>Finalizing your screening evaluation report...</span>
+                </div>
+                <div className="p-4 rounded-2xl bg-amber-500/10 border-2 border-amber-500/30 text-amber-900 dark:text-amber-200 text-xs text-left flex items-start gap-3 shadow-sm">
+                  <AlertTriangle size={18} className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                  <div className="space-y-1">
+                    <p className="font-black text-amber-900 dark:text-amber-200 uppercase tracking-wide text-[11px]">
+                      Do Not Refresh Or Close This Tab
+                    </p>
+                    <p className="text-[11px] text-amber-800/90 dark:text-amber-300/90 leading-relaxed">
+                      Your voice recording is uploading and the AI evaluation report is compiling. Leaving this page will disrupt your submission.
+                    </p>
+                  </div>
+                </div>
               </div>
             ) : completedResponse ? (
               <div className="rounded-2xl border border-[#E4E7DC] bg-[#F8F9F5] p-5 sm:p-6 text-left space-y-4">

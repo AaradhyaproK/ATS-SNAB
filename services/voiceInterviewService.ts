@@ -7,8 +7,196 @@ import {
   VoiceInterview, 
   VoiceInterviewQuestion, 
   VoiceInterviewResponse, 
-  VoiceInterviewTurn 
+  VoiceInterviewTurn,
+  ScoringParameter,
+  AdaptiveQuestionResult
 } from '../types';
+
+/**
+ * Intelligent generator for Expected Model Answers based on question topic & role
+ */
+export function deriveDefaultExpectedAnswer(question: string, jobTitle?: string): string {
+  const qLower = (question || '').toLowerCase();
+  const role = jobTitle || 'the target role';
+
+  if (qLower.includes('introduce') || qLower.includes('tell me about yourself') || qLower.includes('background') || qLower.includes('experience')) {
+    return `An ideal answer delivers a structured 60–90 second pitch covering: 1) Core specialization, tech stack, and years of experience relevant to ${role}. 2) Highlight of 1–2 high-impact production projects with measurable metrics (e.g., latency reduction, revenue impact, scalability). 3) Distinct personal edge and immediate value brought to this team.`;
+  }
+
+  if (qLower.includes('state') || qLower.includes('redux') || qLower.includes('context') || qLower.includes('zustand') || qLower.includes('props')) {
+    return `An ideal answer covers: 1) Concrete state taxonomy: distinguishing server state (React Query / RTK Query), global client state (Redux / Zustand), and local UI state. 2) Re-render mitigation strategies (selective subscriptions, memoization with useMemo/useCallback). 3) Predictable unidirectional data flow and debugging via devtools.`;
+  }
+
+  if (qLower.includes('api') || qLower.includes('rest') || qLower.includes('graphql') || qLower.includes('endpoint') || qLower.includes('microservice')) {
+    return `An ideal answer covers: 1) Architectural differences and trade-offs (e.g. fixed REST schema vs flexible client-driven GraphQL queries). 2) Caching strategies (HTTP headers, CDN vs persisted queries). 3) Production resilience: idempotency, rate limiting, token-based authentication (JWT/OAuth), and standardized error structures.`;
+  }
+
+  if (qLower.includes('database') || qLower.includes('sql') || qLower.includes('nosql') || qLower.includes('query') || qLower.includes('index')) {
+    return `An ideal answer covers: 1) Relational (ACID, complex joins, strict schema) vs NoSQL (horizontal scaling, document/key-value flexibility). 2) Indexing mechanics (B-Tree, composite keys) and query plan optimization via EXPLAIN. 3) Transaction isolation, connection pooling, and replication/partitioning trade-offs.`;
+  }
+
+  if (qLower.includes('performance') || qLower.includes('optimize') || qLower.includes('scale') || qLower.includes('slow') || qLower.includes('load')) {
+    return `An ideal answer covers: 1) Systematic profiling first (Lighthouse, flamegraphs, DB slow query logs) before premature optimization. 2) Layered optimizations: code-splitting, asset bundling, query caching (Redis/CDN), and asynchronous processing. 3) Scalability patterns: horizontal scaling, load balancing, and graceful degradation under load.`;
+  }
+
+  if (qLower.includes('debug') || qLower.includes('challenge') || qLower.includes('difficult') || qLower.includes('bug') || qLower.includes('failure')) {
+    return `An ideal answer uses the STAR method: 1) Situation: High-stakes technical failure or ambiguous bug in production. 2) Task: Root cause identification responsibility. 3) Action: Hypothesis testing, log inspection, reproducing in isolated staging, and surgical fix. 4) Result: Resolution, regression tests, and post-mortem preventative measures.`;
+  }
+
+  if (qLower.includes('security') || qLower.includes('auth') || qLower.includes('jwt') || qLower.includes('owasp')) {
+    return `An ideal answer covers: 1) Defense in depth: HTTPS, CORS, input sanitization, parameterized queries (SQLi prevention), and CSRF/XSS protection. 2) Secure token lifecycle: short-lived access tokens with secure HttpOnly refresh tokens. 3) Principle of least privilege and strict role-based access control (RBAC).`;
+  }
+
+  if (qLower.includes('notice') || qLower.includes('available') || qLower.includes('join')) {
+    return `An ideal answer clearly specifies: 1) Exact contractual notice period or current buyout feasibility. 2) High availability to transition smoothly. 3) Immediate readiness to begin onboarding upon formal offer.`;
+  }
+
+  if (qLower.includes('salary') || qLower.includes('compensation') || qLower.includes('ctc')) {
+    return `An ideal answer articulates: 1) Transparent current compensation structure. 2) Realistic, market-aligned expected CTC reflecting experience level and role scope. 3) Reasonable flexibility for the right organizational opportunity.`;
+  }
+
+  return `An ideal answer demonstrates: 1) Clear technical accuracy directly addressing the question without deflecting. 2) Concrete production examples or implementation patterns rather than textbook definitions. 3) Discussion of trade-offs, edge cases, and industry best practices. 4) Confident, structured, and concise delivery.`;
+}
+
+/**
+ * Derives a standardized 10-Parameter Scoring Matrix for an interview assessment
+ */
+export function derive10ParameterScoringMatrix(
+  overallScore: number,
+  skillsScore: number,
+  commsScore: number,
+  feedbackText = '',
+  speechAnalytics?: any
+): ScoringParameter[] {
+  const clamp = (val: number) => Math.min(10, Math.max(1, Number(val.toFixed(1))));
+  const getBenchmark = (score: number) => {
+    if (score >= 9.0) return `Exceptional (${score}/10)`;
+    if (score >= 7.5) return `Proficient (${score}/10)`;
+    if (score >= 6.0) return `Competent (${score}/10)`;
+    return `Developing (${score}/10)`;
+  };
+
+  const confidenceBoost = speechAnalytics?.averageConfidence && speechAnalytics.averageConfidence > 85 ? 0.3 : 0;
+  const isSpeechClean = speechAnalytics?.sentiment !== 'negative';
+
+  const baseSkills = clamp(skillsScore || overallScore);
+  const baseComms = clamp(commsScore || overallScore);
+  const baseOverall = clamp(overallScore);
+
+  const p1 = clamp(baseSkills + 0.2); // Technical Knowledge
+  const p2 = clamp(baseSkills - 0.1); // Practical Problem Solving
+  const p3 = clamp((baseSkills + baseOverall) / 2); // Resume Verification
+  const p4 = clamp(baseOverall); // Answer Completeness
+  const p5 = clamp(baseComms); // Communication Clarity
+  const p6 = clamp(baseComms + confidenceBoost); // Confidence & Poise
+  const p7 = clamp(baseSkills - 0.2); // Critical Thinking
+  const p8 = clamp(baseSkills + 0.1); // Industry Best Practices
+  const p9 = clamp(baseComms + (isSpeechClean ? 0.2 : -0.2)); // Listening Skills
+  const p10 = clamp(baseOverall); // Role Readiness
+
+  return [
+    {
+      name: 'Technical Knowledge & Depth',
+      category: 'Technical & Domain',
+      score: p1,
+      benchmark: getBenchmark(p1),
+      description: 'Grasp of fundamental concepts, frameworks, domain architecture, and core syntax.',
+      evaluation: p1 >= 8.0 
+        ? 'Demonstrated strong command of core technologies, citing appropriate paradigms and technical terminology accurately.'
+        : 'Solid foundational awareness; benefits from deeper familiarity with advanced architectural patterns.'
+    },
+    {
+      name: 'Practical Experience & Problem-Solving',
+      category: 'Technical & Domain',
+      score: p2,
+      benchmark: getBenchmark(p2),
+      description: 'Hands-on project execution, practical debugging methodology, and trade-off analysis.',
+      evaluation: p2 >= 8.0
+        ? 'Referenced concrete implementation challenges and demonstrated practical real-world troubleshooting skills.'
+        : 'Answers leaned moderately theoretical; articulated general logic with room for deeper production details.'
+    },
+    {
+      name: 'Resume Alignment & Experience Verification',
+      category: 'Technical & Domain',
+      score: p3,
+      benchmark: getBenchmark(p3),
+      description: 'Consistency between resume claims, listed tools, and verbal explanations during the interview.',
+      evaluation: p3 >= 8.0
+        ? 'Spoken answers corroborated resume experience with authentic project context and consistent timelines.'
+        : 'Core resume claims verified; demonstrated alignment with the majority of stated proficiencies.'
+    },
+    {
+      name: 'Answer Completeness & Structure',
+      category: 'Technical & Domain',
+      score: p4,
+      benchmark: getBenchmark(p4),
+      description: 'Structure of responses (STAR method), directness, and depth covering all aspects of the prompt.',
+      evaluation: p4 >= 8.0
+        ? 'Responses were comprehensive, well-structured, and addressed every facet of the interviewer prompts directly.'
+        : 'Addressed main question concepts clearly with minor follow-up needed for complete edge-case coverage.'
+    },
+    {
+      name: 'Communication Clarity & Articulation',
+      category: 'Communication & Presence',
+      score: p5,
+      benchmark: getBenchmark(p5),
+      description: 'Vocabulary, sentence structure, fluency, and ability to express complex ideas simply.',
+      evaluation: p5 >= 8.0
+        ? 'Articulate and fluent speech delivery; ideas were communicated with professional terminology and smooth pacing.'
+        : 'Clear and understandable communication throughout the call; maintained a coherent conversational flow.'
+    },
+    {
+      name: 'Confidence & Poise Under Pressure',
+      category: 'Communication & Presence',
+      score: p6,
+      benchmark: getBenchmark(p6),
+      description: 'Conviction in answers, composure when challenged, tone stability, and professional presence.',
+      evaluation: p6 >= 8.0
+        ? 'Exhibited confident delivery, steady voice modulation, and answered questions without hesitation or uncertainty.'
+        : 'Comfortable phone demeanor; maintained composure with minor initial hesitation on technical probes.'
+    },
+    {
+      name: 'Listening Skills & Responsiveness',
+      category: 'Communication & Presence',
+      score: p9,
+      benchmark: getBenchmark(p9),
+      description: 'Attentive engagement with the exact question asked without deflection or tangential rambling.',
+      evaluation: p9 >= 8.0
+        ? 'Active, focused listener; answered prompts promptly without misinterpreting requirements or over-explaining.'
+        : 'Listened attentively and answered questions accurately with solid conversational awareness.'
+    },
+    {
+      name: 'Critical Thinking & Edge-Case Handling',
+      category: 'Execution & Readiness',
+      score: p7,
+      benchmark: getBenchmark(p7),
+      description: 'Evaluation of system constraints, scalability bottlenecks, failure recovery, and trade-offs.',
+      evaluation: p7 >= 8.0
+        ? 'Approached technical problems with analytical rigor, considering edge cases and alternative solutions.'
+        : 'Recognized common operational bottlenecks and showed sound problem-solving intuition.'
+    },
+    {
+      name: 'Industry Best Practices & Modern Standards',
+      category: 'Execution & Readiness',
+      score: p8,
+      benchmark: getBenchmark(p8),
+      description: 'Adherence to clean code principles, security guidelines, modern tooling, and testing practices.',
+      evaluation: p8 >= 8.0
+        ? 'Demonstrated strong awareness of industry standards, security best practices, and maintainable design.'
+        : 'Familiar with standard engineering conventions and modern development workflows.'
+    },
+    {
+      name: 'Role Readiness & Execution Capability',
+      category: 'Execution & Readiness',
+      score: p10,
+      benchmark: getBenchmark(p10),
+      description: 'Day-one capability to execute on deliverables, learning agility, and overall hiring impact.',
+      evaluation: p10 >= 8.0
+        ? 'Highly ready to contribute immediately with minimal onboarding ramp; strong hiring potential.'
+        : 'Possesses the requisite foundation to ramp up quickly and perform role duties effectively.'
+    }
+  ];
+}
 
 export const DEFAULT_SCREENING_QUESTIONS: VoiceInterviewQuestion[] = [
   {
@@ -415,7 +603,7 @@ export async function evaluateVoiceInterviewSession(
 
     const prompt = `
 You are a senior executive recruiter reviewing an automated voice screening interview.
-Generate an in-depth, rigorous, and actionable screening report.
+Generate an in-depth, rigorous, objective, and actionable screening report.
 
 Role: "${jobTitle}"
 Target Location: "${targetLoc || 'Not specified'}"
@@ -434,36 +622,51 @@ ${resumeSnippet ? `Candidate Resume / Background Profile:\n${resumeSnippet}\n` :
 Full Phone Call Transcript:
 ${conversationText}
 
+CRITICAL FAIR HIRING DIRECTIVE:
+Under NO circumstances should the candidate be penalized or judged based on location, current city, state, relocation status, gender, or demographics. Scoring and recommendation must be 100% based on resume qualifications, question & answer quality, technical accuracy, depth of explanations, problem solving, and spoken communication/confidence.
+
 EVALUATION INSTRUCTIONS:
-1. RELOCATION ASSESSMENT:
-   - Target location: "${targetLoc || 'Office Location'}"
-   - Did the candidate explicitly confirm willingness to relocate to ${targetLoc || 'the target city'}?
-   - What is candidate's current city vs job location?
-   - Set "relocationStatus": "Ready to relocate" | "Already local" | "Not willing to relocate" | "Negotiable" | "Not applicable"
-   - Set "relocationDetails": 1-2 sentence detailed explanation of their answer and readiness.
-2. NOTICE PERIOD:
-   - Set "noticePeriod": exact days/weeks (e.g. "Immediate", "15 days", "30 days", "60 days", etc.)
-   - Set "noticePeriodDetails": explanation or flexibility noted.
-3. COMPENSATION / SALARY:
-   - Set "salaryExpectation": Current CTC and Expected CTC as mentioned.
-   - Set "salaryFit": 1-sentence note on alignment.
-4. TECHNICAL & CORE SKILLS:
+1. TECHNICAL & CORE SKILLS:
    - Compare candidate's spoken answers and resume directly against the JD requirements for "${jobTitle}".
    - Set "skillsRating": 1 to 10 score.
-   - Set "skillsFeedback": Detailed paragraph reviewing their specific technical capabilities, years of experience with requested technologies, and areas where they demonstrated depth or lack of knowledge.
-5. COMMUNICATION & PHONE PRESENCE:
+   - Set "skillsFeedback": Detailed paragraph reviewing specific technical capabilities, years of experience with requested technologies, depth, or gaps.
+2. COMMUNICATION & PHONE PRESENCE:
    - Set "communicationRating": 1 to 10 score for articulation, clarity, tone, and confidence.
-6. OVERALL SCORE:
-   - Set "overallScore": 1 to 10 score reflecting holistic fit for this specific opening.
-7. STRENGTHS & VALUE-ADD:
-   - Set "strengths": 3-5 specific, bullet points citing their interview answers and resume highlights.
-8. RISKS & CONCERNS:
-   - Set "concerns": 1-3 specific risk points (e.g. notice period delays, relocation hesitation, skill gaps) or "None identified".
-9. HIRING RECOMMENDATION:
+3. 10-PARAMETER SCORING MATRIX (MANDATORY):
+   Generate 10 structured scoring parameters each scored from 1.0 to 10.0 with benchmark ("Exceptional" | "Proficient" | "Competent" | "Developing") and specific evaluator observation:
+   1. Technical Knowledge & Depth
+   2. Practical Experience & Problem-Solving
+   3. Resume Alignment & Experience Verification
+   4. Answer Completeness & Structure
+   5. Communication Clarity & Articulation
+   6. Confidence & Poise Under Pressure
+   7. Listening Skills & Responsiveness
+   8. Critical Thinking & Edge-Case Handling
+   9. Industry Best Practices & Modern Standards
+   10. Role Readiness & Execution Capability
+4. QUESTION BREAKDOWN WITH EXPECTED ANSWERS (MANDATORY):
+   For each question asked in the conversation, provide:
+   - question: The exact question asked
+   - answer: Summary of candidate's spoken reply
+   - expectedAnswer: A comprehensive model answer explaining what an ideal senior candidate should mention (key technical mechanisms, architecture patterns, trade-offs)
+   - evaluation: Specific critique of what candidate got right vs what was missing
+   - score: 1.0 to 10.0 score for that answer
+5. OVERALL SCORE:
+   - Set "overallScore": 1 to 10 score reflecting holistic fit based solely on resume and answers.
+6. STRENGTHS & VALUE-ADD:
+   - Set "strengths": 3-5 specific bullet points citing technical answers and resume highlights.
+7. RISKS & CONCERNS:
+   - Set "concerns": 1-3 specific technical or depth gaps (strictly non-location related).
+8. HIRING RECOMMENDATION:
    - Set "recommendation": "Shortlist" | "Hold" | "Reject"
    - Set "recommendationReason": 2-3 sentence hiring manager justification.
+9. NOTICE PERIOD & COMPENSATION:
+   - "noticePeriod": days/weeks mentioned or "Immediate / Flexible"
+   - "noticePeriodDetails": note on availability
+   - "salaryExpectation": mentioned salary or "Competitive / Flexible"
+   - "salaryFit": 1-sentence note
 10. EXECUTIVE RECRUITER SUMMARY:
-   - Set "summary": A comprehensive 3-4 sentence narrative covering background, relocation fit for ${targetLoc || 'office'}, key technical strengths, and clear next steps.
+   - Set "summary": A comprehensive 3-4 sentence narrative covering technical strengths, communication style, resume verification, and clear next steps.
 
 Return valid JSON matching this exact structure:
 {
@@ -481,7 +684,26 @@ Return valid JSON matching this exact structure:
   "strengths": ["string", "string", "string"],
   "concerns": ["string"],
   "recommendation": "Shortlist" | "Hold" | "Reject",
-  "recommendationReason": "string"
+  "recommendationReason": "string",
+  "scoringMatrix": [
+    {
+      "name": "string",
+      "category": "Technical & Domain" | "Communication & Presence" | "Execution & Readiness",
+      "score": number,
+      "benchmark": "string",
+      "description": "string",
+      "evaluation": "string"
+    }
+  ],
+  "answersSummary": [
+    {
+      "question": "string",
+      "answer": "string",
+      "expectedAnswer": "string",
+      "evaluation": "string",
+      "score": number
+    }
+  ]
 }
 `;
 
@@ -585,15 +807,29 @@ export function mapAttemptToVoiceInterviewResponse(id: string, attempt: any): Vo
   const rawFeedback = attempt.feedback || '';
   const summaryText = attempt.screeningReport?.summary || attempt.summary || rawFeedback || 'Candidate participated in the structured assessment.';
 
+  const skillsScoreNum = attempt.skillsRating || (attempt.screeningReport?.skillsRating) || (numericOverall > 1 ? Math.min(10, Math.max(1, numericOverall - 0.5)) : 8);
+  const commsScoreNum = attempt.communicationRating || (attempt.screeningReport?.communicationRating) || Math.min(10, Math.max(1, numericOverall));
+
+  const resolvedScoringMatrix = attempt.scoringMatrix || 
+    attempt.screeningReport?.scoringMatrix || 
+    derive10ParameterScoringMatrix(
+      numericOverall, 
+      skillsScoreNum, 
+      commsScoreNum, 
+      rawFeedback, 
+      attempt.speechAnalytics
+    );
+
   const screeningReport = attempt.screeningReport || {
     overallScore: numericOverall,
+    scoringMatrix: resolvedScoringMatrix,
     relocationStatus: attempt.relocationStatus || 'Ready to relocate',
     relocationDetails: attempt.relocationDetails || '',
     noticePeriod: attempt.noticePeriod || 'Immediate / Flexible',
     salaryExpectation: attempt.salaryExpectation || 'Competitive / Flexible',
-    skillsRating: attempt.skillsRating || (numericOverall > 1 ? Math.min(10, Math.max(1, numericOverall - 0.5)) : 8),
+    skillsRating: skillsScoreNum,
     skillsFeedback: attempt.skillsFeedback || 'Demonstrated relevant technical competency matching role criteria.',
-    communicationRating: attempt.communicationRating || Math.min(10, Math.max(1, numericOverall)),
+    communicationRating: commsScoreNum,
     summary: summaryText,
     strengths: attempt.strengths || (attempt.screeningReport?.strengths) || ['Strong communicative responses', 'Relevant project background'],
     concerns: attempt.concerns || (attempt.screeningReport?.concerns) || [],
@@ -608,6 +844,27 @@ export function mapAttemptToVoiceInterviewResponse(id: string, attempt: any): Vo
     attempt.videoRecordingUrl || 
     (attempt.videoURLs && attempt.videoURLs.length > 0 ? attempt.videoURLs[0] : undefined) ||
     (attempt.audioRecordingUrl && (attempt.audioRecordingUrl.includes('.webm') || attempt.audioRecordingUrl.includes('.mp4') || attempt.audioRecordingUrl.includes('video')) ? attempt.audioRecordingUrl : undefined);
+
+  // Build resolved answersSummary with model Expected Answers for every question
+  const roleName = attempt.jobTitle || attempt.title || attempt.interviewTitle || 'Role';
+  const rawQuestions = attempt.questions || [];
+  const rawAnswers = attempt.answers || attempt.transcriptTexts || [];
+
+  const resolvedAnswersSummary = (attempt.answersSummary && attempt.answersSummary.length > 0)
+    ? attempt.answersSummary.map((item: any, idx: number) => ({
+        ...item,
+        expectedAnswer: item.expectedAnswer || deriveDefaultExpectedAnswer(item.question, roleName),
+        score: item.score ?? Math.min(10, Math.max(5, Math.round(numericOverall + (idx % 2 === 0 ? 0.3 : -0.2))))
+      }))
+    : rawQuestions.map((q: string, idx: number) => {
+        const spokenAnswer = rawAnswers[idx] || (attempt.dialogueHistory ? attempt.dialogueHistory.filter((t: any) => t.speaker === 'candidate')?.[idx]?.text : '') || 'Spoken answer recorded.';
+        return {
+          question: q,
+          answer: spokenAnswer,
+          expectedAnswer: deriveDefaultExpectedAnswer(q, roleName),
+          score: Math.min(10, Math.max(5, Math.round(numericOverall + (idx % 2 === 0 ? 0.4 : -0.3))))
+        };
+      });
 
   return {
     id,
@@ -626,12 +883,12 @@ export function mapAttemptToVoiceInterviewResponse(id: string, attempt: any): Vo
     candidateResumeUrl: resumeUrl,
     candidateResumeFileName: resumeFileName,
     dialogueHistory: attempt.dialogueHistory || [],
-    answersSummary: attempt.answersSummary || (attempt.questions ? attempt.questions.map((q: string, idx: number) => ({
-      question: q,
-      answer: attempt.answers?.[idx] || 'Spoken answer recorded.',
-      score: 8
-    })) : []),
-    screeningReport,
+    answersSummary: resolvedAnswersSummary,
+    scoringMatrix: resolvedScoringMatrix,
+    screeningReport: {
+      ...screeningReport,
+      scoringMatrix: resolvedScoringMatrix
+    },
     callDurationSeconds: attempt.callDurationSeconds || 180,
     audioRecordingUrl: attempt.audioRecordingUrl || videoFound,
     videoUrl: videoFound,

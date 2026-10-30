@@ -235,6 +235,7 @@ export const LiveVoiceInterview: React.FC = () => {
   const [activeMediaStream, setActiveMediaStream] = useState<MediaStream | null>(null);
   const [submittedSessionId, setSubmittedSessionId] = useState<string>('');
   const [savedVideoUrl, setSavedVideoUrl] = useState<string>('');
+  const [savingStage, setSavingStage] = useState('Uploading high-definition video recording to secure cloud storage…');
 
   // Strict Proctoring / Tab Switch Detection State
   const [tabSwitchCount, setTabSwitchCount] = useState(0);
@@ -305,6 +306,19 @@ export const LiveVoiceInterview: React.FC = () => {
       window.removeEventListener('focus', handleFocus);
       if (tabWarningTimerRef.current) clearTimeout(tabWarningTimerRef.current);
     };
+  }, [phase]);
+
+  // Prevent accidental page refresh or tab close during live interview and while submitting
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (phase === 'live' || phase === 'saving') {
+        e.preventDefault();
+        e.returnValue = 'Your interview is actively in progress or submitting. Please do NOT refresh or close this tab!';
+        return e.returnValue;
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [phase]);
 
   // Resolve job document
@@ -515,6 +529,7 @@ export const LiveVoiceInterview: React.FC = () => {
       return;
     }
     setPhase('saving');
+    setSavingStage('Uploading high-definition video recording to secure cloud storage…');
 
     const rec = recorderRef.current;
     const recMime = rec?.mimeType || 'video/webm';
@@ -589,6 +604,7 @@ export const LiveVoiceInterview: React.FC = () => {
     };
 
     try {
+      setSavingStage('Analyzing interview transcript & generating 10-parameter evaluation matrix…');
       const totalTabSwitches = tabSwitchCountRef.current;
       const screeningReport = await evaluateVoiceInterviewSession(job?.title || 'Job Screening', dialogueHistory, candidateInfo, {
         jobDescription: job?.description,
@@ -629,6 +645,7 @@ export const LiveVoiceInterview: React.FC = () => {
       };
       
       // Save response
+      setSavingStage('Securing and saving candidate submission in ATS database…');
       await saveVoiceInterviewResponse(JSON.parse(JSON.stringify(response)));
 
       // Save attempt under interviews/{jobId}/attempts/{sessionId} for recruiter dashboard
@@ -1177,13 +1194,70 @@ export const LiveVoiceInterview: React.FC = () => {
   // -------------------------------------------------------------
   if (phase === 'saving') {
     return (
-      <div className="fixed inset-0 w-screen h-screen bg-[#0A0B0E] text-white flex flex-col items-center justify-center p-6 z-50">
-        <div className="max-w-md w-full bg-[#12141A] border border-white/10 rounded-3xl p-8 text-center shadow-2xl space-y-5">
-          <Loader2 className="animate-spin text-[#D4F82C] mx-auto" size={40} />
-          <h2 className="text-lg font-extrabold text-white">Submitting Your Interview Video & Dossier</h2>
-          <p className="text-xs text-neutral-400 leading-relaxed">
-            Uploading full interview video and generating executive evaluation report…
-          </p>
+      <div className="fixed inset-0 w-screen h-screen bg-[#0A0B0E] text-white flex flex-col items-center justify-center p-4 sm:p-6 z-50">
+        <div className="max-w-lg w-full bg-[#12141A] border border-white/10 rounded-3xl p-6 sm:p-8 text-center shadow-2xl space-y-6">
+          {/* Animated Spinner with Lime Glow */}
+          <div className="relative mx-auto size-20 rounded-full bg-[#D4F82C]/10 border border-[#D4F82C]/30 flex items-center justify-center shadow-lg shadow-[#D4F82C]/10">
+            <Loader2 className="animate-spin text-[#D4F82C]" size={38} />
+            <span className="absolute size-3 rounded-full bg-[#D4F82C] animate-ping top-1 right-1 opacity-75" />
+          </div>
+
+          {/* Heading and Subtitle */}
+          <div>
+            <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+              Submitting Your Interview Video & Dossier
+            </h2>
+            <p className="text-xs sm:text-sm text-neutral-400 mt-2 leading-relaxed max-w-sm mx-auto">
+              Please wait while your session recording and AI evaluation report are uploaded and stored securely.
+            </p>
+          </div>
+
+          {/* High-Visibility DO NOT REFRESH Warning Callout Box */}
+          <div className="p-4 rounded-2xl bg-amber-500/15 border-2 border-amber-500/40 text-amber-200 text-left flex items-start gap-3.5 shadow-xl shadow-amber-950/30">
+            <div className="p-2 rounded-xl bg-amber-500/20 text-amber-400 shrink-0 mt-0.5">
+              <AlertTriangle size={22} className="animate-bounce" />
+            </div>
+            <div className="space-y-1 flex-1">
+              <p className="font-black text-amber-300 text-xs sm:text-sm uppercase tracking-wider flex items-center gap-1.5">
+                Do Not Refresh Or Close This Tab
+              </p>
+              <p className="text-[12px] sm:text-xs text-amber-100/90 leading-relaxed font-medium">
+                Your video interview is currently uploading to cloud storage and your evaluation is finalizing. Refreshing, closing, or navigating away from this tab will interrupt and invalidate your submission.
+              </p>
+            </div>
+          </div>
+
+          {/* Live Progress Stage Tracker */}
+          <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/10 space-y-3 text-left">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-neutral-300 font-medium flex items-center gap-2">
+                <span className="size-2 rounded-full bg-[#D4F82C] animate-ping" />
+                {savingStage}
+              </span>
+              <span className="text-[#D4F82C] font-mono font-bold text-[11px]">In Progress</span>
+            </div>
+            <div className="w-full bg-white/10 h-1.5 rounded-full overflow-hidden">
+              <div className="bg-gradient-to-r from-[#D4F82C] via-lime-400 to-emerald-400 h-full w-full animate-pulse rounded-full" />
+            </div>
+            <div className="flex items-center justify-between text-[11px] text-neutral-400 pt-1">
+              <span className="flex items-center gap-1.5">
+                <Sparkles size={13} className="text-[#D4F82C]" />
+                10-Parameter Scoring & Dossier Compilation
+              </span>
+              <span className="text-neutral-400 font-mono text-[10px]">Auto-Redirecting Soon</span>
+            </div>
+          </div>
+
+          {/* Footer note & Security Seal */}
+          <div className="space-y-2 pt-2 border-t border-white/5">
+            <p className="text-[11px] text-neutral-400 leading-normal">
+              This process usually takes <strong className="text-neutral-300">10–25 seconds</strong>. You will automatically be redirected once submitted.
+            </p>
+            <div className="flex items-center justify-center gap-2 text-[10px] text-neutral-400 font-mono">
+              <Shield size={12} className="text-[#D4F82C]" />
+              <span>TLS 1.3 / 256-Bit Encrypted Interview Submission</span>
+            </div>
+          </div>
         </div>
       </div>
     );

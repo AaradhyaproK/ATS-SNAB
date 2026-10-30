@@ -13,6 +13,7 @@ import HireXLogo from '../components/HireXLogo';
 import { useMessageBox } from '../components/MessageBox';
 import { ArrowLeft, Download, Share2, User, FileText, MessageSquare, Brain, Shield, Video, VideoOff, Eye, EyeOff, CheckCircle, XCircle, Briefcase, MapPin, GraduationCap, DollarSign, Calendar, Award, Link as LinkIcon, Maximize2, Minimize2, Globe, Volume2, Sparkles, BookOpen, Headphones, UserCheck, Mic, Zap, Phone, Users, CheckCircle2, Copy, Check, Radio, Layers } from 'lucide-react';
 import { isLocationMatching } from '../data/maharashtraCities';
+import { deriveDefaultExpectedAnswer } from '../services/voiceInterviewService';
 
 // Filter out false-positive location mismatches (e.g. "Ambad" is inside "Nashik")
 const getValidCriteriaMismatches = (rawMismatches?: string[]): string[] => {
@@ -1076,7 +1077,7 @@ const InterviewReport: React.FC = () => {
 
         {/* Sticky Header */}
         <div className="sticky top-3 z-40 bg-[#F8F9F5]/90 dark:bg-[#0c0c0c]/85 backdrop-blur-xl rounded-2xl border border-[#E4E7DC] dark:border-white/[0.08] mb-6 sm:mb-8 shadow-xs dark:shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
-            <div className="max-w-7xl mx-auto flex flex-wrap justify-between items-center p-3 sm:p-4 gap-3">
+            <div className="w-full flex flex-wrap justify-between items-center p-3 sm:p-4 gap-3">
                 <div className="flex items-center gap-3">
                     <button 
                         onClick={() => navigate(-1)} 
@@ -1109,7 +1110,7 @@ const InterviewReport: React.FC = () => {
             </div>
         </div>
 
-        <div id="report-content" className={`mx-auto transition-all duration-300 ${isCompareMode ? 'max-w-full flex flex-col xl:flex-row gap-6' : 'max-w-7xl space-y-6'}`}>
+        <div id="report-content" className={`mx-auto transition-all duration-300 ${isCompareMode ? 'max-w-full flex flex-col xl:flex-row gap-6' : 'w-full space-y-6'}`}>
             
             <div className={`space-y-6 flex-1 w-full ${isCompareMode ? 'xl:w-1/2' : ''}`}>
                 {/* Header & Candidate Info + Integrated Performance Strip */}
@@ -2145,13 +2146,31 @@ const InterviewReport: React.FC = () => {
                                             </div>
                                         )}
                                         
-                                        <div className="flex-1 bg-white dark:bg-[#090909] rounded-2xl p-5 border border-[#E4E7DC] dark:border-white/[0.06] h-full flex flex-col shadow-xs">
-                                            <h4 className="text-[10px] font-bold text-[#73766C] dark:text-white/40 uppercase tracking-wider mb-2.5 flex items-center gap-2 font-mono">
-                                                <FileText size={14} className="text-emerald-600 dark:text-emerald-400" /> Transcript / Candidate Answer
-                                            </h4>
-                                            <div className="flex-1">
-                                                <p className="text-sm text-[#2c2f28] dark:text-gray-300 whitespace-pre-wrap leading-relaxed font-sans">
-                                                    {submission.transcriptTexts?.[index] || 'Transcript not available for this question.'}
+                                        <div className="flex-1 bg-white dark:bg-[#090909] rounded-2xl p-5 border border-[#E4E7DC] dark:border-white/[0.06] h-full flex flex-col shadow-xs space-y-3">
+                                            <div>
+                                                <h4 className="text-[10px] font-bold text-[#73766C] dark:text-white/40 uppercase tracking-wider mb-2 flex items-center gap-2 font-mono">
+                                                    <FileText size={14} className="text-emerald-600 dark:text-emerald-400" /> Transcript / Candidate Answer
+                                                </h4>
+                                                <div className="flex-1">
+                                                    <p className="text-sm text-[#2c2f28] dark:text-gray-300 whitespace-pre-wrap leading-relaxed font-sans">
+                                                        {submission.transcriptTexts?.[index] || 'Transcript not available for this question.'}
+                                                    </p>
+                                                </div>
+                                            </div>
+
+                                            {/* Expected / Model Answer */}
+                                            <div className="pt-3 border-t border-[#E4E7DC] dark:border-white/[0.06] bg-[#F4F6F0] dark:bg-white/[0.03] p-3.5 rounded-xl border border-[#D5D9CC] dark:border-white/10 space-y-1.5">
+                                                <div className="flex items-center justify-between text-[10px] font-mono font-bold uppercase tracking-wider text-[#111215] dark:text-[#D4F82C]">
+                                                    <span className="flex items-center gap-1.5">
+                                                        <CheckCircle2 size={13} className="text-emerald-600 dark:text-[#D4F82C]" />
+                                                        Expected / Model Answer
+                                                    </span>
+                                                    <span className="text-[9px] px-2 py-0.5 rounded-full bg-[#E4E7DC] dark:bg-white/10 text-[#575A51] dark:text-white/70">
+                                                        Standard
+                                                    </span>
+                                                </div>
+                                                <p className="text-xs text-[#2c2f28] dark:text-gray-200 leading-relaxed font-medium">
+                                                    {(submission.answersSummary && submission.answersSummary[index]?.expectedAnswer) || deriveDefaultExpectedAnswer(q, (submission as any)?.jobTitle || 'Role')}
                                                 </p>
                                             </div>
                                         </div>

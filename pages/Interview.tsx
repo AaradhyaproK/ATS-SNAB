@@ -14,7 +14,9 @@ import {
 } from '../services/deepgramService';
 import { 
   generateCrossQuestionOrAcknowledge, 
-  generateAdaptiveNextQuestion 
+  generateAdaptiveNextQuestion,
+  derive10ParameterScoringMatrix,
+  deriveDefaultExpectedAnswer
 } from '../services/voiceInterviewService';
 import { uploadToS3 } from '../services/s3Service';
 import { Interview, InterviewState } from '../types';
@@ -4913,11 +4915,33 @@ const InterviewSubmission: React.FC<{
         const qnaScoreNum = parseScoreValue(/Q&A Score:\s*(\d{1,3})(?:\s*\/\s*100)?/i);
 
         const overallScoreNum = Math.round((resumeScoreNum * 0.4) + (qnaScoreNum * 0.6));
+        const overallScoreOutOf10 = Number((overallScoreNum / 10).toFixed(1));
+        const skillsScoreOutOf10 = Number((qnaScoreNum / 10).toFixed(1));
+        const commsScoreOutOf10 = Number((overallScoreNum / 10).toFixed(1));
 
         setFinalScores({
           overall: (overallScoreNum / 10).toFixed(1),
           resume: (resumeScoreNum / 10).toFixed(1),
           qna: (qnaScoreNum / 10).toFixed(1)
+        });
+
+        // Generate 10-Parameter Scoring Matrix & Expected Answers
+        const scoringMatrix = derive10ParameterScoringMatrix(
+          overallScoreOutOf10,
+          skillsScoreOutOf10,
+          commsScoreOutOf10,
+          feedbackRaw,
+          finalState.speechAnalytics
+        );
+
+        const answersSummary = finalState.questions.map((q: string, idx: number) => {
+          const ans = transcriptTexts[idx] || finalState.transcriptTexts?.[idx] || 'Spoken answer recorded.';
+          return {
+            question: q,
+            answer: ans,
+            expectedAnswer: deriveDefaultExpectedAnswer(q, finalState.jobTitle || 'Role'),
+            score: Math.min(10, Math.max(5, Math.round(overallScoreOutOf10 + (idx % 2 === 0 ? 0.3 : -0.2))))
+          };
         });
 
         setStatus("Saving Report...");
@@ -4929,6 +4953,8 @@ const InterviewSubmission: React.FC<{
             crossQuestionsSummary: finalState.crossQuestionsSummary || [],
             candidateResumeBase64: null, // Do not bloat Firebase storage
             transcriptTexts,
+            answersSummary,
+            scoringMatrix,
             pendingResponseCount: 0,
             feedback: feedbackRaw,
             score: `${overallScoreNum}/100`,

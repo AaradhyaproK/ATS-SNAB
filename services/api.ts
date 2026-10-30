@@ -255,7 +255,10 @@ export const generateFeedback = async (
     strictnessInstructions = "You are an extremely strict hiring manager. Scrutinize every detail of the answers. Provide strict feedback, heavily penalizing any technical gaps, hesitation, or communication errors. Demand perfection.";
   }
 
-  const sys = `${strictnessInstructions} Adhere strictly to the output format provided.`;
+  const sys = `${strictnessInstructions}
+IMPORTANT FAIR-HIRING DIRECTIVE:
+Under NO circumstances should you evaluate, penalize, or judge the candidate based on geographic location, current city, state, relocation status, gender, age, or demographics. Scoring, verdict, and critique must be 100% focused on resume qualifications, question & answer quality, technical accuracy, depth of explanations, and spoken communication/confidence.
+Adhere strictly to the output format provided.`;
 
   const feedbackPrompt =
 `## Candidate Evaluation
@@ -278,6 +281,8 @@ ${qaBlock}
 ### EVALUATION TASK
 
 Based on the Job Description, the candidate's resume (provided in context), and their Q&A performance, provide a comprehensive evaluation.
+
+**FAIR HIRING REQUIREMENT:** Evaluate strictly on technical answers, problem-solving, resume verification, and communication. Do NOT judge or reduce scores based on candidate location or city.
 
 **1. Resume Analysis (Role Fit):**
    - **Goal:** Assess the candidate's **Role Fit**.
@@ -303,15 +308,36 @@ Based on the Job Description, the candidate's resume (provided in context), and 
      - Interpersonal Skills
      - Overall Communication Rating
 
-**4. Overall Evaluation (Summary):**
+**4. 10-Parameter Scoring Matrix (MANDATORY):**
+   - Score each of the 10 parameters from 1.0 to 10.0 with a benchmark rating (Exceptional | Proficient | Competent | Developing) and a concise, concrete evaluator note.
+   1. Technical Knowledge & Depth
+   2. Practical Experience & Problem-Solving
+   3. Resume Alignment & Experience Verification
+   4. Answer Completeness & Structure
+   5. Communication Clarity & Articulation
+   6. Confidence & Poise Under Pressure
+   7. Critical Thinking & Edge-Case Handling
+   8. Industry Best Practices & Modern Standards
+   9. Listening Skills & Responsiveness
+   10. Role Readiness & Execution Capability
+
+**5. Question-by-Question Breakdown with Expected Answers (MANDATORY):**
+   - For every question in the transcript, provide:
+     - Question Text
+     - Candidate Answer Summary
+     - Expected / Model Answer (Detailed ideal answer covering core technical mechanisms, best practices, and architecture)
+     - Answer Quality Analysis (Strengths and missing nuances compared to the expected answer)
+     - Question Score (1-10)
+
+**6. Overall Evaluation (Summary):**
    - **Goal:** Provide a **Summary**.
    - **Action:** Write a concise 2–3 line summary of the candidate’s overall performance.
 
-**5. Verdict (Final Verdict):**
+**7. Verdict (Final Verdict):**
    - **Goal:** Give a clear **Final Verdict**.
    - **Action:** State if the candidate is a "Strong Hire", "Hire", "Leaning No", or "No Hire". Keep it professional and balanced.
 
-**6. Scoring (MANDATORY):**
+**8. Scoring (MANDATORY):**
    - **Resume Score:** A numerical score from 0-100 based on the resume's alignment with the JD.
    - **Q&A Score:** A numerical score from 0-100 based on the quality and accuracy of their answers.
    - **DO NOT** provide an "Overall Score". The application will calculate it.
@@ -344,6 +370,26 @@ Response Speed & Presence of Mind: [Excellent | Good | Average | Poor] - [1-sent
 Telephone Etiquette: [Excellent | Good | Average | Poor] - [1-sentence reason]
 Interpersonal Skills: [Excellent | Good | Average | Poor] - [1-sentence reason]
 Detailed Style Analysis: [A brief paragraph summarizing their communication style, strengths, and feedback]
+
+**Scoring Matrix (10 Parameters):**
+1. Technical Knowledge & Depth: [SCORE]/10 - [Benchmark: Exceptional | Proficient | Competent | Developing] - [Specific evaluator observation]
+2. Practical Experience & Problem-Solving: [SCORE]/10 - [Benchmark] - [Specific evaluator observation]
+3. Resume Alignment & Experience Verification: [SCORE]/10 - [Benchmark] - [Specific evaluator observation]
+4. Answer Completeness & Structure: [SCORE]/10 - [Benchmark] - [Specific evaluator observation]
+5. Communication Clarity & Articulation: [SCORE]/10 - [Benchmark] - [Specific evaluator observation]
+6. Confidence & Poise Under Pressure: [SCORE]/10 - [Benchmark] - [Specific evaluator observation]
+7. Critical Thinking & Edge-Case Handling: [SCORE]/10 - [Benchmark] - [Specific evaluator observation]
+8. Industry Best Practices & Modern Standards: [SCORE]/10 - [Benchmark] - [Specific evaluator observation]
+9. Listening Skills & Responsiveness: [SCORE]/10 - [Benchmark] - [Specific evaluator observation]
+10. Role Readiness & Execution Capability: [SCORE]/10 - [Benchmark] - [Specific evaluator observation]
+
+**Question Breakdown & Expected Answers:**
+[For each question:]
+Q1 Question: [Question]
+Q1 Candidate Answer: [Answer summary]
+Q1 Expected Answer: [Comprehensive ideal response covering key technical mechanisms, trade-offs, and best practices]
+Q1 Answer Analysis: [Detailed critique of strengths and missing points vs expected answer]
+Q1 Score: [SCORE]/10
 
 **Overall Evaluation:**
 [Your 1-2 sentence executive summary.]
