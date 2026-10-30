@@ -3097,12 +3097,12 @@ html.dark {
 }
 
 /* Dark Buttons, Active Pills & Toggles: preserve pure white text & lime accents */
-:root:not(.dark) .recruiter-shell .recruiter-workspace [class*="bg-[#111215]"],
-:root:not(.dark) .recruiter-shell .recruiter-workspace [class*="bg-[#111215]"] *,
-:root:not(.dark) .recruiter-shell .recruiter-workspace button[class*="bg-[#111215]"],
-:root:not(.dark) .recruiter-shell .recruiter-workspace button[class*="bg-[#111215]"] *,
-:root:not(.dark) .recruiter-shell .recruiter-workspace a[class*="bg-[#111215]"],
-:root:not(.dark) .recruiter-shell .recruiter-workspace a[class*="bg-[#111215]"] *,
+:root:not(.dark) .recruiter-shell .recruiter-workspace [class*="bg-[#111215]"]:not([class*="bg-[#111215]/"]),
+:root:not(.dark) .recruiter-shell .recruiter-workspace [class*="bg-[#111215]"]:not([class*="bg-[#111215]/"]) *,
+:root:not(.dark) .recruiter-shell .recruiter-workspace button[class*="bg-[#111215]"]:not([class*="bg-[#111215]/"]),
+:root:not(.dark) .recruiter-shell .recruiter-workspace button[class*="bg-[#111215]"]:not([class*="bg-[#111215]/"]) *,
+:root:not(.dark) .recruiter-shell .recruiter-workspace a[class*="bg-[#111215]"]:not([class*="bg-[#111215]/"]),
+:root:not(.dark) .recruiter-shell .recruiter-workspace a[class*="bg-[#111215]"]:not([class*="bg-[#111215]/"]) *,
 :root:not(.dark) .recruiter-shell .recruiter-workspace .btn-dark,
 :root:not(.dark) .recruiter-shell .recruiter-workspace .btn-dark * {
   color: #ffffff !important;

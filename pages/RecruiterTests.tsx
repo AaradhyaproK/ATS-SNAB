@@ -33,16 +33,21 @@ import {
   X,
   Send,
   UploadCloud,
-  CheckCheck
+  CheckCheck,
+  FileSpreadsheet,
+  Table,
+  Clipboard,
+  FileUp
 } from 'lucide-react';
+import { parseCandidateDocument, parseBulkCandidateTextInput } from '../services/candidateFileParser';
 import { useMessageBox } from '../components/MessageBox';
 import { useCompanyRateLimits } from '../hooks/useRecruiterRateLimits';
 import { getRateLimitReachedMessage, isRateLimitReached, RateLimitResource } from '../services/rateLimitService';
-import { sendInterviewInvitations } from '../services/sesService';
+import { sendAssessmentEmailInvitations } from '../services/sesService';
 import {
   formatPhoneForWhatsApp,
   openWhatsAppWebInvite,
-  sendInterviewWhatsAppInvite
+  sendAssessmentWhatsAppInvite
 } from '../services/waSenderService';
 
 type TimestampLike =
@@ -94,6 +99,30 @@ const getStats = (test: any, submissions: any[]) => {
   };
 };
 
+const getTestSkills = (test: any): string[] => {
+  if (Array.isArray(test.skills) && test.skills.length > 0) return test.skills;
+  if (typeof test.skills === 'string' && test.skills.trim()) {
+    return test.skills.split(',').map((s: string) => s.trim()).filter(Boolean);
+  }
+  
+  const tags: string[] = [];
+  if (test.type === 'coding') {
+    tags.push('Coding Challenge');
+    tags.push('Algorithms');
+  } else {
+    tags.push('Aptitude Screen');
+    tags.push('Analytical Logic');
+  }
+
+  if (Array.isArray(test.questions)) {
+    test.questions.forEach((q: any) => {
+      if (q.difficulty && !tags.includes(q.difficulty)) tags.push(q.difficulty);
+      if (q.category && !tags.includes(q.category)) tags.push(q.category);
+    });
+  }
+  return tags.slice(0, 4);
+};
+
 const RecruiterTests: React.FC = () => {
   const { userProfile } = useAuth();
   const [tests, setTests] = useState<any[]>([]);
@@ -102,6 +131,12 @@ const RecruiterTests: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState<'All' | 'aptitude' | 'coding'>('All');
   const navigate = useNavigate();
+
+  useEffect(() => {
+    // Force light theme on recruiter tests page for consistent clean high-contrast view
+    const root = document.documentElement;
+    root.classList.remove('dark');
+  }, []);
   const { showConfirm, showError, showSuccess } = useMessageBox();
   const { status: rateLimitStatus } = useCompanyRateLimits();
   const assessmentLimitReached = isRateLimitReached(rateLimitStatus, 'assessments');
@@ -111,15 +146,24 @@ const RecruiterTests: React.FC = () => {
   const [invitingTest, setInvitingTest] = useState<any | null>(null);
   const [inviteMode, setInviteMode] = useState<'ai_suggest' | 'bulk' | 'invited'>('ai_suggest');
   const [inviteEmailsList, setInviteEmailsList] = useState<string[]>([]);
+  const [candidateDetailsMap, setCandidateDetailsMap] = useState<Record<string, { name: string; phone: string; experience?: string }>>({});
+  const [bulkSubMode, setBulkSubMode] = useState<'form' | 'spreadsheet'>('form');
+  const [bulkPasteType, setBulkPasteType] = useState<'email' | 'phone' | 'mixed'>('email');
   const [candidateEmailsInput, setCandidateEmailsInput] = useState('');
   const [singleCandidateName, setSingleCandidateName] = useState('');
   const [singleCandidateEmail, setSingleCandidateEmail] = useState('');
   const [singleCandidatePhone, setSingleCandidatePhone] = useState('');
+  const [spreadsheetRows, setSpreadsheetRows] = useState<Array<{ id: string; name: string; email: string; phone: string }>>([
+    { id: 'row_1', name: '', email: '', phone: '' },
+    { id: 'row_2', name: '', email: '', phone: '' },
+    { id: 'row_3', name: '', email: '', phone: '' },
+  ]);
+  const [isUploadingSpreadsheet, setIsUploadingSpreadsheet] = useState(false);
   const [dumpCandidates, setDumpCandidates] = useState<any[]>([]);
   const [loadingDumpCandidates, setLoadingDumpCandidates] = useState(false);
   const [sendingInvites, setSendingInvites] = useState(false);
   const [sendEmailChannel, setSendEmailChannel] = useState(true);
-  const [sendWhatsAppChannel, setSendWhatsAppChannel] = useState(false);
+  const [sendWhatsAppChannel, setSendWhatsAppChannel] = useState(true);
   const [copiedModalLink, setCopiedModalLink] = useState(false);
   const [remindingEmail, setRemindingEmail] = useState<string | null>(null);
 
@@ -307,80 +351,367 @@ const RecruiterTests: React.FC = () => {
       .sort((a, b) => b.matchScore - a.matchScore);
   }, [invitingTest, dumpCandidates]);
 
-  const toggleCandidateInInviteList = (email: string) => {
+  const toggleCandidateInInviteList = (
+    email: string,
+    candMeta?: { name?: string; phone?: string; experience?: string }
+  ) => {
     const target = email.toLowerCase().trim();
     if (!target) return;
     setInviteEmailsList((prev) =>
       prev.includes(target) ? prev.filter((e) => e !== target) : [...prev, target]
     );
+    if (candMeta) {
+      setCandidateDetailsMap((prev) => ({
+        ...prev,
+        [target]: {
+          name: candMeta.name || target.split('@')[0],
+          phone: candMeta.phone || '',
+          experience: candMeta.experience || '',
+        },
+      }));
+    }
   };
 
   const handleSelectAllSuggested = () => {
-    const allSuggestedEmails = suggestedCandidates.slice(0, 20).map((c) => c.email);
+    const slice = suggestedCandidates.slice(0, 20);
+    const allSuggestedEmails = slice.map((c) => c.email.toLowerCase().trim());
     setInviteEmailsList((prev) => Array.from(new Set([...prev, ...allSuggestedEmails])));
+    setCandidateDetailsMap((prev) => {
+      const next = { ...prev };
+      slice.forEach((c) => {
+        const em = c.email.toLowerCase().trim();
+        next[em] = {
+          name: c.name || em.split('@')[0],
+          phone: c.phone || '',
+          experience: c.experienceYears ? `${c.experienceYears}y exp` : '',
+        };
+      });
+      return next;
+    });
     showSuccess(`Selected top ${Math.min(20, suggestedCandidates.length)} AI suggested candidates!`);
   };
 
   const handleClearSelectedInvites = () => {
     setInviteEmailsList([]);
+    setCandidateDetailsMap({});
     showSuccess('Cleared selected candidates from invite list.');
   };
 
   const handleAddSingleCandidate = () => {
-    const email = singleCandidateEmail.trim().toLowerCase();
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    const cleanEmail = singleCandidateEmail.trim().toLowerCase();
+    const cleanPhone = singleCandidatePhone.trim();
+    const cleanName =
+      singleCandidateName.trim() ||
+      (cleanEmail ? cleanEmail.split('@')[0] : cleanPhone ? `Candidate ${cleanPhone.slice(-4)}` : 'Candidate');
+
+    if (!cleanEmail && !cleanPhone) {
+      showError('Please enter at least an Email address or Mobile phone number.');
+      return;
+    }
+
+    if (cleanEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
       showError('Please enter a valid email address.');
       return;
     }
-    if (inviteEmailsList.includes(email)) {
+
+    const key = cleanEmail || `${cleanPhone.replace(/\D/g, '')}@candidate.whatsapp`;
+
+    if (inviteEmailsList.includes(key)) {
       showError('This candidate is already in the invite list.');
       return;
     }
-    setInviteEmailsList((prev) => [...prev, email]);
-    if (singleCandidateName || singleCandidatePhone) {
-      setDumpCandidates((prev) => [
-        {
-          id: `manual_${Date.now()}`,
-          name: singleCandidateName.trim() || email.split('@')[0],
-          email,
-          phone: singleCandidatePhone.trim(),
-          skills: [],
-          experienceYears: 0,
-        },
-        ...prev,
-      ]);
-    }
+
+    setCandidateDetailsMap((prev) => ({
+      ...prev,
+      [key]: {
+        name: cleanName,
+        phone: cleanPhone,
+        experience: 'Direct Entry',
+      },
+    }));
+
+    setInviteEmailsList((prev) => [...prev, key]);
+
+    setDumpCandidates((prev) => [
+      {
+        id: `manual_${Date.now()}`,
+        name: cleanName,
+        email: key,
+        phone: cleanPhone,
+        skills: [],
+        experienceYears: 0,
+      },
+      ...prev.filter((c) => c.email.toLowerCase() !== key),
+    ]);
+
     setSingleCandidateName('');
     setSingleCandidateEmail('');
     setSingleCandidatePhone('');
-    showSuccess(`Added ${email} to invite list!`);
+    showSuccess(`Added ${cleanName} (${cleanEmail || cleanPhone}) to invite list!`);
   };
 
-  const handleAddBulkEmailsFromText = () => {
-    const extracted = candidateEmailsInput
-      .split(/[\n,;\s]+/)
-      .map((e) => e.trim().toLowerCase())
-      .filter((e) => e && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e));
-
-    if (extracted.length === 0) {
-      showError('No valid email addresses found in pasted text.');
+  const handleAddBulkInput = () => {
+    const rawText = candidateEmailsInput.trim();
+    if (!rawText) {
+      showError('Please enter or paste candidate details first.');
       return;
     }
 
     let added = 0;
-    setInviteEmailsList((prev) => {
-      const set = new Set(prev);
-      extracted.forEach((em) => {
-        if (!set.has(em)) {
-          set.add(em);
+
+    if (bulkPasteType === 'email') {
+      const extractedEmails = rawText
+        .split(/[\n,;\s]+/)
+        .map((e) => e.trim().toLowerCase())
+        .filter((e) => e && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e));
+
+      if (extractedEmails.length === 0) {
+        showError('No valid email addresses found in pasted text.');
+        return;
+      }
+
+      setInviteEmailsList((prev) => {
+        const set = new Set(prev);
+        extractedEmails.forEach((em) => {
+          if (!set.has(em)) {
+            set.add(em);
+            added++;
+          }
+        });
+        return Array.from(set);
+      });
+
+      setCandidateDetailsMap((prev) => {
+        const next = { ...prev };
+        extractedEmails.forEach((em) => {
+          if (!next[em]) {
+            const dumpMatch = dumpCandidates.find((c) => c.email.toLowerCase() === em);
+            next[em] = {
+              name: dumpMatch?.name || em.split('@')[0],
+              phone: dumpMatch?.phone || '',
+              experience: dumpMatch?.experienceYears ? `${dumpMatch.experienceYears}y exp` : '',
+            };
+          }
+        });
+        return next;
+      });
+
+      setCandidateEmailsInput('');
+      showSuccess(`Added ${added} candidate email(s) to invite list!`);
+    } else if (bulkPasteType === 'phone') {
+      const phoneCandidates = rawText
+        .split(/[\n,;\r]+/)
+        .map((p) => p.trim())
+        .filter(Boolean);
+
+      const validPhones: string[] = [];
+      phoneCandidates.forEach((line) => {
+        const nums = line.split(/[,\s]+/).map((n) => n.trim()).filter((n) => n.replace(/\D/g, '').length >= 10);
+        validPhones.push(...nums);
+      });
+
+      const uniquePhones = Array.from(new Set(validPhones));
+      if (uniquePhones.length === 0) {
+        showError('No valid 10+ digit mobile numbers found in pasted text.');
+        return;
+      }
+
+      uniquePhones.forEach((phone) => {
+        const digits = phone.replace(/\D/g, '');
+        const key = `${digits}@candidate.whatsapp`;
+        if (!inviteEmailsList.includes(key)) {
+          setInviteEmailsList((prev) => [...prev, key]);
           added++;
         }
+        setCandidateDetailsMap((prev) => ({
+          ...prev,
+          [key]: {
+            name: `Candidate (${phone.slice(-4)})`,
+            phone,
+            experience: 'Phone Import',
+          },
+        }));
       });
-      return Array.from(set);
+
+      setCandidateEmailsInput('');
+      showSuccess(`Added ${added} candidate phone number(s) to invite list!`);
+    } else {
+      // Mixed Name, Email, Phone
+      const parsed = parseBulkCandidateTextInput(rawText);
+      if (parsed.length === 0) {
+        showError('Could not extract candidate contacts. Make sure entries contain an email or mobile phone.');
+        return;
+      }
+
+      parsed.forEach((c) => {
+        const cleanEmail = (c.email || '').trim().toLowerCase();
+        const cleanPhone = (c.phone || '').trim();
+        const cleanName =
+          (c.name || '').trim() ||
+          (cleanEmail ? cleanEmail.split('@')[0] : `Candidate ${cleanPhone.slice(-4)}`);
+        const key = cleanEmail || `${cleanPhone.replace(/\D/g, '')}@candidate.whatsapp`;
+
+        if (!inviteEmailsList.includes(key)) {
+          setInviteEmailsList((prev) => [...prev, key]);
+          added++;
+        }
+
+        setCandidateDetailsMap((prev) => ({
+          ...prev,
+          [key]: {
+            name: cleanName,
+            phone: cleanPhone,
+            experience: 'Mixed Paste',
+          },
+        }));
+      });
+
+      setCandidateEmailsInput('');
+      showSuccess(`Added ${added} candidate(s) with contact details to invite list!`);
+    }
+  };
+
+  // Spreadsheet Table Handlers
+  const handleAddSpreadsheetRow = () => {
+    setSpreadsheetRows((prev) => [
+      ...prev,
+      { id: `row_${Date.now()}_${Math.random()}`, name: '', email: '', phone: '' },
+    ]);
+  };
+
+  const handleAdd5SpreadsheetRows = () => {
+    setSpreadsheetRows((prev) => [
+      ...prev,
+      ...Array.from({ length: 5 }, (_, i) => ({
+        id: `row_${Date.now()}_${i}_${Math.random()}`,
+        name: '',
+        email: '',
+        phone: '',
+      })),
+    ]);
+  };
+
+  const handleUpdateSpreadsheetRow = (id: string, field: 'name' | 'email' | 'phone', value: string) => {
+    setSpreadsheetRows((prev) =>
+      prev.map((r) => (r.id === id ? { ...r, [field]: value } : r))
+    );
+  };
+
+  const handleRemoveSpreadsheetRow = (id: string) => {
+    setSpreadsheetRows((prev) =>
+      prev.length > 1
+        ? prev.filter((r) => r.id !== id)
+        : [{ id: 'row_1', name: '', email: '', phone: '' }]
+    );
+  };
+
+  const handleClearSpreadsheet = () => {
+    setSpreadsheetRows([
+      { id: 'row_1', name: '', email: '', phone: '' },
+      { id: 'row_2', name: '', email: '', phone: '' },
+      { id: 'row_3', name: '', email: '', phone: '' },
+    ]);
+    showSuccess('Cleared spreadsheet table rows.');
+  };
+
+  const handleSpreadsheetFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setIsUploadingSpreadsheet(true);
+    try {
+      const parsed = await parseCandidateDocument(file);
+      if (parsed.length === 0) {
+        showError('No valid candidate records could be extracted from this file.');
+        return;
+      }
+      const newRows = parsed.map((c, i) => ({
+        id: `row_${Date.now()}_${i}`,
+        name: c.name || '',
+        email: c.email || '',
+        phone: c.phone || '',
+      }));
+      setSpreadsheetRows(newRows);
+      showSuccess(`Extracted ${parsed.length} candidate(s) from "${file.name}"!`);
+    } catch (err: any) {
+      showError(err?.message || 'Failed to read spreadsheet file.');
+    } finally {
+      setIsUploadingSpreadsheet(false);
+      event.target.value = '';
+    }
+  };
+
+  const handlePasteClipboardToSpreadsheet = async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      if (!text || !text.trim()) {
+        showError('Clipboard is empty. Copy some rows from Excel or Google Sheets first.');
+        return;
+      }
+      const parsed = parseBulkCandidateTextInput(text);
+      if (parsed.length === 0) {
+        showError('No candidate rows detected in clipboard text.');
+        return;
+      }
+      const newRows = parsed.map((c, i) => ({
+        id: `row_${Date.now()}_${i}`,
+        name: c.name || '',
+        email: c.email || '',
+        phone: c.phone || '',
+      }));
+      setSpreadsheetRows(newRows);
+      showSuccess(`Pasted & parsed ${parsed.length} candidate row(s) into spreadsheet table!`);
+    } catch (err) {
+      showError('Unable to read clipboard. You can paste into the text box instead.');
+    }
+  };
+
+  const handleImportSpreadsheetRows = () => {
+    const validRows = spreadsheetRows.filter(
+      (r) => (r.email && r.email.trim()) || (r.phone && r.phone.trim())
+    );
+
+    if (validRows.length === 0) {
+      showError('Please enter at least one candidate with an Email or Phone number in the table.');
+      return;
+    }
+
+    let addedCount = 0;
+    validRows.forEach((r) => {
+      const cleanEmail = (r.email || '').trim().toLowerCase();
+      const cleanPhone = (r.phone || '').trim();
+      const cleanName =
+        (r.name || '').trim() ||
+        (cleanEmail ? cleanEmail.split('@')[0] : `Candidate ${cleanPhone.slice(-4)}`);
+      const key = cleanEmail || `${cleanPhone.replace(/\D/g, '')}@candidate.whatsapp`;
+
+      if (!inviteEmailsList.includes(key)) {
+        setInviteEmailsList((prev) => [...prev, key]);
+        addedCount++;
+      }
+
+      setCandidateDetailsMap((prev) => ({
+        ...prev,
+        [key]: {
+          name: cleanName,
+          phone: cleanPhone,
+          experience: 'Spreadsheet Table',
+        },
+      }));
+
+      setDumpCandidates((prev) => [
+        {
+          id: `tbl_${Date.now()}_${Math.random()}`,
+          name: cleanName,
+          email: key,
+          phone: cleanPhone,
+          skills: [],
+          experienceYears: 0,
+        },
+        ...prev.filter((c) => c.email.toLowerCase() !== key),
+      ]);
     });
 
-    setCandidateEmailsInput('');
-    showSuccess(`Added ${added} new candidate email(s) to invite list!`);
+    showSuccess(`Successfully imported ${addedCount} candidate(s) from spreadsheet table!`);
   };
 
   const handleSendTestInvites = async () => {
@@ -409,12 +740,13 @@ const RecruiterTests: React.FC = () => {
     const updatedCandidateEmails = Array.from(new Set([...existingCandidateEmails, ...finalEmails]));
 
     const candidateDataToAdd = finalEmails.map((email) => {
-      const match = dumpCandidates.find((c) => c.email.toLowerCase() === email);
+      const details = candidateDetailsMap[email.toLowerCase()];
+      const dumpMatch = dumpCandidates.find((c) => c.email.toLowerCase() === email);
       return {
         email,
-        name: match?.name || email.split('@')[0] || 'Candidate',
-        phone: match?.phone || '',
-        experience: match?.experienceYears ? `${match.experienceYears} Years` : 'N/A',
+        name: details?.name || dumpMatch?.name || email.split('@')[0] || 'Candidate',
+        phone: details?.phone || dumpMatch?.phone || '',
+        experience: details?.experience || (dumpMatch?.experienceYears ? `${dumpMatch.experienceYears} Years` : 'N/A'),
         invitedAt: new Date().toISOString(),
       };
     });
@@ -427,50 +759,93 @@ const RecruiterTests: React.FC = () => {
         updatedAt: serverTimestamp(),
       });
 
+      // 1. Send Assessment Email Invitations (MCQ Aptitude or Coding Challenge)
       if (sendEmailChannel) {
-        await sendInterviewInvitations(
+        await sendAssessmentEmailInvitations(
           candidateDataToAdd,
           invitingTest.title,
           testLink,
           invitingTest.accessCode || '',
+          invitingTest.type || 'aptitude',
+          {
+            duration: invitingTest.duration || 10,
+            passingScore: invitingTest.passingScore || 70,
+            questionsCount: invitingTest.questions?.length || 0,
+          },
           false,
           {
             recruiterName: userProfile?.name || 'InterviewXpert Team',
             recruiterEmail: userProfile?.email || 'info@interviewxpert.in',
-            recruiterUid: userProfile?.uid,
+            companyName: userProfile?.companyName || 'InterviewXpert',
           }
         );
       }
 
+      // 2. Send Assessment WhatsApp Invitations (MCQ Aptitude or Coding Challenge)
+      let waSuccessCount = 0;
       if (sendWhatsAppChannel) {
         for (const cand of candidateDataToAdd) {
           if (cand.phone) {
             const formattedPhone = formatPhoneForWhatsApp(cand.phone);
-            try {
-              await sendInterviewWhatsAppInvite({
-                phone: formattedPhone,
-                candidateName: cand.name,
-                jobTitle: invitingTest.title,
-                interviewLink: testLink,
-                accessCode: invitingTest.accessCode || '',
-                isReminder: false,
-              });
-            } catch {
-              // Non-blocking fallback
+            if (formattedPhone) {
+              try {
+                const waRes = await sendAssessmentWhatsAppInvite({
+                  phone: formattedPhone,
+                  candidateName: cand.name,
+                  testTitle: invitingTest.title,
+                  testType: invitingTest.type || 'aptitude',
+                  testLink,
+                  accessCode: invitingTest.accessCode || '',
+                  duration: invitingTest.duration || 10,
+                  passingScore: invitingTest.passingScore || 70,
+                  questionsCount: invitingTest.questions?.length || 0,
+                  isReminder: false,
+                  recruiterName: userProfile?.name || 'InterviewXpert Team',
+                  companyName: userProfile?.companyName || 'InterviewXpert',
+                });
+                if (waRes.success) waSuccessCount++;
+              } catch (waErr) {
+                console.warn('Non-blocking WhatsApp send error:', waErr);
+              }
             }
           }
         }
       }
 
+      // Update local state for both candidateEmails AND candidateData so lookups immediately succeed
       setTests((prev) =>
         prev.map((t) =>
-          t.id === invitingTest.id ? { ...t, candidateEmails: updatedCandidateEmails } : t
+          t.id === invitingTest.id
+            ? {
+                ...t,
+                candidateEmails: updatedCandidateEmails,
+                candidateData: [...(t.candidateData || []), ...candidateDataToAdd],
+              }
+            : t
         )
       );
 
-      showSuccess(`✅ Invitations dispatched to ${finalEmails.length} candidate(s)!`);
+      setInvitingTest((prev: any) =>
+        prev && prev.id === invitingTest.id
+          ? {
+              ...prev,
+              candidateEmails: updatedCandidateEmails,
+              candidateData: [...(prev.candidateData || []), ...candidateDataToAdd],
+            }
+          : prev
+      );
+
+      const channelSummary = [
+        sendEmailChannel ? `${finalEmails.length} Email(s)` : '',
+        sendWhatsAppChannel ? `${waSuccessCount} WhatsApp` : '',
+      ]
+        .filter(Boolean)
+        .join(' & ');
+
+      showSuccess(`✅ Assessment invitations dispatched via ${channelSummary || 'selected channels'}!`);
       setInvitingTest(null);
       setInviteEmailsList([]);
+      setCandidateDetailsMap({});
       setCandidateEmailsInput('');
     } catch (err: any) {
       console.error('Failed to dispatch test invitations:', err);
@@ -484,19 +859,29 @@ const RecruiterTests: React.FC = () => {
     if (!invitingTest) return;
     setRemindingEmail(email);
     const testLink = getAssessmentLink(invitingTest.id);
-    const match = dumpCandidates.find((c) => c.email.toLowerCase() === email.toLowerCase());
-    const candName = match?.name || email.split('@')[0] || 'Candidate';
+    const candDataMatch = (invitingTest.candidateData || []).find((c: any) => (c.email || '').toLowerCase() === email.toLowerCase());
+    const dumpMatch = dumpCandidates.find((c) => c.email.toLowerCase() === email.toLowerCase());
+    const details = candidateDetailsMap[email.toLowerCase()];
+    const candName = candDataMatch?.name || details?.name || dumpMatch?.name || email.split('@')[0] || 'Candidate';
+    const phone = candDataMatch?.phone || details?.phone || dumpMatch?.phone || '';
 
     try {
-      await sendInterviewInvitations(
-        [{ email, name: candName, phone: match?.phone || '' }],
+      await sendAssessmentEmailInvitations(
+        [{ email, name: candName, phone }],
         invitingTest.title,
         testLink,
         invitingTest.accessCode || '',
+        invitingTest.type || 'aptitude',
+        {
+          duration: invitingTest.duration || 10,
+          passingScore: invitingTest.passingScore || 70,
+          questionsCount: invitingTest.questions?.length || 0,
+        },
         true,
         {
           recruiterName: userProfile?.name || 'InterviewXpert Team',
           recruiterEmail: userProfile?.email || 'info@interviewxpert.in',
+          companyName: userProfile?.companyName || 'InterviewXpert',
         }
       );
       showSuccess(`Assessment reminder sent to ${email}!`);
@@ -507,12 +892,14 @@ const RecruiterTests: React.FC = () => {
     }
   };
 
-  const handleSendWhatsAppReminder = (email: string) => {
+  const handleSendWhatsAppReminder = async (email: string) => {
     if (!invitingTest) return;
     const testLink = getAssessmentLink(invitingTest.id);
-    const match = dumpCandidates.find((c) => c.email.toLowerCase() === email.toLowerCase());
-    const candName = match?.name || email.split('@')[0] || 'Candidate';
-    const rawPhone = match?.phone || '';
+    const candDataMatch = (invitingTest.candidateData || []).find((c: any) => (c.email || '').toLowerCase() === email.toLowerCase());
+    const dumpMatch = dumpCandidates.find((c) => c.email.toLowerCase() === email.toLowerCase());
+    const details = candidateDetailsMap[email.toLowerCase()];
+    const candName = candDataMatch?.name || details?.name || dumpMatch?.name || email.split('@')[0] || 'Candidate';
+    const rawPhone = candDataMatch?.phone || details?.phone || dumpMatch?.phone || '';
     const formattedPhone = formatPhoneForWhatsApp(rawPhone);
 
     if (!formattedPhone) {
@@ -520,8 +907,25 @@ const RecruiterTests: React.FC = () => {
       return;
     }
 
-    const text = `Hi ${candName}! Reminder for your assessment invite for ${invitingTest.title} on InterviewXpert ATS.\n\nStart your test here: ${testLink}\n\nPassing benchmark: ${invitingTest.passingScore || 70}%.`;
-    openWhatsAppWebInvite(formattedPhone, text);
+    try {
+      await sendAssessmentWhatsAppInvite({
+        phone: formattedPhone,
+        candidateName: candName,
+        testTitle: invitingTest.title,
+        testType: invitingTest.type || 'aptitude',
+        testLink,
+        accessCode: invitingTest.accessCode || '',
+        duration: invitingTest.duration || 10,
+        passingScore: invitingTest.passingScore || 70,
+        questionsCount: invitingTest.questions?.length || 0,
+        isReminder: true,
+        recruiterName: userProfile?.name || 'InterviewXpert Team',
+        companyName: userProfile?.companyName || 'InterviewXpert',
+      });
+      showSuccess(`WhatsApp assessment reminder sent to ${candName} (${formattedPhone})!`);
+    } catch (err: any) {
+      showError(err?.message || 'Failed to send WhatsApp reminder.');
+    }
   };
 
   const filteredTests = useMemo(() => {
@@ -591,7 +995,7 @@ const RecruiterTests: React.FC = () => {
               aria-disabled={assessmentLimitReached}
               className={secondaryButtonClass}
             >
-              <FileText size={14} className="text-[#8FB305] dark:text-[#D4F82C]" />
+              <FileText size={14} className="text-emerald-700 dark:text-emerald-400" />
               <span>+ Aptitude Test</span>
             </Link>
             <Link
@@ -639,7 +1043,7 @@ const RecruiterTests: React.FC = () => {
             </div>
             <div className="min-w-0">
               <p className="text-xl sm:text-2xl xl:text-3xl font-black font-mono text-[#111215] dark:text-white truncate">{tests.length}</p>
-              <p className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 mt-0.5 truncate">Active in bank</p>
+              <p className="text-[10px] font-bold text-[#575A51] dark:text-neutral-400 mt-0.5 truncate">Active in bank</p>
             </div>
           </div>
 
@@ -647,7 +1051,7 @@ const RecruiterTests: React.FC = () => {
           <div className="rounded-2xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] p-3.5 sm:p-4 xl:p-5 shadow-xs flex flex-col justify-between min-w-0">
             <div className="flex items-center justify-between mb-2 sm:mb-3 gap-1">
               <span className="text-[10px] sm:text-[11px] font-bold text-[#73766C] dark:text-neutral-400 uppercase tracking-wider truncate">Aptitude</span>
-              <div className="size-6 sm:size-7 rounded-lg bg-[#F4F9EB] dark:bg-emerald-950/20 border border-[#D2E7B3] dark:border-emerald-800/40 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
+              <div className="size-6 sm:size-7 rounded-lg bg-[#F4F9EB] dark:bg-emerald-950/20 border border-[#D2E7B3] dark:border-emerald-800/40 flex items-center justify-center text-emerald-800 dark:text-emerald-300 shrink-0">
                 <FileText size={13} className="sm:w-3.5 sm:h-3.5" />
               </div>
             </div>
@@ -689,13 +1093,13 @@ const RecruiterTests: React.FC = () => {
           <div className="rounded-2xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] p-3.5 sm:p-4 xl:p-5 shadow-xs flex flex-col justify-between min-w-0">
             <div className="flex items-center justify-between mb-2 sm:mb-3 gap-1">
               <span className="text-[10px] sm:text-[11px] font-bold text-[#73766C] dark:text-neutral-400 uppercase tracking-wider truncate">Passed</span>
-              <div className="size-6 sm:size-7 rounded-lg bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800/40 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
+              <div className="size-6 sm:size-7 rounded-lg bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800/40 flex items-center justify-center text-emerald-800 dark:text-emerald-300 shrink-0">
                 <CheckCircle2 size={13} className="sm:w-3.5 sm:h-3.5" />
               </div>
             </div>
             <div className="min-w-0">
-              <p className="text-xl sm:text-2xl xl:text-3xl font-black font-mono text-emerald-600 dark:text-emerald-400 truncate">{overviewStats.passed}</p>
-              <p className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 mt-0.5 truncate">{overviewStats.passRate}% pass rate</p>
+              <p className="text-xl sm:text-2xl xl:text-3xl font-black font-mono text-[#111215] dark:text-white truncate">{overviewStats.passed}</p>
+              <p className="text-[10px] font-bold text-emerald-800 dark:text-emerald-300 mt-0.5 truncate">{overviewStats.passRate}% pass rate</p>
             </div>
           </div>
 
@@ -738,8 +1142,8 @@ const RecruiterTests: React.FC = () => {
                   onClick={() => setTypeFilter(filter)}
                   className={`px-3 py-1 text-xs font-bold rounded-full transition-all capitalize cursor-pointer ${
                     typeFilter === filter
-                      ? 'bg-[#111215] text-[#D4F82C] dark:bg-[#D4F82C] dark:text-[#111215] shadow-xs'
-                      : 'text-[#575A51] dark:text-neutral-400 hover:text-[#111215] dark:hover:text-white'
+                      ? 'bg-white text-[#111215] border border-[#E4E7DC] font-bold shadow-xs'
+                      : 'text-[#73766C] hover:text-[#111215] font-medium'
                   }`}
                 >
                   {filter}
@@ -761,20 +1165,22 @@ const RecruiterTests: React.FC = () => {
 
         {/* Content Section */}
         {loading ? (
-          <div className="space-y-4">
-            {[...Array(4)].map((_, index) => (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {[...Array(6)].map((_, index) => (
               <div key={index} className="rounded-3xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] p-6 shadow-xs animate-pulse space-y-4">
                 <div className="flex items-center justify-between">
-                  <div className="h-5 w-60 rounded-xl bg-gray-200 dark:bg-white/10" />
-                  <div className="h-8 w-24 rounded-full bg-gray-200 dark:bg-white/10" />
+                  <div className="h-5 w-40 rounded-xl bg-gray-200 dark:bg-white/10" />
+                  <div className="h-5 w-16 rounded-full bg-gray-200 dark:bg-white/10" />
                 </div>
-                <div className="h-4 w-96 rounded-lg bg-gray-100 dark:bg-white/5" />
+                <div className="h-6 w-3/4 rounded-lg bg-gray-200 dark:bg-white/10" />
+                <div className="h-4 w-full rounded-md bg-gray-100 dark:bg-white/5" />
+                <div className="h-16 rounded-2xl bg-gray-100 dark:bg-white/5" />
               </div>
             ))}
           </div>
         ) : tests.length === 0 ? (
           <div className="rounded-3xl border-2 border-dashed border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] p-12 sm:p-16 text-center shadow-xs">
-            <div className="size-14 rounded-2xl bg-[#F8F9F5] dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 flex items-center justify-center text-[#8FB305] dark:text-[#D4F82C] mx-auto mb-4 shadow-2xs">
+            <div className="size-14 rounded-2xl bg-[#F8F9F5] border border-[#E4E7DC] flex items-center justify-center text-[#111215] mx-auto mb-4 shadow-2xs">
               <Sparkles size={24} />
             </div>
             <h3 className="text-lg font-black text-[#111215] dark:text-white">No assessments created yet</h3>
@@ -806,151 +1212,182 @@ const RecruiterTests: React.FC = () => {
             </button>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {filteredTests.map((test) => {
               const isCoding = test.type === 'coding';
               const stats = getStats(test, submissionsMap[test.id] || []);
               const testLink = getAssessmentLink(test.id);
               const invitedCount = (test.candidateEmails || []).length;
+              const skillsList = getTestSkills(test);
 
               return (
                 <article
                   key={test.id}
-                  className="rounded-3xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] p-5 sm:p-6 shadow-xs hover:shadow-md transition-all space-y-4 hover:border-[#111215]/30 dark:hover:border-white/20 min-w-0"
+                  onClick={() => navigate(`/recruiter/tests/${test.id}/results`)}
+                  className="group rounded-3xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] p-5 sm:p-6 transition-all duration-200 hover:-translate-y-1 hover:border-[#111215]/30 dark:hover:border-white/20 hover:shadow-lg flex flex-col justify-between cursor-pointer"
                 >
-                  {/* Top Bar: Title, Badges, Quick Actions */}
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#E4E7DC] dark:border-white/10">
-                    <div className="flex items-start sm:items-center gap-3 min-w-0 flex-1">
-                      <div className={`size-11 rounded-2xl flex items-center justify-center font-bold shadow-2xs shrink-0 ${
-                        isCoding
-                          ? 'bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400 border border-blue-200 dark:border-blue-800/40'
-                          : 'bg-[#F4F9EB] text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 border border-[#D2E7B3] dark:border-emerald-800/40'
-                      }`}>
-                        {isCoding ? <Code size={20} /> : <FileText size={20} />}
-                      </div>
-
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <button
-                            type="button"
-                            onClick={() => navigate(`/recruiter/tests/${test.id}/results`)}
-                            className="text-base sm:text-lg font-black text-[#111215] dark:text-white hover:text-emerald-600 dark:hover:text-[#D4F82C] text-left transition-colors cursor-pointer truncate max-w-full"
-                            title={test.title}
-                          >
-                            {test.title}
-                          </button>
-                          <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider shrink-0 ${
-                            isCoding
-                              ? 'bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400 border border-blue-200 dark:border-blue-800/50'
-                              : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/50'
-                          }`}>
-                            {isCoding ? 'Coding Challenge' : 'Aptitude Assessment'}
+                  <div>
+                    {/* Top Row: Category & Status (Exact All Jobs Style) */}
+                    <div className="flex items-center justify-between gap-2 mb-3">
+                      <div className="flex items-center gap-1.5 flex-wrap min-w-0">
+                        <span className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full border truncate max-w-[200px] ${
+                          isCoding
+                            ? 'bg-blue-50 text-blue-800 dark:bg-blue-950/40 dark:text-blue-300 border-blue-200 dark:border-blue-800'
+                            : 'bg-[#F8F9F5] text-[#575A51] dark:bg-white/5 dark:text-neutral-300 border-[#E4E7DC] dark:border-white/10'
+                        }`}>
+                          {isCoding ? 'Coding Challenge' : 'Aptitude Assessment'}
+                        </span>
+                        {test.accessCode && (
+                          <span className="font-mono text-[#111215] dark:text-white font-bold bg-[#E4E7DC] dark:bg-white/10 border border-[#D5D9CC] dark:border-white/10 px-2.5 py-0.5 rounded-full text-[10px]">
+                            #{test.accessCode}
                           </span>
-                        </div>
-                        <p className="text-xs text-[#73766C] dark:text-neutral-400 mt-0.5 truncate">
-                          Created on {formatDate(test.createdAt)} • {test.questions?.length || 0} questions • {test.duration || 10}m duration
-                        </p>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 font-mono text-xs border border-emerald-300 bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800">
+                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-600 animate-pulse" />
+                          <span>Active</span>
+                        </span>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2 shrink-0">
-                      <button
-                        type="button"
-                        onClick={() => navigate(`/recruiter/tests/${test.id}/edit`)}
-                        className={secondaryButtonClass}
-                        title="Edit Assessment"
-                      >
-                        <Edit3 size={13} className="text-[#8FB305] dark:text-[#D4F82C]" />
-                        <span>Edit</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleDelete(test.id)}
-                        className="size-9 sm:size-10 rounded-full flex items-center justify-center text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 border border-transparent hover:border-red-200 dark:hover:border-red-500/20 transition-all cursor-pointer shrink-0"
-                        title="Delete assessment"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  </div>
+                    {/* Test Title */}
+                    <h2
+                      style={{ color: '#111215' }}
+                      className="text-base sm:text-lg font-bold text-[#111215] dark:text-white group-hover:text-black dark:group-hover:text-white transition-colors truncate"
+                      title={test.title}
+                    >
+                      {test.title}
+                    </h2>
 
-                  {/* Bento Info Box (Clean metrics strip) */}
-                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
-                    <div className="p-3 rounded-2xl bg-[#F8F9F5] dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 text-center">
-                      <span className="text-[10px] font-bold text-[#73766C] dark:text-neutral-400 block uppercase tracking-wider">Duration</span>
-                      <span className="text-sm sm:text-base font-black font-mono text-[#111215] dark:text-white block mt-0.5">{test.duration || 10}m</span>
-                    </div>
-                    <div className="p-3 rounded-2xl bg-[#F8F9F5] dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 text-center">
-                      <span className="text-[10px] font-bold text-[#73766C] dark:text-neutral-400 block uppercase tracking-wider">Pass Benchmark</span>
-                      <span className="text-sm sm:text-base font-black font-mono text-emerald-600 dark:text-emerald-400 block mt-0.5">{test.passingScore || 70}%</span>
-                    </div>
-                    <div className="p-3 rounded-2xl bg-[#F8F9F5] dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 text-center">
-                      <span className="text-[10px] font-bold text-[#73766C] dark:text-neutral-400 block uppercase tracking-wider">Submissions</span>
-                      <span className="text-sm sm:text-base font-black font-mono text-[#111215] dark:text-white block mt-0.5">{stats.submissions}</span>
-                    </div>
-                    <div className="p-3 rounded-2xl bg-[#F8F9F5] dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 text-center">
-                      <span className="text-[10px] font-bold text-[#73766C] dark:text-neutral-400 block uppercase tracking-wider">Avg Score</span>
-                      <span className="text-sm sm:text-base font-black font-mono text-amber-600 dark:text-amber-400 block mt-0.5">{stats.averageScore}%</span>
-                    </div>
-                    <div className="p-3 rounded-2xl bg-[#F8F9F5] dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 text-center col-span-2 sm:col-span-1">
-                      <span className="text-[10px] font-bold text-[#73766C] dark:text-neutral-400 block uppercase tracking-wider">Invited</span>
-                      <span className="text-sm sm:text-base font-black font-mono text-blue-600 dark:text-blue-400 block mt-0.5">
-                        {invitedCount} candidate{invitedCount === 1 ? '' : 's'}
+                    {/* Metadata Sub-row */}
+                    <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 mt-1.5 text-xs text-[#575A51] dark:text-neutral-400">
+                      <span className="flex items-center gap-1 truncate">
+                        <Clock className="w-3 h-3 text-[#73766C] shrink-0" />
+                        <span>{test.duration || 10}m duration</span>
                       </span>
+                      <span>•</span>
+                      <span className="flex items-center gap-1 truncate">
+                        <FileText className="w-3 h-3 text-[#73766C] shrink-0" />
+                        <span>{test.questions?.length || 0} questions</span>
+                      </span>
+                      <span>•</span>
+                      <span>Created {formatDate(test.createdAt)}</span>
                     </div>
+
+                    {/* Short Description */}
+                    <p className="mt-2.5 text-xs text-[#575A51] dark:text-neutral-400 line-clamp-2 leading-relaxed">
+                      {test.description || 'Automated screening assessment with anti-cheating browser lock and live proctoring.'}
+                    </p>
+
+                    {/* Specifications Grid (Exact All Jobs Style) */}
+                    <div className="mt-3.5 pt-3 border-t border-[#E4E7DC] dark:border-white/10 grid grid-cols-2 gap-x-3 gap-y-2 text-xs text-[#575A51] dark:text-neutral-400">
+                      <div className="flex items-center gap-1.5 min-w-0" title={`Duration: ${test.duration || 10}m`}>
+                        <Clock className="w-3.5 h-3.5 text-[#575A51] dark:text-neutral-400 shrink-0" />
+                        <span className="text-[#73766C] shrink-0">Duration:</span>
+                        <span className="text-[#111215] dark:text-white font-bold truncate">{test.duration || 10}m</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 min-w-0" title={`Pass Benchmark: ${test.passingScore || 70}%`}>
+                        <Target className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400 shrink-0" />
+                        <span className="text-[#73766C] shrink-0">Benchmark:</span>
+                        <span className="text-[#111215] dark:text-white font-bold truncate">{test.passingScore || 70}%</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 min-w-0" title={`${stats.submissions} candidate${stats.submissions === 1 ? '' : 's'} tested`}>
+                        <Users className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                        <span className="text-[#73766C] shrink-0">Tested:</span>
+                        <span className="text-[#111215] dark:text-white font-bold truncate">{stats.submissions} candidate{stats.submissions === 1 ? '' : 's'}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 min-w-0" title={`${invitedCount} candidate${invitedCount === 1 ? '' : 's'} invited`}>
+                        <Send className="w-3.5 h-3.5 text-purple-600 shrink-0" />
+                        <span className="text-[#73766C] shrink-0">Invited:</span>
+                        <span className="text-[#111215] dark:text-white font-bold truncate">{invitedCount} candidate{invitedCount === 1 ? '' : 's'}</span>
+                      </div>
+                    </div>
+
+                    {/* Skills / Topics */}
+                    {skillsList.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 mt-3">
+                        {skillsList.map((skill, sIdx) => (
+                          <span
+                            key={sIdx}
+                            className="text-[11px] px-2.5 py-0.5 rounded-full bg-[#F8F9F5] dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 text-[#111215] dark:text-white font-medium"
+                          >
+                            {skill}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
-                  {/* Bottom Action Row (NO raw url bar, NO code box) */}
-                  <div className="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-t border-[#E4E7DC]/60 dark:border-white/5">
-                    {/* Left Quick Actions */}
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <button
-                        type="button"
-                        onClick={() => copyToClipboard(testLink, 'Candidate assessment link copied to clipboard.')}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-white/5 text-xs font-bold text-[#111215] dark:text-white hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer shadow-2xs"
-                        title="Copy candidate assessment URL"
-                      >
-                        <Copy size={13} />
-                        <span>Copy Link</span>
-                      </button>
+                  {/* Card Actions (Exact All Jobs Row: [Invite], [Responses], [Link], [Edit], [Delete]) */}
+                  <div className="mt-4 pt-3.5 border-t border-[#E4E7DC] dark:border-white/10 flex items-center justify-between gap-2 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setInvitingTest(test);
+                        setInviteMode('ai_suggest');
+                        setInviteEmailsList([]);
+                        setCandidateEmailsInput('');
+                      }}
+                      className="flex-1 min-w-[100px] inline-flex h-8 items-center justify-center gap-1.5 rounded-full bg-[#111215] dark:bg-[#D4F82C] px-3 font-semibold text-white dark:text-[#111215] text-xs transition-colors hover:bg-[#202227] dark:hover:bg-[#c5ea24] shadow-xs cursor-pointer"
+                      title="Invite candidate"
+                    >
+                      <UserPlus className="w-3.5 h-3.5 text-white dark:text-[#111215]" />
+                      <span className="truncate">Invite</span>
+                    </button>
 
-                      <a
-                        href={testLink}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-white/5 text-xs font-bold text-[#575A51] dark:text-neutral-300 hover:text-[#111215] dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 transition-colors shadow-2xs"
-                        title="Preview test taking experience"
-                      >
-                        <ExternalLink size={13} />
-                        <span>Preview Test</span>
-                      </a>
-                    </div>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/recruiter/tests/${test.id}/results`);
+                      }}
+                      className="inline-flex h-8 items-center justify-center gap-1.5 rounded-full border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-white/5 px-3 font-semibold text-[#111215] dark:text-white text-xs transition-colors hover:bg-[#F8F9F5] dark:hover:bg-white/10 cursor-pointer shadow-2xs"
+                      title="See candidate submissions"
+                    >
+                      <FileText className="w-3.5 h-3.5 text-[#575A51] dark:text-neutral-400" />
+                      <span>Responses</span>
+                    </button>
 
-                    {/* Right Action Buttons */}
-                    <div className="flex items-center gap-2 self-stretch sm:self-auto">
-                      <button
-                        type="button"
-                        onClick={() => navigate(`/recruiter/tests/${test.id}/results`)}
-                        className={secondaryButtonClass}
-                      >
-                        <BarChart3 size={13} />
-                        <span>View Results ({stats.submissions})</span>
-                      </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        copyToClipboard(testLink, 'Assessment link copied to clipboard.');
+                      }}
+                      className="inline-flex h-8 items-center justify-center gap-1.5 rounded-full border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-white/5 px-2.5 font-semibold text-[#111215] dark:text-white text-xs transition-colors hover:bg-[#F8F9F5] dark:hover:bg-white/10 cursor-pointer shadow-2xs"
+                      title="Copy assessment link"
+                    >
+                      <Copy className="w-3.5 h-3.5 text-[#575A51] dark:text-neutral-400" />
+                      <span className="hidden sm:inline">Link</span>
+                    </button>
 
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setInvitingTest(test);
-                          setInviteMode('ai_suggest');
-                          setInviteEmailsList([]);
-                          setCandidateEmailsInput('');
-                        }}
-                        className="inline-flex h-9 sm:h-10 items-center justify-center rounded-full bg-[#111215] text-[#D4F82C] hover:bg-black dark:bg-[#D4F82C] dark:text-[#111215] dark:hover:bg-[#c5ea24] px-5 font-bold text-xs sm:text-sm transition-all shadow-md cursor-pointer gap-2 shrink-0 active:scale-95"
-                      >
-                        <UserPlus size={15} />
-                        <span>Invite Candidates</span>
-                      </button>
-                    </div>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/recruiter/tests/${test.id}/edit`);
+                      }}
+                      className="inline-flex h-8 items-center justify-center gap-1.5 rounded-full border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-white/5 px-2.5 font-semibold text-[#111215] dark:text-white text-xs transition-colors hover:bg-[#F8F9F5] dark:hover:bg-white/10 cursor-pointer shadow-2xs"
+                      title="Edit assessment"
+                    >
+                      <Edit3 className="w-3.5 h-3.5 text-[#575A51] dark:text-neutral-400" />
+                      <span>Edit</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(test.id);
+                      }}
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-red-200 bg-red-50 text-red-600 hover:bg-red-100 text-xs transition-colors shrink-0 cursor-pointer dark:bg-red-950/40 dark:border-red-800 dark:text-red-400"
+                      title="Delete assessment"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
                   </div>
                 </article>
               );
@@ -981,7 +1418,10 @@ const RecruiterTests: React.FC = () => {
                     <h3 className="text-base sm:text-lg font-black text-[#111215] dark:text-white">
                       Invite Candidates to Assessment
                     </h3>
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#111215]/5 dark:bg-white/10 text-[#575A51] dark:text-neutral-300 border border-[#E4E7DC] dark:border-white/10 truncate max-w-xs">
+                    <span
+                      style={{ color: '#111215' }}
+                      className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-black bg-white text-[#111215] border border-[#E4E7DC] truncate max-w-xs shadow-2xs"
+                    >
                       {invitingTest.title}
                     </span>
                     <span className={`text-[10px] font-mono font-bold uppercase px-2 py-0.5 rounded-full ${
@@ -1033,7 +1473,7 @@ const RecruiterTests: React.FC = () => {
                       showSuccess('Assessment link copied to clipboard!');
                       setTimeout(() => setCopiedModalLink(false), 2500);
                     }}
-                    className="px-3.5 py-2 rounded-xl text-xs font-bold bg-[#111215] text-[#D4F82C] dark:bg-[#D4F82C] dark:text-[#111215] hover:opacity-90 transition-opacity cursor-pointer shrink-0 flex items-center gap-1.5 shadow-xs"
+                    className="px-3.5 py-2 rounded-xl text-xs font-bold bg-[#111215] text-white hover:bg-[#202227] transition-all cursor-pointer shrink-0 flex items-center gap-1.5 shadow-xs"
                   >
                     {copiedModalLink ? <Check size={13} strokeWidth={2.5} /> : <Copy size={13} />}
                     <span>{copiedModalLink ? 'Copied!' : 'Copy Link'}</span>
@@ -1057,11 +1497,11 @@ const RecruiterTests: React.FC = () => {
                   onClick={() => setInviteMode('ai_suggest')}
                   className={`flex-1 py-2 px-3 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-1.5 min-w-[140px] cursor-pointer ${
                     inviteMode === 'ai_suggest'
-                      ? 'bg-[#111215] text-[#D4F82C] dark:bg-[#D4F82C] dark:text-[#111215] shadow-xs'
-                      : 'text-[#575A51] dark:text-neutral-400 hover:text-[#111215] dark:hover:text-white'
+                      ? 'bg-white text-[#111215] border border-[#E4E7DC] shadow-xs'
+                      : 'text-[#575A51] hover:text-[#111215] hover:bg-white/60'
                   }`}
                 >
-                  <Sparkles className="w-3.5 h-3.5" />
+                  <Sparkles className="w-3.5 h-3.5 text-[#111215]" />
                   <span>Suggest AI Candidates</span>
                 </button>
 
@@ -1070,11 +1510,11 @@ const RecruiterTests: React.FC = () => {
                   onClick={() => setInviteMode('bulk')}
                   className={`flex-1 py-2 px-3 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-1.5 min-w-[120px] cursor-pointer ${
                     inviteMode === 'bulk'
-                      ? 'bg-[#111215] text-[#D4F82C] dark:bg-[#D4F82C] dark:text-[#111215] shadow-xs'
-                      : 'text-[#575A51] dark:text-neutral-400 hover:text-[#111215] dark:hover:text-white'
+                      ? 'bg-white text-[#111215] border border-[#E4E7DC] shadow-xs'
+                      : 'text-[#575A51] hover:text-[#111215] hover:bg-white/60'
                   }`}
                 >
-                  <Layers className="w-3.5 h-3.5" />
+                  <Layers className="w-3.5 h-3.5 text-[#111215]" />
                   <span>Add / Bulk Import</span>
                 </button>
 
@@ -1083,11 +1523,11 @@ const RecruiterTests: React.FC = () => {
                   onClick={() => setInviteMode('invited')}
                   className={`flex-1 py-2 px-3 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-1.5 min-w-[130px] cursor-pointer ${
                     inviteMode === 'invited'
-                      ? 'bg-[#111215] text-[#D4F82C] dark:bg-[#D4F82C] dark:text-[#111215] shadow-xs'
-                      : 'text-[#575A51] dark:text-neutral-400 hover:text-[#111215] dark:hover:text-white'
+                      ? 'bg-white text-[#111215] border border-[#E4E7DC] shadow-xs'
+                      : 'text-[#575A51] hover:text-[#111215] hover:bg-white/60'
                   }`}
                 >
-                  <Users className="w-3.5 h-3.5" />
+                  <Users className="w-3.5 h-3.5 text-[#111215]" />
                   <span>Invited Candidates ({(invitingTest.candidateEmails || []).length})</span>
                 </button>
               </div>
@@ -1104,7 +1544,7 @@ const RecruiterTests: React.FC = () => {
                         <button
                           type="button"
                           onClick={handleSelectAllSuggested}
-                          className="text-[11px] font-bold text-[#8FB305] dark:text-[#D4F82C] hover:underline cursor-pointer"
+                          className="text-[11px] font-bold text-[#111215] dark:text-white hover:underline cursor-pointer"
                         >
                           + Select Top 20 Candidates
                         </button>
@@ -1183,10 +1623,10 @@ const RecruiterTests: React.FC = () => {
 
                             <button
                               type="button"
-                              onClick={() => toggleCandidateInInviteList(cand.email)}
+                              onClick={() => toggleCandidateInInviteList(cand.email, { name: cand.name, phone: cand.phone, experience: cand.experienceYears ? `${cand.experienceYears}y exp` : '' })}
                               className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
                                 isSelected
-                                  ? 'bg-[#111215] text-[#D4F82C] dark:bg-[#D4F82C] dark:text-[#111215] shadow-xs'
+                                  ? 'bg-[#111215] text-white shadow-xs'
                                   : 'border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-white/5 text-[#111215] dark:text-white hover:bg-black/5'
                               }`}
                             >
@@ -1203,76 +1643,367 @@ const RecruiterTests: React.FC = () => {
               {/* TAB 2: Add / Bulk Import */}
               {inviteMode === 'bulk' && (
                 <div className="space-y-4">
-                  {/* Single Candidate Input */}
-                  <div className="p-4 rounded-2xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-white/5 space-y-3">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-[#73766C] dark:text-neutral-400 block">
-                      Add Single Candidate Directly
-                    </span>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                      <input
-                        type="text"
-                        value={singleCandidateName}
-                        onChange={(e) => setSingleCandidateName(e.target.value)}
-                        placeholder="Candidate Name"
-                        className="px-3 py-2 rounded-xl border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-[#101114] text-xs outline-none focus:border-[#111215] dark:focus:border-[#D4F82C]"
-                      />
-                      <input
-                        type="email"
-                        value={singleCandidateEmail}
-                        onChange={(e) => setSingleCandidateEmail(e.target.value)}
-                        placeholder="Candidate Email *"
-                        className="px-3 py-2 rounded-xl border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-[#101114] text-xs outline-none focus:border-[#111215] dark:focus:border-[#D4F82C]"
-                      />
-                      <div className="flex gap-2">
-                        <input
-                          type="tel"
-                          value={singleCandidatePhone}
-                          onChange={(e) => setSingleCandidatePhone(e.target.value)}
-                          placeholder="Phone (Optional)"
-                          className="flex-1 px-3 py-2 rounded-xl border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-[#101114] text-xs outline-none focus:border-[#111215] dark:focus:border-[#D4F82C]"
+                  {/* Sub-mode Switcher: Form & Paste vs Spreadsheet Grid */}
+                  <div className="flex items-center justify-between gap-2 p-1.5 rounded-2xl bg-[#F8F9F5] dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10">
+                    <div className="flex items-center gap-1.5 flex-1">
+                      <button
+                        type="button"
+                        onClick={() => setBulkSubMode('form')}
+                        className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                          bulkSubMode === 'form'
+                            ? 'bg-white dark:bg-[#1A1C20] text-[#111215] dark:text-white shadow-xs border border-[#E4E7DC] dark:border-white/10'
+                            : 'text-[#73766C] dark:text-neutral-400 hover:text-[#111215] dark:hover:text-white'
+                        }`}
+                      >
+                        <UserPlus className="w-3.5 h-3.5" />
+                        <span>Quick Form & Bulk Paste</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setBulkSubMode('spreadsheet')}
+                        className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                          bulkSubMode === 'spreadsheet'
+                            ? 'bg-white dark:bg-[#1A1C20] text-[#111215] dark:text-white shadow-xs border border-[#E4E7DC] dark:border-white/10'
+                            : 'text-[#73766C] dark:text-neutral-400 hover:text-[#111215] dark:hover:text-white'
+                        }`}
+                      >
+                        <Table className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>Spreadsheet Table (Excel / CSV Grid)</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {bulkSubMode === 'form' ? (
+                    <>
+                      {/* Aligned Single Candidate Input */}
+                      <div className="p-4 rounded-2xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-white/5 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] font-bold uppercase tracking-wider text-[#73766C] dark:text-neutral-400 block">
+                            Add Single Candidate Directly
+                          </span>
+                          <span className="text-[11px] text-[#73766C] dark:text-neutral-400">
+                            Provide Email, Mobile Phone, or both
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
+                          <div>
+                            <label className="block text-[11px] font-bold text-[#73766C] dark:text-neutral-400 mb-1">
+                              Candidate Name
+                            </label>
+                            <input
+                              type="text"
+                              value={singleCandidateName}
+                              onChange={(e) => setSingleCandidateName(e.target.value)}
+                              placeholder="e.g. Rahul Sharma"
+                              className="w-full h-10 px-3.5 rounded-xl border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-[#101114] text-xs text-[#111215] dark:text-white outline-none focus:border-[#111215] dark:focus:border-[#D4F82C] transition-colors"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[11px] font-bold text-[#73766C] dark:text-neutral-400 mb-1">
+                              Candidate Email
+                            </label>
+                            <input
+                              type="email"
+                              value={singleCandidateEmail}
+                              onChange={(e) => setSingleCandidateEmail(e.target.value)}
+                              placeholder="e.g. rahul@example.com"
+                              className="w-full h-10 px-3.5 rounded-xl border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-[#101114] text-xs text-[#111215] dark:text-white outline-none focus:border-[#111215] dark:focus:border-[#D4F82C] transition-colors"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[11px] font-bold text-[#73766C] dark:text-neutral-400 mb-1">
+                              Mobile / WhatsApp
+                            </label>
+                            <input
+                              type="tel"
+                              value={singleCandidatePhone}
+                              onChange={(e) => setSingleCandidatePhone(e.target.value)}
+                              placeholder="e.g. +91 9876543210"
+                              className="w-full h-10 px-3.5 rounded-xl border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-[#101114] text-xs text-[#111215] dark:text-white outline-none focus:border-[#111215] dark:focus:border-[#D4F82C] transition-colors"
+                            />
+                          </div>
+                          <div>
+                            <button
+                              type="button"
+                              onClick={handleAddSingleCandidate}
+                              className="w-full h-10 px-4 rounded-xl text-xs font-bold bg-[#111215] text-white hover:bg-[#202227] cursor-pointer shadow-xs flex items-center justify-center gap-1.5 transition-all"
+                            >
+                              <Plus className="w-3.5 h-3.5" />
+                              <span>+ Add Candidate</span>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Paste Multiple Candidates with Options */}
+                      <div className="p-4 rounded-2xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-white/5 space-y-3">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                          <div>
+                            <label className="text-[11px] uppercase font-bold text-[#73766C] dark:text-neutral-400 block">
+                              Paste Multiple Candidates
+                            </label>
+                            <span className="text-[11px] text-[#73766C] dark:text-neutral-400">
+                              Choose paste format then paste lists separated by commas or lines
+                            </span>
+                          </div>
+
+                          {/* Mode selector pills */}
+                          <div className="inline-flex items-center gap-1 p-1 bg-[#F8F9F5] rounded-xl border border-[#E4E7DC] text-xs">
+                            <button
+                              type="button"
+                              onClick={() => setBulkPasteType('email')}
+                              className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
+                                bulkPasteType === 'email'
+                                  ? 'bg-white text-[#111215] shadow-xs border border-[#E4E7DC]'
+                                  : 'text-[#73766C] hover:text-[#111215]'
+                              }`}
+                            >
+                              Emails
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setBulkPasteType('phone')}
+                              className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
+                                bulkPasteType === 'phone'
+                                  ? 'bg-white text-[#111215] shadow-xs border border-[#E4E7DC]'
+                                  : 'text-[#73766C] hover:text-[#111215]'
+                              }`}
+                            >
+                              Phone Numbers
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setBulkPasteType('mixed')}
+                              className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
+                                bulkPasteType === 'mixed'
+                                  ? 'bg-white text-[#111215] shadow-xs border border-[#E4E7DC]'
+                                  : 'text-[#73766C] hover:text-[#111215]'
+                              }`}
+                            >
+                              Mixed (Name, Email, Phone)
+                            </button>
+                          </div>
+                        </div>
+
+                        <textarea
+                          rows={3}
+                          value={candidateEmailsInput}
+                          onChange={(e) => setCandidateEmailsInput(e.target.value)}
+                          placeholder={
+                            bulkPasteType === 'email'
+                              ? 'e.g. dev@example.com, alex@tech.org\npriya@startup.in, rahul@company.com'
+                              : bulkPasteType === 'phone'
+                              ? 'e.g. +91 9876543210, 9876543211\n+1 415 555 2671, +91-9123456789'
+                              : 'e.g. Rahul Sharma, rahul@example.com, +91 9876543210\nPriya, priya@startup.in\n+91 9988776655'
+                          }
+                          className="w-full p-3 rounded-xl border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-[#101114] text-xs font-mono outline-none focus:border-[#111215] dark:focus:border-[#D4F82C] text-[#111215] dark:text-white resize-none"
                         />
+
+                        <div className="flex items-center justify-between pt-1">
+                          <span className="text-[11px] text-[#73766C] dark:text-neutral-400">
+                            {bulkPasteType === 'email' && 'Extracts all valid email addresses.'}
+                            {bulkPasteType === 'phone' && 'Extracts all 10+ digit contact numbers for WhatsApp invite.'}
+                            {bulkPasteType === 'mixed' && 'Intelligently parses names, emails, and phone numbers.'}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={handleAddBulkInput}
+                            disabled={!candidateEmailsInput.trim()}
+                            className="px-4 py-2 rounded-xl text-xs font-bold bg-[#111215] text-white hover:bg-[#202227] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-xs transition-all flex items-center gap-1.5"
+                          >
+                            <span>
+                              Extract & Add{' '}
+                              {bulkPasteType === 'email'
+                                ? 'Emails'
+                                : bulkPasteType === 'phone'
+                                ? 'Phones'
+                                : 'Candidates'}{' '}
+                              →
+                            </span>
+                          </button>
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    /* Sub-mode: Spreadsheet Table */
+                    <div className="p-4 rounded-2xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-white/5 space-y-3">
+                      {/* Toolbar */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-1 border-b border-[#E4E7DC] dark:border-white/10">
+                        <div>
+                          <h4 className="text-xs font-bold text-[#111215] dark:text-white flex items-center gap-2">
+                            <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+                            <span>Spreadsheet Candidate Grid</span>
+                          </h4>
+                          <p className="text-[11px] text-[#73766C] dark:text-neutral-400">
+                            Edit rows inline, paste Excel rows, or upload a .xlsx / .csv file.
+                          </p>
+                        </div>
+
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <label className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-white/5 hover:bg-neutral-100 dark:hover:bg-white/10 text-[#111215] dark:text-white cursor-pointer transition-colors shadow-2xs">
+                            <FileUp className="w-3.5 h-3.5 text-emerald-600" />
+                            <span>{isUploadingSpreadsheet ? 'Reading...' : 'Upload File'}</span>
+                            <input
+                              type="file"
+                              accept=".xlsx,.xls,.csv"
+                              onChange={handleSpreadsheetFileUpload}
+                              disabled={isUploadingSpreadsheet}
+                              className="hidden"
+                            />
+                          </label>
+
+                          <button
+                            type="button"
+                            onClick={handlePasteClipboardToSpreadsheet}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-white/5 hover:bg-neutral-100 dark:hover:bg-white/10 text-[#111215] dark:text-white cursor-pointer transition-colors shadow-2xs"
+                          >
+                            <Clipboard className="w-3.5 h-3.5 text-sky-600" />
+                            <span>Paste Clipboard</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={handleAddSpreadsheetRow}
+                            className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-bold rounded-xl border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-white/5 hover:bg-neutral-100 dark:hover:bg-white/10 text-[#111215] dark:text-white cursor-pointer transition-colors"
+                          >
+                            <Plus className="w-3 h-3" />
+                            <span>Row</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={handleAdd5SpreadsheetRows}
+                            className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-bold rounded-xl border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-white/5 hover:bg-neutral-100 dark:hover:bg-white/10 text-[#111215] dark:text-white cursor-pointer transition-colors"
+                          >
+                            <span>+5 Rows</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={handleClearSpreadsheet}
+                            className="px-2.5 py-1.5 text-xs font-bold rounded-xl text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 cursor-pointer transition-colors"
+                          >
+                            Clear
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Interactive Spreadsheet Table */}
+                      <div className="overflow-x-auto rounded-xl border border-[#E4E7DC] dark:border-white/10 max-h-60 overflow-y-auto">
+                        <table className="w-full text-left text-xs border-collapse">
+                          <thead className="bg-[#F8F9F5] dark:bg-[#151619] text-[#73766C] dark:text-neutral-400 text-[11px] uppercase tracking-wider font-bold sticky top-0 z-10 border-b border-[#E4E7DC] dark:border-white/10">
+                            <tr>
+                              <th className="py-2.5 px-3 w-10 text-center">#</th>
+                              <th className="py-2.5 px-3">Candidate Full Name</th>
+                              <th className="py-2.5 px-3">Email Address</th>
+                              <th className="py-2.5 px-3">Mobile / WhatsApp</th>
+                              <th className="py-2.5 px-3 w-12 text-center">Action</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-[#E4E7DC]/60 dark:divide-white/5 bg-white dark:bg-[#101114]">
+                            {spreadsheetRows.map((row, idx) => (
+                              <tr key={row.id} className="hover:bg-[#F8F9F5]/70 dark:hover:bg-white/5 transition-colors">
+                                <td className="py-2 px-3 text-center text-[#73766C] dark:text-neutral-400 font-mono text-[11px]">
+                                  {idx + 1}
+                                </td>
+                                <td className="py-1.5 px-2">
+                                  <input
+                                    type="text"
+                                    value={row.name}
+                                    onChange={(e) => handleUpdateSpreadsheetRow(row.id, 'name', e.target.value)}
+                                    placeholder="Rahul Sharma"
+                                    className="w-full px-2.5 py-1.5 rounded-lg border border-transparent hover:border-[#E4E7DC] dark:hover:border-white/20 focus:border-[#111215] dark:focus:border-[#D4F82C] bg-transparent text-xs text-[#111215] dark:text-white outline-none"
+                                  />
+                                </td>
+                                <td className="py-1.5 px-2">
+                                  <input
+                                    type="email"
+                                    value={row.email}
+                                    onChange={(e) => handleUpdateSpreadsheetRow(row.id, 'email', e.target.value)}
+                                    placeholder="rahul@example.com"
+                                    className="w-full px-2.5 py-1.5 rounded-lg border border-transparent hover:border-[#E4E7DC] dark:hover:border-white/20 focus:border-[#111215] dark:focus:border-[#D4F82C] bg-transparent text-xs text-[#111215] dark:text-white outline-none"
+                                  />
+                                </td>
+                                <td className="py-1.5 px-2">
+                                  <input
+                                    type="tel"
+                                    value={row.phone}
+                                    onChange={(e) => handleUpdateSpreadsheetRow(row.id, 'phone', e.target.value)}
+                                    placeholder="+91 9876543210"
+                                    className="w-full px-2.5 py-1.5 rounded-lg border border-transparent hover:border-[#E4E7DC] dark:hover:border-white/20 focus:border-[#111215] dark:focus:border-[#D4F82C] bg-transparent text-xs text-[#111215] dark:text-white outline-none"
+                                  />
+                                </td>
+                                <td className="py-1.5 px-2 text-center">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveSpreadsheetRow(row.id)}
+                                    className="p-1 rounded-lg text-[#73766C] hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
+                                    title="Delete Row"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {/* Spreadsheet Import Action Footer */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
+                        <span className="text-xs text-[#73766C] dark:text-neutral-400 font-medium">
+                          {
+                            spreadsheetRows.filter((r) => (r.email && r.email.trim()) || (r.phone && r.phone.trim()))
+                              .length
+                          }{' '}
+                          ready row(s) out of {spreadsheetRows.length} in table
+                        </span>
+
                         <button
                           type="button"
-                          onClick={handleAddSingleCandidate}
-                          className="px-3.5 py-2 rounded-xl text-xs font-bold bg-[#111215] text-[#D4F82C] dark:bg-[#D4F82C] dark:text-[#111215] hover:opacity-90 cursor-pointer shadow-xs shrink-0"
+                          onClick={handleImportSpreadsheetRows}
+                          disabled={
+                            spreadsheetRows.filter((r) => (r.email && r.email.trim()) || (r.phone && r.phone.trim()))
+                              .length === 0
+                          }
+                          className="px-4 py-2 rounded-xl text-xs font-bold bg-[#111215] text-white hover:bg-[#202227] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-xs transition-all flex items-center justify-center gap-1.5"
                         >
-                          + Add
+                          <Check className="w-4 h-4" />
+                          <span>
+                            + Import & Add{' '}
+                            {
+                              spreadsheetRows.filter((r) => (r.email && r.email.trim()) || (r.phone && r.phone.trim()))
+                                .length
+                            }{' '}
+                            Candidates from Table
+                          </span>
                         </button>
                       </div>
                     </div>
-                  </div>
+                  )}
 
-                  {/* Paste Multiple Emails */}
-                  <div className="p-4 rounded-2xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-white/5 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <label className="text-[11px] uppercase font-bold text-[#73766C] dark:text-neutral-400 block">
-                        Paste Multiple Emails (Comma or Newline separated)
-                      </label>
-                      {candidateEmailsInput.trim() && (
-                        <button
-                          type="button"
-                          onClick={handleAddBulkEmailsFromText}
-                          className="text-xs font-bold text-[#8FB305] dark:text-[#D4F82C] hover:underline cursor-pointer"
-                        >
-                          Extract & Add Emails →
-                        </button>
-                      )}
-                    </div>
-                    <textarea
-                      rows={3}
-                      value={candidateEmailsInput}
-                      onChange={(e) => setCandidateEmailsInput(e.target.value)}
-                      placeholder="e.g. dev@example.com, alex@tech.org, priya@startup.in"
-                      className="w-full p-3 rounded-xl border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-[#101114] text-xs font-mono outline-none focus:border-[#111215] dark:focus:border-[#D4F82C] resize-none"
-                    />
-                  </div>
-
-                  {/* Currently Selected Candidate Emails Chips */}
+                  {/* Currently Selected Candidate Chips with Mobile Phone & Name */}
                   {inviteEmailsList.length > 0 && (
                     <div className="space-y-1.5 pt-1">
                       <div className="flex items-center justify-between text-xs">
-                        <span className="font-bold text-[#111215] dark:text-white">
-                          Candidates Selected for Invitation ({inviteEmailsList.length})
+                        <span className="font-bold text-[#111215] dark:text-white flex items-center gap-2 flex-wrap">
+                          <span>Candidates Selected for Invitation ({inviteEmailsList.length})</span>
+                          {inviteEmailsList.filter((e) => {
+                            const details = candidateDetailsMap[e.toLowerCase()];
+                            const dumpMatch = dumpCandidates.find((c) => c.email.toLowerCase() === e.toLowerCase());
+                            return Boolean(details?.phone || dumpMatch?.phone);
+                          }).length > 0 && (
+                            <span className="font-mono text-[10px] text-emerald-800 font-semibold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                              {
+                                inviteEmailsList.filter((e) => {
+                                  const details = candidateDetailsMap[e.toLowerCase()];
+                                  const dumpMatch = dumpCandidates.find((c) => c.email.toLowerCase() === e.toLowerCase());
+                                  return Boolean(details?.phone || dumpMatch?.phone);
+                                }).length
+                              }{' '}
+                              with mobile phone
+                            </span>
+                          )}
                         </span>
                         <button
                           type="button"
@@ -1282,22 +2013,45 @@ const RecruiterTests: React.FC = () => {
                           Clear All
                         </button>
                       </div>
-                      <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto p-2 rounded-xl bg-white dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10">
-                        {inviteEmailsList.map((em) => (
-                          <span
-                            key={em}
-                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-mono bg-[#F8F9F5] dark:bg-white/10 border border-[#E4E7DC] dark:border-white/10 text-[#111215] dark:text-white"
-                          >
-                            <span>{em}</span>
-                            <button
-                              type="button"
-                              onClick={() => toggleCandidateInInviteList(em)}
-                              className="hover:text-rose-500 cursor-pointer"
+                      <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto p-2.5 rounded-2xl bg-[#F8F9F5] dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10">
+                        {inviteEmailsList.map((em) => {
+                          const details = candidateDetailsMap[em.toLowerCase()] || dumpCandidates.find((c) => c.email.toLowerCase() === em.toLowerCase());
+                          const name = details?.name || em.split('@')[0];
+                          const phone = details?.phone || '';
+
+                          return (
+                            <div
+                              key={em}
+                              className="inline-flex items-center justify-between gap-3 px-3 py-2 rounded-xl text-xs bg-white dark:bg-[#1A1C20] border border-[#E4E7DC] dark:border-white/10 text-[#111215] dark:text-white shadow-2xs min-w-[200px]"
                             >
-                              <X size={12} />
-                            </button>
-                          </span>
-                        ))}
+                              <div className="flex flex-col min-w-0">
+                                <div className="flex items-center gap-1.5 font-bold truncate">
+                                  <span className="truncate">{name}</span>
+                                  {phone ? (
+                                    <span className="font-mono text-[10px] font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded-md shrink-0">
+                                      📱 {phone}
+                                    </span>
+                                  ) : (
+                                    <span className="text-[10px] text-[#73766C] dark:text-neutral-400 font-normal shrink-0">
+                                      (No phone)
+                                    </span>
+                                  )}
+                                </div>
+                                <span className="font-mono text-[11px] text-[#575A51] dark:text-neutral-400 truncate">
+                                  {em}
+                                </span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => toggleCandidateInInviteList(em)}
+                                className="text-[#73766C] hover:text-rose-500 cursor-pointer shrink-0 p-1 rounded-md hover:bg-black/5"
+                                title="Remove candidate"
+                              >
+                                <X size={13} />
+                              </button>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   )}
@@ -1318,8 +2072,11 @@ const RecruiterTests: React.FC = () => {
                   ) : (
                     <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
                       {invitingTest.candidateEmails.map((email: string, idx: number) => {
-                        const match = dumpCandidates.find((c) => c.email.toLowerCase() === email.toLowerCase());
-                        const name = match?.name || email.split('@')[0] || 'Candidate';
+                        const candDataMatch = (invitingTest.candidateData || []).find((c: any) => (c.email || '').toLowerCase() === email.toLowerCase());
+                        const dumpMatch = dumpCandidates.find((c) => c.email.toLowerCase() === email.toLowerCase());
+                        const details = candidateDetailsMap[email.toLowerCase()];
+                        const name = candDataMatch?.name || details?.name || dumpMatch?.name || email.split('@')[0] || 'Candidate';
+                        const phone = candDataMatch?.phone || details?.phone || dumpMatch?.phone || '';
                         const isReminding = remindingEmail === email;
 
                         return (
@@ -1328,17 +2085,24 @@ const RecruiterTests: React.FC = () => {
                             className="p-3 rounded-2xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-white/5 flex items-center justify-between gap-3 text-xs"
                           >
                             <div className="min-w-0 flex-1">
-                              <p className="font-bold text-[#111215] dark:text-white truncate">{name}</p>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <p className="font-bold text-[#111215] dark:text-white truncate">{name}</p>
+                                {phone && (
+                                  <span className="font-mono text-[10px] font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded-md">
+                                    📱 {phone}
+                                  </span>
+                                )}
+                              </div>
                               <p className="text-[11px] text-[#73766C] dark:text-neutral-400 font-mono truncate">{email}</p>
                             </div>
 
                             <div className="flex items-center gap-2 shrink-0">
-                              {match?.phone && (
+                              {phone && (
                                 <button
                                   type="button"
                                   onClick={() => handleSendWhatsAppReminder(email)}
                                   className="px-2.5 py-1.5 rounded-lg border border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 text-[11px] font-bold hover:opacity-90 transition-opacity cursor-pointer flex items-center gap-1"
-                                  title="Send WhatsApp reminder"
+                                  title={`Send WhatsApp assessment reminder to ${phone}`}
                                 >
                                   <MessageCircle size={12} />
                                   <span>WhatsApp</span>
@@ -1373,11 +2137,11 @@ const RecruiterTests: React.FC = () => {
                       type="checkbox"
                       checked={sendEmailChannel}
                       onChange={(e) => setSendEmailChannel(e.target.checked)}
-                      className="rounded text-[#111215] dark:text-[#D4F82C] accent-[#111215] cursor-pointer"
+                      className="rounded text-[#111215] accent-[#111215] cursor-pointer"
                     />
                     <span className="text-[#111215] dark:text-white flex items-center gap-1">
                       <Mail size={13} />
-                      <span>Email Invitation</span>
+                      <span>Email Invitation ({inviteEmailsList.length})</span>
                     </span>
                   </label>
 
@@ -1386,11 +2150,21 @@ const RecruiterTests: React.FC = () => {
                       type="checkbox"
                       checked={sendWhatsAppChannel}
                       onChange={(e) => setSendWhatsAppChannel(e.target.checked)}
-                      className="rounded text-[#111215] dark:text-[#D4F82C] accent-[#111215] cursor-pointer"
+                      className="rounded text-[#111215] accent-[#111215] cursor-pointer"
                     />
                     <span className="text-[#111215] dark:text-white flex items-center gap-1">
                       <MessageCircle size={13} className="text-emerald-600 dark:text-emerald-400" />
-                      <span>WhatsApp Message</span>
+                      <span>
+                        WhatsApp Message (
+                        {
+                          inviteEmailsList.filter((e) => {
+                            const details = candidateDetailsMap[e.toLowerCase()];
+                            const dumpMatch = dumpCandidates.find((c) => c.email.toLowerCase() === e.toLowerCase());
+                            return Boolean(details?.phone || dumpMatch?.phone);
+                          }).length
+                        }{' '}
+                        with phone)
+                      </span>
                     </span>
                   </label>
                 </div>
@@ -1415,7 +2189,7 @@ const RecruiterTests: React.FC = () => {
                   type="button"
                   onClick={handleSendTestInvites}
                   disabled={sendingInvites || (inviteEmailsList.length === 0 && !candidateEmailsInput.trim())}
-                  className="px-5 py-2 rounded-xl text-xs font-bold bg-[#111215] text-[#D4F82C] dark:bg-[#D4F82C] dark:text-[#111215] hover:opacity-90 transition-opacity cursor-pointer shadow-xs disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5"
+                  className="px-5 py-2 rounded-xl text-xs font-bold bg-[#111215] text-white hover:bg-[#202227] transition-all cursor-pointer shadow-xs disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5"
                 >
                   <UserPlus size={14} />
                   <span>{sendingInvites ? 'Dispatching Invites...' : 'Send Invitations'}</span>

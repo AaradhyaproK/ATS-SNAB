@@ -2780,16 +2780,6 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
           </div>
 
           <div className="flex items-center gap-2.5">
-            <button
-              type="button"
-              onClick={toggleTheme}
-              className="p-2 rounded-full border border-[#E4E7DC] dark:border-white/10 bg-white/70 dark:bg-white/5 hover:bg-white dark:hover:bg-white/10 text-[#575A51] dark:text-neutral-300 transition-all shadow-2xs cursor-pointer"
-              title={isDark ? "Switch to Day Mode" : "Switch to Night Mode"}
-              aria-label="Toggle theme"
-            >
-              {isDark ? <Sun size={15} className="text-[#D4F82C]" /> : <Moon size={15} className="text-[#111215]" />}
-            </button>
-
             <Link
               to="/"
               className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold text-[#575A51] dark:text-neutral-300 hover:text-[#111215] dark:hover:text-white bg-white/70 dark:bg-white/5 hover:bg-white dark:hover:bg-white/10 border border-[#E4E7DC] dark:border-white/10 transition-all shadow-2xs backdrop-blur-sm"
@@ -3596,21 +3586,12 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
                           <span className="w-1.5 h-1.5 rounded-full bg-[#D4F82C]"></span>
                           Candidate Portal
                         </span>
-                        <Link
-                          to="/upload-resume"
-                          className="inline-flex items-center gap-1 text-[11px] font-bold text-[#8FB305] dark:text-[#D4F82C] hover:underline"
-                        >
-                          <span>Candidate Onboard / Signup →</span>
-                        </Link>
                       </div>
                       <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-[#111215] dark:text-white">
                         Candidate Login
                       </h2>
                       <p className="mt-1.5 text-xs sm:text-sm text-[#575A51] dark:text-neutral-400">
-                        Sign in with your registered <strong>Email</strong> and <strong>Phone Number</strong> (as password). New candidate?{' '}
-                        <Link to="/upload-resume" className="font-bold text-[#111215] dark:text-[#D4F82C] underline hover:no-underline">
-                          Candidate Onboard & Sign Up
-                        </Link>
+                        Sign in with your registered <strong>Email</strong> and <strong>Phone Number</strong> (as password).
                       </p>
                     </div>
 
@@ -3768,40 +3749,22 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
                       </button>
                     </form>
 
-                    {/* ── Candidate Onboard & Signup Bridge ── */}
-                    <div className="mt-5 pt-4 border-t border-[#E4E7DC] dark:border-white/10">
+                    {/* ── Sign Up Option ── */}
+                    <div className="mt-5 pt-4 border-t border-[#E4E7DC] dark:border-white/10 text-center text-xs text-[#575A51] dark:text-neutral-400">
+                      Don't have an account?{' '}
                       <Link
                         to="/upload-resume"
-                        className="group flex items-center justify-between p-3 sm:p-3.5 rounded-2xl bg-[#D4F82C]/15 hover:bg-[#D4F82C]/25 dark:bg-[#D4F82C]/10 dark:hover:bg-[#D4F82C]/20 border border-[#8FB305]/40 transition-all text-left"
+                        className="font-bold text-[#111215] dark:text-[#D4F82C] underline hover:no-underline ml-1"
                       >
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-xl bg-[#111215] text-[#D4F82C] flex items-center justify-center font-bold shrink-0">
-                            <UploadCloud size={16} />
-                          </div>
-                          <div>
-                            <div className="text-xs font-bold text-[#111215] dark:text-white flex items-center gap-1.5">
-                              New Candidate? Signup & Onboard
-                              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#111215] text-[#D4F82C]">
-                                Candidate Onboard
-                              </span>
-                            </div>
-                            <p className="text-[11px] text-[#575A51] dark:text-neutral-300">
-                              Upload resume to complete candidate onboarding & unlock 1-click matches
-                            </p>
-                          </div>
-                        </div>
-                        <ChevronRight
-                          size={16}
-                          className="text-[#111215] dark:text-[#D4F82C] group-hover:translate-x-1 transition-all shrink-0"
-                        />
+                        Sign Up
                       </Link>
+                    </div>
 
-                      <div className="mt-3 text-center text-xs text-[#73766C] dark:text-neutral-400">
-                        Are you a Recruiter or Employer?{' '}
-                        <Link to="/auth" className="font-bold text-[#111215] dark:text-white hover:underline cursor-pointer ml-1">
-                          Recruiter Sign In →
-                        </Link>
-                      </div>
+                    <div className="mt-2.5 text-center text-xs text-[#73766C] dark:text-neutral-400">
+                      Are you a Recruiter or Employer?{' '}
+                      <Link to="/auth" className="font-bold text-[#111215] dark:text-white hover:underline cursor-pointer ml-1">
+                        Recruiter Sign In →
+                      </Link>
                     </div>
                   </div>
                 )}

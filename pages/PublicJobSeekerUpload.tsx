@@ -1576,6 +1576,15 @@ export default function PublicJobSeekerUpload() {
               <p className="text-xs sm:text-base max-w-2xl mx-auto text-[#575A51] leading-relaxed">
                 Complete your candidate onboarding in 60 seconds. Our AI resume parser extracts your skills, experience, location, and qualification fit, pre-fills your profile, and matches you against live hiring requisitions.
               </p>
+              <div className="pt-0.5 text-xs text-[#575A51]">
+                Already have an account?{' '}
+                <Link
+                  to="/candidate/login"
+                  className="font-bold text-[#111215] underline hover:no-underline ml-0.5"
+                >
+                  Candidate Login →
+                </Link>
+              </div>
               <div className="pt-1 flex items-center justify-center">
                 <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#D4F82C]/30 border border-[#8FB305]/40 text-[#111215] text-xs font-bold shadow-2xs">
                   <Sparkles className="w-3.5 h-3.5 text-[#8FB305]" />

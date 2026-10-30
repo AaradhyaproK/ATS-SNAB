@@ -483,3 +483,233 @@ export async function sendInterviewInvitations(
 
   return { success: false, totalEmails: 0, error: lastError || 'Failed to send emails via Amazon SES.' };
 }
+
+/**
+ * Dedicated Assessment Invitation Email Sender (Aptitude MCQ & Coding Challenge)
+ * Ensures candidates receive assessment-specific communications, not generic job interview emails.
+ */
+export async function sendAssessmentEmailInvitations(
+  candidateEmails: (string | { email: string; name?: string; phone?: string })[],
+  testTitle: string,
+  testLink: string,
+  accessCode: string,
+  testType: 'aptitude' | 'coding' | string = 'aptitude',
+  testSpecs?: {
+    duration?: number;
+    passingScore?: number;
+    questionsCount?: number;
+  },
+  isReminder: boolean = false,
+  options?: {
+    recruiterName?: string;
+    recruiterEmail?: string;
+    recruiterPhone?: string;
+    companyName?: string;
+  }
+): Promise<SendEmailResult> {
+  if (!candidateEmails || candidateEmails.length === 0) {
+    return { success: false, totalEmails: 0, error: 'No candidate emails provided.' };
+  }
+
+  const allMessageIds: string[] = [];
+  let lastError = '';
+  const isCoding = testType === 'coding';
+  const duration = testSpecs?.duration || 10;
+  const passingScore = testSpecs?.passingScore || 70;
+  const questionsCount = testSpecs?.questionsCount || 0;
+  const companyName = options?.companyName || 'InterviewXpert';
+  const recruiterName = options?.recruiterName || 'Talent Acquisition Team';
+
+  for (const item of candidateEmails) {
+    if (!item) continue;
+    let email = '';
+    let rawName = '';
+
+    if (typeof item === 'string') {
+      email = item.trim();
+    } else if (typeof item === 'object' && item !== null) {
+      email = (item.email || '').trim();
+      rawName = (item.name || '').trim();
+    }
+
+    if (!email || !email.includes('@') || email.endsWith('@whatsapp.local')) continue;
+
+    const candidateName = rawName || deriveNameFromEmail(email);
+    const candidateLink = testLink.includes('email=')
+      ? testLink
+      : `${testLink}${testLink.includes('?') ? '&' : '?'}email=${encodeURIComponent(email)}&name=${encodeURIComponent(candidateName)}`;
+
+    const subject = isReminder
+      ? `⏰ Reminder: Complete Your Assessment — ${testTitle} | ${companyName}`
+      : `${isCoding ? '💻 Coding Challenge' : '📝 Online Assessment'} Invitation: ${testTitle} | ${companyName}`;
+
+    const badgeText = isReminder
+      ? 'ASSESSMENT PENDING REMINDER'
+      : (isCoding ? 'CODING CHALLENGE INVITATION' : 'ONLINE ASSESSMENT INVITATION');
+
+    const formatLabel = isCoding
+      ? '💻 Live Coding Challenge (Multi-Language IDE & Test Cases)'
+      : '📝 MCQ / Multiple Choice Aptitude Screen';
+
+    const bodyIntro = isReminder
+      ? `This is a friendly reminder to complete your pending screening assessment for <strong>${testTitle}</strong>.<br/><br/>Please make sure to attempt the test at your earliest convenience.`
+      : `You have been invited by <strong>${recruiterName}</strong> (${companyName}) to complete an automated online assessment for <strong>${testTitle}</strong>.<br/><br/>This evaluation is designed to gauge your ${isCoding ? 'coding algorithms, problem solving, and technical execution' : 'analytical reasoning, domain knowledge, and problem-solving skills'}.`;
+
+    const htmlContent = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${testTitle}</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#0f172a;line-height:1.6;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#f8fafc;padding:24px 12px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:600px;background-color:#ffffff;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+          
+          <!-- Header -->
+          <tr>
+            <td style="padding:22px 28px;background-color:#ffffff;border-bottom:1px solid #e2e8f0;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                <tr>
+                  <td>
+                    <span style="font-size:22px;font-weight:900;color:#0f172a;letter-spacing:-0.5px;">InterviewXpert</span>
+                  </td>
+                  <td align="right">
+                    <span style="display:inline-block;padding:4px 10px;background-color:#f1f5f9;border:1px solid #cbd5e1;border-radius:6px;font-size:10px;font-weight:800;letter-spacing:0.5px;color:#334155;text-transform:uppercase;">
+                      ${badgeText}
+                    </span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Main Content -->
+          <tr>
+            <td style="padding:28px 30px;">
+              <h2 style="margin:0 0 12px 0;font-size:19px;font-weight:800;color:#0f172a;">Dear ${candidateName},</h2>
+              <div style="margin:0 0 20px 0;font-size:14px;color:#334155;line-height:1.65;">
+                ${bodyIntro}
+              </div>
+
+              <!-- Assessment Specs Card -->
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#ffffff;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:20px;overflow:hidden;">
+                <tr>
+                  <td style="background-color:#f8fafc;padding:10px 16px;border-bottom:1px solid #e2e8f0;">
+                    <span style="font-size:11px;font-weight:800;letter-spacing:0.5px;color:#0f172a;text-transform:uppercase;">Assessment Specifications</span>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:14px 16px;">
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="font-size:13px;">
+                      <tr>
+                        <td style="padding:5px 0;color:#64748b;font-weight:600;width:38%;">Assessment Title:</td>
+                        <td style="padding:5px 0;color:#0f172a;font-weight:700;">${testTitle}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding:5px 0;color:#64748b;font-weight:600;">Evaluation Format:</td>
+                        <td style="padding:5px 0;color:#0f172a;font-weight:600;">${formatLabel}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding:5px 0;color:#64748b;font-weight:600;">Duration:</td>
+                        <td style="padding:5px 0;color:#0f172a;font-weight:700;">${duration} Minutes</td>
+                      </tr>
+                      <tr>
+                        <td style="padding:5px 0;color:#64748b;font-weight:600;">Pass Benchmark:</td>
+                        <td style="padding:5px 0;color:#059669;font-weight:700;">${passingScore}%</td>
+                      </tr>
+                      ${questionsCount > 0 ? `
+                      <tr>
+                        <td style="padding:5px 0;color:#64748b;font-weight:600;">Total Questions/Problems:</td>
+                        <td style="padding:5px 0;color:#0f172a;font-weight:700;">${questionsCount}</td>
+                      </tr>` : ''}
+                      <tr>
+                        <td style="padding:5px 0;color:#64748b;font-weight:600;">Invited By:</td>
+                        <td style="padding:5px 0;color:#0f172a;font-weight:600;">${recruiterName} (${companyName})</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              ${accessCode ? `
+              <!-- Access Code Box -->
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:20px;">
+                <tr>
+                  <td style="padding:16px;text-align:center;">
+                    <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:#475569;margin-bottom:6px;">Your Access Code</div>
+                    <div style="font-family:'Courier New',Courier,monospace;font-size:24px;font-weight:800;letter-spacing:4px;color:#0f172a;background-color:#ffffff;display:inline-block;padding:6px 18px;border-radius:6px;border:1px solid #cbd5e1;margin-bottom:6px;">
+                      ${accessCode}
+                    </div>
+                    <div style="font-size:11px;color:#64748b;">Enter this code when launching your assessment if prompted.</div>
+                  </td>
+                </tr>
+              </table>
+              ` : ''}
+
+              <!-- CTA Button -->
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-bottom:22px;">
+                <tr>
+                  <td align="center">
+                    <a href="${candidateLink}" target="_blank" style="display:inline-block;padding:13px 32px;background-color:#0f172a;color:#ffffff;font-size:14px;font-weight:700;text-decoration:none;border-radius:8px;letter-spacing:0.2px;">
+                      Launch Assessment Now &rarr;
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Test Guidelines -->
+              <div style="padding:14px;background-color:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;margin-bottom:16px;">
+                <div style="font-size:11px;font-weight:800;text-transform:uppercase;color:#334155;margin-bottom:6px;">Test Guidelines:</div>
+                <ul style="margin:0;padding-left:18px;font-size:12px;color:#475569;line-height:1.6;">
+                  <li>Open the link on a modern browser (Chrome, Edge, Firefox, Brave) with a stable internet connection.</li>
+                  <li>Live browser anti-cheating monitoring and tab-switching restrictions are enabled.</li>
+                  <li>Ensure uninterrupted connectivity during the ${duration}-minute session.</li>
+                  <li>Your scorecard and performance breakdown will be generated immediately upon submission.</li>
+                </ul>
+              </div>
+
+              <div style="font-size:12px;color:#64748b;margin-top:16px;line-height:1.5;">
+                Best regards,<br/>
+                <strong style="color:#0f172a;">${recruiterName}</strong><br/>
+                ${companyName} Talent Evaluation Team
+              </div>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="padding:16px;background-color:#f8fafc;border-top:1px solid #e2e8f0;text-align:center;font-size:11px;color:#94a3b8;">
+              This is an automated evaluation dispatch sent via InterviewXpert Assessment Studio.
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+`;
+
+    const result = await sendSingleEmail(email, candidateName, subject, htmlContent);
+    if (result.success && result.messageId) {
+      allMessageIds.push(result.messageId);
+    } else {
+      lastError = result.error || 'Unknown error';
+    }
+  }
+
+  if (allMessageIds.length > 0) {
+    return {
+      success: true,
+      totalEmails: allMessageIds.length,
+      messageIds: allMessageIds,
+      error: lastError || undefined,
+    };
+  }
+
+  return { success: false, totalEmails: 0, error: lastError || 'Failed to send assessment emails via Amazon SES.' };
+}

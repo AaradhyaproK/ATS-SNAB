@@ -855,14 +855,14 @@ const AuthPage: React.FC = () => {
                       <Sparkles size={16} />
                     </div>
                     <div>
-                      <div className="text-xs font-bold text-[#111215] dark:text-white flex items-center gap-1.5">
-                        New Candidate Onboard & Signup
+                      <div className="text-xs font-bold text-[#111215] dark:text-white flex items-center gap-1.5 flex-wrap">
+                        <span>New here? Upload Resume</span>
                         <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#111215] text-[#D4F82C]">
-                          Candidate Onboard
+                          Instant Register
                         </span>
                       </div>
-                      <p className="text-[11px] text-[#575A51] dark:text-neutral-300">
-                        Upload resume & get fast-track matched to live jobs
+                      <p className="text-[11px] text-[#575A51] dark:text-neutral-300 mt-0.5">
+                        Parse skills and get matched to high-paying jobs
                       </p>
                     </div>
                   </div>

@@ -53,7 +53,11 @@ import {
   Power,
   PowerOff,
   Loader2,
-  Video
+  Video,
+  Table,
+  FileSpreadsheet,
+  Clipboard,
+  FileUp
 } from 'lucide-react';
 
 
@@ -331,6 +335,14 @@ const RecruiterAllJobs: React.FC = () => {
   const [currentSingleLocation, setCurrentSingleLocation] = useState('');
   const [currentSingleEducation, setCurrentSingleEducation] = useState('B.Tech / B.E. (Bachelor of Engineering / Technology)');
   const [currentSingleEmploymentTypes, setCurrentSingleEmploymentTypes] = useState<string[]>(['Full-time — Work from Office / On-site']);
+  const [bulkSubMode, setBulkSubMode] = useState<'form' | 'spreadsheet'>('form');
+  const [bulkPasteType, setBulkPasteType] = useState<'email' | 'phone' | 'mixed'>('email');
+  const [spreadsheetRows, setSpreadsheetRows] = useState<Array<{ id: string; name: string; email: string; phone: string }>>([
+    { id: 'row_1', name: '', email: '', phone: '' },
+    { id: 'row_2', name: '', email: '', phone: '' },
+    { id: 'row_3', name: '', email: '', phone: '' },
+  ]);
+  const [isUploadingSpreadsheet, setIsUploadingSpreadsheet] = useState(false);
 
   // AI Candidate Suggestions State
   const [dumpCandidates, setDumpCandidates] = useState<any[]>([]);
@@ -1573,6 +1585,262 @@ const RecruiterAllJobs: React.FC = () => {
     setInviteEmailsList(prev => prev.filter(e => e !== email));
   };
 
+  const handleAddBulkInput = () => {
+    const rawText = candidateEmailsInput.trim();
+    if (!rawText) {
+      messageBox.showError('Please enter or paste candidate details first.');
+      return;
+    }
+
+    let added = 0;
+
+    if (bulkPasteType === 'email') {
+      const extractedEmails = rawText
+        .split(/[\n,;\s]+/)
+        .map((e) => e.trim().toLowerCase())
+        .filter((e) => e && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e));
+
+      if (extractedEmails.length === 0) {
+        messageBox.showError('No valid email addresses found in pasted text.');
+        return;
+      }
+
+      setInviteEmailsList((prev) => {
+        const set = new Set(prev);
+        extractedEmails.forEach((em) => {
+          if (!set.has(em)) {
+            set.add(em);
+            added++;
+          }
+        });
+        return Array.from(set);
+      });
+
+      setParsedCandidates((prev) => {
+        const next = [...prev];
+        extractedEmails.forEach((em) => {
+          if (!next.some((c) => c.email.toLowerCase() === em)) {
+            const dumpMatch = dumpCandidates.find((c) => c.email?.toLowerCase() === em);
+            next.push({
+              email: em,
+              name: dumpMatch?.name || em.split('@')[0],
+              phone: dumpMatch?.phone || 'N/A',
+              experience: dumpMatch?.experienceYears ? `${dumpMatch.experienceYears}y exp` : 'N/A',
+            });
+          }
+        });
+        return next;
+      });
+
+      setCandidateEmailsInput('');
+      messageBox.showSuccess(`Added ${added} candidate email(s) to invite list!`);
+    } else if (bulkPasteType === 'phone') {
+      const phoneCandidates = rawText
+        .split(/[\n,;\r]+/)
+        .map((p) => p.trim())
+        .filter(Boolean);
+
+      const validPhones: string[] = [];
+      phoneCandidates.forEach((line) => {
+        const nums = line.split(/[,\s]+/).map((n) => n.trim()).filter((n) => n.replace(/\D/g, '').length >= 10);
+        validPhones.push(...nums);
+      });
+
+      const uniquePhones = Array.from(new Set(validPhones));
+      if (uniquePhones.length === 0) {
+        messageBox.showError('No valid 10+ digit mobile numbers found in pasted text.');
+        return;
+      }
+
+      uniquePhones.forEach((phone) => {
+        const digits = phone.replace(/\D/g, '');
+        const key = `${digits}@whatsapp.local`;
+        if (!inviteEmailsList.includes(key)) {
+          setInviteEmailsList((prev) => [...prev, key]);
+          added++;
+        }
+        setParsedCandidates((prev) => [
+          ...prev.filter((c) => c.email.toLowerCase() !== key.toLowerCase()),
+          {
+            email: key,
+            name: `Candidate (${phone.slice(-4)})`,
+            phone,
+            experience: 'Phone Import',
+          },
+        ]);
+      });
+
+      setCandidateEmailsInput('');
+      messageBox.showSuccess(`Added ${added} candidate phone number(s) to invite list!`);
+    } else {
+      // Mixed Name, Email, Phone
+      const parsed = parseBulkCandidateTextInput(rawText);
+      if (parsed.length === 0) {
+        messageBox.showError('Could not extract candidate contacts. Make sure entries contain an email or mobile phone.');
+        return;
+      }
+
+      parsed.forEach((c) => {
+        const cleanEmail = (c.email || '').trim().toLowerCase();
+        const cleanPhone = (c.phone || '').trim();
+        const cleanName =
+          (c.name || '').trim() ||
+          (cleanEmail ? cleanEmail.split('@')[0] : `Candidate ${cleanPhone.slice(-4)}`);
+        const key = cleanEmail || `${cleanPhone.replace(/\D/g, '')}@whatsapp.local`;
+
+        if (!inviteEmailsList.includes(key)) {
+          setInviteEmailsList((prev) => [...prev, key]);
+          added++;
+        }
+
+        setParsedCandidates((prev) => [
+          ...prev.filter((p) => p.email.toLowerCase() !== key.toLowerCase()),
+          {
+            email: key,
+            name: cleanName,
+            phone: cleanPhone || 'N/A',
+            experience: 'Mixed Paste',
+          },
+        ]);
+      });
+
+      setCandidateEmailsInput('');
+      messageBox.showSuccess(`Added ${added} candidate(s) with contact details to invite list!`);
+    }
+  };
+
+  // Spreadsheet Table Handlers
+  const handleAddSpreadsheetRow = () => {
+    setSpreadsheetRows((prev) => [
+      ...prev,
+      { id: `row_${Date.now()}_${Math.random()}`, name: '', email: '', phone: '' },
+    ]);
+  };
+
+  const handleAdd5SpreadsheetRows = () => {
+    setSpreadsheetRows((prev) => [
+      ...prev,
+      ...Array.from({ length: 5 }, (_, i) => ({
+        id: `row_${Date.now()}_${i}_${Math.random()}`,
+        name: '',
+        email: '',
+        phone: '',
+      })),
+    ]);
+  };
+
+  const handleUpdateSpreadsheetRow = (id: string, field: 'name' | 'email' | 'phone', value: string) => {
+    setSpreadsheetRows((prev) =>
+      prev.map((r) => (r.id === id ? { ...r, [field]: value } : r))
+    );
+  };
+
+  const handleRemoveSpreadsheetRow = (id: string) => {
+    setSpreadsheetRows((prev) =>
+      prev.length > 1
+        ? prev.filter((r) => r.id !== id)
+        : [{ id: 'row_1', name: '', email: '', phone: '' }]
+    );
+  };
+
+  const handleClearSpreadsheet = () => {
+    setSpreadsheetRows([
+      { id: 'row_1', name: '', email: '', phone: '' },
+      { id: 'row_2', name: '', email: '', phone: '' },
+      { id: 'row_3', name: '', email: '', phone: '' },
+    ]);
+    messageBox.showInfo('Cleared spreadsheet table rows.');
+  };
+
+  const handleSpreadsheetFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setIsUploadingSpreadsheet(true);
+    try {
+      const parsed = await parseCandidateDocument(file);
+      if (parsed.length === 0) {
+        messageBox.showError('No valid candidate records could be extracted from this file.');
+        return;
+      }
+      const newRows = parsed.map((c, i) => ({
+        id: `row_${Date.now()}_${i}`,
+        name: c.name || '',
+        email: c.email || '',
+        phone: c.phone || '',
+      }));
+      setSpreadsheetRows(newRows);
+      messageBox.showSuccess(`Extracted ${parsed.length} candidate(s) from "${file.name}"!`);
+    } catch (err: any) {
+      messageBox.showError(err?.message || 'Failed to read spreadsheet file.');
+    } finally {
+      setIsUploadingSpreadsheet(false);
+      event.target.value = '';
+    }
+  };
+
+  const handlePasteClipboardToSpreadsheet = async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      if (!text || !text.trim()) {
+        messageBox.showError('Clipboard is empty. Copy some rows from Excel or Google Sheets first.');
+        return;
+      }
+      const parsed = parseBulkCandidateTextInput(text);
+      if (parsed.length === 0) {
+        messageBox.showError('No candidate rows detected in clipboard text.');
+        return;
+      }
+      const newRows = parsed.map((c, i) => ({
+        id: `row_${Date.now()}_${i}`,
+        name: c.name || '',
+        email: c.email || '',
+        phone: c.phone || '',
+      }));
+      setSpreadsheetRows(newRows);
+      messageBox.showSuccess(`Pasted & parsed ${parsed.length} candidate row(s) into spreadsheet table!`);
+    } catch (err) {
+      messageBox.showError('Unable to read clipboard. You can paste into the text box instead.');
+    }
+  };
+
+  const handleImportSpreadsheetRows = () => {
+    const validRows = spreadsheetRows.filter(
+      (r) => (r.email && r.email.trim()) || (r.phone && r.phone.trim())
+    );
+
+    if (validRows.length === 0) {
+      messageBox.showError('Please enter at least one candidate with an Email or Phone number in the table.');
+      return;
+    }
+
+    let addedCount = 0;
+    validRows.forEach((r) => {
+      const cleanEmail = (r.email || '').trim().toLowerCase();
+      const cleanPhone = (r.phone || '').trim();
+      const cleanName =
+        (r.name || '').trim() ||
+        (cleanEmail ? cleanEmail.split('@')[0] : `Candidate ${cleanPhone.slice(-4)}`);
+      const key = cleanEmail || `${cleanPhone.replace(/\D/g, '')}@whatsapp.local`;
+
+      if (!inviteEmailsList.includes(key)) {
+        setInviteEmailsList((prev) => [...prev, key]);
+        addedCount++;
+      }
+
+      setParsedCandidates((prev) => [
+        ...prev.filter((p) => p.email.toLowerCase() !== key.toLowerCase()),
+        {
+          email: key,
+          name: cleanName,
+          phone: cleanPhone || 'N/A',
+          experience: 'Spreadsheet Table',
+        },
+      ]);
+    });
+
+    messageBox.showSuccess(`Successfully imported ${addedCount} candidate(s) from spreadsheet table!`);
+  };
+
 
   const handleDocumentUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -2168,6 +2436,7 @@ const RecruiterAllJobs: React.FC = () => {
 
                     {/* Job Title & Company */}
                     <h2
+                      style={{ color: '#111215' }}
                       className="text-base sm:text-lg font-bold text-[#111215] group-hover:text-black transition-colors truncate"
                       title={job.title}
                     >
@@ -2324,7 +2593,10 @@ const RecruiterAllJobs: React.FC = () => {
                     <h3 className="text-base sm:text-lg font-black text-[#111215]">
                       Invite Candidate to Job
                     </h3>
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#111215]/5 text-[#575A51] border border-[#E4E7DC]">
+                    <span
+                      style={{ color: '#111215' }}
+                      className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-[#E4E7DC] text-[#111215] border border-[#D5D9CC] shadow-2xs"
+                    >
                       {invitingJob.title}
                     </span>
                   </div>
@@ -2364,7 +2636,7 @@ const RecruiterAllJobs: React.FC = () => {
                           <div className={`w-7 h-7 rounded-xl flex items-center justify-center ${
                             isAiVideoInterview
                               ? 'bg-[#D4F82C] text-[#111215]'
-                              : 'bg-[#111215]/5 text-[#575A51]'
+                              : 'bg-[#E4E7DC] text-[#575A51]'
                           }`}>
                             <Video className="w-4 h-4" />
                           </div>
@@ -2373,7 +2645,7 @@ const RecruiterAllJobs: React.FC = () => {
                         <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black tracking-wide uppercase ${
                           isAiVideoInterview
                             ? 'bg-[#D4F82C] text-[#111215] shadow-xs'
-                            : 'bg-[#111215]/5 text-[#73766C]'
+                            : 'bg-[#E4E7DC] text-[#575A51]'
                         }`}>
                           {isAiVideoInterview ? '⚡ AI Video Link Active' : 'Normal ATS Application'}
                         </span>
@@ -2429,9 +2701,9 @@ const RecruiterAllJobs: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setInviteMode('ai_suggest')}
-                  className={`flex-1 py-2 px-3 rounded-xl font-black text-xs transition-all flex items-center justify-center gap-1.5 min-w-[140px] cursor-pointer ${
+                  className={`flex-1 py-2 px-3 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-1.5 min-w-[140px] cursor-pointer ${
                     inviteMode === 'ai_suggest'
-                      ? 'bg-[#D4F82C] text-[#111215] shadow-sm ring-2 ring-[#D4F82C]/30'
+                      ? 'bg-white text-[#111215] shadow-xs border border-[#E4E7DC]'
                       : 'text-[#575A51] hover:text-[#111215] hover:bg-white/60'
                   }`}
                 >
@@ -2444,12 +2716,12 @@ const RecruiterAllJobs: React.FC = () => {
                   onClick={() => setInviteMode('bulk')}
                   className={`flex-1 py-2 px-3 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-1.5 min-w-[110px] cursor-pointer ${
                     inviteMode === 'bulk'
-                      ? 'bg-[#111215] text-white shadow-sm'
+                      ? 'bg-white text-[#111215] shadow-xs border border-[#E4E7DC]'
                       : 'text-[#575A51] hover:text-[#111215] hover:bg-white/60'
                   }`}
                 >
-                  <Layers className="w-3.5 h-3.5" />
-                  <span>Bulk Import</span>
+                  <Layers className="w-3.5 h-3.5 text-[#111215]" />
+                  <span>Add / Bulk Import</span>
                 </button>
 
                 <button
@@ -2457,120 +2729,356 @@ const RecruiterAllJobs: React.FC = () => {
                   onClick={() => setInviteMode('invited')}
                   className={`flex-1 py-2 px-3 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-1.5 min-w-[130px] cursor-pointer ${
                     inviteMode === 'invited'
-                      ? 'bg-[#111215] text-white shadow-sm'
+                      ? 'bg-white text-[#111215] shadow-xs border border-[#E4E7DC]'
                       : 'text-[#575A51] hover:text-[#111215] hover:bg-white/60'
                   }`}
                 >
-                  <Users className="w-3.5 h-3.5" />
+                  <Users className="w-3.5 h-3.5 text-[#111215]" />
                   <span>Invited Candidates ({(invitingJob.candidateEmails || []).length})</span>
                 </button>
               </div>
 
               {inviteMode === 'bulk' && (
-                <>
-                  {/* Bulk Candidate Document Upload (Excel, CSV, Multiple Resumes) */}
-                  <div className="p-6 bg-white border-2 border-dashed border-[#E4E7DC] rounded-2xl text-center space-y-3 shadow-sm">
-                    <div className="flex items-center justify-center w-12 h-12 rounded-2xl bg-[#D4F82C] text-[#111215] mx-auto shadow-sm">
-                      <FileText className="w-6 h-6" />
-                    </div>
-                    <span className="text-sm font-black text-[#111215] block">Bulk Import Candidate Files</span>
-                    <p className="text-xs text-[#575A51] max-w-sm mx-auto leading-relaxed">
-                      Upload Excel (.xlsx, .xls), CSV, or multiple PDF/DOCX/TXT resumes. Auto-extracts Name, Phone Number, and Email Address.
-                    </p>
-                    <label className="inline-flex h-10 items-center justify-center gap-2 px-6 rounded-full bg-[#111215] text-white font-bold text-xs hover:bg-[#202227] transition-all cursor-pointer shadow-sm active:scale-95">
-                      <span>{parsingDoc ? 'Parsing Document...' : 'Select File(s) (Excel / CSV / Resumes)'}</span>
-                      <input
-                        type="file"
-                        multiple
-                        accept=".pdf,.csv,.xlsx,.xls,.txt,.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,text/csv"
-                        onChange={handleDocumentUpload}
-                        className="hidden"
-                        disabled={parsingDoc}
-                      />
-                    </label>
-                  </div>
-
-                  {/* Bulk Paste Multiple Emails */}
-                  <div className="p-5 bg-white border border-[#E4E7DC] rounded-2xl space-y-2 shadow-sm">
-                    <div className="flex items-center justify-between">
-                      <label className="text-[11px] uppercase font-bold text-[#73766C] block">
-                        Paste Multiple Emails
-                      </label>
-                      {candidateEmailsInput.trim() && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const extracted = candidateEmailsInput
-                              .split(/[\n,;\s]+/)
-                              .map(e => e.trim().toLowerCase())
-                              .filter(e => e && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e));
-                            if (extracted.length === 0) {
-                              messageBox.showError('No valid email addresses found in pasted text.');
-                              return;
-                            }
-                            let added = 0;
-                            extracted.forEach(email => {
-                              if (!inviteEmailsList.includes(email)) {
-                                setInviteEmailsList(prev => [...prev, email]);
-                                added++;
-                              }
-                            });
-                            setCandidateEmailsInput('');
-                            messageBox.showSuccess(`Added ${added} candidate email(s) to invite list!`);
-                          }}
-                          className="text-xs text-[#4D6500] hover:underline font-bold transition-colors flex items-center gap-1 cursor-pointer"
-                        >
-                          <Plus className="w-3.5 h-3.5" />
-                          <span>Add Pasted Emails</span>
-                        </button>
-                      )}
-                    </div>
-                    <textarea
-                      rows={3}
-                      placeholder="Enter or paste multiple candidate emails separated by comma or newline (e.g. alex@example.com, sara@company.org)..."
-                      value={candidateEmailsInput}
-                      onChange={(e) => setCandidateEmailsInput(e.target.value)}
-                      className="w-full rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] p-3 text-xs text-[#111215] outline-none focus:ring-2 focus:ring-[#8FB305] placeholder:text-[#8f8f8f]"
-                    />
-                  </div>
-
-                  {/* Add Candidate Manually */}
-                  <div className="p-5 bg-white border border-[#E4E7DC] rounded-2xl space-y-3 shadow-sm">
-                    <label className="text-[11px] uppercase font-bold text-[#73766C] block">
-                      Add Candidate Manually (Email & WhatsApp Contact)
-                    </label>
-                    <div className="flex flex-col sm:flex-row gap-2.5">
-                      <input
-                        type="text"
-                        placeholder="Candidate Name (e.g. Rahul Sharma)"
-                        value={currentSingleName}
-                        onChange={(e) => setCurrentSingleName(e.target.value)}
-                        className="flex-1 h-10 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] px-3.5 text-xs text-[#111215] outline-none focus:ring-2 focus:ring-[#8FB305] placeholder:text-[#8f8f8f]"
-                      />
-                      <input
-                        type="email"
-                        placeholder="Candidate email (e.g. candidate@example.com)"
-                        value={currentSingleEmail}
-                        onChange={(e) => setCurrentSingleEmail(e.target.value)}
-                        className="flex-1 h-10 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] px-3.5 text-xs text-[#111215] outline-none focus:ring-2 focus:ring-[#8FB305] placeholder:text-[#8f8f8f]"
-                      />
-                      <input
-                        type="tel"
-                        placeholder="WhatsApp Phone (+91...)"
-                        value={currentSinglePhone}
-                        onChange={(e) => setCurrentSinglePhone(e.target.value)}
-                        className="w-full sm:w-1/4 h-10 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] px-3.5 text-xs text-[#111215] outline-none focus:ring-2 focus:ring-[#8FB305] placeholder:text-[#8f8f8f]"
-                      />
+                <div className="space-y-4">
+                  {/* Sub-mode Switcher: Form & Paste vs Spreadsheet Grid */}
+                  <div className="flex items-center justify-between gap-2 p-1.5 rounded-2xl bg-[#F8F9F5] border border-[#E4E7DC]">
+                    <div className="flex items-center gap-1.5 flex-1">
                       <button
                         type="button"
-                        onClick={handleAddCandidate}
-                        className="h-10 px-5 bg-[#111215] text-white hover:bg-[#202227] rounded-full font-bold text-xs transition-all shrink-0 cursor-pointer shadow-sm active:scale-95"
+                        onClick={() => setBulkSubMode('form')}
+                        className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                          bulkSubMode === 'form'
+                            ? 'bg-white text-[#111215] shadow-xs border border-[#E4E7DC]'
+                            : 'text-[#73766C] hover:text-[#111215]'
+                        }`}
                       >
-                        + Add Candidate
+                        <UserPlus className="w-3.5 h-3.5" />
+                        <span>Quick Form & Bulk Paste</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setBulkSubMode('spreadsheet')}
+                        className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                          bulkSubMode === 'spreadsheet'
+                            ? 'bg-white text-[#111215] shadow-xs border border-[#E4E7DC]'
+                            : 'text-[#73766C] hover:text-[#111215]'
+                        }`}
+                      >
+                        <Table className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>Spreadsheet Table (Excel / CSV Grid)</span>
                       </button>
                     </div>
                   </div>
-                </>
+
+                  {bulkSubMode === 'form' ? (
+                    <>
+                      {/* Aligned Single Candidate Input */}
+                      <div className="p-4 rounded-2xl border border-[#E4E7DC] bg-white space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] font-bold uppercase tracking-wider text-[#73766C] block">
+                            Add Single Candidate Directly
+                          </span>
+                          <span className="text-[11px] text-[#73766C]">
+                            Provide Email, Mobile Phone, or both
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
+                          <div>
+                            <label className="block text-[11px] font-bold text-[#73766C] mb-1">
+                              Candidate Name
+                            </label>
+                            <input
+                              type="text"
+                              value={currentSingleName}
+                              onChange={(e) => setCurrentSingleName(e.target.value)}
+                              placeholder="e.g. Rahul Sharma"
+                              className="w-full h-10 px-3.5 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] text-xs text-[#111215] outline-none focus:border-[#111215] transition-colors"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[11px] font-bold text-[#73766C] mb-1">
+                              Candidate Email
+                            </label>
+                            <input
+                              type="email"
+                              value={currentSingleEmail}
+                              onChange={(e) => setCurrentSingleEmail(e.target.value)}
+                              placeholder="e.g. rahul@example.com"
+                              className="w-full h-10 px-3.5 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] text-xs text-[#111215] outline-none focus:border-[#111215] transition-colors"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[11px] font-bold text-[#73766C] mb-1">
+                              Mobile / WhatsApp
+                            </label>
+                            <input
+                              type="tel"
+                              value={currentSinglePhone}
+                              onChange={(e) => setCurrentSinglePhone(e.target.value)}
+                              placeholder="e.g. +91 9876543210"
+                              className="w-full h-10 px-3.5 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] text-xs text-[#111215] outline-none focus:border-[#111215] transition-colors"
+                            />
+                          </div>
+                          <div>
+                            <button
+                              type="button"
+                              onClick={handleAddCandidate}
+                              className="w-full h-10 px-4 rounded-xl text-xs font-bold bg-[#111215] text-white hover:bg-[#202227] cursor-pointer shadow-xs flex items-center justify-center gap-1.5 transition-all"
+                            >
+                              <Plus className="w-3.5 h-3.5" />
+                              <span>+ Add Candidate</span>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Paste Multiple Candidates with Options */}
+                      <div className="p-4 rounded-2xl border border-[#E4E7DC] bg-white space-y-3">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                          <div>
+                            <label className="text-[11px] uppercase font-bold text-[#73766C] block">
+                              Paste Multiple Candidates
+                            </label>
+                            <span className="text-[11px] text-[#73766C]">
+                              Choose paste format then paste lists separated by commas or lines
+                            </span>
+                          </div>
+
+                          {/* Mode selector pills */}
+                          <div className="inline-flex items-center gap-1 p-1 bg-[#F8F9F5] rounded-xl border border-[#E4E7DC] text-xs">
+                            <button
+                              type="button"
+                              onClick={() => setBulkPasteType('email')}
+                              className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
+                                bulkPasteType === 'email'
+                                  ? 'bg-white text-[#111215] shadow-xs border border-[#E4E7DC]'
+                                  : 'text-[#73766C] hover:text-[#111215]'
+                              }`}
+                            >
+                              Emails
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setBulkPasteType('phone')}
+                              className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
+                                bulkPasteType === 'phone'
+                                  ? 'bg-white text-[#111215] shadow-xs border border-[#E4E7DC]'
+                                  : 'text-[#73766C] hover:text-[#111215]'
+                              }`}
+                            >
+                              Phone Numbers
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setBulkPasteType('mixed')}
+                              className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
+                                bulkPasteType === 'mixed'
+                                  ? 'bg-white text-[#111215] shadow-xs border border-[#E4E7DC]'
+                                  : 'text-[#73766C] hover:text-[#111215]'
+                              }`}
+                            >
+                              Mixed (Name, Email, Phone)
+                            </button>
+                          </div>
+                        </div>
+
+                        <textarea
+                          rows={3}
+                          value={candidateEmailsInput}
+                          onChange={(e) => setCandidateEmailsInput(e.target.value)}
+                          placeholder={
+                            bulkPasteType === 'email'
+                              ? 'e.g. dev@example.com, alex@tech.org\npriya@startup.in, rahul@company.com'
+                              : bulkPasteType === 'phone'
+                              ? 'e.g. +91 9876543210, 9876543211\n+1 415 555 2671, +91-9123456789'
+                              : 'e.g. Rahul Sharma, rahul@example.com, +91 9876543210\nPriya, priya@startup.in\n+91 9988776655'
+                          }
+                          className="w-full p-3 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] text-xs font-mono outline-none focus:border-[#111215] text-[#111215] resize-none"
+                        />
+
+                        <div className="flex items-center justify-between pt-1">
+                          <span className="text-[11px] text-[#73766C]">
+                            {bulkPasteType === 'email' && 'Extracts all valid email addresses.'}
+                            {bulkPasteType === 'phone' && 'Extracts all 10+ digit contact numbers for WhatsApp invite.'}
+                            {bulkPasteType === 'mixed' && 'Intelligently parses names, emails, and phone numbers.'}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={handleAddBulkInput}
+                            disabled={!candidateEmailsInput.trim()}
+                            className="px-4 py-2 rounded-xl text-xs font-bold bg-[#111215] text-white hover:bg-[#202227] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-xs transition-all flex items-center gap-1.5"
+                          >
+                            <span>
+                              Extract & Add{' '}
+                              {bulkPasteType === 'email'
+                                ? 'Emails'
+                                : bulkPasteType === 'phone'
+                                ? 'Phones'
+                                : 'Candidates'}{' '}
+                              →
+                            </span>
+                          </button>
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    /* Sub-mode: Spreadsheet Table */
+                    <div className="p-4 rounded-2xl border border-[#E4E7DC] bg-white space-y-3">
+                      {/* Toolbar */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-1 border-b border-[#E4E7DC]">
+                        <div>
+                          <h4 className="text-xs font-bold text-[#111215] flex items-center gap-2">
+                            <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+                            <span>Spreadsheet Candidate Grid</span>
+                          </h4>
+                          <p className="text-[11px] text-[#73766C]">
+                            Edit rows inline, paste Excel rows, or upload a .xlsx / .csv file.
+                          </p>
+                        </div>
+
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <label className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] hover:bg-neutral-100 text-[#111215] cursor-pointer transition-colors shadow-2xs">
+                            <FileUp className="w-3.5 h-3.5 text-emerald-600" />
+                            <span>{isUploadingSpreadsheet ? 'Reading...' : 'Upload File'}</span>
+                            <input
+                              type="file"
+                              accept=".xlsx,.xls,.csv"
+                              onChange={handleSpreadsheetFileUpload}
+                              disabled={isUploadingSpreadsheet}
+                              className="hidden"
+                            />
+                          </label>
+
+                          <button
+                            type="button"
+                            onClick={handlePasteClipboardToSpreadsheet}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] hover:bg-neutral-100 text-[#111215] cursor-pointer transition-colors shadow-2xs"
+                          >
+                            <Clipboard className="w-3.5 h-3.5 text-sky-600" />
+                            <span>Paste Clipboard</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={handleAddSpreadsheetRow}
+                            className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-bold rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] hover:bg-neutral-100 text-[#111215] cursor-pointer transition-colors"
+                          >
+                            <Plus className="w-3 h-3" />
+                            <span>Row</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={handleAdd5SpreadsheetRows}
+                            className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-bold rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] hover:bg-neutral-100 text-[#111215] cursor-pointer transition-colors"
+                          >
+                            <span>+5 Rows</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={handleClearSpreadsheet}
+                            className="px-2.5 py-1.5 text-xs font-bold rounded-xl text-rose-500 hover:bg-rose-50 cursor-pointer transition-colors"
+                          >
+                            Clear
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Interactive Spreadsheet Table */}
+                      <div className="overflow-x-auto rounded-xl border border-[#E4E7DC] max-h-60 overflow-y-auto">
+                        <table className="w-full text-left text-xs border-collapse">
+                          <thead className="bg-[#F8F9F5] text-[#73766C] text-[11px] uppercase tracking-wider font-bold sticky top-0 z-10 border-b border-[#E4E7DC]">
+                            <tr>
+                              <th className="py-2.5 px-3 w-10 text-center">#</th>
+                              <th className="py-2.5 px-3">Candidate Full Name</th>
+                              <th className="py-2.5 px-3">Email Address</th>
+                              <th className="py-2.5 px-3">Mobile / WhatsApp</th>
+                              <th className="py-2.5 px-3 w-12 text-center">Action</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-[#E4E7DC]/60 bg-white">
+                            {spreadsheetRows.map((row, idx) => (
+                              <tr key={row.id} className="hover:bg-[#F8F9F5]/70 transition-colors">
+                                <td className="py-2 px-3 text-center text-[#73766C] font-mono text-[11px]">
+                                  {idx + 1}
+                                </td>
+                                <td className="py-1.5 px-2">
+                                  <input
+                                    type="text"
+                                    value={row.name}
+                                    onChange={(e) => handleUpdateSpreadsheetRow(row.id, 'name', e.target.value)}
+                                    placeholder="Rahul Sharma"
+                                    className="w-full px-2.5 py-1.5 rounded-lg border border-transparent hover:border-[#E4E7DC] focus:border-[#111215] bg-transparent text-xs text-[#111215] outline-none"
+                                  />
+                                </td>
+                                <td className="py-1.5 px-2">
+                                  <input
+                                    type="email"
+                                    value={row.email}
+                                    onChange={(e) => handleUpdateSpreadsheetRow(row.id, 'email', e.target.value)}
+                                    placeholder="rahul@example.com"
+                                    className="w-full px-2.5 py-1.5 rounded-lg border border-transparent hover:border-[#E4E7DC] focus:border-[#111215] bg-transparent text-xs text-[#111215] outline-none"
+                                  />
+                                </td>
+                                <td className="py-1.5 px-2">
+                                  <input
+                                    type="tel"
+                                    value={row.phone}
+                                    onChange={(e) => handleUpdateSpreadsheetRow(row.id, 'phone', e.target.value)}
+                                    placeholder="+91 9876543210"
+                                    className="w-full px-2.5 py-1.5 rounded-lg border border-transparent hover:border-[#E4E7DC] focus:border-[#111215] bg-transparent text-xs text-[#111215] outline-none"
+                                  />
+                                </td>
+                                <td className="py-1.5 px-2 text-center">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveSpreadsheetRow(row.id)}
+                                    className="p-1 rounded-lg text-[#73766C] hover:text-rose-500 hover:bg-rose-50 transition-colors cursor-pointer"
+                                    title="Delete Row"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {/* Spreadsheet Import Action Footer */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
+                        <span className="text-xs text-[#73766C] font-medium">
+                          {
+                            spreadsheetRows.filter((r) => (r.email && r.email.trim()) || (r.phone && r.phone.trim()))
+                              .length
+                          }{' '}
+                          ready row(s) out of {spreadsheetRows.length} in table
+                        </span>
+
+                        <button
+                          type="button"
+                          onClick={handleImportSpreadsheetRows}
+                          disabled={
+                            spreadsheetRows.filter((r) => (r.email && r.email.trim()) || (r.phone && r.phone.trim()))
+                              .length === 0
+                          }
+                          className="px-4 py-2 rounded-xl text-xs font-bold bg-[#111215] text-white hover:bg-[#202227] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-xs transition-all flex items-center justify-center gap-1.5"
+                        >
+                          <Check className="w-4 h-4" />
+                          <span>
+                            + Import & Add{' '}
+                            {
+                              spreadsheetRows.filter((r) => (r.email && r.email.trim()) || (r.phone && r.phone.trim()))
+                                .length
+                            }{' '}
+                            Candidates from Table
+                          </span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               )}
 
               {inviteMode === 'invited' && (

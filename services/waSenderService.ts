@@ -795,3 +795,91 @@ export async function sendBulkWhatsAppInvites(
     errors,
   };
 }
+
+/**
+ * Formats and sends an Assessment invitation via WhatsApp (Aptitude MCQ & Coding Challenge).
+ * Ensures candidates receive proper assessment guidelines and details instead of generic job descriptions.
+ */
+export async function sendAssessmentWhatsAppInvite(params: {
+  phone: string;
+  candidateName?: string;
+  testTitle: string;
+  testType: 'aptitude' | 'coding' | string;
+  testLink: string;
+  accessCode?: string;
+  duration?: number;
+  passingScore?: number;
+  questionsCount?: number;
+  isReminder?: boolean;
+  recruiterName?: string;
+  companyName?: string;
+  options?: WhatsAppInviteOptions;
+}): Promise<SendWhatsAppResponse> {
+  const isCoding = params.testType === 'coding';
+  const roundTypeLabel = isCoding ? 'Coding Challenge (Algorithms & Live Code)' : 'Aptitude Assessment (MCQ)';
+  const icon = isCoding ? '💻' : '📝';
+  const duration = params.duration || 10;
+  const benchmark = params.passingScore || 70;
+  const company = params.companyName || 'InterviewXpert';
+  const recruiter = params.recruiterName || 'Talent Acquisition Team';
+
+  let candidateSpecificLink = params.testLink;
+  if (!candidateSpecificLink.includes('name=') && params.candidateName) {
+    const sep = candidateSpecificLink.includes('?') ? '&' : '?';
+    candidateSpecificLink = `${candidateSpecificLink}${sep}name=${encodeURIComponent(params.candidateName)}`;
+  }
+
+  const messageText = params.isReminder
+    ? `⏰ *ASSESSMENT PENDING REMINDER* — *${params.testTitle}*
+
+Dear *${params.candidateName || 'Candidate'}*,
+
+This is a reminder to complete your pending online screening assessment for *${params.testTitle}*.
+
+*ASSESSMENT DETAILS:*
+• *Assessment:* *${params.testTitle}*
+• *Type:* ${icon} *${roundTypeLabel}*
+• *Duration:* *${duration} Minutes*
+• *Pass Benchmark:* *${benchmark}%*
+${params.questionsCount ? `• *Questions/Problems:* *${params.questionsCount}*\n` : ''}
+👉 *Start Assessment Now (Direct Link):*
+🔗 ${candidateSpecificLink}
+${params.accessCode ? `\n🔑 *Access Code:* *${params.accessCode}*\n` : ''}
+*Important Guidelines:*
+1. Click the assessment link above to begin.
+2. Complete all questions within the *${duration}m* countdown timer.
+3. Live anti-cheating browser tracking is active during this round.
+4. Your scorecard and feedback will be generated immediately upon submission.
+
+Best regards,
+*${recruiter}* | *${company}*`
+    : `🎯 *ONLINE ASSESSMENT INVITATION* — *${params.testTitle}*
+
+Dear *${params.candidateName || 'Candidate'}*,
+
+You have been invited by *${recruiter}* (*${company}*) to take an automated online screening test for *${params.testTitle}*.
+
+*ASSESSMENT SPECIFICATIONS:*
+• *Assessment:* *${params.testTitle}*
+• *Evaluation Format:* ${icon} *${roundTypeLabel}*
+• *Duration:* *${duration} Minutes*
+• *Benchmark Score:* *${benchmark}%*
+${params.questionsCount ? `• *Total Questions:* *${params.questionsCount}*\n` : ''}
+👉 *Start Your Assessment (Direct Link):*
+🔗 ${candidateSpecificLink}
+${params.accessCode ? `\n🔑 *Access Code:* *${params.accessCode}*\n` : ''}
+*Test Guidelines:*
+1. Use a desktop, laptop, or mobile browser with a stable internet connection.
+2. Ensure you have a quiet environment before starting the timer.
+3. Live anti-cheating browser locks and focus monitoring are active.
+4. Your evaluation results will be recorded immediately upon completion.
+
+Best of luck!
+*${recruiter}* | *${company}*`;
+
+  return await sendWhatsAppMessage(params.phone, messageText, {
+    sessionId: params.options?.whatsappSessionId,
+    passcode: params.options?.whatsappSessionPasscode
+  });
+}
+
