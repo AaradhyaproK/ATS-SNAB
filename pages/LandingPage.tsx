@@ -59,7 +59,8 @@ import {
   Code2,
   SlidersHorizontal,
   Target,
-  Star
+  Star,
+  BookOpen
 } from 'lucide-react';
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { db } from '../services/firebase';
@@ -825,6 +826,22 @@ export default function LandingPage() {
                       <div className="text-[11px] text-[#73766C] font-normal leading-tight">Real verified candidate feedback</div>
                     </div>
                   </a>
+
+                  <Link
+                    to="/guide"
+                    className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-[#F8F9F5] transition-colors group/item"
+                  >
+                    <div className="size-8 rounded-lg bg-[#F8F9F5] border border-[#E4E7DC] flex items-center justify-center shrink-0 group-hover/item:border-[#111215] transition-colors">
+                      <BookOpen className="size-4 text-[#8FB305]" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-bold text-[#111215] whitespace-nowrap">Platform Guide & SOP</span>
+                        <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded-full bg-[#D4F82C] text-[#111215]">New</span>
+                      </div>
+                      <div className="text-[11px] text-[#73766C] font-normal leading-tight">12 comprehensive operations chapters</div>
+                    </div>
+                  </Link>
                 </div>
               </div>
             </div>
@@ -1115,6 +1132,19 @@ export default function LandingPage() {
                   <span className="flex items-center gap-2">
                     <Rocket className="size-3.5 text-[#8FB305]" />
                     <span>Public Job Board</span>
+                  </span>
+                  <ChevronRight className="size-3.5 text-[#73766C]" />
+                </Link>
+
+                <Link
+                  to="/guide"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center justify-between px-3.5 py-2.5 text-xs font-bold text-[#111215] hover:bg-[#F8F9F5] transition-colors"
+                >
+                  <span className="flex items-center gap-2">
+                    <BookOpen className="size-3.5 text-[#8FB305]" />
+                    <span>10 • Platform Guide & SOP</span>
+                    <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded-full bg-[#D4F82C] text-[#111215]">New</span>
                   </span>
                   <ChevronRight className="size-3.5 text-[#73766C]" />
                 </Link>
@@ -5221,6 +5251,9 @@ export default function LandingPage() {
             </div>
 
             <div className="flex flex-wrap items-center justify-center gap-2 text-xs font-semibold">
+              <Link to="/guide" className="px-3 py-1 rounded-full bg-[#111215] text-[#D4F82C] border border-[#111215] hover:bg-black transition-all shadow-2xs font-bold">
+                Platform Guide & SOP
+              </Link>
               <Link to="/privacy-policy" className="px-3 py-1 rounded-full bg-white border border-[#E4E7DC] text-[#575A51] hover:text-[#111215] hover:border-[#111215] transition-all shadow-2xs">
                 Privacy Policy
               </Link>

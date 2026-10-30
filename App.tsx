@@ -43,6 +43,7 @@ import PrivacyPolicy from './pages/PrivacyPolicy';
 import TermsOfService from './pages/TermsOfService';
 import CandidateDataCharter from './pages/CandidateDataCharter';
 import SecurityWhitepaper from './pages/SecurityWhitepaper';
+import ProductGuide from './pages/ProductGuide';
 import SubmitReview from './pages/SubmitReview';
 import ReviewsPage from './pages/Reviews';
 import OurJourney from './pages/OurJourney';
@@ -187,6 +188,9 @@ const App: React.FC = () => {
             <Route path="terms-of-service" element={<TermsOfService />} />
             <Route path="candidate-data-charter" element={<CandidateDataCharter />} />
             <Route path="security-whitepaper" element={<SecurityWhitepaper />} />
+            <Route path="guide" element={<ProductGuide />} />
+            <Route path="product-guide" element={<ProductGuide />} />
+            <Route path="user-guide" element={<ProductGuide />} />
             <Route path="status" element={<StatusPage />} />
             <Route path="blog/:id" element={
               <ThemeProvider>
