@@ -286,7 +286,11 @@ const AuthPage: React.FC = () => {
     }
 
     try {
-      await sendPasswordResetEmail(auth, cleanEmail);
+      const actionCodeSettings = {
+        url: typeof window !== 'undefined' ? `${window.location.origin}/login` : 'https://interviewxpert.in/login',
+        handleCodeInApp: false,
+      };
+      await sendPasswordResetEmail(auth, cleanEmail, actionCodeSettings);
       setMessage('Password reset email sent! Check your inbox and your spam/junk folder.');
       setMode('login');
     } catch (err: any) {
