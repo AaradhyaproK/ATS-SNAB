@@ -1365,7 +1365,7 @@ export default function ProductGuide() {
                       { name: 'Hot Leads Tracker', path: '/recruiter/hot-leads', target: '/recruiter/hot-leads', desc: 'High-Intent Applicants' },
                       { name: 'Candidate Career Portal', path: '/candidate', target: '/candidate', desc: 'Candidate Hub & Profile' },
                       { name: 'Public Job Career Board', path: '/jobs', target: '/jobs', desc: 'Public Job Listings' },
-                      { name: 'Job Seeker Resume Upload', path: '/upload-resume', target: '/upload-resume', desc: 'Inbound Candidate Intake' },
+                      { name: 'Candidate Onboard (Resume Intake)', path: '/upload-resume', target: '/upload-resume', desc: 'Candidate Onboarding & Fast-Track Match' },
                       { name: 'Live Candidate Interview Room', path: '/interview/:id', target: '/interview/demo', desc: 'Candidate Test Room' },
                       { name: 'Verified Candidate Reviews', path: '/reviews', target: '/reviews', desc: 'Candidate Wall of Love' },
                       { name: 'Candidate Review Form', path: '/submit-review', target: '/submit-review', desc: 'Submit Feedback' },

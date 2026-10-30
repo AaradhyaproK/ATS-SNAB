@@ -1693,6 +1693,14 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
     setTimeout(() => setCopiedLink(null), 2500);
   };
 
+  const handleCopyScorecardLink = (subId: string) => {
+    if (!subId) return;
+    const shareUrl = `${window.location.origin}/test-result/${subId}`;
+    navigator.clipboard?.writeText(shareUrl);
+    setCopiedLink(shareUrl);
+    setTimeout(() => setCopiedLink(null), 2500);
+  };
+
   const handleOpenJobModal = (jobOrMatch: any) => {
     if (!jobOrMatch) return;
     if (jobOrMatch.job) {
@@ -2212,13 +2220,49 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
                   : 'Recently'}
               </p>
             </div>
-            <button
-              type="button"
-              onClick={() => setSelectedScorecardSubmission(null)}
-              className="size-8 rounded-full border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-white/5 flex items-center justify-center hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
-            >
-              <X size={16} />
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => handleCopyScorecardLink(selectedScorecardSubmission.id)}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer border ${
+                  copiedLink?.includes(selectedScorecardSubmission.id)
+                    ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
+                    : 'bg-white dark:bg-white/5 border-[#E4E7DC] dark:border-white/10 text-[#111215] dark:text-white hover:bg-black/5 dark:hover:bg-white/10 shadow-2xs'
+                }`}
+                title="Copy shareable link"
+              >
+                {copiedLink?.includes(selectedScorecardSubmission.id) ? (
+                  <>
+                    <Check size={13} strokeWidth={2.5} />
+                    <span>Copied!</span>
+                  </>
+                ) : (
+                  <>
+                    <Share2 size={13} />
+                    <span>Share Result</span>
+                  </>
+                )}
+              </button>
+
+              <a
+                href={`/test-result/${selectedScorecardSubmission.id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="size-8 rounded-full border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-white/5 flex items-center justify-center text-[#575A51] dark:text-neutral-300 hover:text-[#111215] dark:hover:text-white transition-colors cursor-pointer shadow-2xs"
+                title="Open dedicated result page in new tab"
+              >
+                <ExternalLink size={14} />
+              </a>
+
+              <button
+                type="button"
+                onClick={() => setSelectedScorecardSubmission(null)}
+                className="size-8 rounded-full border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-white/5 flex items-center justify-center hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer shadow-2xs"
+                title="Close scorecard"
+              >
+                <X size={16} />
+              </button>
+            </div>
           </div>
 
           {/* Modal Body */}
@@ -2328,7 +2372,36 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
           </div>
 
           {/* Modal Footer */}
-          <div className="p-4 border-t border-[#E4E7DC] dark:border-white/10 flex justify-end bg-[#F8F9F5] dark:bg-[#1D1F24]">
+          <div className="p-4 border-t border-[#E4E7DC] dark:border-white/10 flex flex-wrap items-center justify-between gap-3 bg-[#F8F9F5] dark:bg-[#1D1F24]">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => handleCopyScorecardLink(selectedScorecardSubmission.id)}
+                className="px-4 py-2 rounded-xl text-xs font-bold border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-white/5 text-[#111215] dark:text-white hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer flex items-center gap-1.5 shadow-2xs"
+              >
+                {copiedLink?.includes(selectedScorecardSubmission.id) ? (
+                  <>
+                    <Check size={13} className="text-emerald-600" />
+                    <span>Link Copied!</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy size={13} />
+                    <span>Copy Shareable Link</span>
+                  </>
+                )}
+              </button>
+              <a
+                href={`/test-result/${selectedScorecardSubmission.id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-4 py-2 rounded-xl text-xs font-bold border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-white/5 text-[#111215] dark:text-white hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer flex items-center gap-1.5 shadow-2xs"
+              >
+                <span>Open Dedicated Page</span>
+                <ExternalLink size={12} />
+              </a>
+            </div>
+
             <button
               type="button"
               onClick={() => setSelectedScorecardSubmission(null)}
@@ -3518,15 +3591,26 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
 
                     {/* Card Header */}
                     <div className="mb-6">
-                      <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-[#73766C] dark:text-neutral-400 mb-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#D4F82C]"></span>
-                        Candidate Portal
-                      </span>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-[#73766C] dark:text-neutral-400">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#D4F82C]"></span>
+                          Candidate Portal
+                        </span>
+                        <Link
+                          to="/upload-resume"
+                          className="inline-flex items-center gap-1 text-[11px] font-bold text-[#8FB305] dark:text-[#D4F82C] hover:underline"
+                        >
+                          <span>Candidate Onboard / Signup →</span>
+                        </Link>
+                      </div>
                       <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-[#111215] dark:text-white">
                         Candidate Login
                       </h2>
                       <p className="mt-1.5 text-xs sm:text-sm text-[#575A51] dark:text-neutral-400">
-                        Sign in with your registered <strong>Email</strong> and <strong>Phone Number</strong> (as password).
+                        Sign in with your registered <strong>Email</strong> and <strong>Phone Number</strong> (as password). New candidate?{' '}
+                        <Link to="/upload-resume" className="font-bold text-[#111215] dark:text-[#D4F82C] underline hover:no-underline">
+                          Candidate Onboard & Sign Up
+                        </Link>
                       </p>
                     </div>
 
@@ -3684,31 +3768,31 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
                       </button>
                     </form>
 
-                    {/* ── New Candidate Upload Resume Bridge ── */}
+                    {/* ── Candidate Onboard & Signup Bridge ── */}
                     <div className="mt-5 pt-4 border-t border-[#E4E7DC] dark:border-white/10">
                       <Link
                         to="/upload-resume"
-                        className="group flex items-center justify-between p-3 sm:p-3.5 rounded-2xl bg-[#F8F9F5] hover:bg-[#F0F2EB] dark:bg-[#1D1F24] dark:hover:bg-[#24272E] border border-[#E4E7DC] dark:border-white/10 transition-all text-left"
+                        className="group flex items-center justify-between p-3 sm:p-3.5 rounded-2xl bg-[#D4F82C]/15 hover:bg-[#D4F82C]/25 dark:bg-[#D4F82C]/10 dark:hover:bg-[#D4F82C]/20 border border-[#8FB305]/40 transition-all text-left"
                       >
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-xl bg-[#D4F82C] text-[#111215] flex items-center justify-center font-bold shrink-0">
+                          <div className="w-8 h-8 rounded-xl bg-[#111215] text-[#D4F82C] flex items-center justify-center font-bold shrink-0">
                             <UploadCloud size={16} />
                           </div>
                           <div>
-                            <div className="text-xs font-bold text-[#111215] dark:text-white flex items-center gap-1">
-                              New here? Upload Resume
-                              <span className="text-[10px] font-semibold px-1.5 py-0.2 rounded-full bg-[#E4E7DC] dark:bg-white/10 text-[#575A51] dark:text-neutral-300">
-                                Instant Register
+                            <div className="text-xs font-bold text-[#111215] dark:text-white flex items-center gap-1.5">
+                              New Candidate? Signup & Onboard
+                              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#111215] text-[#D4F82C]">
+                                Candidate Onboard
                               </span>
                             </div>
-                            <p className="text-[11px] text-[#73766C] dark:text-neutral-400">
-                              Parse skills and get matched to high-paying jobs
+                            <p className="text-[11px] text-[#575A51] dark:text-neutral-300">
+                              Upload resume to complete candidate onboarding & unlock 1-click matches
                             </p>
                           </div>
                         </div>
                         <ChevronRight
                           size={16}
-                          className="text-[#73766C] dark:text-neutral-400 group-hover:translate-x-1 group-hover:text-[#111215] dark:group-hover:text-white transition-all shrink-0"
+                          className="text-[#111215] dark:text-[#D4F82C] group-hover:translate-x-1 transition-all shrink-0"
                         />
                       </Link>
 
@@ -5979,14 +6063,37 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab }) 
                           </span>
                         </div>
 
-                        <button
-                          type="button"
-                          onClick={() => setSelectedScorecardSubmission(submission)}
-                          className="px-4 py-2 rounded-xl text-xs font-bold bg-[#111215] dark:bg-[#D4F82C] text-white dark:text-[#111215] hover:opacity-90 transition-opacity cursor-pointer shadow-xs flex items-center gap-1.5"
-                        >
-                          <FileText size={13} />
-                          <span>View Scorecard</span>
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleCopyScorecardLink(submission.id)}
+                            className="p-2 rounded-xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-white/5 text-[#575A51] dark:text-neutral-300 hover:text-[#111215] dark:hover:text-white transition-all cursor-pointer shadow-2xs"
+                            title="Copy shareable result link"
+                          >
+                            {copiedLink?.includes(submission.id) ? (
+                              <Check size={14} className="text-emerald-600" />
+                            ) : (
+                              <Share2 size={14} />
+                            )}
+                          </button>
+                          <a
+                            href={`/test-result/${submission.id}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-2 rounded-xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-white/5 text-[#575A51] dark:text-neutral-300 hover:text-[#111215] dark:hover:text-white transition-all cursor-pointer shadow-2xs"
+                            title="Open dedicated result page in new tab"
+                          >
+                            <ExternalLink size={14} />
+                          </a>
+                          <button
+                            type="button"
+                            onClick={() => setSelectedScorecardSubmission(submission)}
+                            className="px-4 py-2 rounded-xl text-xs font-bold bg-[#111215] dark:bg-[#D4F82C] text-white dark:text-[#111215] hover:opacity-90 transition-opacity cursor-pointer shadow-xs flex items-center gap-1.5"
+                          >
+                            <FileText size={13} />
+                            <span>View Scorecard</span>
+                          </button>
+                        </div>
                       </div>
                     </div>
                   );

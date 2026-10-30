@@ -1381,10 +1381,10 @@ export default function LandingPage() {
 
               <div className="pt-6 mt-6 border-t border-[#E4E7DC] flex items-center justify-between">
                 <Link
-                  to="/interview/demo"
+                  to="/upload-resume"
                   className="inline-flex items-center gap-1.5 text-xs font-bold text-[#111215] hover:text-[#8FB305] transition-colors"
                 >
-                  <span>Experience Live Interview</span>
+                  <span>Candidate Onboard & Match</span>
                   <ArrowRight size={13} />
                 </Link>
                 <span className="text-[10px] font-mono text-[#73766C]">Instant AI Dossier</span>
@@ -1826,11 +1826,11 @@ export default function LandingPage() {
                   Want to see this live from a candidate's perspective?
                 </span>
                 <Link
-                  to="/interview/demo"
+                  to="/upload-resume"
                   className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#111215] text-[#D4F82C] text-xs font-bold hover:bg-black transition-all shadow-xs"
                 >
                   <Play size={12} className="fill-current" />
-                  <span>Launch 2-Minute Candidate Test Drive</span>
+                  <span>Launch Candidate Onboard Demo</span>
                 </Link>
               </div>
             </div>
@@ -3395,10 +3395,10 @@ export default function LandingPage() {
                   <ExternalLink size={11} className="text-[#A1A79B]" />
                 </a>
                 <Link
-                  to="/interview/demo"
+                  to="/upload-resume"
                   className="px-3.5 py-1.5 rounded-full bg-[#D4F82C] hover:bg-[#c2e424] text-[#111215] text-xs font-black transition-all flex items-center gap-1.5 shadow-sm"
                 >
-                  <span>Launch Live Candidate Demo</span>
+                  <span>Candidate Onboard</span>
                   <span>→</span>
                 </Link>
               </div>
@@ -3843,11 +3843,11 @@ export default function LandingPage() {
                 <span>Watch 30s Video Demo</span>
               </button>
               <Link
-                to="/interview/demo"
+                to="/upload-resume"
                 className="px-5 py-2.5 rounded-full bg-[#D4F82C] hover:bg-[#c2e424] text-[#111215] text-xs font-black transition-all shadow-sm flex items-center gap-1.5"
               >
                 <Play size={12} className="fill-current" />
-                <span>Experience AI Interview Live</span>
+                <span>Candidate Onboard & Live Demo</span>
               </Link>
               <button
                 type="button"
@@ -4837,10 +4837,10 @@ export default function LandingPage() {
                   </button>
 
                   <Link
-                    to="/interview/demo"
+                    to="/upload-resume"
                     className="w-full py-2.5 rounded-full bg-white/10 hover:bg-white/15 text-white text-xs font-bold transition-all text-center block"
                   >
-                    Try Live Interactive Demo First
+                    Candidate Onboard & Free Demo
                   </Link>
                 </div>
               </div>

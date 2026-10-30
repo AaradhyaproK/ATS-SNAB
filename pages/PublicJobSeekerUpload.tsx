@@ -62,7 +62,7 @@ export default function PublicJobSeekerUpload() {
   const { isDark, toggleTheme } = useTheme();
 
   useEffect(() => {
-    document.title = "Upload Resume | InterviewXpert - AI Recruitment Platform";
+    document.title = "Candidate Onboard | InterviewXpert - AI Recruitment Platform";
     const setMetaTag = (attr: string, value: string, content: string) => {
       let element = document.querySelector(`meta[${attr}='${value}']`) as HTMLMetaElement;
       if (!element) {
@@ -95,6 +95,7 @@ export default function PublicJobSeekerUpload() {
   const [candidateDomains, setCandidateDomains] = useState<string[]>([]);
   const [candidateDomain, setCandidateDomain] = useState('');
   const [candidateExp, setCandidateExp] = useState('');
+  const [candidateCurrentRole, setCandidateCurrentRole] = useState('');
 
   const toggleSector = (sectorName: string) => {
     setCandidateSectors(prev => {
@@ -181,15 +182,16 @@ export default function PublicJobSeekerUpload() {
   // Live Profile Completion Meter for Sidebar
   const profileCompletionScore = useMemo(() => {
     let score = 0;
-    if (selectedFile) score += 30;
-    if (candidateName.trim() && candidateEmail.trim()) score += 25;
-    else if (candidateName.trim() || candidateEmail.trim()) score += 12;
+    if (selectedFile) score += 25;
+    if (candidateName.trim() && candidateEmail.trim()) score += 20;
+    else if (candidateName.trim() || candidateEmail.trim()) score += 10;
     if (candidatePhone.trim()) score += 15;
     if (candidateLocation.trim() && candidateExp.trim()) score += 15;
     else if (candidateLocation.trim() || candidateExp.trim()) score += 8;
     if (candidateEducation.trim()) score += 15;
+    if (candidateCurrentRole.trim()) score += 10;
     return Math.min(100, score);
-  }, [selectedFile, candidateName, candidateEmail, candidatePhone, candidateLocation, candidateExp, candidateEducation]);
+  }, [selectedFile, candidateName, candidateEmail, candidatePhone, candidateLocation, candidateExp, candidateEducation, candidateCurrentRole]);
 
   // Email Autocheck State for existing candidates
   const [existingEmailCandidate, setExistingEmailCandidate] = useState<any | null>(null);
@@ -267,6 +269,9 @@ export default function PublicJobSeekerUpload() {
           setCandidateDomain(parsed.domain);
         }
         if (parsed.exp) setCandidateExp(parsed.exp);
+        if (parsed.currentRole) setCandidateCurrentRole(parsed.currentRole);
+        else if (parsed.role) setCandidateCurrentRole(parsed.role);
+        else if (parsed.designation) setCandidateCurrentRole(parsed.designation);
         if (parsed.education) setCandidateEducation(parsed.education);
         if (parsed.status) setCandidateEmploymentStatus(parsed.status);
         if (parsed.noticeVal) setCandidateNoticePeriodVal(parsed.noticeVal);
@@ -319,6 +324,7 @@ export default function PublicJobSeekerUpload() {
           domains: candidateDomains,
           domain: candidateDomains.join(', '),
           exp: candidateExp,
+          currentRole: candidateCurrentRole,
           education: candidateEducation,
           status: candidateEmploymentStatus,
           noticeVal: candidateNoticePeriodVal,
@@ -341,7 +347,7 @@ export default function PublicJobSeekerUpload() {
     }
   }, [
     candidateName, candidateEmail, candidatePhone, candidateGender, candidateLocation, candidateDomains,
-    candidateExp, candidateEducation, candidateEmploymentStatus, candidateNoticePeriodVal,
+    candidateExp, candidateCurrentRole, candidateEducation, candidateEmploymentStatus, candidateNoticePeriodVal,
     candidateNoticePeriodUnit, candidateCurrentSalaryVal, candidateCurrentSalaryPeriod, candidateCurrentSalaryType,
     candidateExpectedSalaryVal, candidateExpectedSalaryPeriod, candidateExpectedSalaryType, extractedSkills, extraBioText
   ]);
@@ -514,12 +520,18 @@ export default function PublicJobSeekerUpload() {
       setCandidateDomain(existingDoms.join(', '));
     }
 
+    const role = candData.currentRole || candData.currentTitle || candData.designation || candData.role || prof.currentRole || prof.currentTitle || prof.designation || prof.role || '';
+    if (role) setCandidateCurrentRole(role);
+
     const isCandBlocked = Boolean(candData.isBlocked || prof.isBlocked || candData.isBanned || prof.isBanned);
     const profileObj: CandidateMatchProfile = {
       name,
       email,
       phone,
       gender,
+      currentRole: role,
+      currentTitle: role,
+      designation: role,
       location,
       domain: existingDoms.join(', '),
       domains: existingDoms,
@@ -1182,20 +1194,8 @@ export default function PublicJobSeekerUpload() {
       messageBox.showError("Please select your Highest Education Qualification.");
       return;
     }
-    if (!candidateEmploymentStatus.trim()) {
-      messageBox.showError("Please select your Current Working / Employment Status.");
-      return;
-    }
-    if (!candidateNoticePeriodVal.trim()) {
-      messageBox.showError("Please enter your Notice Period.");
-      return;
-    }
-    if (!candidateCurrentSalaryVal.trim()) {
-      messageBox.showError("Please enter your Current Salary (Enter 0 if you are a Fresher).");
-      return;
-    }
-    if (!candidateExpectedSalaryVal.trim()) {
-      messageBox.showError("Please enter your Expected Salary.");
+    if (!candidateCurrentRole.trim()) {
+      messageBox.showError("Please enter your Current Role or Designation (or 'Fresher' if starting your career).");
       return;
     }
     if (!selectedFile && !existingEmailCandidate) {
@@ -1227,7 +1227,11 @@ export default function PublicJobSeekerUpload() {
       finalProfile.email = candidateEmail.trim().toLowerCase();
       finalProfile.phone = candidatePhone.trim();
       finalProfile.gender = candidateGender;
-      finalProfile.maritalStatus = candidateMaritalStatus;
+      finalProfile.maritalStatus = '';
+      finalProfile.currentRole = candidateCurrentRole.trim();
+      finalProfile.currentTitle = candidateCurrentRole.trim();
+      finalProfile.designation = candidateCurrentRole.trim();
+      finalProfile.role = candidateCurrentRole.trim();
       finalProfile.location = candidateLocation.trim();
       finalProfile.domain = targetDomainStr;
       finalProfile.domains = targetDomainsList;
@@ -1239,27 +1243,27 @@ export default function PublicJobSeekerUpload() {
       finalProfile.totalExperienceYears = expNum;
       finalProfile.experience = expNum;
 
-      finalProfile.employmentStatus = candidateEmploymentStatus;
+      finalProfile.employmentStatus = candidateEmploymentStatus || 'Working';
       finalProfile.isWorking = candidateEmploymentStatus === 'Working' || candidateEmploymentStatus === 'Currently Working';
-      finalProfile.noticePeriodVal = candidateNoticePeriodVal.trim();
-      finalProfile.noticePeriodUnit = candidateNoticePeriodUnit;
-      finalProfile.noticePeriod = `${candidateNoticePeriodVal.trim()} ${candidateNoticePeriodUnit}`;
+      finalProfile.noticePeriodVal = candidateNoticePeriodVal?.trim() || '30';
+      finalProfile.noticePeriodUnit = candidateNoticePeriodUnit || 'Days';
+      finalProfile.noticePeriod = `${candidateNoticePeriodVal?.trim() || '30'} ${candidateNoticePeriodUnit || 'Days'}`;
       finalProfile.noticePeriodDays = candidateNoticePeriodUnit === 'Months'
-        ? String(Math.round((parseFloat(candidateNoticePeriodVal) || 0) * 30))
-        : candidateNoticePeriodVal.trim();
+        ? String(Math.round((parseFloat(candidateNoticePeriodVal || '1') || 1) * 30))
+        : (candidateNoticePeriodVal?.trim() || '30');
 
-      const formattedCurrentSalary = getFormattedCurrentSalary();
-      const formattedExpectedSalary = getFormattedExpectedSalary();
+      const formattedCurrentSalary = getFormattedCurrentSalary() || 'Competitive';
+      const formattedExpectedSalary = getFormattedExpectedSalary() || 'As per Industry';
       finalProfile.currentSalary = formattedCurrentSalary;
       finalProfile.expectedSalary = formattedExpectedSalary;
-      finalProfile.currentSalaryVal = candidateCurrentSalaryVal.trim();
+      finalProfile.currentSalaryVal = candidateCurrentSalaryVal.trim() || 'Competitive';
       finalProfile.currentSalaryPeriod = candidateCurrentSalaryPeriod;
       finalProfile.currentSalaryType = candidateCurrentSalaryType;
-      finalProfile.expectedSalaryVal = candidateExpectedSalaryVal.trim();
+      finalProfile.expectedSalaryVal = candidateExpectedSalaryVal.trim() || 'Best in Industry';
       finalProfile.expectedSalaryPeriod = candidateExpectedSalaryPeriod;
       finalProfile.expectedSalaryType = candidateExpectedSalaryType;
-      finalProfile.employmentType = candidateEmploymentType;
-      finalProfile.employmentTypes = candidateEmploymentTypes;
+      finalProfile.employmentType = candidateEmploymentType || 'Full-time';
+      finalProfile.employmentTypes = candidateEmploymentTypes.length > 0 ? candidateEmploymentTypes : ['Full-time — Work from Office / On-site'];
 
       const selectedDegree = candidateEducation.trim();
       const existingEdu = finalProfile.education || [];
@@ -1291,14 +1295,18 @@ export default function PublicJobSeekerUpload() {
         source: 'public_job_seeker_upload'
       });
 
-      const formattedStatus = candidateEmploymentStatus === 'Working' ? 'Currently Working' : candidateEmploymentStatus;
+      const formattedStatus = candidateEmploymentStatus === 'Working' ? 'Currently Working' : (candidateEmploymentStatus || 'Available');
 
       const profileMatchCandidate: CandidateMatchProfile = {
         name: candidateName.trim(),
         email: candidateEmail.trim().toLowerCase(),
         phone: candidatePhone.trim(),
         gender: candidateGender,
-        maritalStatus: candidateMaritalStatus,
+        maritalStatus: '',
+        currentRole: candidateCurrentRole.trim(),
+        currentTitle: candidateCurrentRole.trim(),
+        designation: candidateCurrentRole.trim(),
+        role: candidateCurrentRole.trim(),
         location: candidateLocation.trim(),
         domain: targetDomainStr,
         domains: targetDomainsList,
@@ -1308,9 +1316,9 @@ export default function PublicJobSeekerUpload() {
         education: selectedDegree,
         highestEducation: selectedDegree,
         employmentStatus: formattedStatus,
-        employmentType: candidateEmploymentType,
-        employmentTypes: candidateEmploymentTypes,
-        noticePeriod: `${candidateNoticePeriodVal.trim()} ${candidateNoticePeriodUnit}`,
+        employmentType: candidateEmploymentType || 'Full-time',
+        employmentTypes: candidateEmploymentTypes.length > 0 ? candidateEmploymentTypes : ['Full-time — Work from Office / On-site'],
+        noticePeriod: `${candidateNoticePeriodVal.trim() || '30'} ${candidateNoticePeriodUnit}`,
         currentSalary: formattedCurrentSalary,
         expectedSalary: formattedExpectedSalary,
         fileName: selectedFile ? selectedFile.name : (existingEmailCandidate?.fileName || 'resume.pdf'),
@@ -1339,6 +1347,7 @@ export default function PublicJobSeekerUpload() {
     setCandidateMaritalStatus('');
     setCandidateLocation('');
     setCandidateExp('');
+    setCandidateCurrentRole('');
     setCandidateEducation('');
     setCandidateEmploymentStatus('Working');
     setCandidateEmploymentTypes(['Full-time — Work from Office / On-site']);
@@ -1371,7 +1380,7 @@ export default function PublicJobSeekerUpload() {
               <HireXLogo size="md" variant="full" isDark={false} />
             </Link>
             <div className="hidden sm:block border-l border-[#E4E7DC] pl-3">
-              <span className="text-[11px] font-mono text-[#8FB305] font-bold block uppercase tracking-wider">Candidate Match Portal</span>
+              <span className="text-[11px] font-mono text-[#8FB305] font-bold block uppercase tracking-wider">Candidate Onboard & Match Portal</span>
             </div>
           </div>
 
@@ -1558,14 +1567,14 @@ export default function PublicJobSeekerUpload() {
             <div className="text-center space-y-3 pt-2 sm:pt-4">
               <div className="inline-flex items-center gap-2 rounded-full border border-[#E4E7DC] bg-white px-3.5 py-1 text-xs font-semibold tracking-wider uppercase text-[#575A51] shadow-2xs">
                 <span className="h-1.5 w-1.5 rounded-full bg-[#8FB305] animate-pulse" />
-                <span>AI CANDIDATE MATCH • FAST-TRACK PROFILE</span>
+                <span>CANDIDATE ONBOARD • FAST-TRACK PROFILE MATCH</span>
               </div>
               <h1 className="text-3xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-[#111215] leading-[1.08]">
-                Upload Resume. <br className="hidden sm:inline" />
+                Candidate Onboard. <br className="hidden sm:inline" />
                 <span className="italic font-serif font-normal text-[#575A51]">Instant Matches.</span> Zero Friction.
               </h1>
               <p className="text-xs sm:text-base max-w-2xl mx-auto text-[#575A51] leading-relaxed">
-                Our AI resume parser extracts your skills, experience, location, and qualification fit, pre-fills your profile, and matches you against live hiring requisitions.
+                Complete your candidate onboarding in 60 seconds. Our AI resume parser extracts your skills, experience, location, and qualification fit, pre-fills your profile, and matches you against live hiring requisitions.
               </p>
               <div className="pt-1 flex items-center justify-center">
                 <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#D4F82C]/30 border border-[#8FB305]/40 text-[#111215] text-xs font-bold shadow-2xs">
@@ -1829,7 +1838,7 @@ export default function PublicJobSeekerUpload() {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-1">
+                    <div className="pt-1">
                       {/* Gender Switch */}
                       <div className="space-y-1">
                         <label className="block text-[11px] font-bold uppercase tracking-wider text-[#353831]">
@@ -1848,30 +1857,6 @@ export default function PublicJobSeekerUpload() {
                               }`}
                             >
                               {g}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Marital Status Switch */}
-                      <div className="space-y-1">
-                        <label className="block text-[11px] font-bold uppercase tracking-wider text-[#353831]">
-                          Marital Status
-                        </label>
-                        <div className="grid grid-cols-2 gap-1 p-1 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5]">
-                          {['Single / Unmarried', 'Married'].map(m => (
-                            <button
-                              key={m}
-                              type="button"
-                              onClick={() => setCandidateMaritalStatus(m)}
-                              className={`py-2 rounded-lg text-xs font-bold transition-all cursor-pointer truncate px-1 ${
-                                candidateMaritalStatus === m
-                                  ? 'bg-[#111215] text-[#D4F82C] shadow-xs'
-                                  : 'text-[#575A51] hover:text-[#111215] hover:bg-white'
-                              }`}
-                              title={m}
-                            >
-                              {m === 'Single / Unmarried' ? 'Single' : 'Married'}
                             </button>
                           ))}
                         </div>
@@ -2008,7 +1993,7 @@ export default function PublicJobSeekerUpload() {
                     </div>
                   </div>
 
-                  {/* CARD BLOCK 4: EMPLOYMENT STATUS, NOTICE PERIOD & SALARY */}
+                  {/* CARD BLOCK 4: CURRENT ROLE / DESIGNATION */}
                   <div className="rounded-2xl sm:rounded-3xl p-5 sm:p-6 border border-[#E4E7DC] bg-white shadow-xs hover:border-[#111215]/30 transition-all duration-200 space-y-4">
                     <div className="flex items-center justify-between border-b border-[#E4E7DC] pb-3.5">
                       <div className="flex items-center gap-2.5">
@@ -2017,10 +2002,10 @@ export default function PublicJobSeekerUpload() {
                         </span>
                         <div>
                           <h3 className="text-sm sm:text-base font-black tracking-tight text-[#111215]">
-                            Employment & Salary <span className="text-rose-500">*</span>
+                            Current Role <span className="text-rose-500">*</span>
                           </h3>
                           <p className="text-[11px] text-[#73766C]">
-                            Availability and compensation expectations for salary matching
+                            Your current designation, title, or job role (e.g. Software Engineer, Fresher)
                           </p>
                         </div>
                       </div>
@@ -2029,166 +2014,53 @@ export default function PublicJobSeekerUpload() {
                       </span>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                      {/* 1. Working Status */}
-                      <div className="space-y-1">
-                        <div className="flex items-center justify-between">
-                          <label className="block text-[11px] font-bold uppercase tracking-wider text-[#353831]">
-                            Working Status <span className="text-rose-500">*</span>
-                          </label>
-                          <span className="text-[10px] text-[#73766C]">Current</span>
-                        </div>
-                        <select
+                    <div className="space-y-3">
+                      <div className="relative">
+                        <Briefcase className="w-4 h-4 absolute left-3.5 top-3.5 text-[#73766C]" />
+                        <input
+                          type="text"
                           required
-                          value={candidateEmploymentStatus}
-                          onChange={(e) => setCandidateEmploymentStatus(e.target.value)}
-                          className="w-full px-3 py-2.5 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] text-xs text-[#111215] outline-none focus:ring-2 focus:ring-[#8FB305]/30 focus:border-[#111215] focus:bg-white font-bold cursor-pointer transition-all"
-                        >
-                          <option value="Working">Currently Working (Employed)</option>
-                          <option value="Not Working">Not Working (Unemployed)</option>
-                          <option value="Serving Notice">Serving Notice Period</option>
-                        </select>
-                      </div>
-
-                      {/* 2. Notice Period */}
-                      <div className="space-y-1">
-                        <div className="flex items-center justify-between">
-                          <label className="block text-[11px] font-bold uppercase tracking-wider text-[#353831]">
-                            Notice Period <span className="text-rose-500">*</span>
-                          </label>
-                          <div className="flex items-center gap-1">
-                            {['0', '15', '30', '60'].map(d => (
-                              <button
-                                key={d}
-                                type="button"
-                                onClick={() => {
-                                  setCandidateNoticePeriodVal(d);
-                                  setCandidateNoticePeriodUnit('Days');
-                                }}
-                                className={`px-1.5 py-0.5 rounded text-[9px] font-bold border transition-all cursor-pointer ${
-                                  candidateNoticePeriodVal === d && candidateNoticePeriodUnit === 'Days'
-                                    ? 'bg-[#111215] text-[#D4F82C] border-[#111215]'
-                                    : 'bg-[#F8F9F5] text-[#575A51] border-[#E4E7DC] hover:text-[#111215]'
-                                }`}
-                              >
-                                {d === '0' ? 'Imm' : `${d}d`}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <div className="relative flex-1">
-                            <Clock className="w-3.5 h-3.5 absolute left-3 top-3 text-[#73766C]" />
-                            <input
-                              type="number"
-                              min="0"
-                              max="365"
-                              required
-                              value={candidateNoticePeriodVal}
-                              onChange={(e) => setCandidateNoticePeriodVal(e.target.value)}
-                              placeholder="30"
-                              className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] text-xs font-semibold text-[#111215] outline-none focus:ring-2 focus:ring-[#8FB305]/30 focus:border-[#111215] focus:bg-white placeholder-[#73766C] transition-all"
-                            />
-                          </div>
-                          <select
-                            value={candidateNoticePeriodUnit}
-                            onChange={(e) => setCandidateNoticePeriodUnit(e.target.value as 'Days' | 'Months')}
-                            className="px-3 py-2.5 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] text-xs font-bold text-[#111215] outline-none cursor-pointer"
-                          >
-                            <option value="Days">Days</option>
-                            <option value="Months">Months</option>
-                          </select>
-                        </div>
-                      </div>
-
-                      {/* 3. Current Salary */}
-                      <div className="space-y-1">
-                        <div className="flex items-center justify-between">
-                          <label className="block text-[11px] font-bold uppercase tracking-wider text-[#353831]">
-                            Current Salary <span className="text-rose-500">*</span>
-                          </label>
-                          <span className="text-[10px] text-[#73766C]">0 if Fresher</span>
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                          <div className="relative flex-1 min-w-0">
-                            <IndianRupee className="w-3.5 h-3.5 absolute left-3 top-3 text-[#73766C]" />
-                            <input
-                              type="text"
-                              required
-                              value={candidateCurrentSalaryVal}
-                              onChange={(e) => setCandidateCurrentSalaryVal(e.target.value)}
-                              placeholder="e.g. 4.5 or 35,000"
-                              className="w-full pl-8 pr-2.5 py-2.5 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] text-xs font-semibold text-[#111215] outline-none focus:ring-2 focus:ring-[#8FB305]/30 focus:border-[#111215] focus:bg-white transition-all placeholder-[#73766C]"
-                            />
-                          </div>
-                          <select
-                            value={candidateCurrentSalaryPeriod}
-                            onChange={(e) => setCandidateCurrentSalaryPeriod(e.target.value as any)}
-                            className="px-2 py-2.5 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] text-[11px] font-bold text-[#111215] outline-none cursor-pointer shrink-0"
-                          >
-                            <option value="Per Month">/ Month</option>
-                            <option value="Per Year">/ Year</option>
-                          </select>
-                          <select
-                            value={candidateCurrentSalaryType}
-                            onChange={(e) => setCandidateCurrentSalaryType(e.target.value as any)}
-                            className="px-2 py-2.5 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] text-[11px] font-bold text-[#111215] outline-none cursor-pointer shrink-0"
-                          >
-                            <option value="In-Hand">In-Hand</option>
-                            <option value="CTC">CTC</option>
-                          </select>
-                        </div>
-                      </div>
-
-                      {/* 4. Expected Salary */}
-                      <div className="space-y-1">
-                        <div className="flex items-center justify-between">
-                          <label className="block text-[11px] font-bold uppercase tracking-wider text-[#353831]">
-                            Expected Salary <span className="text-rose-500">*</span>
-                          </label>
-                          <span className="text-[10px] text-[#73766C]">Target</span>
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                          <div className="relative flex-1 min-w-0">
-                            <IndianRupee className="w-3.5 h-3.5 absolute left-3 top-3 text-[#73766C]" />
-                            <input
-                              type="text"
-                              required
-                              value={candidateExpectedSalaryVal}
-                              onChange={(e) => setCandidateExpectedSalaryVal(e.target.value)}
-                              placeholder="e.g. 6.5 or 50,000"
-                              className="w-full pl-8 pr-2.5 py-2.5 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] text-xs font-semibold text-[#111215] outline-none focus:ring-2 focus:ring-[#8FB305]/30 focus:border-[#111215] focus:bg-white transition-all placeholder-[#73766C]"
-                            />
-                          </div>
-                          <select
-                            value={candidateExpectedSalaryPeriod}
-                            onChange={(e) => setCandidateExpectedSalaryPeriod(e.target.value as any)}
-                            className="px-2 py-2.5 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] text-[11px] font-bold text-[#111215] outline-none cursor-pointer shrink-0"
-                          >
-                            <option value="Per Month">/ Month</option>
-                            <option value="Per Year">/ Year</option>
-                          </select>
-                          <select
-                            value={candidateExpectedSalaryType}
-                            onChange={(e) => setCandidateExpectedSalaryType(e.target.value as any)}
-                            className="px-2 py-2.5 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] text-[11px] font-bold text-[#111215] outline-none cursor-pointer shrink-0"
-                          >
-                            <option value="In-Hand">In-Hand</option>
-                            <option value="CTC">CTC</option>
-                          </select>
-                        </div>
-                      </div>
-
-                      {/* 5. Employment Type Preferences */}
-                      <div className="sm:col-span-2 space-y-1 pt-1">
-                        <label className="block text-[11px] font-bold uppercase tracking-wider text-[#353831]">
-                          Employment Type Preferences <span className="text-rose-500">*</span>
-                        </label>
-                        <EmploymentTypeMultiSelect
-                          values={candidateEmploymentTypes}
-                          onChange={setCandidateEmploymentTypes}
-                          variant="dropdown"
+                          value={candidateCurrentRole}
+                          onChange={(e) => setCandidateCurrentRole(e.target.value)}
+                          placeholder="e.g. Software Engineer, Frontend Developer, Sales Executive, Fresher..."
+                          className="w-full pl-10 pr-4 py-3 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] text-xs sm:text-sm font-semibold text-[#111215] outline-none focus:ring-2 focus:ring-[#8FB305]/30 focus:border-[#111215] focus:bg-white placeholder-[#73766C] transition-all"
                         />
+                      </div>
+
+                      {/* Quick Popular Role Suggestions */}
+                      <div className="space-y-1.5 pt-1">
+                        <span className="text-[10px] font-mono font-bold text-[#73766C]">Quick suggestions:</span>
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          {[
+                            'Fresher / Graduate Trainee',
+                            'Software Engineer',
+                            'Frontend Developer',
+                            'Backend Developer',
+                            'Full Stack Developer',
+                            'Data Analyst',
+                            'DevOps Engineer',
+                            'UI/UX Designer',
+                            'QA / Test Engineer',
+                            'Sales / Business Development',
+                            'Digital Marketing Specialist',
+                            'Human Resources (HR)',
+                            'Accountant / Finance Executive',
+                            'Operations Executive'
+                          ].map(role => (
+                            <button
+                              key={role}
+                              type="button"
+                              onClick={() => setCandidateCurrentRole(role)}
+                              className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-all cursor-pointer ${
+                                candidateCurrentRole === role
+                                  ? 'bg-[#111215] text-[#D4F82C] border-[#111215] shadow-xs'
+                                  : 'bg-[#F8F9F5] border-[#E4E7DC] text-[#575A51] hover:border-[#111215] hover:text-[#111215]'
+                              }`}
+                            >
+                              {role}
+                            </button>
+                          ))}
+                        </div>
                       </div>
                     </div>
                   </div>

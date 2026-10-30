@@ -73,11 +73,11 @@ export const EducationInput: React.FC<EducationInputProps> = ({
       if (specs.includes(value)) {
         // Already matches
       } else {
-        // Reset or select default
-        onChange('');
+        // Default to the first standard specialization or category name
+        onChange(specs[0] || newQual);
       }
     } else {
-      onChange('');
+      onChange(newQual || '');
     }
   };
 

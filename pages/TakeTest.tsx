@@ -35,7 +35,10 @@ import {
   Award,
   Briefcase,
   FileUp,
-  Star
+  Star,
+  Share2,
+  ExternalLink,
+  Linkedin
 } from 'lucide-react';
 import { sendInterviewInvitations } from '../services/brevoService';
 import { grokGenerateJson } from '../services/grokService';
@@ -325,6 +328,7 @@ export const TakeTest: React.FC = () => {
   const screenShieldTimeoutRef = useRef<any>(null);
 
   const [resultData, setResultData] = useState<any>(null);
+  const [copiedReportLink, setCopiedReportLink] = useState(false);
   const [showPromoPopup, setShowPromoPopup] = useState(false);
   const [markedQuestions, setMarkedQuestions] = useState<Record<number, boolean>>({});
   const [showCalculator, setShowCalculator] = useState(false);
@@ -962,6 +966,7 @@ export const TakeTest: React.FC = () => {
     }
 
     setResultData({
+      submissionId: submissionRef.id,
       score,
       feedback,
       questions: test.questions,
@@ -1090,10 +1095,37 @@ export const TakeTest: React.FC = () => {
         className={`min-h-screen flex flex-col bg-[#F8F9F5] dark:bg-[#0D0E11] text-[#111215] dark:text-[#F8F9F5] selection:bg-[#D4F82C] selection:text-[#111215]`}
       >
         {/* Top Minimal Bar */}
-        <header className="border-b border-[#E4E7DC] dark:border-white/10 bg-white/80 dark:bg-[#15161A]/80 backdrop-blur-md px-6 py-4 flex items-center justify-between">
+        <header className="border-b border-[#E4E7DC] dark:border-white/10 bg-white/80 dark:bg-[#15161A]/80 backdrop-blur-md px-4 sm:px-6 py-3.5 flex items-center justify-between gap-3">
           <HireXLogo size="md" variant="full" withLink to="/" isDark={isDark} />
           <div className="flex items-center gap-2">
-            <span className="px-3 py-1 rounded-full text-[11px] font-bold border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-white/5">
+            {resultData?.submissionId && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const shareUrl = `${window.location.origin}/test-result/${resultData.submissionId}`;
+                    navigator.clipboard.writeText(shareUrl);
+                    setCopiedReportLink(true);
+                    setTimeout(() => setCopiedReportLink(false), 2500);
+                  }}
+                  className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-white/5 text-[#111215] dark:text-white hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer shadow-2xs"
+                  title="Copy shareable result link"
+                >
+                  {copiedReportLink ? <Check size={13} className="text-emerald-600" /> : <Copy size={13} />}
+                  <span>{copiedReportLink ? 'Link Copied!' : 'Copy Result Link'}</span>
+                </button>
+                <a
+                  href={`/test-result/${resultData.submissionId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-[#111215] text-[#D4F82C] dark:bg-[#D4F82C] dark:text-[#111215] hover:opacity-90 transition-opacity cursor-pointer shadow-xs"
+                >
+                  <span>Dedicated Scorecard</span>
+                  <ExternalLink size={12} />
+                </a>
+              </>
+            )}
+            <span className="hidden md:inline-block px-3 py-1 rounded-full text-[11px] font-bold border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-white/5">
               Completed Assessment
             </span>
           </div>
@@ -1210,6 +1242,53 @@ export const TakeTest: React.FC = () => {
               </div>
             </div>
           </div>
+
+          {/* Shareable Dedicated Result Callout */}
+          {resultData.submissionId && (
+            <div className="rounded-3xl border border-[#E4E7DC] dark:border-white/10 bg-gradient-to-r from-white via-[#F8F9F5] to-white dark:from-[#15161A] dark:via-[#191B20] dark:to-[#15161A] p-5 sm:p-6 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="space-y-1">
+                <div className="inline-flex items-center gap-1.5 text-[10px] font-mono font-bold uppercase tracking-wider text-[#8FB305] dark:text-[#D4F82C]">
+                  <Share2 size={12} />
+                  <span>Public Verified Scorecard URL</span>
+                </div>
+                <h3 className="text-sm sm:text-base font-bold text-[#111215] dark:text-white">
+                  Share your verified assessment report with recruiters & hiring managers
+                </h3>
+                <p className="text-xs text-[#575A51] dark:text-neutral-400">
+                  Anyone with this link can view your detailed scorecard, evaluation feedback, and proctoring audit without logging in.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2 self-stretch sm:self-auto shrink-0">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const shareUrl = `${window.location.origin}/test-result/${resultData.submissionId}`;
+                    navigator.clipboard.writeText(shareUrl);
+                    setCopiedReportLink(true);
+                    setTimeout(() => setCopiedReportLink(false), 2500);
+                  }}
+                  className={`flex-1 sm:flex-initial px-4 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer inline-flex items-center justify-center gap-1.5 shadow-2xs ${
+                    copiedReportLink
+                      ? 'bg-emerald-600 text-white border-emerald-600'
+                      : 'bg-white dark:bg-white/5 border-[#E4E7DC] dark:border-white/10 text-[#111215] dark:text-white hover:bg-black/5 dark:hover:bg-white/10'
+                  }`}
+                >
+                  {copiedReportLink ? <Check size={13} strokeWidth={2.5} /> : <Copy size={13} />}
+                  <span>{copiedReportLink ? 'Copied Link!' : 'Copy Link'}</span>
+                </button>
+                <a
+                  href={`/test-result/${resultData.submissionId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 sm:flex-initial px-4 py-2 rounded-xl text-xs font-bold bg-[#111215] text-[#D4F82C] dark:bg-[#D4F82C] dark:text-[#111215] hover:opacity-90 transition-opacity cursor-pointer shadow-xs inline-flex items-center justify-center gap-1.5"
+                >
+                  <span>Open Dedicated Page</span>
+                  <ExternalLink size={13} />
+                </a>
+              </div>
+            </div>
+          )}
 
           {/* AI Feedback for Coding */}
           {resultData.type === 'coding' && resultData.feedback && (

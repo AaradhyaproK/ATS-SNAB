@@ -65,6 +65,7 @@ import CandidateInterviewFlow from './pages/Interview';
 import { CandidateVoiceInterview } from './pages/CandidateVoiceInterview';
 import { VoiceInterviewReport } from './pages/VoiceInterviewReport';
 import LiveVoiceInterview from './pages/LiveVoiceInterview';
+import AssessmentResultReport from './pages/AssessmentResultReport';
 import { resolveJobOrInterviewDocument } from './services/jobResolutionService';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from './services/firebase';
@@ -233,6 +234,21 @@ const App: React.FC = () => {
                 <PublicJobSeekerUpload />
               </ThemeProvider>
             } />
+            <Route path="candidate-onboard" element={
+              <ThemeProvider>
+                <PublicJobSeekerUpload />
+              </ThemeProvider>
+            } />
+            <Route path="candidate/onboard" element={
+              <ThemeProvider>
+                <PublicJobSeekerUpload />
+              </ThemeProvider>
+            } />
+            <Route path="candidate-onboarding" element={
+              <ThemeProvider>
+                <PublicJobSeekerUpload />
+              </ThemeProvider>
+            } />
             <Route path="job-seeker-upload" element={
               <ThemeProvider>
                 <PublicJobSeekerUpload />
@@ -341,6 +357,38 @@ const App: React.FC = () => {
             <Route path="test/start/:testId" element={
               <ThemeProvider>
                 <TakeTest />
+              </ThemeProvider>
+            } />
+
+            {/* Public Dedicated Assessment Result Reports (Aptitude & Coding) */}
+            <Route path="test-result/:submissionId" element={
+              <ThemeProvider>
+                <AssessmentResultReport />
+              </ThemeProvider>
+            } />
+            <Route path="test-result" element={
+              <ThemeProvider>
+                <AssessmentResultReport />
+              </ThemeProvider>
+            } />
+            <Route path="assessment-result/:submissionId" element={
+              <ThemeProvider>
+                <AssessmentResultReport />
+              </ThemeProvider>
+            } />
+            <Route path="assessment-result" element={
+              <ThemeProvider>
+                <AssessmentResultReport />
+              </ThemeProvider>
+            } />
+            <Route path="assessment-report/:submissionId" element={
+              <ThemeProvider>
+                <AssessmentResultReport />
+              </ThemeProvider>
+            } />
+            <Route path="test/result/:submissionId" element={
+              <ThemeProvider>
+                <AssessmentResultReport />
               </ThemeProvider>
             } />
 

@@ -18,6 +18,7 @@ import {
   Layers,
   Mail,
   Search,
+  Share2,
   ShieldCheck,
   Sparkles,
   Target,
@@ -689,6 +690,29 @@ const TestResults: React.FC = () => {
 
                             <button
                               type="button"
+                              onClick={() => {
+                                const url = `${window.location.origin}/test-result/${submission.id}`;
+                                navigator.clipboard.writeText(url);
+                                showSuccess('Candidate shareable scorecard link copied!');
+                              }}
+                              className="size-8 rounded-full border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-white/5 flex items-center justify-center text-[#575A51] dark:text-neutral-300 hover:text-[#111215] dark:hover:text-white hover:bg-[#F1F3EB] dark:hover:bg-white/10 transition-all cursor-pointer shadow-2xs"
+                              title="Copy public shareable scorecard link"
+                            >
+                              <Share2 size={13} />
+                            </button>
+
+                            <a
+                              href={`/test-result/${submission.id}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="size-8 rounded-full border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-white/5 flex items-center justify-center text-[#575A51] dark:text-neutral-300 hover:text-[#111215] dark:hover:text-white hover:bg-[#F1F3EB] dark:hover:bg-white/10 transition-all cursor-pointer shadow-2xs"
+                              title="Open dedicated public scorecard page in new tab"
+                            >
+                              <ExternalLink size={13} />
+                            </a>
+
+                            <button
+                              type="button"
                               onClick={() => setSelectedSubmission(submission)}
                               className="px-3 py-1.5 rounded-full border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-white/5 hover:bg-[#F1F3EB] dark:hover:bg-white/10 text-xs font-bold text-[#111215] dark:text-white transition-all shadow-2xs flex items-center gap-1.5 cursor-pointer"
                             >
@@ -906,7 +930,31 @@ const TestResults: React.FC = () => {
             </div>
 
             {/* Modal Footer */}
-            <div className="p-4 border-t border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-[#101114] flex items-center justify-end">
+            <div className="p-4 border-t border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-[#101114] flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const url = `${window.location.origin}/test-result/${selectedSubmission.id}`;
+                    navigator.clipboard.writeText(url);
+                    showSuccess('Candidate public scorecard link copied!');
+                  }}
+                  className={secondaryButtonClass}
+                >
+                  <Copy size={13} />
+                  <span>Copy Public Link</span>
+                </button>
+                <a
+                  href={`/test-result/${selectedSubmission.id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={primaryButtonClass}
+                >
+                  <span>Open Dedicated Report</span>
+                  <ExternalLink size={13} />
+                </a>
+              </div>
+
               <button
                 type="button"
                 onClick={() => setSelectedSubmission(null)}

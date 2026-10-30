@@ -844,8 +844,34 @@ const AuthPage: React.FC = () => {
               </>
             )}
 
-              {/* ── Candidate Portal Bridge Banner ── */}
-              <div className="mt-6 pt-5 border-t border-[#E4E7DC] dark:border-white/10">
+              {/* ── Candidate Onboarding & Portal Bridge ── */}
+              <div className="mt-6 pt-5 border-t border-[#E4E7DC] dark:border-white/10 space-y-2">
+                <Link
+                  to="/upload-resume"
+                  className="group flex items-center justify-between p-3 sm:p-3.5 rounded-2xl bg-[#D4F82C]/15 hover:bg-[#D4F82C]/25 dark:bg-[#D4F82C]/10 dark:hover:bg-[#D4F82C]/20 border border-[#8FB305]/40 transition-all text-left"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-xl bg-[#111215] text-[#D4F82C] flex items-center justify-center font-bold shrink-0">
+                      <Sparkles size={16} />
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-[#111215] dark:text-white flex items-center gap-1.5">
+                        New Candidate Onboard & Signup
+                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#111215] text-[#D4F82C]">
+                          Candidate Onboard
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-[#575A51] dark:text-neutral-300">
+                        Upload resume & get fast-track matched to live jobs
+                      </p>
+                    </div>
+                  </div>
+                  <ChevronRight
+                    size={16}
+                    className="text-[#111215] dark:text-[#D4F82C] group-hover:translate-x-1 transition-all shrink-0"
+                  />
+                </Link>
+
                 <Link
                   to="/candidate/login"
                   className="group flex items-center justify-between p-3 sm:p-3.5 rounded-2xl bg-[#F8F9F5] hover:bg-[#F0F2EB] dark:bg-[#1D1F24] dark:hover:bg-[#24272E] border border-[#E4E7DC] dark:border-white/10 transition-all text-left"
@@ -856,7 +882,7 @@ const AuthPage: React.FC = () => {
                     </div>
                     <div>
                       <div className="text-xs font-bold text-[#111215] dark:text-white flex items-center gap-1">
-                        Are you a Job Seeker?
+                        Registered Candidate Login
                         <span className="text-[10px] font-semibold px-1.5 py-0.2 rounded-full bg-[#E4E7DC] dark:bg-white/10 text-[#575A51] dark:text-neutral-300">
                           Candidates
                         </span>
