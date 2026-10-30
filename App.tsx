@@ -260,7 +260,7 @@ const App: React.FC = () => {
               </ThemeProvider>
             } />
 
-            {/* Candidate Portal & Dedicated Candidate Login */}
+            {/* Candidate Portal & Dedicated Candidate Unique Routes */}
             <Route path="candidate" element={
               <ThemeProvider>
                 <CandidatePortal />
@@ -276,8 +276,49 @@ const App: React.FC = () => {
                 <CandidatePortal initialTab="dashboard" />
               </ThemeProvider>
             } />
+            <Route path="candidate/matches" element={
+              <ThemeProvider>
+                <CandidatePortal initialTab="matches" />
+              </ThemeProvider>
+            } />
+            <Route path="candidate/jobs" element={<Navigate to="/candidate/matches" replace />} />
+            <Route path="candidate/applied" element={
+              <ThemeProvider>
+                <CandidatePortal initialTab="applied" />
+              </ThemeProvider>
+            } />
+            <Route path="candidate/applications" element={<Navigate to="/candidate/applied" replace />} />
+            <Route path="candidate/interviews" element={
+              <ThemeProvider>
+                <CandidatePortal initialTab="applied" initialStageFilter="shortlisted" />
+              </ThemeProvider>
+            } />
+            <Route path="candidate/assessments" element={
+              <ThemeProvider>
+                <CandidatePortal initialTab="assessments" />
+              </ThemeProvider>
+            } />
+            <Route path="candidate/tests" element={<Navigate to="/candidate/assessments" replace />} />
+            <Route path="candidate/assessment-results" element={
+              <ThemeProvider>
+                <CandidatePortal initialTab="assessment-results" />
+              </ThemeProvider>
+            } />
+            <Route path="candidate/results" element={<Navigate to="/candidate/assessment-results" replace />} />
+            <Route path="candidate/resume" element={
+              <ThemeProvider>
+                <CandidatePortal initialTab="resume" />
+              </ThemeProvider>
+            } />
+            <Route path="candidate/cv" element={<Navigate to="/candidate/resume" replace />} />
+            <Route path="candidate/profile" element={
+              <ThemeProvider>
+                <CandidatePortal initialTab="edit-profile" />
+              </ThemeProvider>
+            } />
+            <Route path="candidate/edit-profile" element={<Navigate to="/candidate/profile" replace />} />
             <Route path="candidate-login" element={<Navigate to="/candidate/login" replace />} />
-            <Route path="candidate-portal" element={<Navigate to="/candidate" replace />} />
+            <Route path="candidate-portal" element={<Navigate to="/candidate/dashboard" replace />} />
 
             {/* Admin Routes (No Standard Layout) */}
             <Route path="admin" element={
