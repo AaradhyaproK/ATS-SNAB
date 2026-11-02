@@ -124,6 +124,11 @@ export interface HotLeadItem {
   resumeUrl?: string;
   resumeFileName?: string;
   source?: string;
+  screeningAnswers?: any[];
+  screenerPassedCount?: number;
+  screenerTotalCount?: number;
+  screenerScore?: number;
+  screenerSummary?: string;
   candidateDetails?: {
     experience?: string | number;
     education?: any;
@@ -478,6 +483,11 @@ export default function HotLeads() {
           matchGrade: app.matchGrade,
           resumeUrl: app.resumeUrl || '',
           source: app.source || 'Candidate Application',
+          screeningAnswers: app.screeningAnswers || [],
+          screenerPassedCount: app.screenerPassedCount || (Array.isArray(app.screeningAnswers) ? app.screeningAnswers.filter((a: any) => a.isPassed !== false).length : 0),
+          screenerTotalCount: app.screenerTotalCount || (Array.isArray(app.screeningAnswers) ? app.screeningAnswers.length : 0),
+          screenerScore: app.screenerScore,
+          screenerSummary: app.screenerSummary,
         });
       });
 
@@ -2318,6 +2328,13 @@ export default function HotLeads() {
                                     <Scale className="size-2.5 shrink-0" />
                                     <span>100% Unbiased Merit</span>
                                   </div>
+
+                                  {lead.screeningAnswers && lead.screeningAnswers.length > 0 && (
+                                    <div className="flex items-center gap-1 text-[9.5px] font-bold text-blue-600 dark:text-blue-400">
+                                      <CheckCircle2 className="size-2.5 shrink-0" />
+                                      <span>Screener: {lead.screenerPassedCount ?? lead.screeningAnswers.length}/{lead.screeningAnswers.length} Passed</span>
+                                    </div>
+                                  )}
                                 </div>
                               </div>
                             );
@@ -2900,6 +2917,63 @@ export default function HotLeads() {
                       </div>
                     );
                   })()}
+
+                  {/* Quick Apply Screener Verification Card */}
+                  {selectedCandidateDetail.screeningAnswers && selectedCandidateDetail.screeningAnswers.length > 0 && (
+                    <div className="p-4 rounded-xl border border-blue-500/25 bg-blue-500/5 dark:bg-blue-500/10 space-y-3">
+                      <div className="flex items-center justify-between flex-wrap gap-2">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center font-black text-xs shadow-xs">
+                            <CheckCircle2 size={16} />
+                          </div>
+                          <div>
+                            <h4 className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                              <span>Quick Apply Screener Answers</span>
+                              <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300 font-bold uppercase tracking-wider">
+                                Pre-Screening
+                              </span>
+                            </h4>
+                            <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                              Candidate confirmed requirements according to the Job Description (JD).
+                            </p>
+                          </div>
+                        </div>
+                        <span className="text-xs font-bold px-3 py-1 rounded-full bg-emerald-600 text-white flex items-center gap-1.5 shadow-xs">
+                          <CheckCircle2 size={12} />
+                          <span>{selectedCandidateDetail.screenerPassedCount ?? selectedCandidateDetail.screeningAnswers.length}/{selectedCandidateDetail.screeningAnswers.length} Criteria Passed</span>
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                        {selectedCandidateDetail.screeningAnswers.map((ans: any, idx: number) => {
+                          const isYes = ans.answer?.toLowerCase() === 'yes' || ans.isPassed;
+                          const isNo = ans.answer?.toLowerCase() === 'no';
+                          return (
+                            <div key={idx} className="p-3 rounded-lg bg-white dark:bg-[#111114] border border-gray-200 dark:border-white/[0.1] space-y-1.5">
+                              <span className="text-[11px] text-slate-600 dark:text-slate-400 font-medium line-clamp-2 block leading-snug">
+                                <span className="font-bold text-blue-600 dark:text-blue-400 mr-1">{idx + 1}.</span>
+                                {ans.question}
+                              </span>
+                              <div className="flex items-center justify-between pt-1 border-t border-gray-100 dark:border-white/5">
+                                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Response</span>
+                                <span className={`text-xs font-bold px-2 py-0.5 rounded-md flex items-center gap-1 ${
+                                  isYes
+                                    ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
+                                    : isNo
+                                    ? 'bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300'
+                                    : 'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-200'
+                                }`}>
+                                  {isYes && <Check size={11} />}
+                                  {isNo && <X size={11} />}
+                                  <span>{ans.answer || 'N/A'}</span>
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
 
                   {/* Stats Grid */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">

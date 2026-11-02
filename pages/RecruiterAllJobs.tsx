@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { collection, query, onSnapshot, where, doc, updateDoc, deleteDoc, arrayUnion, getDocs } from 'firebase/firestore';
+import { collection, query, onSnapshot, where, doc, updateDoc, deleteDoc, arrayUnion, getDocs, getDoc } from 'firebase/firestore';
 
 import { db } from '../services/firebase';
 
@@ -57,8 +57,11 @@ import {
   Table,
   FileSpreadsheet,
   Clipboard,
-  FileUp
+  FileUp,
+  Zap,
+  RotateCw,
 } from 'lucide-react';
+import { generateDefaultScreeningQuestions, ScreeningQuestion } from '../services/screeningService';
 
 
 
@@ -103,6 +106,7 @@ export interface AllJobItem {
   hasJobDoc?: boolean;
   hasInterviewDoc?: boolean;
   isAiVideoInterview?: boolean;
+  screeningQuestions?: ScreeningQuestion[];
 }
 
 const parseDeadlineMillis = (deadline: any): number => {
@@ -383,6 +387,13 @@ const RecruiterAllJobs: React.FC = () => {
   const [rosterWaTarget, setRosterWaTarget] = useState<'whatsapp' | 'both'>('whatsapp');
   const [isWhatsAppModalOpen, setIsWhatsAppModalOpen] = useState(false);
 
+  // Quick Apply Screening Questions State
+  const [jobScreeningQuestions, setJobScreeningQuestions] = useState<ScreeningQuestion[]>([]);
+  const [newQuestionText, setNewQuestionText] = useState('');
+  const [newQuestionType, setNewQuestionType] = useState<'yes_no' | 'short_text' | 'number'>('yes_no');
+  const [showAddQuestionRow, setShowAddQuestionRow] = useState(false);
+  const [isGeneratingQuestions, setIsGeneratingQuestions] = useState(false);
+
   // Always enforce Day Mode for the Recruiter section
   useEffect(() => {
     const root = document.documentElement;
@@ -423,8 +434,18 @@ const RecruiterAllJobs: React.FC = () => {
       } catch {
         isChecked = true;
       }
-      setIsAiVideoInterview(true);
+      setIsAiVideoInterview(isChecked);
       setInviteMode(isChecked ? 'ai_suggest' : 'bulk');
+
+      // Initialize Screening Questions from job or defaults
+      if (Array.isArray((invitingJob as any).screeningQuestions) && (invitingJob as any).screeningQuestions.length > 0) {
+        setJobScreeningQuestions((invitingJob as any).screeningQuestions);
+      } else {
+        const generated = generateDefaultScreeningQuestions(invitingJob);
+        setJobScreeningQuestions(generated);
+      }
+      setShowAddQuestionRow(false);
+      setNewQuestionText('');
     }
   }, [invitingJob]);
 
@@ -435,6 +456,7 @@ const RecruiterAllJobs: React.FC = () => {
       if (invitingJob?.id) {
         localStorage.setItem(`job_ai_video_${invitingJob.id}`, String(checked));
         updateDoc(doc(db, 'interviews', invitingJob.id), { isAiVideoInterview: checked }).catch(() => {});
+        updateDoc(doc(db, 'jobs', invitingJob.id), { isAiVideoInterview: checked }).catch(() => {});
       }
     } catch (err) {
       console.warn('Could not persist ai video interview preference:', err);
@@ -442,6 +464,71 @@ const RecruiterAllJobs: React.FC = () => {
     if (checked) {
       setInviteMode('ai_suggest');
     }
+  };
+
+  const handleSaveScreeningQuestionsToJob = async (updatedQuestions: ScreeningQuestion[]) => {
+    setJobScreeningQuestions(updatedQuestions);
+    if (!invitingJob?.id) return;
+    try {
+      await Promise.all([
+        updateDoc(doc(db, 'jobs', invitingJob.id), { screeningQuestions: updatedQuestions }).catch(() => {}),
+        updateDoc(doc(db, 'interviews', invitingJob.id), { screeningQuestions: updatedQuestions }).catch(() => {})
+      ]);
+    } catch (err) {
+      console.warn('Could not persist screening questions:', err);
+    }
+  };
+
+  const handleAutoGenerateFromJD = async () => {
+    if (!invitingJob) return;
+    setIsGeneratingQuestions(true);
+    try {
+      let fullJob: any = { ...invitingJob };
+      try {
+        const [jobSnap, interviewSnap] = await Promise.all([
+          getDoc(doc(db, 'jobs', invitingJob.id)),
+          getDoc(doc(db, 'interviews', invitingJob.id))
+        ]);
+        if (jobSnap.exists()) {
+          fullJob = { ...fullJob, ...jobSnap.data() };
+        }
+        if (interviewSnap.exists()) {
+          fullJob = { ...fullJob, ...interviewSnap.data() };
+        }
+      } catch (err) {
+        console.warn('Could not fetch latest job doc for question generation:', err);
+      }
+
+      const generated = generateDefaultScreeningQuestions(fullJob);
+      if (generated && generated.length > 0) {
+        await handleSaveScreeningQuestionsToJob(generated);
+        messageBox.showSuccess(`Generated ${generated.length} screening questions from Job Description!`);
+      } else {
+        messageBox.showInfo('No questions could be auto-generated. You can add questions manually.');
+      }
+    } catch (err) {
+      console.error('Failed to auto-generate questions:', err);
+      messageBox.showError('Could not generate questions. Please try again.');
+    } finally {
+      setTimeout(() => setIsGeneratingQuestions(false), 300);
+    }
+  };
+
+  const handleAddCustomQuestion = () => {
+    const text = newQuestionText.trim();
+    if (!text) return;
+    const newQ: ScreeningQuestion = {
+      id: `sq_custom_${Date.now()}`,
+      question: text,
+      type: newQuestionType,
+      category: 'custom',
+      expectedAnswer: newQuestionType === 'yes_no' ? 'yes' : undefined,
+      required: true,
+    };
+    const updated = [...jobScreeningQuestions, newQ];
+    handleSaveScreeningQuestionsToJob(updated);
+    setNewQuestionText('');
+    setShowAddQuestionRow(false);
   };
 
   const handleToggleSuggestedCandidate = (cand: any) => {
@@ -2075,6 +2162,7 @@ const RecruiterAllJobs: React.FC = () => {
 
         const updatePayload = {
           isAiVideoInterview,
+          screeningQuestions: jobScreeningQuestions,
           candidateEmails: updatedCandidateEmails,
           candidateData: arrayUnion(...candidateDataToAdd),
           updatedAt: new Date()
@@ -2087,6 +2175,7 @@ const RecruiterAllJobs: React.FC = () => {
       } else {
         const updatePayload = {
           isAiVideoInterview,
+          screeningQuestions: jobScreeningQuestions,
           updatedAt: new Date()
         };
         await Promise.all([
@@ -2614,56 +2703,87 @@ const RecruiterAllJobs: React.FC = () => {
             </div>
 
             <div className="p-5 sm:p-6 space-y-4 overflow-y-auto [scrollbar-color:#c2c5ba_transparent] [scrollbar-width:thin]">
-              {/* AI Video Pre-Screening Interview Checkmark / Toggle Bento Card */}
-              <div className={`p-5 rounded-2xl border transition-all duration-200 ${
-                isAiVideoInterview
-                  ? 'border-2 border-[#D4F82C] bg-white shadow-lg shadow-[#D4F82C]/10 ring-2 ring-[#D4F82C]/30'
-                  : 'border border-[#E4E7DC] bg-white'
-              }`}>
-                <div className="flex items-start justify-between gap-4">
-                  <label className="flex items-start gap-3.5 cursor-pointer select-none flex-1">
-                    <div className="relative flex items-center justify-center mt-0.5">
-                      <input
-                        type="checkbox"
-                        checked={isAiVideoInterview}
-                        onChange={(e) => handleToggleAiVideo(e.target.checked)}
-                        className="w-5 h-5 rounded-lg border-[#E4E7DC] text-[#111215] focus:ring-0 focus:ring-offset-0 bg-white cursor-pointer accent-[#D4F82C]"
-                      />
-                    </div>
-                    <div className="space-y-1.5 flex-1">
-                      <div className="flex items-center gap-2.5 flex-wrap">
-                        <span className="font-black text-sm text-[#111215] flex items-center gap-2">
-                          <div className={`w-7 h-7 rounded-xl flex items-center justify-center ${
-                            isAiVideoInterview
-                              ? 'bg-[#D4F82C] text-[#111215]'
-                              : 'bg-[#E4E7DC] text-[#575A51]'
+              {/* Invite Mode Selector: AI Video vs Standard ATS Quick Apply */}
+              <div className="space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {/* Option 1: AI Video Interview */}
+                  <div
+                    onClick={() => handleToggleAiVideo(true)}
+                    className={`p-4 rounded-2xl border-2 transition-all cursor-pointer relative ${
+                      isAiVideoInterview
+                        ? 'border-[#111215] bg-white shadow-md ring-2 ring-[#D4F82C]'
+                        : 'border-[#E4E7DC] bg-[#F8F9F5]/70 hover:bg-white hover:border-[#D5D9CC]'
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+                        isAiVideoInterview ? 'bg-[#D4F82C] text-[#111215]' : 'bg-[#E4E7DC] text-[#575A51]'
+                      }`}>
+                        <Video className="w-5 h-5" />
+                      </div>
+                      <div className="space-y-1 flex-1">
+                        <div className="flex items-center justify-between">
+                          <span className="font-black text-sm text-[#111215]">
+                            AI Video Interview
+                          </span>
+                          <span className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                            isAiVideoInterview ? 'border-[#111215] bg-[#111215]' : 'border-[#C2C5BA]'
                           }`}>
-                            <Video className="w-4 h-4" />
-                          </div>
-                          <span>AI-Based Video Pre-Screening Interview</span>
-                        </span>
-                        <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black tracking-wide uppercase ${
-                          isAiVideoInterview
-                            ? 'bg-[#D4F82C] text-[#111215] shadow-xs'
-                            : 'bg-[#E4E7DC] text-[#575A51]'
-                        }`}>
-                          {isAiVideoInterview ? '⚡ AI Video Link Active' : 'Normal ATS Application'}
+                            {isAiVideoInterview && <div className="w-1.5 h-1.5 rounded-full bg-[#D4F82C]" />}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-[#575A51] leading-snug">
+                          Live AI voice & webcam pre-screening with automated behavioral & technical evaluation.
+                        </p>
+                        <span className="inline-block mt-0.5 text-[10px] font-bold uppercase tracking-wider text-[#73766C]">
+                          Direct Video Link
                         </span>
                       </div>
-                      <p className="text-xs text-[#575A51] leading-relaxed font-medium">
-                        {isAiVideoInterview
-                          ? 'AI Video screening enabled. Candidates receive direct openable video interview links with auto-loaded profiles, webcam recording, and automated evaluation. Best-fit candidates from Resume Dump are suggested below.'
-                          : 'Tick this checkmark to enable direct AI Video Pre-Screening interviews and automatically suggest best-fit candidates from Resume Dump. When unticked, standard ATS candidate portal links are sent.'}
-                      </p>
                     </div>
-                  </label>
+                  </div>
+
+                  {/* Option 2: ATS Quick Apply Screener */}
+                  <div
+                    onClick={() => handleToggleAiVideo(false)}
+                    className={`p-4 rounded-2xl border-2 transition-all cursor-pointer relative ${
+                      !isAiVideoInterview
+                        ? 'border-[#111215] bg-white shadow-md ring-2 ring-[#D4F82C]'
+                        : 'border-[#E4E7DC] bg-[#F8F9F5]/70 hover:bg-white hover:border-[#D5D9CC]'
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+                        !isAiVideoInterview ? 'bg-[#D4F82C] text-[#111215]' : 'bg-[#E4E7DC] text-[#575A51]'
+                      }`}>
+                        <FileText className="w-5 h-5" />
+                      </div>
+                      <div className="space-y-1 flex-1">
+                        <div className="flex items-center justify-between">
+                          <span className="font-black text-sm text-[#111215]">
+                            ATS Quick Apply
+                          </span>
+                          <span className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                            !isAiVideoInterview ? 'border-[#111215] bg-[#111215]' : 'border-[#C2C5BA]'
+                          }`}>
+                            {!isAiVideoInterview && <div className="w-1.5 h-1.5 rounded-full bg-[#D4F82C]" />}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-[#575A51] leading-snug">
+                          Standard ATS application with 1-word & Yes/No screener questions to verify experience, skills & relocation.
+                        </p>
+                        <span className="inline-block mt-0.5 text-[10px] font-bold uppercase tracking-wider text-[#73766C]">
+                          Quick Apply Link
+                        </span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Direct Link Preview & Copy */}
-                <div className="mt-4 pt-3.5 border-t border-[#E4E7DC] flex items-center justify-between gap-3 flex-wrap">
+                <div className="p-3.5 rounded-2xl border border-[#E4E7DC] bg-white flex items-center justify-between gap-3 flex-wrap">
                   <div className="flex items-center gap-2 min-w-0 flex-1">
                     <span className="text-[11px] font-bold uppercase tracking-wider text-[#73766C] shrink-0">
-                      {isAiVideoInterview ? 'Direct Video Link:' : 'Standard ATS Link:'}
+                      {isAiVideoInterview ? 'Direct Video Link:' : 'Quick Apply Link:'}
                     </span>
                     <span className="text-xs font-mono font-bold text-[#111215] truncate bg-[#F8F9F5] px-3 py-1.5 rounded-xl border border-[#E4E7DC] select-all">
                       {isAiVideoInterview
@@ -2694,6 +2814,138 @@ const RecruiterAllJobs: React.FC = () => {
                     )}
                   </button>
                 </div>
+
+                {/* If ATS Quick Apply selected: Show Quick Apply Screener Questions Configurator */}
+                {!isAiVideoInterview && (
+                  <div className="p-4 rounded-2xl border border-[#E4E7DC] bg-[#F8F9F5] space-y-3">
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded-lg bg-[#111215] text-[#D4F82C] flex items-center justify-center text-xs font-black shadow-xs">
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                        </div>
+                        <div>
+                          <span className="font-black text-xs text-[#111215] flex items-center gap-1.5">
+                            <span>Quick Apply Screener Questions</span>
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-[#111215] text-[#D4F82C]">
+                              {jobScreeningQuestions.length} Questions
+                            </span>
+                          </span>
+                          <p className="text-[11px] text-[#575A51]">
+                            Candidates answer these questions when applying. Responses calculate verified match scores.
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={handleAutoGenerateFromJD}
+                          disabled={isGeneratingQuestions}
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-bold text-[#111215] hover:text-black bg-white border border-[#D5D9CC] hover:bg-[#E4E7DC]/40 transition-all cursor-pointer shadow-2xs disabled:opacity-50"
+                          title="Generate recommended questions based on Job Description"
+                        >
+                          <RotateCw className={`w-3 h-3 ${isGeneratingQuestions ? 'animate-spin' : ''}`} />
+                          <span>{isGeneratingQuestions ? 'Generating...' : 'Auto-Generate from JD'}</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setShowAddQuestionRow(prev => !prev)}
+                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-bold bg-[#111215] text-white hover:bg-[#202227] transition-all cursor-pointer shadow-xs"
+                        >
+                          <Plus className="w-3 h-3 text-[#D4F82C]" />
+                          <span>Add Question</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Add Custom Question Form */}
+                    {showAddQuestionRow && (
+                      <div className="p-3 rounded-xl bg-white border border-[#E4E7DC] space-y-2.5 shadow-xs">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] font-bold text-[#111215]">New Screener Question</span>
+                          <button
+                            type="button"
+                            onClick={() => setShowAddQuestionRow(false)}
+                            className="text-[#73766C] hover:text-[#111215]"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                        <input
+                          type="text"
+                          value={newQuestionText}
+                          onChange={(e) => setNewQuestionText(e.target.value)}
+                          placeholder="e.g. Do you have hands-on experience in Quality Auditing?"
+                          className="w-full h-9 px-3 text-xs rounded-lg border border-[#E4E7DC] bg-[#F8F9F5] text-[#111215] outline-none focus:border-[#111215]"
+                        />
+                        <div className="flex items-center justify-between gap-2 flex-wrap">
+                          <div className="flex items-center gap-2">
+                            <span className="text-[11px] text-[#73766C] font-semibold">Answer Type:</span>
+                            <select
+                              value={newQuestionType}
+                              onChange={(e) => setNewQuestionType(e.target.value as any)}
+                              className="h-8 px-2.5 text-xs font-bold rounded-lg border border-[#E4E7DC] bg-white text-[#111215] outline-none cursor-pointer"
+                            >
+                              <option value="yes_no">Yes / No Question</option>
+                              <option value="number">Number (e.g. Years of Exp)</option>
+                              <option value="short_text">Short Text / One-Word</option>
+                            </select>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={handleAddCustomQuestion}
+                            className="px-3 py-1.5 rounded-lg text-xs font-bold bg-[#111215] text-white hover:bg-[#202227] cursor-pointer shadow-xs"
+                          >
+                            Add to Screener
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Question List */}
+                    <div className="space-y-1.5">
+                      {jobScreeningQuestions.map((q, idx) => (
+                        <div
+                          key={q.id || idx}
+                          className="p-2.5 rounded-xl bg-white border border-[#E4E7DC] flex items-center justify-between gap-2 hover:border-[#C2C5BA] transition-colors shadow-2xs"
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                            <span className="w-5 h-5 rounded-full bg-[#E4E7DC] text-[#111215] text-[10px] font-black flex items-center justify-center shrink-0">
+                              {idx + 1}
+                            </span>
+                            <span className="text-xs font-medium text-[#111215] truncate">
+                              {q.question}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider ${
+                              q.type === 'yes_no'
+                                ? 'bg-purple-100 text-purple-800'
+                                : q.type === 'number'
+                                ? 'bg-amber-100 text-amber-800'
+                                : 'bg-slate-100 text-slate-800'
+                            }`}>
+                              {q.type === 'yes_no' ? 'Yes / No' : q.type === 'number' ? 'Number' : 'Short Text'}
+                            </span>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const filtered = jobScreeningQuestions.filter((_, i) => i !== idx);
+                                handleSaveScreeningQuestionsToJob(filtered);
+                              }}
+                              className="w-6 h-6 rounded-md hover:bg-red-50 text-gray-400 hover:text-red-600 flex items-center justify-center transition-colors cursor-pointer"
+                              title="Delete question"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Bento Tab Selector */}
@@ -3390,7 +3642,7 @@ const RecruiterAllJobs: React.FC = () => {
                                       ? 'border border-blue-300 bg-blue-100 text-blue-900'
                                       : 'border border-[#E4E7DC] bg-[#F8F9F5] text-[#575A51]'
                                   }`}>
-                                    {cand.matchScore >= 75 ? '🔥' : '⚡'} {cand.matchScore}% Match
+                                    {cand.matchScore}% Match
                                   </span>
                                   {cand.experience && cand.experience !== 'N/A' && (
                                     <span className="text-[10px] text-[#575A51] bg-[#F8F9F5] border border-[#E4E7DC] px-2 py-0.5 rounded-full font-bold">
@@ -3650,7 +3902,7 @@ const RecruiterAllJobs: React.FC = () => {
                   ) : (
                     <>
                       <Mail className="w-4 h-4" />
-                      <span>{sendingInvites ? 'Sending...' : 'Send ATS Invitations'}</span>
+                      <span>{sendingInvites ? 'Sending...' : 'Send Quick Apply Link'}</span>
                     </>
                   )}
                 </button>

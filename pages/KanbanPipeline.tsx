@@ -75,6 +75,8 @@ export interface PipelineCandidate {
   education?: string;
   summary?: string;
   resumeUrl?: string;
+  screeningAnswers?: any[];
+  screenerPassedCount?: number;
   scheduledInterview?: {
     date?: string;
     time?: string;
@@ -425,6 +427,8 @@ export default function KanbanPipeline() {
           education: typeof education === 'string' ? education : 'Bachelor Degree',
           summary,
           resumeUrl,
+          screeningAnswers: app.screeningAnswers || [],
+          screenerPassedCount: app.screenerPassedCount || (Array.isArray(app.screeningAnswers) ? app.screeningAnswers.filter((a: any) => a.isPassed !== false).length : 0),
           scheduledInterview: app.scheduledInterview,
         });
       });
@@ -1556,13 +1560,13 @@ export default function KanbanPipeline() {
 
                               {/* Candidate Meta Info: Experience & Notice */}
                               <div className="flex items-center gap-2 text-[10px] text-gray-500 dark:text-[#8f8f8f] font-medium">
-                                <span>💼 {cand.experience || '2+ yrs'}</span>
+                                <span>{cand.experience || '2+ yrs'}</span>
                                 <span>•</span>
-                                <span>⚡ {cand.noticePeriod || 'Immediate'}</span>
+                                <span>{cand.noticePeriod || 'Immediate'}</span>
                                 {cand.location && (
                                   <>
                                     <span>•</span>
-                                    <span className="truncate max-w-[80px]">📍 {cand.location}</span>
+                                    <span className="truncate max-w-[80px]">{cand.location}</span>
                                   </>
                                 )}
                               </div>
@@ -1862,6 +1866,63 @@ export default function KanbanPipeline() {
                       </div>
                     )}
                   </div>
+
+                  {/* Quick Apply Screener Verification Card */}
+                  {selectedDrawerCandidate.screeningAnswers && selectedDrawerCandidate.screeningAnswers.length > 0 && (
+                    <div className="p-4 rounded-xl border border-blue-500/25 bg-blue-500/5 dark:bg-blue-500/10 space-y-3">
+                      <div className="flex items-center justify-between flex-wrap gap-2">
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold text-xs shadow-xs">
+                            <CheckCircle2 size={15} />
+                          </div>
+                          <div>
+                            <h4 className="text-xs font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
+                              <span>Quick Apply Screener Answers</span>
+                              <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300 font-bold uppercase">
+                                Pre-Screening
+                              </span>
+                            </h4>
+                            <p className="text-[10.5px] text-gray-500 dark:text-neutral-400">
+                              Candidate confirmed requirements according to the Job Description (JD).
+                            </p>
+                          </div>
+                        </div>
+                        <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-emerald-600 text-white flex items-center gap-1 shadow-xs">
+                          <CheckCircle2 size={12} />
+                          <span>{selectedDrawerCandidate.screenerPassedCount ?? selectedDrawerCandidate.screeningAnswers.length}/{selectedDrawerCandidate.screeningAnswers.length} Criteria Passed</span>
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                        {selectedDrawerCandidate.screeningAnswers.map((ans: any, idx: number) => {
+                          const isYes = ans.answer?.toLowerCase() === 'yes' || ans.isPassed;
+                          const isNo = ans.answer?.toLowerCase() === 'no';
+                          return (
+                            <div key={idx} className="p-2.5 rounded-lg bg-white dark:bg-[#111114] border border-gray-200 dark:border-white/[0.08] space-y-1">
+                              <span className="text-[10.5px] text-gray-600 dark:text-neutral-400 font-medium line-clamp-2 block leading-snug">
+                                <span className="font-bold text-blue-600 dark:text-blue-400 mr-1">{idx + 1}.</span>
+                                {ans.question}
+                              </span>
+                              <div className="flex items-center justify-between pt-1 border-t border-gray-100 dark:border-white/5">
+                                <span className="text-[9.5px] font-bold uppercase text-gray-400">Response</span>
+                                <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1 ${
+                                  isYes
+                                    ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
+                                    : isNo
+                                    ? 'bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300'
+                                    : 'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-200'
+                                }`}>
+                                  {isYes && <Check size={10} />}
+                                  {isNo && <X size={10} />}
+                                  <span>{ans.answer || 'N/A'}</span>
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
 
                   {/* 2. Key Attributes Grid */}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">

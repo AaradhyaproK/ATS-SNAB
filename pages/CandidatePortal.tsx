@@ -87,6 +87,11 @@ import { auth, db } from '../services/firebase';
 import { calculateJobMatchScore, JobMatchResult, CandidateMatchProfile } from '../services/jobMatchService';
 import { speak, stopSpeech } from '../lib/tts';
 import { uploadToS3 } from '../services/s3Service';
+import {
+  ScreeningQuestion,
+  generateDefaultScreeningQuestions,
+  evaluateScreeningAnswers
+} from '../services/screeningService';
 
 export type CandidateTab =
   | 'dashboard'
@@ -303,6 +308,13 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab, in
   const [applyingJobId, setApplyingJobId] = useState<string | null>(null);
   const [applySuccessMsg, setApplySuccessMsg] = useState<string | null>(null);
 
+  // Quick Apply (Pre-Screening) State
+  const [quickApplyJob, setQuickApplyJob] = useState<any | null>(null);
+  const [quickApplyQuestions, setQuickApplyQuestions] = useState<ScreeningQuestion[]>([]);
+  const [quickApplyAnswers, setQuickApplyAnswers] = useState<Record<string, string>>({});
+  const [submittingQuickApply, setSubmittingQuickApply] = useState(false);
+  const [confirmJdRead, setConfirmJdRead] = useState(false);
+
   // Audio JD state
   const [playingJobId, setPlayingJobId] = useState<string | null>(null);
 
@@ -379,7 +391,12 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab, in
 
     const found = allJobs.find(j => j.id === resolvedTargetJobId || j.jobNo === resolvedTargetJobId || j.accessCode === resolvedTargetJobId);
     if (found) {
-      setTargetJobData(found);
+      const questions = (Array.isArray(found.screeningQuestions) && found.screeningQuestions.length > 0)
+        ? found.screeningQuestions
+        : generateDefaultScreeningQuestions(found);
+      const enrichedFound = { ...found, screeningQuestions: questions };
+      setTargetJobData(enrichedFound);
+      setQuickApplyQuestions(questions);
       return;
     }
 
@@ -435,7 +452,7 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab, in
               ? `${d.minExperience} - ${d.maxExperience} yrs`
               : (d.minExperience ? `${d.minExperience}+ yrs` : 'Fresher / Any Experience'));
 
-          setTargetJobData({
+          const jobObj = {
             id: snap.id,
             title: d.title || 'Job Opening',
             company: d.company || d.companyName || 'Hiring Partner',
@@ -465,7 +482,14 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab, in
             interviewMode: d.interviewMode,
             interviewLink: d.interviewLink,
             deadline: d.deadlineDate || d.deadline || d.applyDeadline || '',
-          });
+          };
+
+          const questions = (Array.isArray(d.screeningQuestions) && d.screeningQuestions.length > 0)
+            ? d.screeningQuestions
+            : generateDefaultScreeningQuestions(jobObj);
+
+          setTargetJobData({ ...jobObj, screeningQuestions: questions });
+          setQuickApplyQuestions(questions);
         }
       } catch (err) {
         console.warn('Direct job fetch error:', err);
@@ -2534,22 +2558,138 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab, in
     }
   };
 
+  // ── Quick Apply Modal Opener & Submission ──
+  const openQuickApplyModal = async (jobOrMatch: any) => {
+    const targetJob = jobOrMatch?.job || jobOrMatch;
+    if (!targetJob) return;
+
+    let questions: ScreeningQuestion[] = [];
+    if (Array.isArray(targetJob.screeningQuestions) && targetJob.screeningQuestions.length > 0) {
+      questions = targetJob.screeningQuestions;
+    } else {
+      try {
+        const [jobSnap, intSnap] = await Promise.all([
+          getDoc(doc(db, 'jobs', targetJob.id)).catch(() => null),
+          getDoc(doc(db, 'interviews', targetJob.id)).catch(() => null),
+        ]);
+        const jobData = jobSnap?.exists() ? jobSnap.data() : null;
+        const intData = intSnap?.exists() ? intSnap.data() : null;
+        const combinedData = { ...targetJob, ...(intData || {}), ...(jobData || {}) };
+        if (Array.isArray(combinedData.screeningQuestions) && combinedData.screeningQuestions.length > 0) {
+          questions = combinedData.screeningQuestions;
+        } else {
+          questions = generateDefaultScreeningQuestions(combinedData);
+        }
+      } catch (err) {
+        console.warn('Could not fetch questions from Firestore, generating defaults:', err);
+        questions = generateDefaultScreeningQuestions(targetJob);
+      }
+    }
+
+    if (!questions || questions.length === 0) {
+      questions = generateDefaultScreeningQuestions(targetJob);
+    }
+
+    // Pre-fill answers from candidate profile (enforcing non-negative experience)
+    const prefilled: Record<string, string> = {};
+    const rawExp = editForm.totalExperienceYears ||
+      candidate?.totalExperienceYears ||
+      candidate?.experience ||
+      autofetchedCandidate?.totalExperienceYears ||
+      '2';
+    const numExp = Math.max(0, parseFloat(String(rawExp).replace(/[^0-9.]/g, '')) || 0);
+
+    questions.forEach(q => {
+      if (q.category === 'experience' || q.type === 'number') {
+        prefilled[q.id] = String(numExp);
+      } else if (q.category === 'skills' || q.type === 'yes_no') {
+        prefilled[q.id] = 'yes';
+      } else if (q.category === 'relocation') {
+        prefilled[q.id] = 'yes';
+      } else if (q.category === 'notice_period') {
+        prefilled[q.id] = candidate?.noticePeriod || autofetchedCandidate?.noticePeriod || 'Immediate';
+      } else {
+        prefilled[q.id] = q.type === 'yes_no' ? 'yes' : '';
+      }
+    });
+
+    setQuickApplyJob(targetJob);
+    setQuickApplyQuestions(questions);
+    setQuickApplyAnswers(prefilled);
+    setConfirmJdRead(false);
+  };
+
+  // Submit Quick Application from modal
+  const handleSubmitQuickApply = async () => {
+    if (!quickApplyJob) return;
+    if (!confirmJdRead) return;
+    setSubmittingQuickApply(true);
+    try {
+      // Ensure all experience answers are strictly non-negative numbers before submitting
+      const sanitizedAnswers = { ...quickApplyAnswers };
+      quickApplyQuestions.forEach(q => {
+        if (q.category === 'experience' || q.type === 'number') {
+          const val = sanitizedAnswers[q.id];
+          const num = parseFloat(String(val || '').replace(/[^0-9.]/g, '')) || 0;
+          sanitizedAnswers[q.id] = String(Math.max(0, num));
+        }
+      });
+
+      await handleApplyToJob(quickApplyJob, sanitizedAnswers);
+      setQuickApplyJob(null);
+      setConfirmJdRead(false);
+    } catch (err) {
+      console.error('Quick apply submit error:', err);
+    } finally {
+      setSubmittingQuickApply(false);
+    }
+  };
+
   // Apply to Job
-  const handleApplyToJob = async (matchOrJob: any) => {
+  const handleApplyToJob = async (matchOrJob: any, screenerAnswersMap?: Record<string, string>) => {
     if (!matchOrJob) return;
     const targetJob: any = matchOrJob.job || matchOrJob;
     const jobId = targetJob.id;
     if (!jobId || appliedJobIds.includes(jobId) || applyingJobId === jobId) return;
 
+    // If screener answers not supplied, trigger Quick Apply modal first
+    if (!screenerAnswersMap) {
+      await openQuickApplyModal(matchOrJob);
+      return;
+    }
+
     setApplyingJobId(jobId);
     try {
-      const candidateEmail = (editForm.email || candidate?.email || '').trim().toLowerCase();
-      const candidateName = editForm.name || candidate?.name || 'Job Seeker';
-      const candidatePhone = editForm.phone || candidate?.phone || '';
+      const candidateEmail = (editForm.email || candidate?.email || autofetchedCandidate?.email || emailInput || '').trim().toLowerCase();
+      const candidateName = (editForm.name || candidate?.name || autofetchedCandidate?.name || quickName || candidateEmail.split('@')[0] || 'Job Seeker').trim();
+      const candidatePhone = (editForm.phone || candidate?.phone || autofetchedCandidate?.phone || quickPhone || '').trim();
+      let resumeUrl = candidate?.resumeUrl || autofetchedCandidate?.resumeUrl || '';
+
+      // If user uploaded a new quick resume file
+      if (quickResumeFile && !resumeUrl) {
+        try {
+          const uploadRes = await uploadToS3(quickResumeFile, 'candidate_resumes');
+          if (uploadRes && uploadRes.url) {
+            resumeUrl = uploadRes.url;
+          }
+        } catch (e) {
+          console.warn('Quick resume upload failed, proceeding anyway:', e);
+        }
+      }
 
       const overallScore = matchOrJob.overallScore ?? 80;
-      const matchGrade = matchOrJob.matchGrade || 'Recommended';
       const jobTitle = targetJob.title || 'Job Opening';
+
+      // Evaluate screening answers & calculate verified enhanced score
+      const qList = (quickApplyQuestions && quickApplyQuestions.length > 0)
+        ? quickApplyQuestions
+        : (Array.isArray(targetJob.screeningQuestions) && targetJob.screeningQuestions.length > 0)
+        ? targetJob.screeningQuestions
+        : generateDefaultScreeningQuestions(targetJob);
+
+      const screenerEvaluation = evaluateScreeningAnswers(qList, screenerAnswersMap, overallScore, targetJob);
+      const finalMatchScore = screenerEvaluation.enhancedMatchScore;
+      const finalMatchGrade = finalMatchScore >= 80 ? 'Exceptional Match' : finalMatchScore >= 60 ? 'Strong Match' : 'Potential Match';
 
       // 1. Primary: Save to candidateApplications so it appears instantly in Candidate Responses / Hot Leads
       try {
@@ -2558,18 +2698,25 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab, in
           jobId: jobId,
           jobTitle,
           jobAccessCode: targetJob.accessCode || targetJob.jobNo || '',
-          candidateId: candidate?.id || '',
+          candidateId: candidate?.id || autofetchedCandidate?.id || 'manual_candidate',
           candidateName,
           candidateEmail,
           candidatePhone,
+          resumeUrl,
           recruiterUID: targetJob.recruiterUID || targetJob.createdBy?.uid || '',
           teamId: targetJob.teamId || '',
-          matchScore: overallScore,
-          matchGrade,
+          matchScore: finalMatchScore,
+          enhancedMatchScore: finalMatchScore,
+          matchGrade: finalMatchGrade,
+          screeningAnswers: screenerEvaluation.answers,
+          screenerPassedCount: screenerEvaluation.passedCount,
+          screenerTotalCount: screenerEvaluation.totalCount,
+          screenerScore: screenerEvaluation.screenerScore,
+          screenerSummary: screenerEvaluation.summary,
           status: 'pending',
           appliedAt: serverTimestamp(),
           createdAt: serverTimestamp(),
-          source: 'Candidate Portal Application'
+          source: 'Quick Apply'
         });
       } catch (appErr) {
         console.warn('candidateApplications save error:', appErr);
@@ -2581,14 +2728,22 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab, in
         interviewId: jobId,
         jobTitle,
         jobAccessCode: targetJob.accessCode || targetJob.jobNo || '',
-        candidateId: candidate?.id || '',
+        candidateId: candidate?.id || autofetchedCandidate?.id || '',
         candidateName,
         candidateEmail,
         candidatePhone,
-        matchScore: overallScore,
-        matchGrade,
+        resumeUrl,
+        matchScore: finalMatchScore,
+        enhancedMatchScore: finalMatchScore,
+        matchGrade: finalMatchGrade,
+        screeningAnswers: screenerEvaluation.answers,
+        screenerPassedCount: screenerEvaluation.passedCount,
+        screenerTotalCount: screenerEvaluation.totalCount,
+        screenerScore: screenerEvaluation.screenerScore,
+        screenerSummary: screenerEvaluation.summary,
         status: 'Applied',
-        appliedAt: serverTimestamp()
+        appliedAt: serverTimestamp(),
+        source: 'Quick Apply'
       }).catch((err) => console.warn('Note: application collection save:', err));
 
       // 3. Register into interviews collection so recruiters see candidate in interview details
@@ -2600,13 +2755,31 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab, in
             name: candidateName,
             email: candidateEmail,
             phone: candidatePhone,
+            resumeUrl,
             appliedAt: new Date().toISOString(),
             status: 'interested',
-            source: 'candidate_portal'
+            matchScore: finalMatchScore,
+            screeningAnswers: screenerEvaluation.answers,
+            screenerPassedCount: screenerEvaluation.passedCount,
+            source: 'quick_apply'
           })
         });
       } catch {
         // Not all jobs are in interviews collection, ignore
+      }
+
+      // Establish candidate session if not yet active
+      if (!candidate && (candidateEmail || autofetchedCandidate)) {
+        const activeSession = {
+          id: candidate?.id || autofetchedCandidate?.id || `cand_${Date.now()}`,
+          name: candidateName,
+          email: candidateEmail,
+          phone: candidatePhone,
+          resumeUrl,
+          skills: autofetchedCandidate?.skills || []
+        };
+        localStorage.setItem(CANDIDATE_SESSION_KEY, JSON.stringify(activeSession));
+        setCandidate(activeSession as any);
       }
 
       const updated = Array.from(new Set([...appliedJobIds, jobId]));
@@ -2617,7 +2790,7 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab, in
           jobId,
           status: 'Under Review',
           appliedAt: new Date().toISOString(),
-          matchScore: overallScore,
+          matchScore: finalMatchScore,
         }
       }));
       const cleanEmail = candidateEmail.trim().toLowerCase();
@@ -2625,8 +2798,19 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab, in
         localStorage.setItem(`snab_candidate_applied_jobs_${cleanEmail}`, JSON.stringify(updated));
       }
 
-      setApplySuccessMsg(`Successfully applied to ${jobTitle}! The recruitment team has received your application.`);
+      setApplySuccessMsg(`Successfully submitted Quick Application for ${jobTitle}!`);
       setTimeout(() => setApplySuccessMsg(null), 5000);
+
+      // If user came via express job URL (?job=...) or targetJobId is present, trigger celebration view
+      if (targetJobId) {
+        setOneTapApplySuccess({
+          candidateName,
+          jobTitle,
+          company: targetJob.company || targetJob.companyName || 'Hiring Partner',
+          jobId,
+          hasInterview: targetJob.interviewMode === 'ai_video' || targetJob.interviewType === 'ai_video' || targetJob.hasAiInterview || targetJob.interviewMode === 'ai_audio'
+        });
+      }
     } catch (err) {
       console.error('Apply error:', err);
     } finally {
@@ -3414,42 +3598,28 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab, in
               Close
             </button>
 
-            {candidate ? (
-              <button
-                type="button"
-                onClick={() => {
-                  setShowTargetJdModal(false);
-                  handleApplyToJob(targetJobData);
-                }}
-                disabled={isAlreadyApplied}
-                className="px-6 py-2.5 rounded-xl bg-[#D4F82C] hover:bg-[#C2E820] text-[#111215] font-black text-xs shadow-md transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-              >
-                {isAlreadyApplied ? (
-                  <>
-                    <CheckCircle2 size={14} className="text-emerald-800" />
-                    <span>Already Applied</span>
-                  </>
-                ) : (
-                  <>
-                    <Zap size={14} className="fill-[#111215]" />
-                    <span>1-Tap Apply to Role</span>
-                  </>
-                )}
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={() => {
-                  setShowTargetJdModal(false);
-                  window.scrollTo({ top: 400, behavior: 'smooth' });
-                }}
-                className="px-6 py-2.5 rounded-xl bg-[#D4F82C] hover:bg-[#C2E820] text-[#111215] font-black text-xs shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
-              >
-                <Zap size={14} className="fill-[#111215]" />
-                <span>Apply for this Job</span>
-                <ArrowRight size={14} />
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={() => {
+                setShowTargetJdModal(false);
+                openQuickApplyModal(targetJobData);
+              }}
+              disabled={isAlreadyApplied}
+              className="px-6 py-2.5 rounded-xl bg-[#D4F82C] hover:bg-[#C2E820] text-[#111215] font-black text-xs shadow-md transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+            >
+              {isAlreadyApplied ? (
+                <>
+                  <CheckCircle2 size={14} className="text-emerald-800" />
+                  <span>Already Applied</span>
+                </>
+              ) : (
+                <>
+                  <Zap size={14} className="fill-[#111215]" />
+                  <span>Quick Apply</span>
+                  <ArrowRight size={14} />
+                </>
+              )}
+            </button>
           </div>
         </div>
       </div>
@@ -3509,6 +3679,418 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab, in
               className="w-full h-full border-0"
               title="Resume Fullscreen Viewer"
             />
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // ── Dedicated Quick Apply Pre-Screening Modal ──
+  const renderQuickApplyModal = () => {
+    if (!quickApplyJob) return null;
+
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200">
+        <div className="relative w-full max-w-xl max-h-[92vh] rounded-3xl bg-white dark:bg-[#15161A] border border-[#E4E7DC] dark:border-white/10 shadow-2xl flex flex-col overflow-hidden">
+          {/* Modal Header */}
+          <div className="px-5 sm:px-6 py-4 border-b border-[#E4E7DC] dark:border-white/10 flex items-center justify-between shrink-0 bg-[#F8F9F5] dark:bg-white/5">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-[#111215] dark:bg-[#D4F82C] text-white dark:text-[#111215] flex items-center justify-center font-black text-sm shadow-xs shrink-0">
+                <CheckCircle2 size={16} />
+              </div>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className="text-base font-black text-[#111215] dark:text-white">
+                    Quick Apply
+                  </h3>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 uppercase tracking-wider">
+                    Pre-Screening
+                  </span>
+                </div>
+                <p className="text-xs text-[#575A51] dark:text-neutral-400 font-medium truncate max-w-xs sm:max-w-md">
+                  {quickApplyJob.title} • {quickApplyJob.companyName || quickApplyJob.company || 'Hiring Company'}
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setQuickApplyJob(null);
+                setConfirmJdRead(false);
+              }}
+              className="w-8 h-8 rounded-full flex items-center justify-center text-[#575A51] hover:text-[#111215] dark:text-neutral-400 dark:hover:text-white hover:bg-[#E4E7DC]/60 dark:hover:bg-white/10 transition-colors cursor-pointer"
+            >
+              <X size={18} />
+            </button>
+          </div>
+
+          {/* Modal Scrollable Body */}
+          <div className="p-5 sm:p-6 space-y-5 overflow-y-auto [scrollbar-color:#c2c5ba_transparent] [scrollbar-width:thin]">
+            {/* Candidate Info Summary */}
+            <div className="p-3.5 rounded-2xl bg-[#F8F9F5] dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 flex items-center justify-between gap-3 flex-wrap">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-[#111215] dark:bg-[#D4F82C] text-white dark:text-[#111215] font-black text-sm flex items-center justify-center shadow-xs">
+                  {(
+                    editForm.name ||
+                    candidate?.name ||
+                    autofetchedCandidate?.name ||
+                    quickName ||
+                    (emailInput ? emailInput.split('@')[0] : 'C')
+                  ).charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-[#111215] dark:text-white">
+                    {editForm.name || candidate?.name || autofetchedCandidate?.name || quickName || (emailInput ? emailInput.split('@')[0] : 'Applicant')}
+                  </h4>
+                  <p className="text-[11px] text-[#575A51] dark:text-neutral-400">
+                    {editForm.email || candidate?.email || autofetchedCandidate?.email || emailInput || 'N/A'}
+                    {(editForm.phone || candidate?.phone || autofetchedCandidate?.phone || quickPhone) ? ` • ${editForm.phone || candidate?.phone || autofetchedCandidate?.phone || quickPhone}` : ''}
+                  </p>
+                </div>
+              </div>
+              <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-2.5 py-1 rounded-full border border-emerald-200 dark:border-emerald-900/50 flex items-center gap-1">
+                <CheckCircle2 size={11} /> Verified Profile
+              </span>
+            </div>
+
+            {/* Screener Questions Header */}
+            <div className="space-y-1">
+              <h4 className="text-xs font-black uppercase tracking-wider text-[#111215] dark:text-white flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-[#111215] dark:bg-[#D4F82C]" />
+                <span>Job Screener Questions ({quickApplyQuestions.length})</span>
+              </h4>
+              <p className="text-xs text-[#575A51] dark:text-neutral-400">
+                Confirm your qualifications according to the job description to calculate your match score.
+              </p>
+            </div>
+
+            {/* Screener Questions Form */}
+            <div className="space-y-3">
+              {quickApplyQuestions.map((q, idx) => {
+                const currentVal = quickApplyAnswers[q.id] || '';
+                const isYesNo = q.type === 'yes_no';
+                const isExp = q.category === 'experience' || q.type === 'number';
+                const isNotice = q.category === 'notice_period' || q.question.toLowerCase().includes('notice');
+
+                return (
+                  <div
+                    key={q.id || idx}
+                    className="p-4 rounded-2xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-white/[0.02] space-y-2.5 shadow-2xs"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <label className="text-xs font-bold text-[#111215] dark:text-white leading-snug">
+                        <span className="text-[#111215] dark:text-[#D4F82C] font-black mr-1.5">{idx + 1}.</span>
+                        {q.question}
+                        {q.required && <span className="text-rose-500 ml-1">*</span>}
+                      </label>
+                    </div>
+
+                    {/* 1. Yes / No Pill Selector */}
+                    {isYesNo ? (
+                      <div className="grid grid-cols-2 gap-2 pt-1">
+                        <button
+                          type="button"
+                          onClick={() => setQuickApplyAnswers(prev => ({ ...prev, [q.id]: 'yes' }))}
+                          className={`py-2 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                            currentVal.toLowerCase() === 'yes'
+                              ? 'bg-[#111215] text-[#D4F82C] dark:bg-[#D4F82C] dark:text-[#111215] shadow-xs scale-[1.02]'
+                              : 'bg-[#F8F9F5] dark:bg-white/5 text-[#575A51] dark:text-neutral-400 border border-[#E4E7DC] dark:border-white/10 hover:bg-[#E4E7DC]/50'
+                          }`}
+                        >
+                          <Check size={13} />
+                          <span>Yes</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setQuickApplyAnswers(prev => ({ ...prev, [q.id]: 'no' }))}
+                          className={`py-2 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                            currentVal.toLowerCase() === 'no'
+                              ? 'bg-[#111215] text-[#D4F82C] dark:bg-[#D4F82C] dark:text-[#111215] shadow-xs scale-[1.02]'
+                              : 'bg-[#F8F9F5] dark:bg-white/5 text-[#575A51] dark:text-neutral-400 border border-[#E4E7DC] dark:border-white/10 hover:bg-[#E4E7DC]/50'
+                          }`}
+                        >
+                          <X size={13} />
+                          <span>No</span>
+                        </button>
+                      </div>
+                    ) : isExp ? (
+                      /* 2. Experience with Non-Negative Enforced Input + Quick Response Chips */
+                      <div className="space-y-2 pt-1">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          {[
+                            { label: '0 yrs (Fresher)', value: '0' },
+                            { label: '1 yr', value: '1' },
+                            { label: '2 yrs', value: '2' },
+                            { label: '3 yrs', value: '3' },
+                            { label: '5 yrs', value: '5' },
+                            { label: '7+ yrs', value: '7' },
+                          ].map((chip) => {
+                            const isSelected = currentVal === chip.value;
+                            return (
+                              <button
+                                key={chip.label}
+                                type="button"
+                                onClick={() => setQuickApplyAnswers(prev => ({ ...prev, [q.id]: chip.value }))}
+                                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                                  isSelected
+                                    ? 'bg-[#111215] text-[#D4F82C] dark:bg-[#D4F82C] dark:text-[#111215] shadow-xs'
+                                    : 'bg-[#F8F9F5] dark:bg-white/5 text-[#575A51] dark:text-neutral-300 border border-[#E4E7DC] dark:border-white/10 hover:bg-[#E4E7DC]/50 dark:hover:bg-white/10'
+                                }`}
+                              >
+                                {chip.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+
+                        <div className="relative">
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.5"
+                            value={currentVal}
+                            onKeyDown={(e) => {
+                              if (e.key === '-' || e.key === 'e' || e.key === 'E' || e.key === '+') {
+                                e.preventDefault();
+                              }
+                            }}
+                            onChange={(e) => {
+                              let val = e.target.value;
+                              if (val !== '') {
+                                const parsed = parseFloat(val);
+                                if (isNaN(parsed) || parsed < 0) {
+                                  val = '0';
+                                } else {
+                                  val = String(parsed);
+                                }
+                              }
+                              setQuickApplyAnswers(prev => ({ ...prev, [q.id]: val }));
+                            }}
+                            placeholder="Enter years of experience (e.g. 3)"
+                            className="w-full h-10 pl-3.5 pr-14 text-xs rounded-xl border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-white/5 text-[#111215] dark:text-white outline-none focus:border-[#111215] dark:focus:border-[#D4F82C]"
+                          />
+                          <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[11px] font-bold text-[#575A51] dark:text-neutral-400 select-none">
+                            years
+                          </span>
+                        </div>
+                      </div>
+                    ) : isNotice ? (
+                      /* 3. Notice Period with Quick-Response Pills + Custom Input */
+                      <div className="space-y-2 pt-1">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          {['Immediate', '15 Days', '30 Days', '45 Days', '60 Days', '90 Days', 'Serving Notice'].map((opt) => {
+                            const isSelected = currentVal.trim().toLowerCase() === opt.toLowerCase();
+                            return (
+                              <button
+                                key={opt}
+                                type="button"
+                                onClick={() => setQuickApplyAnswers(prev => ({ ...prev, [q.id]: opt }))}
+                                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                                  isSelected
+                                    ? 'bg-[#111215] text-[#D4F82C] dark:bg-[#D4F82C] dark:text-[#111215] shadow-xs'
+                                    : 'bg-[#F8F9F5] dark:bg-white/5 text-[#575A51] dark:text-neutral-300 border border-[#E4E7DC] dark:border-white/10 hover:bg-[#E4E7DC]/50 dark:hover:bg-white/10'
+                                }`}
+                              >
+                                {opt}
+                              </button>
+                            );
+                          })}
+                        </div>
+
+                        <input
+                          type="text"
+                          value={currentVal}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setQuickApplyAnswers(prev => ({ ...prev, [q.id]: val }));
+                          }}
+                          placeholder="Or type custom notice period (e.g. Immediate / LWD 15th Nov)"
+                          className="w-full h-10 px-3.5 text-xs rounded-xl border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-white/5 text-[#111215] dark:text-white outline-none focus:border-[#111215] dark:focus:border-[#D4F82C]"
+                        />
+                      </div>
+                    ) : (
+                      /* 4. Generic Short Text Input */
+                      <div className="pt-1">
+                        <input
+                          type="text"
+                          value={currentVal}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setQuickApplyAnswers(prev => ({ ...prev, [q.id]: val }));
+                          }}
+                          placeholder="Enter your response"
+                          className="w-full h-10 px-3.5 text-xs rounded-xl border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-white/5 text-[#111215] dark:text-white outline-none focus:border-[#111215] dark:focus:border-[#D4F82C]"
+                        />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Declaration Checkbox */}
+            <div className={`p-4 rounded-2xl border transition-all ${
+              confirmJdRead
+                ? 'border-emerald-500/50 bg-emerald-50/40 dark:bg-emerald-950/20'
+                : 'border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-white/[0.02]'
+            }`}>
+              <label className="flex items-start gap-3 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={confirmJdRead}
+                  onChange={(e) => setConfirmJdRead(e.target.checked)}
+                  className="mt-0.5 w-4 h-4 rounded border-[#E4E7DC] text-[#111215] dark:text-[#D4F82C] focus:ring-0 cursor-pointer accent-[#111215] dark:accent-[#D4F82C]"
+                />
+                <div className="space-y-1">
+                  <span className="text-xs font-bold text-[#111215] dark:text-white flex items-center gap-1.5">
+                    I have read all JD and filled all answers correctly
+                    <span className="text-rose-500">*</span>
+                  </span>
+                  <p className="text-[11px] text-[#575A51] dark:text-neutral-400 leading-relaxed">
+                    I confirm that my experience, skills, relocation preference, and notice period provided above are accurate and truthful according to the JD requirements.
+                  </p>
+                </div>
+              </label>
+            </div>
+
+            {/* Resume Status */}
+            <div className="p-3.5 rounded-2xl border border-dashed border-[#E4E7DC] dark:border-white/10 flex items-center justify-between gap-3 text-xs">
+              <div className="flex items-center gap-2 text-[#575A51] dark:text-neutral-400">
+                <FileText size={16} className="text-[#8FB305] dark:text-[#D4F82C] shrink-0" />
+                <span className="truncate">
+                  Resume: <strong className="text-[#111215] dark:text-white">{candidate?.resumeOriginalName || autofetchedCandidate?.resumeName || quickResumeFile?.name || 'Verified Resume Profile'}</strong>
+                </span>
+              </div>
+              <span className="text-[10px] font-bold text-[#8FB305] dark:text-[#D4F82C] uppercase shrink-0">
+                Auto-Attached
+              </span>
+            </div>
+          </div>
+
+          {/* Modal Footer */}
+          <div className="p-4 sm:p-5 border-t border-[#E4E7DC] dark:border-white/10 flex items-center justify-between gap-3 bg-[#F8F9F5] dark:bg-white/5">
+            <button
+              type="button"
+              onClick={() => {
+                setQuickApplyJob(null);
+                setConfirmJdRead(false);
+              }}
+              className="px-4 py-2.5 rounded-xl border border-[#E4E7DC] dark:border-white/10 text-xs font-bold text-[#575A51] dark:text-neutral-400 hover:text-[#111215] dark:hover:text-white hover:bg-white dark:hover:bg-white/5 transition-all cursor-pointer"
+            >
+              Cancel
+            </button>
+
+            <button
+              type="button"
+              disabled={submittingQuickApply || !confirmJdRead}
+              onClick={handleSubmitQuickApply}
+              className="px-6 py-2.5 rounded-xl bg-[#111215] text-[#D4F82C] dark:bg-[#D4F82C] dark:text-[#111215] font-black text-xs shadow-md transition-all flex items-center gap-2 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed hover:scale-[1.02] active:scale-95"
+            >
+              {submittingQuickApply ? (
+                <>
+                  <RefreshCw size={13} className="animate-spin" />
+                  <span>Submitting Application…</span>
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 size={14} />
+                  <span>Submit Quick Application</span>
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // ── Floating Quick Apply Bar for Optimal Mobile/Viewport Visibility ──
+  const renderFloatingQuickApplyBar = () => {
+    if (!targetJobId || !targetJobData || oneTapApplySuccess || useLegacyLogin || quickApplyJob) {
+      return null;
+    }
+
+    const isApplied = Boolean(
+      targetJobAlreadyApplied ||
+      appliedJobIds.includes(targetJobData.id) ||
+      (targetJobData.accessCode && appliedJobIds.includes(targetJobData.accessCode))
+    );
+
+    const handleFloatingApplyClick = () => {
+      if (isApplied) return;
+
+      // If unauthenticated and email is missing, smoothly focus & scroll to email field
+      if (!candidate && !autofetchedCandidate && !emailInput) {
+        const inputEl = (document.getElementById('quick-apply-email-input') as HTMLInputElement) || document.querySelector<HTMLInputElement>('input[type="email"]');
+        if (inputEl) {
+          inputEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          inputEl.focus();
+          setAutofetchError('Please enter your email address to unlock Quick Apply.');
+          return;
+        }
+      }
+
+      openQuickApplyModal(targetJobData);
+    };
+
+    return (
+      <div className="fixed bottom-0 inset-x-0 z-40 p-3 sm:p-4 bg-white/95 dark:bg-[#15161A]/95 backdrop-blur-xl border-t border-[#E4E7DC] dark:border-white/10 shadow-[0_-8px_30px_rgba(0,0,0,0.15)] transition-all animate-in slide-in-from-bottom duration-300">
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-3">
+          {/* Role Summary & Status */}
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1.5 text-[10px] sm:text-xs font-bold uppercase tracking-wider text-[#8FB305] dark:text-[#D4F82C] truncate">
+              <span className="w-2 h-2 rounded-full bg-[#8FB305] dark:bg-[#D4F82C] animate-pulse shrink-0" />
+              <span className="truncate">
+                {isApplied
+                  ? 'Application Under Review'
+                  : autofetchedCandidate
+                  ? `Verified Profile (${autofetchedCandidate.name})`
+                  : 'Fast-Track Quick Apply'}
+              </span>
+            </div>
+            <div className="text-xs sm:text-sm font-black text-[#111215] dark:text-white truncate">
+              {targetJobData.title}
+              <span className="font-semibold text-[#73766C] dark:text-neutral-400 text-xs ml-1.5 hidden sm:inline">
+                • {targetJobData.company} {targetJobData.salary ? `(${targetJobData.salary})` : ''}
+              </span>
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => setShowTargetJdModal(true)}
+              className="hidden sm:inline-flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-bold bg-[#F8F9F5] dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 text-[#111215] dark:text-white hover:bg-[#E4E7DC]/50 cursor-pointer transition-all shadow-2xs"
+            >
+              <FileText size={13} />
+              <span>View JD</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleFloatingApplyClick}
+              disabled={isApplied}
+              className={`h-11 sm:h-12 px-5 sm:px-7 rounded-2xl font-black text-xs sm:text-sm shadow-md hover:shadow-xl transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95 shrink-0 ${
+                isApplied
+                  ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 opacity-80 cursor-default'
+                  : 'bg-[#D4F82C] hover:bg-[#C2E820] text-[#111215] shadow-[0_4px_20px_rgba(212,248,44,0.35)]'
+              }`}
+            >
+              {isApplied ? (
+                <>
+                  <CheckCircle2 size={16} className="text-emerald-700 dark:text-emerald-300" />
+                  <span>Applied</span>
+                </>
+              ) : (
+                <>
+                  <Zap size={16} className="fill-[#111215]" />
+                  <span>Quick Apply</span>
+                  <ArrowRight size={16} />
+                </>
+              )}
+            </button>
           </div>
         </div>
       </div>
@@ -3590,7 +4172,7 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab, in
         </header>
 
         {/* ── Main Dual-Stage Container ── */}
-        <main className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2 sm:py-4 my-auto flex items-center">
+        <main className={`relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2 sm:py-4 my-auto flex items-center ${targetJobId ? 'pb-24 sm:pb-28' : ''}`}>
           <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
 
             {/* ══════════════════════════════════════════════
@@ -3603,13 +4185,13 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab, in
                   <div>
                     <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider bg-[#D4F82C] text-[#111215] shadow-xs mb-3">
                       <Zap size={14} className="fill-[#111215]" />
-                      Direct Job Invite • 1-Tap Application
+                      Direct Job Invite • Quick Apply
                     </div>
                     <h1 className="text-3xl xl:text-4xl font-black tracking-tight text-[#111215] dark:text-white leading-[1.18]">
                       Apply for <span className="underline decoration-[#D4F82C] decoration-4 underline-offset-4">{targetJobData?.title || 'Job Opening'}</span>
                     </h1>
                     <p className="mt-2 text-sm text-[#575A51] dark:text-neutral-400 leading-relaxed max-w-xl">
-                      You were invited by <strong>{targetJobData?.company || 'our hiring partner'}</strong>. Enter your email on the right to auto-fetch your verified ATS profile and apply with a single tap.
+                      You were invited by <strong>{targetJobData?.company || 'our hiring partner'}</strong>. Enter your email on the right to auto-fetch your verified ATS profile and complete Quick Apply.
                     </p>
                   </div>
 
@@ -3784,7 +4366,7 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab, in
                   {/* Security Seal */}
                   <div className="flex items-center gap-2.5 text-xs text-[#73766C] dark:text-neutral-400">
                     <ShieldCheck size={16} className="text-[#8FB305] dark:text-[#D4F82C]" />
-                    <span>Verified Job Invite #{targetJobData?.accessCode || targetJobId} • 1-Tap application dispatched instantly to recruiter.</span>
+                    <span>Verified Job Invite #{targetJobData?.accessCode || targetJobId} • Quick application dispatched instantly to recruiter.</span>
                   </div>
                 </>
               ) : (
@@ -4023,7 +4605,7 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab, in
                     <div>
                       <span className="inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wider text-[#8FB305] dark:text-[#D4F82C] px-3 py-1 rounded-full bg-[#D4F82C]/15 border border-[#8FB305]/30 mb-2">
                         <Sparkles size={13} />
-                        1-Tap Apply Confirmed!
+                        Quick Application Confirmed!
                       </span>
                       <h2 className="text-2xl font-black text-[#111215] dark:text-white tracking-tight">
                         Application Submitted! 🎉
@@ -4068,7 +4650,7 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab, in
                   </div>
                 ) : targetJobId && !useLegacyLogin ? (
                   /* ─────────────────────────────────────────────────────────────
-                      STATE B: EXPRESS 1-TAP APPLY FLOW (When targetJobId present)
+                      STATE B: EXPRESS QUICK APPLY FLOW (When targetJobId present)
                      ───────────────────────────────────────────────────────────── */
                   <div>
                     {/* Header */}
@@ -4078,10 +4660,10 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab, in
                         Fast-Track Application
                       </span>
                       <h2 className="text-2xl font-black tracking-tight text-[#111215] dark:text-white">
-                        1-Tap Job Application
+                        Quick Apply
                       </h2>
                       <p className="mt-1 text-xs text-[#575A51] dark:text-neutral-400">
-                        Enter your email below. We'll automatically fetch your profile from our talent vault for instant 1-tap apply.
+                        Enter your email below. We'll automatically fetch your profile from our talent vault for instant Quick Apply.
                       </p>
                     </div>
 
@@ -4096,7 +4678,7 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab, in
                             Target Opening
                           </div>
                           <div className="text-xs font-bold text-[#111215] dark:text-white truncate">
-                            {targetJobData?.title || 'Open Position'} • {targetJobData?.company || 'Hiring Partner'}
+                            {targetJobData?.title || 'Job Opening'} • {targetJobData?.company || 'Hiring Partner'}
                           </div>
                         </div>
                       </div>
@@ -4135,6 +4717,7 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab, in
                           <Mail size={17} />
                         </span>
                         <input
+                          id="quick-apply-email-input"
                           type="email"
                           required
                           value={emailInput}
@@ -4195,26 +4778,34 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab, in
                               </button>
                             </div>
                           ) : (
-                            <div className="text-[11px] text-[#73766C] dark:text-neutral-400">
-                              Resume profile verified and linked.
+                            <div className="text-[11px] text-[#73766C] dark:text-neutral-400 italic">
+                              Resume profile stored in candidate database
                             </div>
                           )}
 
-                          {/* Matching Skills */}
-                          {autofetchedCandidate.skills && autofetchedCandidate.skills.length > 0 && (
-                            <div className="flex flex-wrap gap-1">
+                          {/* Candidate Skills Tags */}
+                          {Array.isArray(autofetchedCandidate.skills) && autofetchedCandidate.skills.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5 pt-1">
                               {autofetchedCandidate.skills.slice(0, 5).map((sk: string, i: number) => (
-                                <span key={i} className="px-2 py-0.5 rounded-md text-[10px] font-medium bg-white dark:bg-[#15161A] text-[#575A51] dark:text-neutral-300 border border-[#E4E7DC]/60 dark:border-white/5">
+                                <span
+                                  key={i}
+                                  className="px-2 py-0.5 rounded-md text-[10px] font-medium bg-white dark:bg-[#15161A] border border-[#E4E7DC] dark:border-white/10 text-[#575A51] dark:text-neutral-300"
+                                >
                                   {sk}
                                 </span>
                               ))}
+                              {autofetchedCandidate.skills.length > 5 && (
+                                <span className="px-1.5 py-0.5 rounded-md text-[10px] text-[#73766C] dark:text-neutral-400">
+                                  +{autofetchedCandidate.skills.length - 5} more
+                                </span>
+                              )}
                             </div>
                           )}
                         </div>
 
                         {/* If Already Applied to this Target Job */}
                         {targetJobAlreadyApplied ? (
-                          <div className="p-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/50 text-xs text-emerald-900 dark:text-emerald-200 space-y-2">
+                          <div className="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/50 text-xs text-emerald-900 dark:text-emerald-200 space-y-2">
                             <div className="flex items-center gap-2 font-bold">
                               <CheckCircle2 size={16} className="text-emerald-600 dark:text-emerald-400" />
                               <span>You have already applied for this role!</span>
@@ -4231,10 +4822,10 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab, in
                                   email: autofetchedCandidate.email,
                                   phone: autofetchedCandidate.phone,
                                   resumeUrl: autofetchedCandidate.resumeUrl,
-                                  skills: autofetchedCandidate.skills,
+                                  skills: autofetchedCandidate.skills
                                 };
                                 localStorage.setItem(CANDIDATE_SESSION_KEY, JSON.stringify(activeSession));
-                                setCandidate(activeSession);
+                                setCandidate(activeSession as any);
                               }}
                               className="w-full h-9 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition-all cursor-pointer flex items-center justify-center gap-1.5"
                             >
@@ -4243,25 +4834,15 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab, in
                             </button>
                           </div>
                         ) : (
-                          /* ONE-TAP APPLY BUTTON */
+                          /* QUICK APPLY BUTTON (Triggers Questions Modal) */
                           <button
                             type="button"
-                            disabled={isOneTapApplying}
-                            onClick={executeOneTapApply}
-                            className="w-full h-12 rounded-2xl bg-[#D4F82C] hover:bg-[#C2E820] text-[#111215] font-black text-sm shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                            onClick={() => openQuickApplyModal(targetJobData)}
+                            className="w-full h-12 rounded-2xl bg-[#D4F82C] hover:bg-[#C2E820] text-[#111215] font-black text-sm shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer"
                           >
-                            {isOneTapApplying ? (
-                              <>
-                                <RefreshCw size={16} className="animate-spin" />
-                                <span>Submitting 1-Tap Application…</span>
-                              </>
-                            ) : (
-                              <>
-                                <Zap size={16} className="fill-[#111215]" />
-                                <span>Confirm & 1-Tap Apply</span>
-                                <ArrowRight size={16} />
-                              </>
-                            )}
+                            <Zap size={16} className="fill-[#111215]" />
+                            <span>Quick Apply</span>
+                            <ArrowRight size={16} />
                           </button>
                         )}
                       </div>
@@ -4270,10 +4851,10 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab, in
                       <div className="p-4 rounded-2xl bg-[#F8F9F5] dark:bg-[#1D1F24] border border-[#E4E7DC] dark:border-white/10 space-y-3">
                         <div className="flex items-center gap-2 text-xs font-bold text-[#111215] dark:text-white">
                           <Sparkles size={14} className="text-[#8FB305] dark:text-[#D4F82C]" />
-                          <span>Quick 10-Second 1-Tap Registration</span>
+                          <span>Quick 10-Second Registration</span>
                         </div>
                         <p className="text-[11px] text-[#73766C] dark:text-neutral-400">
-                          We didn't find a prior resume for this email. Enter your details to complete your 1-tap application:
+                          We didn't find a prior resume for this email. Enter your details to complete your Quick Apply:
                         </p>
 
                         <div className="space-y-2">
@@ -4319,12 +4900,12 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab, in
 
                         <button
                           type="button"
-                          disabled={isOneTapApplying || isUploadingQuickResume || !quickName}
-                          onClick={executeOneTapApply}
+                          disabled={!quickName}
+                          onClick={() => openQuickApplyModal(targetJobData)}
                           className="w-full h-11 rounded-2xl bg-[#D4F82C] hover:bg-[#C2E820] text-[#111215] font-black text-xs shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 mt-2"
                         >
                           <Zap size={14} className="fill-[#111215]" />
-                          <span>Submit 1-Tap Application</span>
+                          <span>Quick Apply</span>
                           <ArrowRight size={14} />
                         </button>
                       </div>
@@ -4335,11 +4916,23 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab, in
                           <Sparkles size={20} />
                         </div>
                         <p className="text-xs font-bold text-[#111215] dark:text-white">
-                          Type your email to unlock 1-Tap Apply
+                          Type your email to unlock Quick Apply
                         </p>
                         <p className="text-[11px] text-[#73766C] dark:text-neutral-400">
                           Your resume, contact details, and skill match will be automatically verified from our talent vault.
                         </p>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const inputEl = (document.getElementById('quick-apply-email-input') as HTMLInputElement) || document.querySelector<HTMLInputElement>('input[type="email"]');
+                            inputEl?.focus();
+                          }}
+                          className="w-full h-11 rounded-2xl bg-[#D4F82C] hover:bg-[#C2E820] text-[#111215] font-black text-xs shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer mt-2"
+                        >
+                          <Zap size={14} className="fill-[#111215]" />
+                          <span>Quick Apply to Job</span>
+                          <ArrowRight size={14} />
+                        </button>
                       </div>
                     )}
 
@@ -4366,7 +4959,7 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab, in
                         className="inline-flex items-center gap-1.5 text-xs font-bold text-[#8FB305] dark:text-[#D4F82C] mb-4 hover:underline cursor-pointer"
                       >
                         <ArrowLeft size={13} />
-                        <span>Back to Express 1-Tap Apply</span>
+                        <span>Back to Quick Apply</span>
                       </button>
                     )}
 
@@ -4585,7 +5178,7 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab, in
         </main>
 
         {/* ── Footer ── */}
-        <footer className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 sm:py-4 border-t border-[#E4E7DC]/60 dark:border-white/5 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-[#73766C] dark:text-neutral-400">
+        <footer className={`relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 sm:py-4 border-t border-[#E4E7DC]/60 dark:border-white/5 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-[#73766C] dark:text-neutral-400 ${targetJobId ? 'mb-20 sm:mb-24' : ''}`}>
           <div className="flex items-center gap-4">
             <Link to="/contact" className="hover:text-[#111215] dark:hover:text-white flex items-center gap-1 transition-colors">
               <Mail size={13} /> Support
@@ -4605,7 +5198,9 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab, in
           <p>© {new Date().getFullYear()} InterviewXpert • Candidate Portal. All rights reserved.</p>
         </footer>
 
+        {renderFloatingQuickApplyBar()}
         {renderTargetJdModal()}
+        {renderQuickApplyModal()}
         {renderResumePreviewModal()}
       </div>
     );
@@ -5175,7 +5770,7 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab, in
                     ) : (
                       <>
                         <Zap size={14} className="fill-[#111215]" />
-                        <span>1-Tap Apply</span>
+                        <span>Quick Apply</span>
                       </>
                     )}
                   </button>
@@ -8348,7 +8943,9 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab, in
         </button>
       </nav>
 
+      {renderFloatingQuickApplyBar()}
       {renderTargetJdModal()}
+      {renderQuickApplyModal()}
       {renderScorecardModal()}
       {renderShareAllModal()}
     </div>
