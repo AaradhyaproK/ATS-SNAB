@@ -933,6 +933,47 @@ export default function HotLeads() {
     setMorphResumeCandidate(morphedData);
   };
 
+  // ── Open AI Match Score Modal with Lazy-Fetch for Screener Answers ──
+  const handleOpenScoreModal = async (lead: HotLeadItem, result: JobMatchResult) => {
+    setScoreModalData({ lead, result });
+
+    // If screening answers are not yet loaded onto this lead item, lazy fetch from candidateApplications
+    if (!lead.screeningAnswers || lead.screeningAnswers.length === 0) {
+      try {
+        const cleanEmail = (lead.candidateEmail || lead.email || '').toLowerCase().trim();
+        if (cleanEmail) {
+          const qApp = query(collection(db, 'candidateApplications'), where('candidateEmail', '==', cleanEmail));
+          const snap = await getDocs(qApp).catch(() => null);
+          if (snap && !snap.empty) {
+            const matchDoc = snap.docs.find(d => {
+              const dData = d.data();
+              return dData.jobId === lead.jobId || dData.interviewId === lead.jobId;
+            }) || snap.docs[0];
+            const appData = matchDoc.data();
+            if (Array.isArray(appData.screeningAnswers) && appData.screeningAnswers.length > 0) {
+              setScoreModalData(prev => {
+                if (!prev || prev.lead.id !== lead.id) return prev;
+                return {
+                  ...prev,
+                  lead: {
+                    ...prev.lead,
+                    screeningAnswers: appData.screeningAnswers,
+                    screenerPassedCount: appData.screenerPassedCount ?? appData.screeningAnswers.filter((a: any) => a.isPassed !== false).length,
+                    screenerTotalCount: appData.screenerTotalCount ?? appData.screeningAnswers.length,
+                    screenerScore: appData.screenerScore,
+                    screenerSummary: appData.screenerSummary,
+                  }
+                };
+              });
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('Lazy-fetch screener answers for score modal error:', e);
+      }
+    }
+  };
+
   // ── WhatsApp Notification Checkmark Handler ──
   const handleToggleWhatsAppNotify = async (checked: boolean) => {
     setNotifyCandidateWhatsApp(checked);
@@ -2324,7 +2365,15 @@ export default function HotLeads() {
                           {(() => {
                             const match = getLeadMatchResult(lead);
                             const score = match ? match.overallScore : (lead.matchScore || 0);
-                            const grade = match?.matchGrade || (score >= 80 ? 'Excellent Fit' : score >= 60 ? 'Good Fit' : score >= 40 ? 'Moderate Fit' : 'Low Fit');
+                            
+                            // Normalize grade string to clean, non-overflowing badge
+                            let rawGrade = String(match?.matchGrade || lead.matchGrade || (score >= 80 ? 'Excellent' : score >= 60 ? 'Good Fit' : score >= 40 ? 'Moderate' : 'Low Fit'));
+                            let grade = rawGrade;
+                            if (rawGrade === 'Exceptional Match' || rawGrade === 'Exceptional Fit') grade = 'Exceptional';
+                            else if (rawGrade === 'Excellent Fit') grade = 'Excellent';
+                            else if (rawGrade === 'Strong Match') grade = 'Strong';
+                            else if (rawGrade === 'Potential Match') grade = 'Moderate';
+
                             const matchedSkillsCount = match?.skillMatch?.matchedSkills.length ?? 0;
                             const totalReqSkills = match?.skillMatch?.totalRequired ?? 0;
 
@@ -2332,12 +2381,16 @@ export default function HotLeads() {
                             const isMedium = score >= 60;
                             const isModerate = score >= 40;
 
+                            const hasScreener = Array.isArray(lead.screeningAnswers) && lead.screeningAnswers.length > 0;
+                            const screenerPassed = lead.screenerPassedCount ?? (hasScreener ? lead.screeningAnswers.filter((a: any) => a.isPassed !== false).length : 0);
+                            const screenerTotal = lead.screenerTotalCount ?? (hasScreener ? lead.screeningAnswers.length : 0);
+
                             return (
-                              <div className="space-y-1.5 min-w-[155px]">
+                              <div className="space-y-1 min-w-[145px]">
                                 <button
                                   type="button"
-                                  onClick={() => match && setScoreModalData({ lead, result: match })}
-                                  className={`group/btn flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg border text-left transition-all cursor-pointer w-full max-w-[170px] shadow-xs hover:shadow-sm ${
+                                  onClick={() => match && handleOpenScoreModal(lead, match)}
+                                  className={`group/btn inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg border text-left transition-all cursor-pointer shadow-xs hover:shadow-sm ${
                                     isHigh
                                       ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/20 hover:border-emerald-500/50'
                                       : isMedium
@@ -2346,45 +2399,35 @@ export default function HotLeads() {
                                       ? 'border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400 hover:bg-amber-500/20 hover:border-amber-500/50'
                                       : 'border-slate-500/30 bg-slate-500/10 text-slate-700 dark:text-slate-400 hover:bg-slate-500/20'
                                   }`}
-                                  title="Click to view unbiased AI match evaluation breakdown"
+                                  title="Click to view unbiased AI match evaluation breakdown & screener answers"
                                 >
-                                  <div className="flex items-center gap-1.5 min-w-0">
+                                  <div className="flex items-center gap-1.5 shrink-0">
                                     <Sparkles className="size-3.5 shrink-0" />
                                     <span className="font-mono font-bold text-xs tracking-tight">{score}%</span>
                                   </div>
-                                  <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-black/5 dark:bg-white/10 shrink-0">
+                                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-black/5 dark:bg-white/10 shrink-0 uppercase tracking-wider">
                                     {grade}
                                   </span>
                                 </button>
 
                                 <div className="space-y-0.5 px-0.5">
                                   {totalReqSkills > 0 ? (
-                                    <div className="flex items-center gap-1 text-[10.5px] text-gray-500 dark:text-[#8f8f8f] font-mono">
+                                    <div className="flex items-center gap-1 text-[11px] text-gray-500 dark:text-[#8f8f8f] font-mono">
                                       <CheckCircle className="size-2.5 text-emerald-500 shrink-0" />
                                       <span>{matchedSkillsCount}/{totalReqSkills} skills matched</span>
                                     </div>
                                   ) : (
-                                    <div className="flex items-center gap-1 text-[10.5px] text-gray-500 dark:text-[#8f8f8f]">
+                                    <div className="flex items-center gap-1 text-[11px] text-gray-500 dark:text-[#8f8f8f]">
                                       <Zap className="size-2.5 text-blue-500 shrink-0" />
                                       <span>{match?.expMatch?.label || 'Skills & Profile Fit'}</span>
                                     </div>
                                   )}
 
-                                  <div className="flex items-center gap-1 text-[9.5px] text-emerald-600 dark:text-emerald-400 font-medium">
-                                    <Scale className="size-2.5 shrink-0" />
-                                    <span>100% Unbiased Merit</span>
-                                  </div>
-
-                                  {lead.screeningAnswers && lead.screeningAnswers.length > 0 && (
-                                    <button
-                                      type="button"
-                                      onClick={() => handleOpenCandidateModal(lead)}
-                                      className="flex items-center gap-1 text-[10px] font-bold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer bg-blue-50 dark:bg-blue-950/40 px-1.5 py-0.5 rounded border border-blue-500/20 transition-all hover:bg-blue-100"
-                                      title="Click to view candidate screener answers"
-                                    >
-                                      <CheckCircle2 className="size-2.5 shrink-0 text-blue-600 dark:text-blue-400" />
-                                      <span>Screener: {lead.screenerPassedCount ?? lead.screeningAnswers.length}/{lead.screeningAnswers.length} Answers</span>
-                                    </button>
+                                  {hasScreener && screenerTotal > 0 && (
+                                    <div className="flex items-center gap-1 text-[9.5px] font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/40 px-1.5 py-0.5 rounded border border-blue-500/20 w-fit">
+                                      <CheckCircle2 className="size-2.5 shrink-0" />
+                                      <span>{screenerPassed}/{screenerTotal} Screener Passed</span>
+                                    </div>
                                   )}
                                 </div>
                               </div>
@@ -2532,9 +2575,9 @@ export default function HotLeads() {
                       return (
                         <button
                           type="button"
-                          onClick={() => match && setScoreModalData({ lead: selectedCandidateDetail, result: match })}
+                          onClick={() => match && handleOpenScoreModal(selectedCandidateDetail, match)}
                           className="inline-flex items-center gap-1.5 text-xs font-mono font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25 hover:bg-emerald-500/20 cursor-pointer transition-all"
-                          title="Click to view full unbiased scoring breakdown"
+                          title="Click to view full unbiased scoring breakdown & screener answers"
                         >
                           <Sparkles size={11} />
                           <span>{score}% Match • {grade}</span>
@@ -2959,7 +3002,7 @@ export default function HotLeads() {
 
                         <button
                           type="button"
-                          onClick={() => setScoreModalData({ lead: selectedCandidateDetail, result: match })}
+                          onClick={() => handleOpenScoreModal(selectedCandidateDetail, match)}
                           className="px-3 py-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-800 dark:text-emerald-300 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5"
                         >
                           <Sparkles size={12} />
@@ -3639,7 +3682,9 @@ export default function HotLeads() {
                         Evaluation Breakdown
                       </h4>
                       <span className="text-[10px] font-semibold text-[#575A51] dark:text-[#9DA195]">
-                        4 Core Dimensions
+                        {Array.isArray(scoreModalData.lead.screeningAnswers) && scoreModalData.lead.screeningAnswers.length > 0
+                          ? '5 Core Dimensions (Inc. Screener)'
+                          : '4 Core Dimensions'}
                       </span>
                     </div>
 
@@ -3768,6 +3813,79 @@ export default function HotLeads() {
                         {scoreModalData.result.locationMatch.label}
                       </span>
                     </div>
+
+                    {/* Dimension 5: Quick Apply Screener Verification */}
+                    {Array.isArray(scoreModalData.lead.screeningAnswers) && scoreModalData.lead.screeningAnswers.length > 0 && (
+                      <div className="p-4 rounded-2xl border border-blue-500/25 bg-blue-500/5 dark:bg-blue-500/10 shadow-xs space-y-3">
+                        <div className="flex items-center justify-between gap-2 flex-wrap">
+                          <div className="flex items-center gap-2">
+                            <div className="size-6 rounded-lg bg-blue-500/15 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+                              <CheckCircle2 size={14} />
+                            </div>
+                            <span className="font-bold text-sm text-[#111215] dark:text-white">
+                              Quick Apply Screener Answers
+                            </span>
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300 uppercase tracking-wider">
+                              {scoreModalData.lead.screeningAnswers.length} Questions
+                            </span>
+                          </div>
+
+                          <span className="font-mono text-xs font-bold px-2.5 py-0.5 rounded-lg bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 border border-emerald-500/25 flex items-center gap-1 shrink-0">
+                            <CheckCircle2 size={12} className="text-emerald-600 dark:text-emerald-400" />
+                            <span>
+                              {scoreModalData.lead.screenerPassedCount ?? scoreModalData.lead.screeningAnswers.filter((a: any) => a.isPassed !== false).length}/{scoreModalData.lead.screeningAnswers.length} Criteria Passed
+                            </span>
+                          </span>
+                        </div>
+
+                        {/* List of Questions and Answers */}
+                        <div className="grid grid-cols-1 gap-2.5 pt-1">
+                          {scoreModalData.lead.screeningAnswers.map((ans: any, idx: number) => {
+                            const questionText = ans.question || `Question ${idx + 1}`;
+                            const answerValue = ans.answer !== undefined && ans.answer !== null ? String(ans.answer) : 'N/A';
+                            const isPassed = ans.isPassed !== false;
+                            const category = ans.category || (ans.type === 'number' ? 'Experience' : ans.type === 'yes_no' ? 'Skills' : 'Notice Period');
+
+                            return (
+                              <div
+                                key={idx}
+                                className="p-3 rounded-xl bg-white dark:bg-[#15161A] border border-[#E4E7DC] dark:border-white/10 space-y-2 shadow-2xs"
+                              >
+                                <div className="flex items-start justify-between gap-2">
+                                  <span className="text-xs font-bold text-[#111215] dark:text-white leading-snug flex-1">
+                                    <span className="text-blue-600 dark:text-blue-400 font-black mr-1.5">Q{idx + 1}.</span>
+                                    {questionText}
+                                  </span>
+                                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-[#F8F9F5] dark:bg-white/10 text-[#575A51] dark:text-neutral-400 uppercase shrink-0">
+                                    {category}
+                                  </span>
+                                </div>
+
+                                <div className="flex items-center justify-between pt-1.5 border-t border-[#E4E7DC]/60 dark:border-white/5">
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="text-[10px] uppercase font-bold text-[#73766C] dark:text-neutral-400">
+                                      Candidate Answer:
+                                    </span>
+                                    <span className="text-xs font-black text-[#111215] dark:text-white">
+                                      {answerValue}
+                                    </span>
+                                  </div>
+
+                                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                    isPassed
+                                      ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-500/25'
+                                      : 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border border-rose-500/25'
+                                  }`}>
+                                    {isPassed ? <Check size={10} className="stroke-[3]" /> : <X size={10} className="stroke-[3]" />}
+                                    <span>{isPassed ? 'Meets Requirement' : 'Does Not Meet'}</span>
+                                  </span>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Objective AI Transparency Card */}

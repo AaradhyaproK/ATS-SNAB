@@ -11,6 +11,7 @@ export interface ScreeningQuestion {
   category?: 'experience' | 'skills' | 'relocation' | 'notice_period' | 'education' | 'custom';
   expectedAnswer?: string; // 'yes' | 'no' | number
   required: boolean;
+  enabled?: boolean; // When true or undefined, the question is active and asked to candidates. When false, question is skipped.
 }
 
 export interface CandidateScreeningAnswer {
@@ -75,6 +76,7 @@ export function generateDefaultScreeningQuestions(job: any): ScreeningQuestion[]
     category: 'experience',
     expectedAnswer: minExp > 0 ? String(minExp) : '0',
     required: true,
+    enabled: true,
   });
 
   // 2. Key Skills Confirmation (Yes / No)
@@ -86,6 +88,7 @@ export function generateDefaultScreeningQuestions(job: any): ScreeningQuestion[]
       category: 'skills',
       expectedAnswer: 'yes',
       required: true,
+      enabled: true,
     });
   } else {
     questions.push({
@@ -95,6 +98,7 @@ export function generateDefaultScreeningQuestions(job: any): ScreeningQuestion[]
       category: 'skills',
       expectedAnswer: 'yes',
       required: true,
+      enabled: true,
     });
   }
 
@@ -108,6 +112,7 @@ export function generateDefaultScreeningQuestions(job: any): ScreeningQuestion[]
       category: 'education',
       expectedAnswer: 'yes',
       required: true,
+      enabled: true,
     });
   }
 
@@ -120,6 +125,7 @@ export function generateDefaultScreeningQuestions(job: any): ScreeningQuestion[]
       category: 'relocation',
       expectedAnswer: 'yes',
       required: true,
+      enabled: true,
     });
   } else {
     questions.push({
@@ -129,6 +135,7 @@ export function generateDefaultScreeningQuestions(job: any): ScreeningQuestion[]
       category: 'relocation',
       expectedAnswer: 'yes',
       required: true,
+      enabled: true,
     });
   }
 
@@ -139,6 +146,7 @@ export function generateDefaultScreeningQuestions(job: any): ScreeningQuestion[]
     type: 'short_text',
     category: 'notice_period',
     required: true,
+    enabled: true,
   });
 
   return questions;
@@ -153,12 +161,26 @@ export function evaluateScreeningAnswers(
   baseResumeScore: number = 75,
   job?: any
 ): ScreenerEvaluationResult {
+  const activeQuestions = (questions || []).filter(q => q.enabled !== false);
+
+  if (activeQuestions.length === 0) {
+    return {
+      answers: [],
+      passedCount: 0,
+      totalCount: 0,
+      passPercentage: 100,
+      screenerScore: 100,
+      enhancedMatchScore: baseResumeScore,
+      summary: 'No screener questions required for this application',
+    };
+  }
+
   const evaluatedAnswers: CandidateScreeningAnswer[] = [];
   let passedCount = 0;
 
   const minExp = job?.minExperience ?? (typeof job?.experience === 'number' ? job.experience : parseFloat(String(job?.experience || '')) || 0);
 
-  questions.forEach((q) => {
+  activeQuestions.forEach((q) => {
     const rawAns = (answersMap[q.id] || '').trim();
     const lowerAns = rawAns.toLowerCase();
     let isPassed = false;
@@ -194,7 +216,7 @@ export function evaluateScreeningAnswers(
     });
   });
 
-  const totalCount = questions.length || 1;
+  const totalCount = activeQuestions.length || 1;
   const passPercentage = Math.round((passedCount / totalCount) * 100);
   const screenerScore = passPercentage;
 

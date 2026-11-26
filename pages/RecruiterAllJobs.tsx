@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { collection, query, onSnapshot, where, doc, updateDoc, deleteDoc, arrayUnion, getDocs, getDoc, setDoc } from 'firebase/firestore';
 
@@ -60,6 +60,7 @@ import {
   FileUp,
   Zap,
   RotateCw,
+  ChevronDown,
 } from 'lucide-react';
 import { generateDefaultScreeningQuestions, ScreeningQuestion } from '../services/screeningService';
 
@@ -327,6 +328,14 @@ const RecruiterAllJobs: React.FC = () => {
   const [togglingJobId, setTogglingJobId] = useState<string | null>(null);
   const [deletingJobId, setDeletingJobId] = useState<string | null>(null);
 
+  // Memoized unique invited candidate emails for the active invitingJob
+  const allInvitedCandidateEmails = useMemo(() => {
+    if (!invitingJob) return [];
+    const fromEmails = (invitingJob.candidateEmails || []).map((e: any) => typeof e === 'string' ? e : e?.email).filter(Boolean);
+    const fromData = (((invitingJob as any).candidateData || []).map((c: any) => c?.email)).filter(Boolean);
+    return Array.from(new Set([...fromEmails, ...fromData]));
+  }, [invitingJob]);
+
   // Invite candidate state
   const [inviteMode, setInviteMode] = useState<'bulk' | 'invited' | 'ai_suggest'>('ai_suggest');
   const [candidateEmailsInput, setCandidateEmailsInput] = useState('');
@@ -396,6 +405,8 @@ const RecruiterAllJobs: React.FC = () => {
   const [editingQuestionIdx, setEditingQuestionIdx] = useState<number | null>(null);
   const [editingQuestionText, setEditingQuestionText] = useState('');
   const [editingQuestionType, setEditingQuestionType] = useState<'yes_no' | 'short_text' | 'number'>('yes_no');
+  const [showScreenerConfig, setShowScreenerConfig] = useState(true);
+  const lastInvitedJobIdRef = useRef<string | null>(null);
 
   // Always enforce Day Mode for the Recruiter section
   useEffect(() => {
@@ -422,7 +433,15 @@ const RecruiterAllJobs: React.FC = () => {
   });
 
   useEffect(() => {
-    if (invitingJob) {
+    if (!invitingJob) {
+      lastInvitedJobIdRef.current = null;
+      return;
+    }
+
+    // Only re-initialize default mode when opening a NEW job modal
+    if (invitingJob.id !== lastInvitedJobIdRef.current) {
+      lastInvitedJobIdRef.current = invitingJob.id;
+
       let isChecked = true;
       try {
         const jobStored = localStorage.getItem(`job_ai_video_${invitingJob.id}`);
@@ -452,23 +471,41 @@ const RecruiterAllJobs: React.FC = () => {
       setEditingQuestionIdx(null);
       setEditingQuestionText('');
 
-      // Also directly fetch latest saved screeningQuestions from Firestore in case they were updated
-      if (invitingJob.id) {
-        Promise.all([
-          getDoc(doc(db, 'jobs', invitingJob.id)).catch(() => null),
-          getDoc(doc(db, 'interviews', invitingJob.id)).catch(() => null)
-        ]).then(([jSnap, iSnap]) => {
-          const jQ = jSnap?.exists() ? jSnap.data()?.screeningQuestions : null;
-          const iQ = iSnap?.exists() ? iSnap.data()?.screeningQuestions : null;
-          const savedQ = (Array.isArray(jQ) && jQ.length > 0) ? jQ : ((Array.isArray(iQ) && iQ.length > 0) ? iQ : null);
-          if (savedQ && savedQ.length > 0) {
-            setJobScreeningQuestions(savedQ);
-            setInvitingJob(prev => prev && prev.id === invitingJob.id ? { ...prev, screeningQuestions: savedQ } as any : prev);
-          }
-        }).catch(err => console.warn('Could not fetch saved questions:', err));
-      }
+      // Directly fetch latest saved screeningQuestions and candidates from Firestore
+      const currentJobId = invitingJob.id;
+      Promise.all([
+        getDoc(doc(db, 'jobs', currentJobId)).catch(() => null),
+        getDoc(doc(db, 'interviews', currentJobId)).catch(() => null)
+      ]).then(([jSnap, iSnap]) => {
+        const jData = jSnap?.exists() ? jSnap.data() : null;
+        const iData = iSnap?.exists() ? iSnap.data() : null;
+        const jQ = jData?.screeningQuestions;
+        const iQ = iData?.screeningQuestions;
+        const savedQ = (Array.isArray(jQ) && jQ.length > 0) ? jQ : ((Array.isArray(iQ) && iQ.length > 0) ? iQ : null);
+
+        const latestEmails = (Array.isArray(iData?.candidateEmails) && iData.candidateEmails.length > 0)
+          ? iData.candidateEmails
+          : (Array.isArray(jData?.candidateEmails) && jData.candidateEmails.length > 0 ? jData.candidateEmails : null);
+        const latestData = (Array.isArray(iData?.candidateData) && iData.candidateData.length > 0)
+          ? iData.candidateData
+          : (Array.isArray(jData?.candidateData) && jData.candidateData.length > 0 ? jData.candidateData : null);
+
+        if (savedQ && savedQ.length > 0) {
+          setJobScreeningQuestions(savedQ);
+        }
+
+        setInvitingJob(prev => {
+          if (!prev || prev.id !== currentJobId) return prev;
+          return {
+            ...prev,
+            ...(savedQ ? { screeningQuestions: savedQ } : {}),
+            ...(latestEmails ? { candidateEmails: latestEmails } : {}),
+            ...(latestData ? { candidateData: latestData } : {}),
+          } as any;
+        });
+      }).catch(err => console.warn('Could not fetch saved questions:', err));
     }
-  }, [invitingJob]);
+  }, [invitingJob?.id]);
 
   const handleToggleAiVideo = (checked: boolean) => {
     setIsAiVideoInterview(checked);
@@ -482,7 +519,7 @@ const RecruiterAllJobs: React.FC = () => {
     } catch (err) {
       console.warn('Could not persist ai video interview preference:', err);
     }
-    if (checked) {
+    if (checked && inviteMode !== 'invited') {
       setInviteMode('ai_suggest');
     }
   };
@@ -547,11 +584,33 @@ const RecruiterAllJobs: React.FC = () => {
       category: 'custom',
       expectedAnswer: newQuestionType === 'yes_no' ? 'yes' : undefined,
       required: true,
+      enabled: true,
     };
     const updated = [...jobScreeningQuestions, newQ];
     handleSaveScreeningQuestionsToJob(updated);
     setNewQuestionText('');
     setShowAddQuestionRow(false);
+  };
+
+  const handleToggleQuestionEnabled = (idx: number) => {
+    const updated = jobScreeningQuestions.map((q, i) => {
+      if (i === idx) {
+        return {
+          ...q,
+          enabled: q.enabled === false ? true : false,
+        };
+      }
+      return q;
+    });
+    handleSaveScreeningQuestionsToJob(updated);
+  };
+
+  const handleToggleAllQuestionsEnabled = (enableAll: boolean) => {
+    const updated = jobScreeningQuestions.map((q) => ({
+      ...q,
+      enabled: enableAll,
+    }));
+    handleSaveScreeningQuestionsToJob(updated);
   };
 
   const handleStartEditQuestion = (idx: number) => {
@@ -2890,16 +2949,35 @@ const RecruiterAllJobs: React.FC = () => {
                           <span className="font-black text-xs text-[#111215] flex items-center gap-1.5">
                             <span>Quick Apply Screener Questions</span>
                             <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-[#111215] text-[#D4F82C]">
-                              {jobScreeningQuestions.length} Questions
+                              {jobScreeningQuestions.filter(q => q.enabled !== false).length} of {jobScreeningQuestions.length} Active
                             </span>
                           </span>
                           <p className="text-[11px] text-[#575A51]">
-                            Candidates answer these questions when applying. Responses calculate verified match scores.
+                            Check questions to include. Only checked questions will be asked to candidates.
                           </p>
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <button
+                          type="button"
+                          onClick={() => setShowScreenerConfig(prev => !prev)}
+                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-bold text-[#111215] bg-white border border-[#D5D9CC] hover:bg-[#E4E7DC]/40 transition-all cursor-pointer shadow-2xs"
+                        >
+                          <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showScreenerConfig ? 'rotate-180' : ''}`} />
+                          <span>{showScreenerConfig ? 'Hide Questions' : `Show Questions (${jobScreeningQuestions.filter(q => q.enabled !== false).length})`}</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const activeCount = jobScreeningQuestions.filter(q => q.enabled !== false).length;
+                            handleToggleAllQuestionsEnabled(activeCount < jobScreeningQuestions.length);
+                          }}
+                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-bold text-[#111215] bg-white border border-[#D5D9CC] hover:bg-[#E4E7DC]/40 transition-all cursor-pointer shadow-2xs"
+                        >
+                          <Check className="w-3 h-3 text-[#111215]" />
+                          <span>{jobScreeningQuestions.filter(q => q.enabled !== false).length < jobScreeningQuestions.length ? 'Check All' : 'Uncheck All'}</span>
+                        </button>
                         <button
                           type="button"
                           onClick={handleAutoGenerateFromJD}
@@ -2912,7 +2990,10 @@ const RecruiterAllJobs: React.FC = () => {
                         </button>
                         <button
                           type="button"
-                          onClick={() => setShowAddQuestionRow(prev => !prev)}
+                          onClick={() => {
+                            setShowScreenerConfig(true);
+                            setShowAddQuestionRow(prev => !prev);
+                          }}
                           className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-bold bg-[#111215] text-white hover:bg-[#202227] transition-all cursor-pointer shadow-xs"
                         >
                           <Plus className="w-3 h-3 text-[#D4F82C]" />
@@ -2921,11 +3002,13 @@ const RecruiterAllJobs: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* Add Custom Question Form */}
+                    {showScreenerConfig && (
+                      <>
+                        {/* Add Custom Question Form */}
                     {showAddQuestionRow && (
                       <div className="p-3 rounded-xl bg-white border border-[#E4E7DC] space-y-2.5 shadow-xs">
                         <div className="flex items-center justify-between">
-                          <span className="text-[11px] font-bold text-[#111215]">New Screener Question</span>
+                          <span className="text-[11px] font-bold text-[#111215]">New Screener Question (Checked by Default)</span>
                           <button
                             type="button"
                             onClick={() => setShowAddQuestionRow(false)}
@@ -2969,13 +3052,17 @@ const RecruiterAllJobs: React.FC = () => {
                     <div className="space-y-1.5">
                       {jobScreeningQuestions.map((q, idx) => {
                         const isEditingThis = editingQuestionIdx === idx;
+                        const isEnabled = q.enabled !== false;
+
                         return (
                           <div
                             key={q.id || idx}
                             className={`p-2.5 rounded-xl border transition-all ${
                               isEditingThis
                                 ? 'bg-[#FCFDF9] border-[#111215] ring-2 ring-[#D4F82C] shadow-sm'
-                                : 'bg-white border-[#E4E7DC] hover:border-[#C2C5BA] shadow-2xs'
+                                : isEnabled
+                                ? 'bg-white border-[#E4E7DC] hover:border-[#C2C5BA] shadow-2xs'
+                                : 'bg-[#F2F4ED]/60 border-[#D5D9CC] border-dashed opacity-75'
                             }`}
                           >
                             {isEditingThis ? (
@@ -3017,35 +3104,74 @@ const RecruiterAllJobs: React.FC = () => {
                                     if (e.key === 'Escape') handleCancelEditQuestion();
                                   }}
                                 />
-                                <div className="flex items-center gap-2">
-                                  <span className="text-[10px] text-[#73766C] font-semibold">Answer Type:</span>
-                                  <select
-                                    value={editingQuestionType}
-                                    onChange={(e) => setEditingQuestionType(e.target.value as any)}
-                                    className="h-7 px-2 text-[11px] font-bold rounded-md border border-[#E4E7DC] bg-white text-[#111215] outline-none cursor-pointer"
-                                  >
-                                    <option value="yes_no">Yes / No Question</option>
-                                    <option value="number">Number (e.g. Years of Exp)</option>
-                                    <option value="short_text">Short Text / One-Word</option>
-                                  </select>
+                                <div className="flex items-center justify-between gap-2 flex-wrap">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-[10px] text-[#73766C] font-semibold">Answer Type:</span>
+                                    <select
+                                      value={editingQuestionType}
+                                      onChange={(e) => setEditingQuestionType(e.target.value as any)}
+                                      className="h-7 px-2 text-[11px] font-bold rounded-md border border-[#E4E7DC] bg-white text-[#111215] outline-none cursor-pointer"
+                                    >
+                                      <option value="yes_no">Yes / No Question</option>
+                                      <option value="number">Number (e.g. Years of Exp)</option>
+                                      <option value="short_text">Short Text / One-Word</option>
+                                    </select>
+                                  </div>
+                                  <label className="flex items-center gap-1.5 text-xs font-bold text-[#111215] cursor-pointer select-none">
+                                    <input
+                                      type="checkbox"
+                                      checked={isEnabled}
+                                      onChange={() => handleToggleQuestionEnabled(idx)}
+                                      className="w-3.5 h-3.5 accent-[#111215]"
+                                    />
+                                    <span>Ask Candidate</span>
+                                  </label>
                                 </div>
                               </div>
                             ) : (
                               <div className="flex items-center justify-between gap-2">
+                                {/* Checkmark toggle: checked = ask candidate, unchecked = skipped */}
+                                <button
+                                  type="button"
+                                  onClick={() => handleToggleQuestionEnabled(idx)}
+                                  className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 transition-all cursor-pointer ${
+                                    isEnabled
+                                      ? 'bg-[#111215] text-[#D4F82C] shadow-2xs'
+                                      : 'border-2 border-[#A8ABA0] bg-white text-transparent hover:border-[#111215]'
+                                  }`}
+                                  title={isEnabled ? 'Checked: Will ask candidate (Click to uncheck/skip)' : 'Unchecked: Skipped (Click to check/ask)'}
+                                >
+                                  <Check className={`w-3.5 h-3.5 ${isEnabled ? 'opacity-100' : 'opacity-0'}`} />
+                                </button>
+
                                 <div
-                                  className="flex items-center gap-2.5 min-w-0 flex-1 cursor-pointer group"
+                                  className="flex items-center gap-2 min-w-0 flex-1 cursor-pointer group"
                                   onClick={() => handleStartEditQuestion(idx)}
                                   title="Click to edit question text"
                                 >
-                                  <span className="w-5 h-5 rounded-full bg-[#E4E7DC] text-[#111215] text-[10px] font-black flex items-center justify-center shrink-0">
+                                  <span className={`w-5 h-5 rounded-full text-[10px] font-black flex items-center justify-center shrink-0 ${
+                                    isEnabled ? 'bg-[#E4E7DC] text-[#111215]' : 'bg-[#D5D9CC] text-[#73766C]'
+                                  }`}>
                                     {idx + 1}
                                   </span>
-                                  <span className="text-xs font-medium text-[#111215] truncate group-hover:text-blue-600">
+                                  <span className={`text-xs font-medium truncate group-hover:text-blue-600 ${
+                                    isEnabled ? 'text-[#111215]' : 'text-[#73766C] line-through'
+                                  }`}>
                                     {q.question}
                                   </span>
                                 </div>
 
                                 <div className="flex items-center gap-1.5 shrink-0">
+                                  {isEnabled ? (
+                                    <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-100 text-emerald-800 uppercase tracking-wide">
+                                      Will Ask
+                                    </span>
+                                  ) : (
+                                    <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-gray-200 text-gray-600 uppercase tracking-wide">
+                                      Skipped
+                                    </span>
+                                  )}
+
                                   <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider ${
                                     q.type === 'yes_no'
                                       ? 'bg-purple-100 text-purple-800'
@@ -3083,51 +3209,53 @@ const RecruiterAllJobs: React.FC = () => {
                         );
                       })}
                     </div>
-                  </div>
+                  </>
                 )}
               </div>
+            )}
+          </div>
 
-              {/* Bento Tab Selector */}
-              <div className="flex items-center gap-1.5 p-1.5 bg-[#E4E7DC]/70 rounded-2xl flex-wrap">
-                <button
-                  type="button"
-                  onClick={() => setInviteMode('ai_suggest')}
-                  className={`flex-1 py-2 px-3 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-1.5 min-w-[140px] cursor-pointer ${
-                    inviteMode === 'ai_suggest'
-                      ? 'bg-white text-[#111215] shadow-xs border border-[#E4E7DC]'
-                      : 'text-[#575A51] hover:text-[#111215] hover:bg-white/60'
-                  }`}
-                >
-                  <Sparkles className="w-3.5 h-3.5 text-[#111215]" />
-                  <span>Suggest AI Candidates</span>
-                </button>
+          {/* Bento Tab Selector */}
+          <div className="flex items-center gap-1.5 p-1.5 bg-[#E4E7DC]/70 rounded-2xl flex-wrap">
+            <button
+              type="button"
+              onClick={() => setInviteMode('ai_suggest')}
+              className={`flex-1 py-2 px-3 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-1.5 min-w-[140px] cursor-pointer ${
+                inviteMode === 'ai_suggest'
+                  ? 'bg-[#111215] text-[#D4F82C] shadow-sm'
+                  : 'text-[#575A51] hover:text-[#111215] hover:bg-white/60'
+              }`}
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Suggest AI Candidates</span>
+            </button>
 
-                <button
-                  type="button"
-                  onClick={() => setInviteMode('bulk')}
-                  className={`flex-1 py-2 px-3 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-1.5 min-w-[110px] cursor-pointer ${
-                    inviteMode === 'bulk'
-                      ? 'bg-white text-[#111215] shadow-xs border border-[#E4E7DC]'
-                      : 'text-[#575A51] hover:text-[#111215] hover:bg-white/60'
-                  }`}
-                >
-                  <Layers className="w-3.5 h-3.5 text-[#111215]" />
-                  <span>Add / Bulk Import</span>
-                </button>
+            <button
+              type="button"
+              onClick={() => setInviteMode('bulk')}
+              className={`flex-1 py-2 px-3 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-1.5 min-w-[110px] cursor-pointer ${
+                inviteMode === 'bulk'
+                  ? 'bg-[#111215] text-[#D4F82C] shadow-sm'
+                  : 'text-[#575A51] hover:text-[#111215] hover:bg-white/60'
+              }`}
+            >
+              <Layers className="w-3.5 h-3.5" />
+              <span>Add / Bulk Import</span>
+            </button>
 
-                <button
-                  type="button"
-                  onClick={() => setInviteMode('invited')}
-                  className={`flex-1 py-2 px-3 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-1.5 min-w-[130px] cursor-pointer ${
-                    inviteMode === 'invited'
-                      ? 'bg-white text-[#111215] shadow-xs border border-[#E4E7DC]'
-                      : 'text-[#575A51] hover:text-[#111215] hover:bg-white/60'
-                  }`}
-                >
-                  <Users className="w-3.5 h-3.5 text-[#111215]" />
-                  <span>Invited Candidates ({(invitingJob.candidateEmails || []).length})</span>
-                </button>
-              </div>
+            <button
+              type="button"
+              onClick={() => setInviteMode('invited')}
+              className={`flex-1 py-2 px-3 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-1.5 min-w-[130px] cursor-pointer ${
+                inviteMode === 'invited'
+                  ? 'bg-[#111215] text-[#D4F82C] shadow-sm'
+                  : 'text-[#575A51] hover:text-[#111215] hover:bg-white/60'
+              }`}
+            >
+              <Users className="w-3.5 h-3.5" />
+              <span>Invited Candidates ({allInvitedCandidateEmails.length})</span>
+            </button>
+          </div>
 
               {inviteMode === 'bulk' && (
                 <div className="space-y-4">
@@ -3473,13 +3601,14 @@ const RecruiterAllJobs: React.FC = () => {
               )}
 
               {inviteMode === 'invited' && (
-                <div className="p-5 bg-white border border-[#E4E7DC] rounded-2xl space-y-3.5 shadow-sm">
+                <div className="p-5 bg-white border border-[#E4E7DC] rounded-2xl space-y-3.5 shadow-sm animate-in fade-in duration-150">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#E4E7DC] pb-3">
-                    <span className="text-xs font-black text-[#111215] uppercase tracking-wide">
-                      Invited Candidates Roster ({(invitingJob.candidateEmails || []).length})
+                    <span className="text-xs font-black text-[#111215] uppercase tracking-wide flex items-center gap-2">
+                      <Users className="w-4 h-4 text-[#8FB305]" />
+                      <span>Invited Candidates Roster ({allInvitedCandidateEmails.length})</span>
                     </span>
 
-                    {Boolean((invitingJob.candidateEmails || []).length > 0) && (
+                    {Boolean(allInvitedCandidateEmails.length > 0) && (
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <button
                           type="button"
@@ -3523,23 +3652,41 @@ const RecruiterAllJobs: React.FC = () => {
                     )}
                   </div>
 
-                  {(!invitingJob.candidateEmails || invitingJob.candidateEmails.length === 0) ? (
-                    <div className="p-8 text-center text-[#73766C] font-medium text-xs">
-                      No candidates invited yet for this job.
+                  {allInvitedCandidateEmails.length === 0 ? (
+                    <div className="p-8 text-center text-[#73766C] font-medium text-xs space-y-3">
+                      <Users className="w-8 h-8 text-[#A8ABA0] mx-auto" />
+                      <p className="font-bold text-[#111215]">No candidates invited yet for this job opening.</p>
+                      <p className="text-[11px] text-[#73766C]">Use the "Suggest AI Candidates" or "Add / Bulk Import" tabs above to invite candidates.</p>
+                      <div className="flex items-center justify-center gap-2 pt-1">
+                        <button
+                          type="button"
+                          onClick={() => setInviteMode('ai_suggest')}
+                          className="px-3.5 py-1.5 rounded-xl bg-[#111215] text-[#D4F82C] text-xs font-bold transition-all shadow-xs cursor-pointer"
+                        >
+                          Suggest AI Candidates
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setInviteMode('bulk')}
+                          className="px-3.5 py-1.5 rounded-xl bg-white border border-[#E4E7DC] text-[#111215] text-xs font-bold transition-all shadow-2xs hover:bg-[#F8F9F5] cursor-pointer"
+                        >
+                          Bulk Import
+                        </button>
+                      </div>
                     </div>
                   ) : (
-                    <div className="flex flex-col gap-2 max-h-[300px] overflow-y-auto pr-1">
-                      {invitingJob.candidateEmails.map((email: string) => {
+                    <div className="flex flex-col gap-2 max-h-[360px] overflow-y-auto pr-1">
+                      {allInvitedCandidateEmails.map((email: string, idx: number) => {
                         const isEditing = editingCandidateEmail === email;
                         const candData = ((invitingJob as any).candidateData || []).find(
-                          (c: any) => c.email && c.email.toLowerCase() === email.toLowerCase()
+                          (c: any) => c && c.email && typeof c.email === 'string' && c.email.toLowerCase() === email.toLowerCase()
                         );
                         const candPhone = candData?.phone && candData.phone !== 'N/A' ? candData.phone : '';
                         const isEmailSending = remindingCandidateEmail === email;
                         const isWASending = remindingWhatsAppEmail === email;
 
                         return (
-                          <div key={email} className="bg-[#F8F9F5] border border-[#E4E7DC] rounded-2xl p-3.5 shadow-xs space-y-2">
+                          <div key={`${email}_${idx}`} className="bg-[#F8F9F5] border border-[#E4E7DC] rounded-2xl p-3.5 shadow-xs space-y-2">
                             {isEditing ? (
                               <div className="space-y-2">
                                 <div className="text-xs text-[#4D6500] font-bold">Editing Candidate Details:</div>
@@ -3577,7 +3724,7 @@ const RecruiterAllJobs: React.FC = () => {
                                       setEditedPhoneValue('');
                                     }}
                                     disabled={savingCandidateEdit}
-                                    className="h-8 px-4 rounded-full border border-[#E4E7DC] text-xs font-semibold text-[#575A51]"
+                                    className="h-8 px-4 rounded-full border border-[#E4E7DC] text-xs font-semibold text-[#575A51] cursor-pointer"
                                   >
                                     Cancel
                                   </button>
@@ -3585,7 +3732,7 @@ const RecruiterAllJobs: React.FC = () => {
                                     type="button"
                                     onClick={() => handleEditCandidate(email, editedEmailValue, editedPhoneValue, editedNameValue)}
                                     disabled={savingCandidateEdit}
-                                    className="h-8 px-4 rounded-full bg-[#111215] text-white font-bold text-xs"
+                                    className="h-8 px-4 rounded-full bg-[#111215] text-white font-bold text-xs cursor-pointer"
                                   >
                                     {savingCandidateEdit ? 'Saving...' : 'Save Changes'}
                                   </button>
@@ -3596,9 +3743,9 @@ const RecruiterAllJobs: React.FC = () => {
                                 <div className="flex flex-col min-w-0">
                                   <div className="flex items-center gap-2">
                                     <span className="font-bold text-[#111215] truncate text-xs" title={candData?.name || email}>
-                                      {candData?.name && candData.name.trim() !== '' ? candData.name : email}
+                                      {candData?.name && candData.name.trim() !== '' ? candData.name : (email.includes('@') && !email.endsWith('@whatsapp.local') ? email.split('@')[0] : email)}
                                     </span>
-                                    {candData?.name && candData.name.trim() !== '' && (
+                                    {email && !email.endsWith('@whatsapp.local') && (
                                       <span className="text-[11px] text-[#73766C] truncate font-mono">({email})</span>
                                     )}
                                   </div>
@@ -4023,28 +4170,39 @@ const RecruiterAllJobs: React.FC = () => {
                   <span>{sendingInvites ? 'Sending...' : 'Send Bulk Reminders'}</span>
                 </button>
 
-                <button
-                  type="button"
-                  onClick={() => handleSendInvites(false)}
-                  disabled={sendingInvites}
-                  className={`inline-flex h-10 items-center gap-2 px-6 rounded-full font-black text-xs sm:text-sm transition-all disabled:opacity-50 cursor-pointer shadow-lg active:scale-95 ${
-                    isAiVideoInterview
-                      ? 'bg-[#D4F82C] text-[#111215] hover:bg-[#c7eb22] shadow-[#D4F82C]/25 ring-2 ring-[#D4F82C]/30'
-                      : 'bg-[#111215] text-white hover:bg-[#202227] shadow-black/20'
-                  }`}
-                >
-                  {isAiVideoInterview ? (
-                    <>
-                      <Video className="w-4 h-4" />
-                      <span>{sendingInvites ? 'Sending...' : 'Send Video Interview Invites'}</span>
-                    </>
-                  ) : (
-                    <>
-                      <Mail className="w-4 h-4" />
-                      <span>{sendingInvites ? 'Sending...' : 'Send Quick Apply Link'}</span>
-                    </>
-                  )}
-                </button>
+                {inviteMode === 'invited' ? (
+                  <button
+                    type="button"
+                    onClick={() => setInviteMode('bulk')}
+                    className="inline-flex h-10 items-center gap-2 px-6 rounded-full font-black text-xs sm:text-sm bg-[#111215] text-[#D4F82C] hover:bg-[#202227] transition-all cursor-pointer shadow-lg active:scale-95"
+                  >
+                    <UserPlus className="w-4 h-4 text-[#D4F82C]" />
+                    <span>Invite More Candidates</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => handleSendInvites(false)}
+                    disabled={sendingInvites}
+                    className={`inline-flex h-10 items-center gap-2 px-6 rounded-full font-black text-xs sm:text-sm transition-all disabled:opacity-50 cursor-pointer shadow-lg active:scale-95 ${
+                      isAiVideoInterview
+                        ? 'bg-[#D4F82C] text-[#111215] hover:bg-[#c7eb22] shadow-[#D4F82C]/25 ring-2 ring-[#D4F82C]/30'
+                        : 'bg-[#111215] text-white hover:bg-[#202227] shadow-black/20'
+                    }`}
+                  >
+                    {isAiVideoInterview ? (
+                      <>
+                        <Video className="w-4 h-4" />
+                        <span>{sendingInvites ? 'Sending...' : 'Send Video Interview Invites'}</span>
+                      </>
+                    ) : (
+                      <>
+                        <Mail className="w-4 h-4" />
+                        <span>{sendingInvites ? 'Sending...' : 'Send Quick Apply Link'}</span>
+                      </>
+                    )}
+                  </button>
+                )}
               </div>
             </div>
           </div>

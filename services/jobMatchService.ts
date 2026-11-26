@@ -434,7 +434,7 @@ export function calculateJobMatchScore(job: any, candidate: CandidateMatchProfil
       label: 'Dept Open'
     },
     skillMatch: {
-      score: skillScore,
+      score: Math.round(skillMatchCoverage * 100),
       matchedSkills,
       missingSkills,
       totalRequired: totalReqSkills,
