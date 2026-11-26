@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { collection, query, onSnapshot, where, doc, updateDoc, deleteDoc, arrayUnion, getDocs, getDoc } from 'firebase/firestore';
+import { collection, query, onSnapshot, where, doc, updateDoc, deleteDoc, arrayUnion, getDocs, getDoc, setDoc } from 'firebase/firestore';
 
 import { db } from '../services/firebase';
 
@@ -393,6 +393,9 @@ const RecruiterAllJobs: React.FC = () => {
   const [newQuestionType, setNewQuestionType] = useState<'yes_no' | 'short_text' | 'number'>('yes_no');
   const [showAddQuestionRow, setShowAddQuestionRow] = useState(false);
   const [isGeneratingQuestions, setIsGeneratingQuestions] = useState(false);
+  const [editingQuestionIdx, setEditingQuestionIdx] = useState<number | null>(null);
+  const [editingQuestionText, setEditingQuestionText] = useState('');
+  const [editingQuestionType, setEditingQuestionType] = useState<'yes_no' | 'short_text' | 'number'>('yes_no');
 
   // Always enforce Day Mode for the Recruiter section
   useEffect(() => {
@@ -446,6 +449,24 @@ const RecruiterAllJobs: React.FC = () => {
       }
       setShowAddQuestionRow(false);
       setNewQuestionText('');
+      setEditingQuestionIdx(null);
+      setEditingQuestionText('');
+
+      // Also directly fetch latest saved screeningQuestions from Firestore in case they were updated
+      if (invitingJob.id) {
+        Promise.all([
+          getDoc(doc(db, 'jobs', invitingJob.id)).catch(() => null),
+          getDoc(doc(db, 'interviews', invitingJob.id)).catch(() => null)
+        ]).then(([jSnap, iSnap]) => {
+          const jQ = jSnap?.exists() ? jSnap.data()?.screeningQuestions : null;
+          const iQ = iSnap?.exists() ? iSnap.data()?.screeningQuestions : null;
+          const savedQ = (Array.isArray(jQ) && jQ.length > 0) ? jQ : ((Array.isArray(iQ) && iQ.length > 0) ? iQ : null);
+          if (savedQ && savedQ.length > 0) {
+            setJobScreeningQuestions(savedQ);
+            setInvitingJob(prev => prev && prev.id === invitingJob.id ? { ...prev, screeningQuestions: savedQ } as any : prev);
+          }
+        }).catch(err => console.warn('Could not fetch saved questions:', err));
+      }
     }
   }, [invitingJob]);
 
@@ -468,11 +489,13 @@ const RecruiterAllJobs: React.FC = () => {
 
   const handleSaveScreeningQuestionsToJob = async (updatedQuestions: ScreeningQuestion[]) => {
     setJobScreeningQuestions(updatedQuestions);
+    setInvitingJob(prev => prev ? { ...prev, screeningQuestions: updatedQuestions } as any : null);
+    setJobs(prevJobs => prevJobs.map(j => j.id === invitingJob?.id ? { ...j, screeningQuestions: updatedQuestions } : j));
     if (!invitingJob?.id) return;
     try {
       await Promise.all([
-        updateDoc(doc(db, 'jobs', invitingJob.id), { screeningQuestions: updatedQuestions }).catch(() => {}),
-        updateDoc(doc(db, 'interviews', invitingJob.id), { screeningQuestions: updatedQuestions }).catch(() => {})
+        setDoc(doc(db, 'jobs', invitingJob.id), { screeningQuestions: updatedQuestions, updatedAt: new Date() }, { merge: true }).catch(() => {}),
+        setDoc(doc(db, 'interviews', invitingJob.id), { screeningQuestions: updatedQuestions, updatedAt: new Date() }, { merge: true }).catch(() => {})
       ]);
     } catch (err) {
       console.warn('Could not persist screening questions:', err);
@@ -529,6 +552,39 @@ const RecruiterAllJobs: React.FC = () => {
     handleSaveScreeningQuestionsToJob(updated);
     setNewQuestionText('');
     setShowAddQuestionRow(false);
+  };
+
+  const handleStartEditQuestion = (idx: number) => {
+    const q = jobScreeningQuestions[idx];
+    if (!q) return;
+    setEditingQuestionIdx(idx);
+    setEditingQuestionText(q.question);
+    setEditingQuestionType(q.type || 'yes_no');
+  };
+
+  const handleSaveEditQuestion = () => {
+    if (editingQuestionIdx === null) return;
+    const text = editingQuestionText.trim();
+    if (!text) return;
+    const updated = jobScreeningQuestions.map((q, idx) => {
+      if (idx === editingQuestionIdx) {
+        return {
+          ...q,
+          question: text,
+          type: editingQuestionType,
+          expectedAnswer: editingQuestionType === 'yes_no' ? (q.expectedAnswer || 'yes') : q.expectedAnswer,
+        };
+      }
+      return q;
+    });
+    handleSaveScreeningQuestionsToJob(updated);
+    setEditingQuestionIdx(null);
+    setEditingQuestionText('');
+  };
+
+  const handleCancelEditQuestion = () => {
+    setEditingQuestionIdx(null);
+    setEditingQuestionText('');
   };
 
   const handleToggleSuggestedCandidate = (cand: any) => {
@@ -1055,6 +1111,7 @@ const RecruiterAllJobs: React.FC = () => {
           recruiterUID: norm.recruiterUID || j.recruiterUID,
           entryBy: norm.entryBy || j.entryBy || '',
           status: norm.status || 'Active',
+          screeningQuestions: (norm as any).screeningQuestions || j.screeningQuestions || [],
           hasJobDoc: true,
           hasInterviewDoc: false,
         });
@@ -1104,6 +1161,7 @@ const RecruiterAllJobs: React.FC = () => {
           recruiterEmail: i.recruiterEmail || existing?.recruiterEmail || '',
           recruiterUID: i.recruiterUID || existing?.recruiterUID,
           status: i.status || existing?.status || 'Active',
+          screeningQuestions: i.screeningQuestions || existing?.screeningQuestions || [],
           hasJobDoc: existing?.hasJobDoc || false,
           hasInterviewDoc: true,
         });
@@ -1134,6 +1192,7 @@ const RecruiterAllJobs: React.FC = () => {
           deadlineDate: existing?.deadlineDate || existing?.deadline || i.deadlineDate || i.deadline || i.applyDeadline || '',
           applyDeadline: existing?.applyDeadline || existing?.deadline || i.applyDeadline || i.deadline || '',
           status: i.status || existing?.status || 'Active',
+          screeningQuestions: i.screeningQuestions || existing?.screeningQuestions || [],
           customFields: i.customFields || existing?.customFields || [],
           genderRequirement: i.genderRequirement || i.gender || existing?.genderRequirement || 'Any',
           strictness: i.strictness || existing?.strictness || 'Low',
@@ -2169,9 +2228,11 @@ const RecruiterAllJobs: React.FC = () => {
         };
 
         await Promise.all([
-          updateDoc(doc(db, 'interviews', invitingJob.id), updatePayload).catch(() => {}),
-          updateDoc(doc(db, 'jobs', invitingJob.id), updatePayload).catch(() => {})
+          setDoc(doc(db, 'interviews', invitingJob.id), updatePayload, { merge: true }).catch(() => {}),
+          setDoc(doc(db, 'jobs', invitingJob.id), updatePayload, { merge: true }).catch(() => {})
         ]);
+        setInvitingJob(prev => prev ? { ...prev, screeningQuestions: jobScreeningQuestions, candidateEmails: updatedCandidateEmails } as any : null);
+        setJobs(prevJobs => prevJobs.map(j => j.id === invitingJob.id ? { ...j, screeningQuestions: jobScreeningQuestions, candidateEmails: updatedCandidateEmails } : j));
       } else {
         const updatePayload = {
           isAiVideoInterview,
@@ -2179,9 +2240,11 @@ const RecruiterAllJobs: React.FC = () => {
           updatedAt: new Date()
         };
         await Promise.all([
-          updateDoc(doc(db, 'interviews', invitingJob.id), updatePayload).catch(() => {}),
-          updateDoc(doc(db, 'jobs', invitingJob.id), updatePayload).catch(() => {})
+          setDoc(doc(db, 'interviews', invitingJob.id), updatePayload, { merge: true }).catch(() => {}),
+          setDoc(doc(db, 'jobs', invitingJob.id), updatePayload, { merge: true }).catch(() => {})
         ]);
+        setInvitingJob(prev => prev ? { ...prev, screeningQuestions: jobScreeningQuestions } as any : null);
+        setJobs(prevJobs => prevJobs.map(j => j.id === invitingJob.id ? { ...j, screeningQuestions: jobScreeningQuestions } : j));
       }
 
       const targetLink = isAiVideoInterview
@@ -2904,45 +2967,121 @@ const RecruiterAllJobs: React.FC = () => {
 
                     {/* Question List */}
                     <div className="space-y-1.5">
-                      {jobScreeningQuestions.map((q, idx) => (
-                        <div
-                          key={q.id || idx}
-                          className="p-2.5 rounded-xl bg-white border border-[#E4E7DC] flex items-center justify-between gap-2 hover:border-[#C2C5BA] transition-colors shadow-2xs"
-                        >
-                          <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                            <span className="w-5 h-5 rounded-full bg-[#E4E7DC] text-[#111215] text-[10px] font-black flex items-center justify-center shrink-0">
-                              {idx + 1}
-                            </span>
-                            <span className="text-xs font-medium text-[#111215] truncate">
-                              {q.question}
-                            </span>
-                          </div>
+                      {jobScreeningQuestions.map((q, idx) => {
+                        const isEditingThis = editingQuestionIdx === idx;
+                        return (
+                          <div
+                            key={q.id || idx}
+                            className={`p-2.5 rounded-xl border transition-all ${
+                              isEditingThis
+                                ? 'bg-[#FCFDF9] border-[#111215] ring-2 ring-[#D4F82C] shadow-sm'
+                                : 'bg-white border-[#E4E7DC] hover:border-[#C2C5BA] shadow-2xs'
+                            }`}
+                          >
+                            {isEditingThis ? (
+                              <div className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-[11px] font-black text-[#111215] flex items-center gap-1.5">
+                                    <span className="w-4 h-4 rounded-full bg-[#111215] text-[#D4F82C] text-[9px] font-black flex items-center justify-center">
+                                      {idx + 1}
+                                    </span>
+                                    <span>Edit Screener Question</span>
+                                  </span>
+                                  <div className="flex items-center gap-1.5">
+                                    <button
+                                      type="button"
+                                      onClick={handleSaveEditQuestion}
+                                      className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-[#111215] text-[#D4F82C] hover:bg-[#202227] flex items-center gap-1 cursor-pointer shadow-2xs"
+                                    >
+                                      <Check className="w-3 h-3" />
+                                      <span>Save Change</span>
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={handleCancelEditQuestion}
+                                      className="p-1 rounded text-[#73766C] hover:text-[#111215] hover:bg-[#E4E7DC]/60 cursor-pointer"
+                                      title="Cancel"
+                                    >
+                                      <X className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
+                                </div>
+                                <input
+                                  type="text"
+                                  value={editingQuestionText}
+                                  onChange={(e) => setEditingQuestionText(e.target.value)}
+                                  className="w-full h-8 px-2.5 text-xs rounded-lg border border-[#E4E7DC] bg-white text-[#111215] outline-none focus:border-[#111215]"
+                                  autoFocus
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') handleSaveEditQuestion();
+                                    if (e.key === 'Escape') handleCancelEditQuestion();
+                                  }}
+                                />
+                                <div className="flex items-center gap-2">
+                                  <span className="text-[10px] text-[#73766C] font-semibold">Answer Type:</span>
+                                  <select
+                                    value={editingQuestionType}
+                                    onChange={(e) => setEditingQuestionType(e.target.value as any)}
+                                    className="h-7 px-2 text-[11px] font-bold rounded-md border border-[#E4E7DC] bg-white text-[#111215] outline-none cursor-pointer"
+                                  >
+                                    <option value="yes_no">Yes / No Question</option>
+                                    <option value="number">Number (e.g. Years of Exp)</option>
+                                    <option value="short_text">Short Text / One-Word</option>
+                                  </select>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="flex items-center justify-between gap-2">
+                                <div
+                                  className="flex items-center gap-2.5 min-w-0 flex-1 cursor-pointer group"
+                                  onClick={() => handleStartEditQuestion(idx)}
+                                  title="Click to edit question text"
+                                >
+                                  <span className="w-5 h-5 rounded-full bg-[#E4E7DC] text-[#111215] text-[10px] font-black flex items-center justify-center shrink-0">
+                                    {idx + 1}
+                                  </span>
+                                  <span className="text-xs font-medium text-[#111215] truncate group-hover:text-blue-600">
+                                    {q.question}
+                                  </span>
+                                </div>
 
-                          <div className="flex items-center gap-2 shrink-0">
-                            <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider ${
-                              q.type === 'yes_no'
-                                ? 'bg-purple-100 text-purple-800'
-                                : q.type === 'number'
-                                ? 'bg-amber-100 text-amber-800'
-                                : 'bg-slate-100 text-slate-800'
-                            }`}>
-                              {q.type === 'yes_no' ? 'Yes / No' : q.type === 'number' ? 'Number' : 'Short Text'}
-                            </span>
+                                <div className="flex items-center gap-1.5 shrink-0">
+                                  <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider ${
+                                    q.type === 'yes_no'
+                                      ? 'bg-purple-100 text-purple-800'
+                                      : q.type === 'number'
+                                      ? 'bg-amber-100 text-amber-800'
+                                      : 'bg-slate-100 text-slate-800'
+                                  }`}>
+                                    {q.type === 'yes_no' ? 'Yes / No' : q.type === 'number' ? 'Number' : 'Short Text'}
+                                  </span>
 
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const filtered = jobScreeningQuestions.filter((_, i) => i !== idx);
-                                handleSaveScreeningQuestionsToJob(filtered);
-                              }}
-                              className="w-6 h-6 rounded-md hover:bg-red-50 text-gray-400 hover:text-red-600 flex items-center justify-center transition-colors cursor-pointer"
-                              title="Delete question"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleStartEditQuestion(idx)}
+                                    className="w-6 h-6 rounded-md hover:bg-[#E4E7DC]/70 text-gray-400 hover:text-[#111215] flex items-center justify-center transition-colors cursor-pointer"
+                                    title="Edit question text"
+                                  >
+                                    <Edit className="w-3.5 h-3.5" />
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const filtered = jobScreeningQuestions.filter((_, i) => i !== idx);
+                                      handleSaveScreeningQuestionsToJob(filtered);
+                                    }}
+                                    className="w-6 h-6 rounded-md hover:bg-red-50 text-gray-400 hover:text-red-600 flex items-center justify-center transition-colors cursor-pointer"
+                                    title="Delete question"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              </div>
+                            )}
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 )}

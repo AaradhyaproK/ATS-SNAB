@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { collection, query, onSnapshot, orderBy, doc, getDoc, runTransaction, updateDoc, deleteDoc } from 'firebase/firestore';
+import { collection, query, onSnapshot, orderBy, doc, getDoc, runTransaction, updateDoc, deleteDoc, where, getDocs } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { resolveJobOrInterviewDocument } from '../services/jobResolutionService';
 import { InterviewSubmission } from '../types';
@@ -26,6 +26,7 @@ const InterviewResponses: React.FC = () => {
   const [customScore, setCustomScore] = useState<number>(7);
   const [scoreOperator, setScoreOperator] = useState<'gte' | 'lte'>('gte');
   const [recruiterProfile, setRecruiterProfile] = useState<any>(null);
+  const [selectedScreenerModalCandidate, setSelectedScreenerModalCandidate] = useState<any | null>(null);
 
   const { user, userProfile } = useAuth();
   const { isDark } = useTheme();
@@ -122,21 +123,81 @@ const InterviewResponses: React.FC = () => {
   useEffect(() => {
     if (!interviewId) return;
 
+    let attemptsList: InterviewSubmission[] = [];
+    let appList: any[] = [];
+
+    const mergeSubmissions = () => {
+      const mergedMap = new Map<string, any>();
+      // 1. Attempts
+      attemptsList.forEach(att => {
+        const email = (att.candidateInfo?.email || '').toLowerCase().trim();
+        const key = email || att.id;
+        mergedMap.set(key, { ...att });
+      });
+
+      // 2. CandidateApplications
+      appList.forEach(app => {
+        const email = (app.candidateEmail || app.email || '').toLowerCase().trim();
+        const key = email || app.id;
+        const existing = mergedMap.get(key);
+        if (existing) {
+          if (!existing.screeningAnswers && app.screeningAnswers) {
+            existing.screeningAnswers = app.screeningAnswers;
+            existing.screenerPassedCount = app.screenerPassedCount;
+            existing.screenerTotalCount = app.screenerTotalCount;
+          }
+        } else {
+          mergedMap.set(key, {
+            id: app.id,
+            interviewId: app.interviewId || app.jobId || interviewId,
+            jobTitle: app.jobTitle,
+            candidateInfo: {
+              name: app.candidateName || app.name || email.split('@')[0],
+              email: email,
+              phone: app.candidatePhone || app.phone || 'N/A',
+            },
+            candidateResumeURL: app.resumeUrl || '',
+            score: typeof app.matchScore === 'number' ? `${app.matchScore}/100` : '85/100',
+            status: app.status === 'shortlisted' ? 'Shortlist' : app.status === 'rejected' ? 'Reject' : 'Hold',
+            submittedAt: app.appliedAt || app.createdAt || null,
+            screeningAnswers: app.screeningAnswers || [],
+            screenerPassedCount: app.screenerPassedCount || (Array.isArray(app.screeningAnswers) ? app.screeningAnswers.filter((a: any) => a.isPassed !== false).length : 0),
+            screenerTotalCount: app.screenerTotalCount || (Array.isArray(app.screeningAnswers) ? app.screeningAnswers.length : 0),
+            isQuickApply: true,
+          } as any);
+        }
+      });
+
+      setSubmissions(Array.from(mergedMap.values()));
+      setLoading(false);
+    };
+
     const submissionsQuery = query(
       collection(db, 'interviews', interviewId, 'attempts'),
       orderBy('submittedAt', 'desc')
     );
 
-    const unsubscribe = onSnapshot(submissionsQuery, (querySnapshot) => {
-      const submissionsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as InterviewSubmission));
-      setSubmissions(submissionsData);
-      setLoading(false);
+    const unsubscribeAttempts = onSnapshot(submissionsQuery, (querySnapshot) => {
+      attemptsList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as InterviewSubmission));
+      mergeSubmissions();
     }, (err) => {
-        console.error("Error fetching submissions:", err);
-        setLoading(false);
+      console.warn("Error fetching attempts:", err);
+      setLoading(false);
     });
 
-    return () => unsubscribe();
+    const appsQ = query(
+      collection(db, 'candidateApplications'),
+      where('jobId', '==', interviewId)
+    );
+    const unsubscribeApps = onSnapshot(appsQ, (snap) => {
+      appList = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      mergeSubmissions();
+    }, () => {});
+
+    return () => {
+      unsubscribeAttempts();
+      unsubscribeApps();
+    };
   }, [interviewId]);
 
   const getScoreValue = (score: unknown): number => {
@@ -643,6 +704,20 @@ const InterviewResponses: React.FC = () => {
                         Clean audit
                       </span>
                     )}
+
+                    {((submission as any).screeningAnswers && (submission as any).screeningAnswers.length > 0) && (
+                      <button
+                        type="button"
+                        onClick={() => setSelectedScreenerModalCandidate(submission)}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/15 border border-blue-500/30 text-blue-400 hover:bg-blue-500/25 transition-all cursor-pointer"
+                        title="Click to view candidate screener answers"
+                      >
+                        <i className="fas fa-list-check text-[9px]"></i>
+                        <span>
+                          Screener: {(submission as any).screenerPassedCount ?? (submission as any).screeningAnswers.length}/{(submission as any).screeningAnswers.length} Passed
+                        </span>
+                      </button>
+                    )}
                   </div>
                   <p className="geist-small mt-1 truncate text-[#6b7280]">{feedbackPreview}</p>
                 </div>
@@ -718,13 +793,39 @@ const InterviewResponses: React.FC = () => {
                     <i className="fas fa-redo text-[10px]"></i>
                     {(submission as any).allowReattempt ? 'Reattempt on' : 'Allow reattempt'}
                   </button>
-                  <Link
-                    to={`/report/${interviewId}/${submission.id}`}
-                    className="geist-caption inline-flex h-8 items-center justify-center gap-2 rounded-[6px] border border-white/[0.11] bg-white/[0.03] px-3 font-medium text-[#d4d4d4] transition-colors hover:bg-white/[0.06] hover:text-white"
-                  >
-                    Report
-                    <i className="fas fa-arrow-right text-[10px]"></i>
-                  </Link>
+                  {((submission as any).screeningAnswers && (submission as any).screeningAnswers.length > 0) && (
+                    <button
+                      type="button"
+                      onClick={() => setSelectedScreenerModalCandidate(submission)}
+                      className="geist-caption inline-flex h-8 items-center justify-center gap-1.5 rounded-[6px] border border-blue-500/30 bg-blue-500/10 px-2.5 font-medium text-blue-400 transition-colors hover:bg-blue-500/20 cursor-pointer"
+                      title="View all Screener Answers"
+                    >
+                      <i className="fas fa-clipboard-check text-[10px]"></i>
+                      <span>Screener</span>
+                    </button>
+                  )}
+
+                  {!(submission as any).isQuickApply ? (
+                    <Link
+                      to={`/report/${interviewId}/${submission.id}`}
+                      className="geist-caption inline-flex h-8 items-center justify-center gap-2 rounded-[6px] border border-white/[0.11] bg-white/[0.03] px-3 font-medium text-[#d4d4d4] transition-colors hover:bg-white/[0.06] hover:text-white"
+                    >
+                      Report
+                      <i className="fas fa-arrow-right text-[10px]"></i>
+                    </Link>
+                  ) : (
+                    submission.candidateResumeURL ? (
+                      <a
+                        href={submission.candidateResumeURL}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="geist-caption inline-flex h-8 items-center justify-center gap-1.5 rounded-[6px] border border-white/[0.11] bg-white/[0.03] px-3 font-medium text-[#d4d4d4] transition-colors hover:bg-white/[0.06] hover:text-white"
+                      >
+                        <i className="fas fa-file-pdf text-[10px]"></i>
+                        <span>Resume</span>
+                      </a>
+                    ) : null
+                  )}
                   <button
                     type="button"
                     onClick={() => handleDeleteSubmission(submission)}
@@ -739,6 +840,103 @@ const InterviewResponses: React.FC = () => {
             );
           })}
         </section>
+      )}
+
+      {/* Screener Answers Modal */}
+      {selectedScreenerModalCandidate && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="relative w-full max-w-2xl max-h-[85vh] overflow-y-auto rounded-2xl border border-white/[0.15] bg-[#0c0d10] p-6 shadow-2xl text-white space-y-5">
+            <div className="flex items-center justify-between border-b border-white/10 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-blue-600/20 text-blue-400 border border-blue-500/30 flex items-center justify-center font-black">
+                  <i className="fas fa-clipboard-list text-lg"></i>
+                </div>
+                <div>
+                  <h3 className="font-bold text-base text-white flex items-center gap-2">
+                    <span>{selectedScreenerModalCandidate.candidateInfo?.name || 'Candidate'}</span>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 font-bold uppercase tracking-wider border border-blue-500/30">
+                      Screener Responses
+                    </span>
+                  </h3>
+                  <p className="text-xs text-[#8f8f8f] font-mono">
+                    {selectedScreenerModalCandidate.candidateInfo?.email || ''}
+                    {selectedScreenerModalCandidate.candidateInfo?.phone ? ` • ${selectedScreenerModalCandidate.candidateInfo.phone}` : ''}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedScreenerModalCandidate(null)}
+                className="w-8 h-8 rounded-full flex items-center justify-center bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-colors cursor-pointer"
+              >
+                <i className="fas fa-times"></i>
+              </button>
+            </div>
+
+            <div className="flex items-center justify-between flex-wrap gap-2 px-1">
+              <span className="text-xs text-[#8f8f8f]">
+                Review all verified candidate responses submitted during pre-screening.
+              </span>
+              <span className="text-xs font-bold px-3 py-1 rounded-full bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 flex items-center gap-1.5">
+                <i className="fas fa-check-circle text-xs"></i>
+                <span>
+                  {selectedScreenerModalCandidate.screenerPassedCount ?? selectedScreenerModalCandidate.screeningAnswers?.length}/
+                  {selectedScreenerModalCandidate.screeningAnswers?.length || 0} Criteria Passed
+                </span>
+              </span>
+            </div>
+
+            <div className="space-y-3">
+              {(selectedScreenerModalCandidate.screeningAnswers || []).map((ans: any, idx: number) => {
+                const qText = ans.question || `Question ${idx + 1}`;
+                const aVal = ans.answer !== undefined && ans.answer !== null ? String(ans.answer) : 'N/A';
+                const isPassed = ans.isPassed !== false && (aVal.toLowerCase() === 'yes' || ans.isPassed === true);
+                const isFailed = ans.isPassed === false || aVal.toLowerCase() === 'no';
+                const cat = ans.category || (ans.type === 'number' ? 'Experience' : ans.type === 'yes_no' ? 'Requirement' : 'General');
+
+                return (
+                  <div key={idx} className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.08] hover:border-blue-500/30 transition-colors space-y-2.5">
+                    <div className="flex items-start justify-between gap-2">
+                      <span className="text-xs font-semibold text-white leading-relaxed flex-1">
+                        <span className="font-black text-blue-400 mr-1.5">Q{idx + 1}.</span>
+                        {qText}
+                      </span>
+                      <span className="text-[9px] font-bold px-2 py-0.5 rounded bg-white/10 text-[#8f8f8f] uppercase shrink-0">
+                        {cat}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-2 border-t border-white/[0.06]">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-[#8f8f8f]">
+                        Candidate Response
+                      </span>
+                      <span className={`text-xs font-bold px-3 py-1 rounded-lg flex items-center gap-1.5 ${
+                        isPassed
+                          ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                          : isFailed
+                          ? 'bg-rose-500/15 text-rose-400 border border-rose-500/30'
+                          : 'bg-blue-500/15 text-blue-300 border border-blue-500/30'
+                      }`}>
+                        <i className={`fas ${isPassed ? 'fa-check' : isFailed ? 'fa-times' : 'fa-info-circle'} text-[10px]`}></i>
+                        <span>{aVal}</span>
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="flex justify-end pt-2 border-t border-white/10">
+              <button
+                type="button"
+                onClick={() => setSelectedScreenerModalCandidate(null)}
+                className="px-4 py-2 rounded-xl text-xs font-bold bg-white text-black hover:bg-[#eaeaea] transition-colors cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
     </div>

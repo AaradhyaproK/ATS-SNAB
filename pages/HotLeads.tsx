@@ -525,7 +525,22 @@ export default function HotLeads() {
               matchScore: c.matchScore,
               resumeUrl: c.resumeUrl || '',
               source: c.source || 'Invited Candidate',
+              screeningAnswers: c.screeningAnswers || [],
+              screenerPassedCount: c.screenerPassedCount || (Array.isArray(c.screeningAnswers) ? c.screeningAnswers.filter((a: any) => a.isPassed !== false).length : 0),
+              screenerTotalCount: c.screenerTotalCount || (Array.isArray(c.screeningAnswers) ? c.screeningAnswers.length : 0),
+              screenerScore: c.screenerScore,
+              screenerSummary: c.screenerSummary,
             });
+          } else {
+            // If lead already exists, merge screeningAnswers if c has them
+            const existing = leadsMap.get(uniqueKey);
+            if (existing && (!existing.screeningAnswers || existing.screeningAnswers.length === 0) && Array.isArray(c.screeningAnswers) && c.screeningAnswers.length > 0) {
+              existing.screeningAnswers = c.screeningAnswers;
+              existing.screenerPassedCount = c.screenerPassedCount || c.screeningAnswers.filter((a: any) => a.isPassed !== false).length;
+              existing.screenerTotalCount = c.screenerTotalCount || c.screeningAnswers.length;
+              existing.screenerScore = c.screenerScore;
+              existing.screenerSummary = c.screenerSummary;
+            }
           }
         });
 
@@ -831,6 +846,37 @@ export default function HotLeads() {
             ? { ...prev, resumeUrl: mergedDetails.resumeUrl || prev.resumeUrl, candidateDetails: mergedDetails }
             : prev
         );
+      }
+
+      // 2. Fetch screening answers from candidateApplications if not already attached to lead
+      if (!lead.screeningAnswers || lead.screeningAnswers.length === 0) {
+        try {
+          const qApp = query(collection(db, 'candidateApplications'), where('candidateEmail', '==', cleanEmail));
+          const appSnap = await getDocs(qApp).catch(() => null);
+          if (appSnap && !appSnap.empty) {
+            const matchDoc = appSnap.docs.find(d => {
+              const dData = d.data();
+              return dData.jobId === lead.jobId || dData.interviewId === lead.jobId;
+            }) || appSnap.docs[0];
+            const appData = matchDoc.data();
+            if (Array.isArray(appData.screeningAnswers) && appData.screeningAnswers.length > 0) {
+              setSelectedCandidateDetail((prev) =>
+                prev && prev.id === lead.id
+                  ? {
+                      ...prev,
+                      screeningAnswers: appData.screeningAnswers,
+                      screenerPassedCount: appData.screenerPassedCount ?? appData.screeningAnswers.filter((a: any) => a.isPassed !== false).length,
+                      screenerTotalCount: appData.screenerTotalCount ?? appData.screeningAnswers.length,
+                      screenerScore: appData.screenerScore,
+                      screenerSummary: appData.screenerSummary,
+                    }
+                  : prev
+              );
+            }
+          }
+        } catch (e) {
+          console.warn('Error fetching screener answers for candidate modal:', e);
+        }
       }
     } catch (err) {
       console.warn('Error fetching candidate full profile:', err);
@@ -2330,10 +2376,15 @@ export default function HotLeads() {
                                   </div>
 
                                   {lead.screeningAnswers && lead.screeningAnswers.length > 0 && (
-                                    <div className="flex items-center gap-1 text-[9.5px] font-bold text-blue-600 dark:text-blue-400">
-                                      <CheckCircle2 className="size-2.5 shrink-0" />
-                                      <span>Screener: {lead.screenerPassedCount ?? lead.screeningAnswers.length}/{lead.screeningAnswers.length} Passed</span>
-                                    </div>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleOpenCandidateModal(lead)}
+                                      className="flex items-center gap-1 text-[10px] font-bold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer bg-blue-50 dark:bg-blue-950/40 px-1.5 py-0.5 rounded border border-blue-500/20 transition-all hover:bg-blue-100"
+                                      title="Click to view candidate screener answers"
+                                    >
+                                      <CheckCircle2 className="size-2.5 shrink-0 text-blue-600 dark:text-blue-400" />
+                                      <span>Screener: {lead.screenerPassedCount ?? lead.screeningAnswers.length}/{lead.screeningAnswers.length} Answers</span>
+                                    </button>
                                   )}
                                 </div>
                               </div>
@@ -2930,11 +2981,11 @@ export default function HotLeads() {
                             <h4 className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
                               <span>Quick Apply Screener Answers</span>
                               <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300 font-bold uppercase tracking-wider">
-                                Pre-Screening
+                                {selectedCandidateDetail.screeningAnswers.length} Questions
                               </span>
                             </h4>
                             <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                              Candidate confirmed requirements according to the Job Description (JD).
+                              Candidate responses to screener questions submitted during Quick Apply.
                             </p>
                           </div>
                         </div>
@@ -2944,28 +2995,40 @@ export default function HotLeads() {
                         </span>
                       </div>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 pt-1">
                         {selectedCandidateDetail.screeningAnswers.map((ans: any, idx: number) => {
-                          const isYes = ans.answer?.toLowerCase() === 'yes' || ans.isPassed;
-                          const isNo = ans.answer?.toLowerCase() === 'no';
+                          const questionText = ans.question || `Question ${idx + 1}`;
+                          const answerValue = ans.answer !== undefined && ans.answer !== null ? String(ans.answer) : 'N/A';
+                          const isYes = answerValue.toLowerCase() === 'yes' || ans.isPassed === true;
+                          const isNo = answerValue.toLowerCase() === 'no' || ans.isPassed === false;
+                          const category = ans.category || (ans.type === 'number' ? 'Experience' : ans.type === 'yes_no' ? 'Requirement' : 'General');
+
                           return (
-                            <div key={idx} className="p-3 rounded-lg bg-white dark:bg-[#111114] border border-gray-200 dark:border-white/[0.1] space-y-1.5">
-                              <span className="text-[11px] text-slate-600 dark:text-slate-400 font-medium line-clamp-2 block leading-snug">
-                                <span className="font-bold text-blue-600 dark:text-blue-400 mr-1">{idx + 1}.</span>
-                                {ans.question}
-                              </span>
-                              <div className="flex items-center justify-between pt-1 border-t border-gray-100 dark:border-white/5">
-                                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Response</span>
-                                <span className={`text-xs font-bold px-2 py-0.5 rounded-md flex items-center gap-1 ${
+                            <div key={idx} className="p-3.5 rounded-xl bg-white dark:bg-[#111114] border border-gray-200 dark:border-white/[0.1] space-y-2 shadow-2xs hover:border-blue-400/50 transition-colors">
+                              <div className="flex items-start justify-between gap-2">
+                                <span className="text-xs text-slate-800 dark:text-slate-200 font-semibold leading-snug break-words flex-1">
+                                  <span className="font-black text-blue-600 dark:text-blue-400 mr-1.5">Q{idx + 1}.</span>
+                                  {questionText}
+                                </span>
+                                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-400 uppercase shrink-0">
+                                  {category}
+                                </span>
+                              </div>
+
+                              <div className="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-white/5">
+                                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                                  Candidate Answer
+                                </span>
+                                <span className={`text-xs font-bold px-2.5 py-1 rounded-md flex items-center gap-1.5 shadow-2xs ${
                                   isYes
-                                    ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
+                                    ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-500/20'
                                     : isNo
-                                    ? 'bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300'
-                                    : 'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-200'
+                                    ? 'bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-500/20'
+                                    : 'bg-blue-50 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-500/20'
                                 }`}>
-                                  {isYes && <Check size={11} />}
-                                  {isNo && <X size={11} />}
-                                  <span>{ans.answer || 'N/A'}</span>
+                                  {isYes && <Check size={12} className="text-emerald-600 dark:text-emerald-400" />}
+                                  {isNo && <X size={12} className="text-rose-600 dark:text-rose-400" />}
+                                  <span>{answerValue}</span>
                                 </span>
                               </div>
                             </div>

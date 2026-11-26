@@ -498,6 +498,8 @@ export default function KanbanPipeline() {
             education: typeof education === 'string' ? education : 'Graduate',
             summary,
             resumeUrl,
+            screeningAnswers: c.screeningAnswers || [],
+            screenerPassedCount: c.screenerPassedCount || (Array.isArray(c.screeningAnswers) ? c.screeningAnswers.filter((a: any) => a.isPassed !== false).length : 0),
             scheduledInterview: c.scheduledInterview,
           });
         });
@@ -1893,28 +1895,37 @@ export default function KanbanPipeline() {
                         </span>
                       </div>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
                         {selectedDrawerCandidate.screeningAnswers.map((ans: any, idx: number) => {
-                          const isYes = ans.answer?.toLowerCase() === 'yes' || ans.isPassed;
-                          const isNo = ans.answer?.toLowerCase() === 'no';
+                          const questionText = ans.question || `Question ${idx + 1}`;
+                          const answerValue = ans.answer !== undefined && ans.answer !== null ? String(ans.answer) : 'N/A';
+                          const isYes = answerValue.toLowerCase() === 'yes' || ans.isPassed === true;
+                          const isNo = answerValue.toLowerCase() === 'no' || ans.isPassed === false;
+                          const category = ans.category || (ans.type === 'number' ? 'Experience' : ans.type === 'yes_no' ? 'Requirement' : 'General');
+
                           return (
-                            <div key={idx} className="p-2.5 rounded-lg bg-white dark:bg-[#111114] border border-gray-200 dark:border-white/[0.08] space-y-1">
-                              <span className="text-[10.5px] text-gray-600 dark:text-neutral-400 font-medium line-clamp-2 block leading-snug">
-                                <span className="font-bold text-blue-600 dark:text-blue-400 mr-1">{idx + 1}.</span>
-                                {ans.question}
-                              </span>
-                              <div className="flex items-center justify-between pt-1 border-t border-gray-100 dark:border-white/5">
-                                <span className="text-[9.5px] font-bold uppercase text-gray-400">Response</span>
-                                <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1 ${
+                            <div key={idx} className="p-3 rounded-xl bg-white dark:bg-[#111114] border border-gray-200 dark:border-white/[0.08] space-y-2 shadow-2xs hover:border-blue-400/50 transition-colors">
+                              <div className="flex items-start justify-between gap-2">
+                                <span className="text-xs text-gray-800 dark:text-neutral-200 font-semibold leading-snug break-words flex-1">
+                                  <span className="font-bold text-blue-600 dark:text-blue-400 mr-1.5">Q{idx + 1}.</span>
+                                  {questionText}
+                                </span>
+                                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-neutral-400 uppercase shrink-0">
+                                  {category}
+                                </span>
+                              </div>
+                              <div className="flex items-center justify-between pt-1.5 border-t border-gray-100 dark:border-white/5">
+                                <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Response</span>
+                                <span className={`text-xs font-bold px-2 py-0.5 rounded-md flex items-center gap-1 ${
                                   isYes
                                     ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
                                     : isNo
                                     ? 'bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300'
-                                    : 'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-200'
+                                    : 'bg-blue-50 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300'
                                 }`}>
-                                  {isYes && <Check size={10} />}
-                                  {isNo && <X size={10} />}
-                                  <span>{ans.answer || 'N/A'}</span>
+                                  {isYes && <Check size={11} />}
+                                  {isNo && <X size={11} />}
+                                  <span>{answerValue}</span>
                                 </span>
                               </div>
                             </div>

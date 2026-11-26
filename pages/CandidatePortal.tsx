@@ -397,6 +397,22 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab, in
       const enrichedFound = { ...found, screeningQuestions: questions };
       setTargetJobData(enrichedFound);
       setQuickApplyQuestions(questions);
+
+      // Even if found in allJobs in memory, asynchronously check Firestore for latest saved questions
+      if (found.id) {
+        Promise.all([
+          getDoc(doc(db, 'jobs', found.id)).catch(() => null),
+          getDoc(doc(db, 'interviews', found.id)).catch(() => null)
+        ]).then(([jSnap, iSnap]) => {
+          const jQ = jSnap?.exists() ? jSnap.data()?.screeningQuestions : null;
+          const iQ = iSnap?.exists() ? iSnap.data()?.screeningQuestions : null;
+          const savedQ = (Array.isArray(jQ) && jQ.length > 0) ? jQ : ((Array.isArray(iQ) && iQ.length > 0) ? iQ : null);
+          if (savedQ && savedQ.length > 0) {
+            setTargetJobData(prev => prev ? { ...prev, screeningQuestions: savedQ } : prev);
+            setQuickApplyQuestions(savedQ);
+          }
+        }).catch(() => {});
+      }
       return;
     }
 
@@ -1486,6 +1502,9 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab, in
               education: existing.education || item.education,
               experience: existing.experience || item.experience,
               accessCode: existing.accessCode || item.accessCode || codeClean,
+              screeningQuestions: (Array.isArray(existing.screeningQuestions) && existing.screeningQuestions.length > 0)
+                ? existing.screeningQuestions
+                : (Array.isArray(item.screeningQuestions) && item.screeningQuestions.length > 0 ? item.screeningQuestions : existing.screeningQuestions || item.screeningQuestions),
             };
           }
           continue;
@@ -2564,24 +2583,31 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab, in
     if (!targetJob) return;
 
     let questions: ScreeningQuestion[] = [];
-    if (Array.isArray(targetJob.screeningQuestions) && targetJob.screeningQuestions.length > 0) {
-      questions = targetJob.screeningQuestions;
-    } else {
-      try {
-        const [jobSnap, intSnap] = await Promise.all([
-          getDoc(doc(db, 'jobs', targetJob.id)).catch(() => null),
-          getDoc(doc(db, 'interviews', targetJob.id)).catch(() => null),
-        ]);
-        const jobData = jobSnap?.exists() ? jobSnap.data() : null;
-        const intData = intSnap?.exists() ? intSnap.data() : null;
-        const combinedData = { ...targetJob, ...(intData || {}), ...(jobData || {}) };
+    try {
+      const [jobSnap, intSnap] = await Promise.all([
+        getDoc(doc(db, 'jobs', targetJob.id)).catch(() => null),
+        getDoc(doc(db, 'interviews', targetJob.id)).catch(() => null),
+      ]);
+      const jobQ = jobSnap?.exists() ? jobSnap.data()?.screeningQuestions : null;
+      const intQ = intSnap?.exists() ? intSnap.data()?.screeningQuestions : null;
+      if (Array.isArray(jobQ) && jobQ.length > 0) {
+        questions = jobQ;
+      } else if (Array.isArray(intQ) && intQ.length > 0) {
+        questions = intQ;
+      } else {
+        const combinedData = { ...targetJob, ...(intSnap?.data() || {}), ...(jobSnap?.data() || {}) };
         if (Array.isArray(combinedData.screeningQuestions) && combinedData.screeningQuestions.length > 0) {
           questions = combinedData.screeningQuestions;
-        } else {
-          questions = generateDefaultScreeningQuestions(combinedData);
         }
-      } catch (err) {
-        console.warn('Could not fetch questions from Firestore, generating defaults:', err);
+      }
+    } catch (err) {
+      console.warn('Could not fetch questions from Firestore, checking in-memory:', err);
+    }
+
+    if (!questions || questions.length === 0) {
+      if (Array.isArray(targetJob.screeningQuestions) && targetJob.screeningQuestions.length > 0) {
+        questions = targetJob.screeningQuestions;
+      } else {
         questions = generateDefaultScreeningQuestions(targetJob);
       }
     }
@@ -2746,26 +2772,41 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab, in
         source: 'Quick Apply'
       }).catch((err) => console.warn('Note: application collection save:', err));
 
-      // 3. Register into interviews collection so recruiters see candidate in interview details
+      // 3. Register into interviews & jobs collection so recruiters see candidate in interview & job details
+      const candidateEntry = {
+        name: candidateName,
+        email: candidateEmail,
+        phone: candidatePhone,
+        resumeUrl,
+        appliedAt: new Date().toISOString(),
+        status: 'interested',
+        matchScore: finalMatchScore,
+        screeningAnswers: screenerEvaluation.answers,
+        screenerPassedCount: screenerEvaluation.passedCount,
+        screenerTotalCount: screenerEvaluation.totalCount,
+        screenerScore: screenerEvaluation.screenerScore,
+        screenerSummary: screenerEvaluation.summary,
+        source: 'quick_apply'
+      };
+
       try {
         const intRef = doc(db, 'interviews', jobId);
         await updateDoc(intRef, {
           candidateEmails: arrayUnion(candidateEmail),
-          candidateData: arrayUnion({
-            name: candidateName,
-            email: candidateEmail,
-            phone: candidatePhone,
-            resumeUrl,
-            appliedAt: new Date().toISOString(),
-            status: 'interested',
-            matchScore: finalMatchScore,
-            screeningAnswers: screenerEvaluation.answers,
-            screenerPassedCount: screenerEvaluation.passedCount,
-            source: 'quick_apply'
-          })
+          candidateData: arrayUnion(candidateEntry)
         });
       } catch {
-        // Not all jobs are in interviews collection, ignore
+        // Not in interviews collection or failed, try jobs
+      }
+
+      try {
+        const jobRef = doc(db, 'jobs', jobId);
+        await updateDoc(jobRef, {
+          candidateEmails: arrayUnion(candidateEmail),
+          candidateData: arrayUnion(candidateEntry)
+        });
+      } catch {
+        // Not in jobs collection, ignore
       }
 
       // Establish candidate session if not yet active
