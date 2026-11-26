@@ -502,7 +502,7 @@ const ActiveJobsPage: React.FC = () => {
               <span>Client Portal</span>
               <span className="size-1.5 rounded-full bg-[#8FB305] animate-pulse"></span>
             </Link>
-            <Link to="/#pricing" className="hover:text-[#111215] transition-colors whitespace-nowrap shrink-0">
+            <Link to="/pricing" className="hover:text-[#111215] transition-colors whitespace-nowrap shrink-0">
               Pricing
             </Link>
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#111215] text-white text-xs font-bold shadow-2xs whitespace-nowrap shrink-0">
@@ -1258,7 +1258,7 @@ const ActiveJobsPage: React.FC = () => {
               <div className="font-bold text-[#111215] uppercase tracking-wider text-[11px]">Product</div>
               <div><Link to="/#pipeline" className="text-[#73766C] hover:text-[#111215]">Pipeline Kanban</Link></div>
               <div><Link to="/#client-portal" className="text-[#73766C] hover:text-[#111215]">Client Portal</Link></div>
-              <div><Link to="/#pricing" className="text-[#73766C] hover:text-[#111215]">Pricing Estimator</Link></div>
+              <div><Link to="/pricing" className="text-[#73766C] hover:text-[#111215]">Pricing & Plans</Link></div>
               <div><Link to="/active-jobs" className="text-[#111215] font-bold">Active Job Board</Link></div>
             </div>
 

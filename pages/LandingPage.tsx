@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   Sparkles,
   ArrowRight,
@@ -296,6 +296,7 @@ const FAQ_ITEMS = [
 ];
 
 export default function LandingPage() {
+  const navigate = useNavigate();
   const { user, userProfile } = useAuth();
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -325,7 +326,9 @@ export default function LandingPage() {
     email: '',
     phone: '',
     company: '',
-    hiringVolume: '1–5 roles / month',
+    hiringVolume: '6–20 roles / month',
+    primaryInterest: 'Full ATS Recruitment Suite',
+    preferredTime: 'Earliest Available (Next 15–30 Mins)',
   });
   const [submittingLead, setSubmittingLead] = useState(false);
   const [leadSubmitted, setLeadSubmitted] = useState(false);
@@ -351,7 +354,7 @@ export default function LandingPage() {
   const [activeProcessTab, setActiveProcessTab] = useState<'interview' | 'coding' | 'mock'>('interview');
 
   // Dynamic AI Interview Pricing Calculator State (₹149 down to ₹129 / interview + Modular Rounds)
-  const [pricingTab, setPricingTab] = useState<'ai-interviews' | 'subscription'>('ai-interviews');
+  const [pricingTab, setPricingTab] = useState<'subscription' | 'ai-interviews'>('subscription');
   const [calcAiInterviews, setCalcAiInterviews] = useState<number>(50);
 
   // Modular Evaluation Round Checkmarks
@@ -539,7 +542,7 @@ export default function LandingPage() {
     e.preventDefault();
     setSubmittingLead(true);
     try {
-      await handleFormspreeSubmit(e);
+      // 1. Direct Firebase Firestore write to 'leads'
       try {
         await addDoc(collection(db, 'leads'), {
           ...leadForm,
@@ -549,9 +552,33 @@ export default function LandingPage() {
       } catch (err) {
         console.warn('Firestore lead logging note:', err);
       }
+
+      // 2. Also log to contactSubmissions
+      try {
+        await addDoc(collection(db, 'contactSubmissions'), {
+          name: leadForm.name,
+          email: leadForm.email,
+          phone: leadForm.phone,
+          subject: `30-Day Free Trial Demo: ${leadForm.company || leadForm.name}`,
+          message: `Company: ${leadForm.company} | Hiring Volume: ${leadForm.hiringVolume} | Interest: ${leadForm.primaryInterest} | Preferred Time: ${leadForm.preferredTime}`,
+          createdAt: serverTimestamp(),
+          status: 'new'
+        });
+      } catch (err) {
+        console.warn('Contact submission note:', err);
+      }
+
+      // 3. Graceful Formspree dispatch
+      try {
+        await handleFormspreeSubmit(e);
+      } catch (formErr) {
+        console.warn('Formspree dispatch note:', formErr);
+      }
+
       setLeadSubmitted(true);
     } catch (err) {
       console.error('Error submitting lead form:', err);
+      setLeadSubmitted(true);
     } finally {
       setSubmittingLead(false);
     }
@@ -559,7 +586,14 @@ export default function LandingPage() {
 
   useEffect(() => {
     document.title = 'InterviewXpert | #1 AI Applicant Tracking System (ATS) & Autonomous Voice Video Interview Platform';
-  }, []);
+
+    if (typeof window !== 'undefined') {
+      const searchParams = new URLSearchParams(window.location.search);
+      if (searchParams.get('demo') === 'true' || window.location.hash === '#demo' || window.location.hash === '#book-demo') {
+        navigate('/book-demo');
+      }
+    }
+  }, [navigate]);
 
   // ── High-Performance Dynamic Scroll Tracking ──
   // - On Mobile (< 768px): Curves are hidden and scroll execution is completely bypassed for 120 FPS native scrolling.
@@ -893,14 +927,13 @@ export default function LandingPage() {
                 >
                   Sign In
                 </Link>
-                <button
-                  type="button"
-                  onClick={() => setBookingModalOpen(true)}
+                <Link
+                  to="/book-demo"
                   className="inline-flex h-9 sm:h-9.5 items-center gap-1.5 sm:gap-2 px-3.5 sm:px-4.5 rounded-full bg-[#111215] hover:bg-black text-white text-xs font-bold transition-all shadow-xs cursor-pointer group"
                 >
                   <span>Book Demo</span>
                   <span className="text-[#D4F82C] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform">↗</span>
-                </button>
+                </Link>
               </div>
             )}
 
@@ -1164,17 +1197,14 @@ export default function LandingPage() {
                 </Link>
               ) : (
                 <>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMobileMenuOpen(false);
-                      setBookingModalOpen(true);
-                    }}
+                  <Link
+                    to="/book-demo"
+                    onClick={() => setMobileMenuOpen(false)}
                     className="w-full flex items-center justify-center gap-2 py-3.5 rounded-full bg-[#111215] text-white text-xs font-bold shadow-sm cursor-pointer"
                   >
                     <span>Start 30-Day Free Trial</span>
                     <span className="text-[#D4F82C]">↗</span>
-                  </button>
+                  </Link>
 
                   <a
                     href="https://wa.me/919511779317?text=Hi%20InterviewXpert%20team,%20I%20would%20like%20a%20demo%20of%20the%20platform."
@@ -1227,14 +1257,13 @@ export default function LandingPage() {
               </p>
 
               <div className="flex flex-col sm:flex-row sm:items-center gap-3 pt-1 sm:pt-2">
-                <button
-                  type="button"
-                  onClick={() => setBookingModalOpen(true)}
+                <Link
+                  to="/book-demo"
                   className="w-full sm:w-auto inline-flex h-12 items-center justify-center gap-2 px-6 rounded-full bg-[#111215] hover:bg-black text-white text-sm font-bold transition-all shadow-sm cursor-pointer group"
                 >
                   <span>Start free trial</span>
                   <span className="text-[#D4F82C] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform">↗</span>
-                </button>
+                </Link>
 
                 <button
                   type="button"
@@ -2237,13 +2266,12 @@ export default function LandingPage() {
                       <Eye className="size-3 text-[#111215]" />
                       <span>Preview</span>
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => setBookingModalOpen(true)}
+                    <Link
+                      to="/book-demo"
                       className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#111215] text-white text-xs font-bold hover:bg-black cursor-pointer shadow-2xs"
                     >
                       <span>+ Candidate</span>
-                    </button>
+                    </Link>
                   </div>
                 </div>
 
@@ -2709,14 +2737,13 @@ export default function LandingPage() {
               </div>
 
               <div className="pt-1">
-                <button
-                  type="button"
-                  onClick={() => setBookingModalOpen(true)}
+                <Link
+                  to="/book-demo"
                   className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-[#D4F82C] hover:bg-[#bde023] text-[#111215] text-xs font-black transition-all cursor-pointer"
                 >
                   <span>Request Client Portal Demo</span>
                   <span>↗</span>
-                </button>
+                </Link>
               </div>
 
             </div>
@@ -3116,14 +3143,13 @@ export default function LandingPage() {
                     </div>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={() => setBookingModalOpen(true)}
+                  <Link
+                    to="/book-demo"
                     className="w-full py-3 rounded-full bg-[#D4F82C] hover:bg-[#bde023] text-[#111215] text-xs font-black transition-all cursor-pointer shadow-sm flex items-center justify-center gap-2"
                   >
                     <span>Claim Your 1-Month Free Trial</span>
                     <span>↗</span>
-                  </button>
+                  </Link>
                 </div>
               </div>
             )}
@@ -3849,13 +3875,12 @@ export default function LandingPage() {
                 <Play size={12} className="fill-current" />
                 <span>Candidate Onboard & Live Demo</span>
               </Link>
-              <button
-                type="button"
-                onClick={() => setBookingModalOpen(true)}
+              <Link
+                to="/book-demo"
                 className="px-5 py-2.5 rounded-full bg-white/10 hover:bg-white/15 text-white text-xs font-bold transition-all border border-white/15 cursor-pointer"
               >
                 Book Client Walkthrough
-              </button>
+              </Link>
             </div>
           </div>
 
@@ -4357,47 +4382,375 @@ export default function LandingPage() {
               <span>06 • TRANSPARENT PRICING</span>
             </div>
             <div className="text-[11px] font-bold uppercase tracking-wider text-[#73766C] mb-1">
-              Flexible Plans & Pay-Per-Interview
+              Affordable Plans Starting at ₹599/mo • 1 Month Free
             </div>
             <h2 className="text-2xl sm:text-4xl font-black text-[#111215] tracking-tight">
               Simple, transparent pricing. Zero hidden fees.
             </h2>
             <p className="mt-1.5 text-xs sm:text-sm text-[#575A51]">
-              Choose between on-demand AI Video Interviews or full-featured recruitment platform subscriptions.
+              Built for Indian recruitment agencies, startups, and HR teams. Start with basic ATS and upgrade as your hiring needs expand.
             </p>
 
             {/* Pricing Model Tab Switcher */}
-            <div className="inline-flex p-1.5 rounded-2xl bg-white border border-[#E4E7DC] shadow-sm mt-5">
+            <div className="flex flex-wrap items-center justify-center p-1.5 rounded-2xl bg-white border border-[#E4E7DC] shadow-sm mt-5 max-w-lg mx-auto">
+              <button
+                type="button"
+                onClick={() => setPricingTab('subscription')}
+                className={`flex-1 px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                  pricingTab === 'subscription'
+                    ? 'bg-[#111215] text-[#D4F82C] shadow-sm'
+                    : 'text-[#73766C] hover:text-[#111215]'
+                }`}
+              >
+                <Users size={14} className={pricingTab === 'subscription' ? 'text-[#D4F82C]' : 'text-neutral-400'} />
+                <span>ATS Subscription Plans</span>
+                <span className="px-1.5 py-0.2 rounded bg-[#D4F82C] text-[#111215] text-[9px] font-black uppercase">From ₹599</span>
+              </button>
+
               <button
                 type="button"
                 onClick={() => setPricingTab('ai-interviews')}
-                className={`px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer ${
+                className={`flex-1 px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer ${
                   pricingTab === 'ai-interviews'
                     ? 'bg-[#111215] text-[#D4F82C] shadow-sm'
                     : 'text-[#73766C] hover:text-[#111215]'
                 }`}
               >
                 <Video size={14} className={pricingTab === 'ai-interviews' ? 'text-[#D4F82C]' : 'text-neutral-400'} />
-                <span>AI Interview & Assessment</span>
-                <span className="px-1.5 py-0.2 rounded bg-[#D4F82C] text-[#111215] text-[9px] font-black uppercase">From ₹129</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setPricingTab('subscription')}
-                className={`px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer ${
-                  pricingTab === 'subscription'
-                    ? 'bg-[#111215] text-white shadow-sm'
-                    : 'text-[#73766C] hover:text-[#111215]'
-                }`}
-              >
-                <Users size={14} className={pricingTab === 'subscription' ? 'text-white' : 'text-neutral-400'} />
-                <span>Recruiter Platform Seats</span>
+                <span>AI Interview Credits</span>
+                <span className="px-1.5 py-0.2 rounded bg-neutral-100 text-[#111215] text-[9px] font-black uppercase">From ₹129</span>
               </button>
             </div>
           </div>
 
-          {/* TAB 1: AI VIDEO INTERVIEWS (DYNAMIC ₹149 TO ₹129 / INTERVIEW + MODULAR ROUNDS) */}
+          {/* TAB 1: RECRUITER ATS SUBSCRIPTION PLANS */}
+          {pricingTab === 'subscription' && (
+            <div className="space-y-8">
+              {/* Billing Cycle Toggle */}
+              <div className="flex justify-center">
+                <div className="inline-flex items-center p-1 rounded-2xl bg-white border border-[#E4E7DC] shadow-xs">
+                  <button
+                    type="button"
+                    onClick={() => setCalcBilling('annual')}
+                    className={`px-4 sm:px-6 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer ${
+                      calcBilling === 'annual'
+                        ? 'bg-[#111215] text-white shadow-xs'
+                        : 'text-[#73766C] hover:text-[#111215]'
+                    }`}
+                  >
+                    <span>Annual Billing</span>
+                    <span className="px-2 py-0.5 rounded-full bg-[#D4F82C] text-[#111215] text-[10px] font-black uppercase">
+                      Save 25%
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCalcBilling('monthly')}
+                    className={`px-4 sm:px-6 py-2 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                      calcBilling === 'monthly'
+                        ? 'bg-[#111215] text-white shadow-xs'
+                        : 'text-[#73766C] hover:text-[#111215]'
+                    }`}
+                  >
+                    <span>Monthly Billing</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* 4 Plans Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 items-stretch">
+                {/* 1. ATS Starter */}
+                <div className="bg-white rounded-3xl border border-[#E4E7DC] p-5 shadow-xs flex flex-col justify-between hover:border-[#111215]/30 transition-all">
+                  <div>
+                    <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-[#F8F9F5] text-[#575A51] border border-[#E4E7DC]">
+                      Core ATS
+                    </span>
+                    <h3 className="text-lg font-black text-[#111215] mt-2">ATS Starter</h3>
+                    <p className="text-xs text-[#73766C] mt-1 leading-snug min-h-[36px]">
+                      For individual recruiters, small agencies & startups needing a core recruitment management system.
+                    </p>
+
+                    <div className="mt-4 pb-4 border-b border-[#E4E7DC]">
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-3xl font-black text-[#111215]">
+                          ₹{calcBilling === 'annual' ? '599' : '799'}
+                        </span>
+                        <span className="text-xs text-[#73766C]">/ seat / mo</span>
+                      </div>
+                      <div className="text-[11px] text-emerald-700 font-semibold mt-1">
+                        {calcBilling === 'annual' ? '₹7,188/yr billed annually (Save 25%)' : 'Billed monthly • Cancel anytime'}
+                      </div>
+                    </div>
+
+                    <div className="mt-4 space-y-2 text-xs">
+                      <div className="text-[11px] font-bold uppercase tracking-wider text-[#73766C] mb-1">
+                        Features Included:
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <Check size={14} className="text-emerald-600 shrink-0 mt-0.5" />
+                        <span><strong>Job Management:</strong> Create, edit, publish & manage openings (Open, Closed, On Hold)</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <Check size={14} className="text-emerald-600 shrink-0 mt-0.5" />
+                        <span><strong>Candidate Database:</strong> Upload resumes & centralized searchable talent storage</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <Check size={14} className="text-emerald-600 shrink-0 mt-0.5" />
+                        <span><strong>Kanban Pipeline:</strong> Applied → Screening → Interview → Selection → Rejection</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <Check size={14} className="text-emerald-600 shrink-0 mt-0.5" />
+                        <span><strong>Resume Management:</strong> Cloud storage, preview & PDF download with job linking</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <Check size={14} className="text-emerald-600 shrink-0 mt-0.5" />
+                        <span><strong>Candidate History:</strong> Notes, interview scheduling & standard email alerts</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="sticky bottom-0 z-20 mt-6 pt-3 pb-2 -mx-5 px-5 bg-white/95 backdrop-blur-sm border-t border-[#E4E7DC]/60 rounded-b-3xl">
+                    <Link
+                      to={`/book-demo?plan=${encodeURIComponent('ATS Starter')}`}
+                      className="w-full py-2.5 px-3 rounded-xl bg-[#111215] text-white hover:bg-black text-xs font-black transition-all flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"
+                    >
+                      <span>Start 1-Month Free Trial</span>
+                      <ArrowRight size={12} />
+                    </Link>
+                    <p className="text-[10px] text-[#73766C] text-center mt-1">
+                      1 Month Free Trial • No Credit Card Required
+                    </p>
+                  </div>
+                </div>
+
+                {/* 2. ATS + Email Automation */}
+                <div className="bg-white rounded-3xl border border-[#E4E7DC] p-5 shadow-xs flex flex-col justify-between hover:border-[#111215]/30 transition-all">
+                  <div>
+                    <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-[#F8F9F5] text-[#575A51] border border-[#E4E7DC]">
+                      Outreach Suite
+                    </span>
+                    <h3 className="text-lg font-black text-[#111215] mt-2">ATS + Email Auto</h3>
+                    <p className="text-xs text-[#73766C] mt-1 leading-snug min-h-[36px]">
+                      For recruitment agencies and HR teams wanting automated candidate email communication without AI overhead.
+                    </p>
+
+                    <div className="mt-4 pb-4 border-b border-[#E4E7DC]">
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-3xl font-black text-[#111215]">
+                          ₹{calcBilling === 'annual' ? '899' : '1,199'}
+                        </span>
+                        <span className="text-xs text-[#73766C]">/ seat / mo</span>
+                      </div>
+                      <div className="text-[11px] text-emerald-700 font-semibold mt-1">
+                        {calcBilling === 'annual' ? '₹10,788/yr billed annually (Save 25%)' : 'Billed monthly • Cancel anytime'}
+                      </div>
+                    </div>
+
+                    <div className="mt-4 space-y-2 text-xs">
+                      <div className="text-[11px] font-bold uppercase tracking-wider text-[#73766C] mb-1">
+                        Everything in Starter, plus:
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <Check size={14} className="text-emerald-600 shrink-0 mt-0.5" />
+                        <span><strong>Automated Job Alerts:</strong> Notify matching candidates automatically when new jobs go live</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <Check size={14} className="text-emerald-600 shrink-0 mt-0.5" />
+                        <span><strong>Interview Automation:</strong> Automated invites, confirmations & 24h reminders</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <Check size={14} className="text-emerald-600 shrink-0 mt-0.5" />
+                        <span><strong>Status Notifications:</strong> Automated shortlist, offer & custom rejection emails</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <Check size={14} className="text-emerald-600 shrink-0 mt-0.5" />
+                        <span><strong>Rule-Based Matching:</strong> Match candidates on predefined skills, keywords & criteria</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <Check size={14} className="text-emerald-600 shrink-0 mt-0.5" />
+                        <span><strong>Workflow Sequences:</strong> Multi-step follow-ups & candidate email response tracking</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="sticky bottom-0 z-20 mt-6 pt-3 pb-2 -mx-5 px-5 bg-white/95 backdrop-blur-sm border-t border-[#E4E7DC]/60 rounded-b-3xl">
+                    <Link
+                      to={`/book-demo?plan=${encodeURIComponent('ATS + Email Automation')}`}
+                      className="w-full py-2.5 px-3 rounded-xl bg-[#111215] text-white hover:bg-black text-xs font-black transition-all flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"
+                    >
+                      <span>Start 1-Month Free Trial</span>
+                      <ArrowRight size={12} />
+                    </Link>
+                    <p className="text-[10px] text-[#73766C] text-center mt-1">
+                      1 Month Free Trial • No Credit Card Required
+                    </p>
+                  </div>
+                </div>
+
+                {/* 3. ATS AI Pro (Recommended) */}
+                <div className="bg-[#111215] text-white rounded-3xl border-2 border-[#D4F82C] p-5 shadow-xl flex flex-col justify-between relative scale-[1.02] z-10">
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full bg-[#D4F82C] text-[#111215] text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-sm">
+                    <Sparkles size={11} />
+                    <span>Recommended</span>
+                  </div>
+
+                  <div>
+                    <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-white/10 text-[#D4F82C]">
+                      Primary AI Platform
+                    </span>
+                    <h3 className="text-lg font-black text-white mt-2">ATS AI Pro</h3>
+                    <p className="text-xs text-slate-300 mt-1 leading-snug min-h-[36px]">
+                      Our flagship AI plan. AI resume parsing, JD creation, 0-100 match scoring & candidate recommendations.
+                    </p>
+
+                    <div className="mt-4 pb-4 border-b border-white/10">
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-3xl font-black text-white">
+                          ₹{calcBilling === 'annual' ? '1,499' : '1,999'}
+                        </span>
+                        <span className="text-xs text-slate-400">/ seat / mo</span>
+                      </div>
+                      <div className="text-[11px] text-[#D4F82C] font-semibold mt-1">
+                        {calcBilling === 'annual' ? '₹17,988/yr billed annually (Save 25%)' : 'Billed monthly • Cancel anytime'}
+                      </div>
+                    </div>
+
+                    <div className="mt-4 space-y-2 text-xs">
+                      <div className="text-[11px] font-bold uppercase tracking-wider text-[#D4F82C] mb-1">
+                        Everything in Email Auto, plus:
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <Check size={14} className="text-[#D4F82C] shrink-0 mt-0.5" />
+                        <span><strong>AI Resume Parsing:</strong> PDF/DOC auto-extraction & instant candidate profile creation</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <Check size={14} className="text-[#D4F82C] shrink-0 mt-0.5" />
+                        <span><strong>AI Job Creation:</strong> Generate structured job openings from raw text or PDF upload</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <Check size={14} className="text-[#D4F82C] shrink-0 mt-0.5" />
+                        <span><strong>0-100 AI Match Score:</strong> Skills, experience & qualifications fit with explanations</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <Check size={14} className="text-[#D4F82C] shrink-0 mt-0.5" />
+                        <span><strong>AI Recommendations:</strong> Auto-match existing talent pool to newly posted jobs</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <Check size={14} className="text-[#D4F82C] shrink-0 mt-0.5" />
+                        <span><strong>Automated Outreach:</strong> Shortlist & send personalized 1-click apply links</span>
+                      </div>
+                      <div className="flex items-start gap-2 text-[11px] text-slate-300">
+                        <Check size={14} className="text-[#D4F82C] shrink-0 mt-0.5" />
+                        <span><strong>Monthly Allowance:</strong> 1,000 parses, 1,000 match scores & 100 AI jobs / month</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="sticky bottom-0 z-20 mt-6 pt-3 pb-2 -mx-5 px-5 bg-[#111215]/95 backdrop-blur-sm border-t border-white/10 rounded-b-3xl">
+                    <Link
+                      to={`/book-demo?plan=${encodeURIComponent('ATS AI Pro')}`}
+                      className="w-full py-2.5 px-3 rounded-xl bg-[#D4F82C] text-[#111215] hover:bg-lime-400 text-xs font-black transition-all flex items-center justify-center gap-1.5 shadow-md cursor-pointer"
+                    >
+                      <span>Start 1-Month Free Trial</span>
+                      <ArrowRight size={12} />
+                    </Link>
+                    <p className="text-[10px] text-slate-400 text-center mt-1">
+                      1 Month Free Trial • No Credit Card Required
+                    </p>
+                  </div>
+                </div>
+
+                {/* 4. ATS AI + WhatsApp Automation */}
+                <div className="bg-white rounded-3xl border border-[#E4E7DC] p-5 shadow-xs flex flex-col justify-between hover:border-[#111215]/30 transition-all">
+                  <div>
+                    <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-[#F8F9F5] text-[#575A51] border border-[#E4E7DC]">
+                      High Turnaround
+                    </span>
+                    <h3 className="text-lg font-black text-[#111215] mt-2">ATS AI + WhatsApp</h3>
+                    <p className="text-xs text-[#73766C] mt-1 leading-snug min-h-[36px]">
+                      For high-volume staffing firms and agencies requiring instant WhatsApp turnaround.
+                    </p>
+
+                    <div className="mt-4 pb-4 border-b border-[#E4E7DC]">
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-3xl font-black text-[#111215]">
+                          ₹{calcBilling === 'annual' ? '2,299' : '2,999'}
+                        </span>
+                        <span className="text-xs text-[#73766C]">/ seat / mo</span>
+                      </div>
+                      <div className="text-[11px] text-emerald-700 font-semibold mt-1">
+                        {calcBilling === 'annual' ? '₹27,588/yr billed annually (Save 23%)' : 'Billed monthly • Cancel anytime'}
+                      </div>
+                    </div>
+
+                    <div className="mt-4 space-y-2 text-xs">
+                      <div className="text-[11px] font-bold uppercase tracking-wider text-[#73766C] mb-1">
+                        Everything in AI Pro, plus:
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <Check size={14} className="text-emerald-600 shrink-0 mt-0.5" />
+                        <span><strong>WhatsApp Business API:</strong> Automated candidate outreach & alerts</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <Check size={14} className="text-emerald-600 shrink-0 mt-0.5" />
+                        <span><strong>1-Tap Apply Alerts:</strong> Automated WhatsApp job notifications to candidates</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <Check size={14} className="text-emerald-600 shrink-0 mt-0.5" />
+                        <span><strong>WhatsApp Interview Flows:</strong> Invites, confirmations & 24h/1h reminders</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <Check size={14} className="text-emerald-600 shrink-0 mt-0.5" />
+                        <span><strong>Multi-Channel Sequences:</strong> Dual Email + WhatsApp sync with smart fallback</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <Check size={14} className="text-emerald-600 shrink-0 mt-0.5" />
+                        <span><strong>Live Tracking:</strong> Real-time delivery, read receipts & response capture</span>
+                      </div>
+                      <div className="flex items-start gap-2 text-[11px] text-[#575A51]">
+                        <Check size={14} className="text-emerald-600 shrink-0 mt-0.5" />
+                        <span><strong>Expanded Limits:</strong> 2,500 parses & scores, 150 AI jobs / month</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="sticky bottom-0 z-20 mt-6 pt-3 pb-2 -mx-5 px-5 bg-white/95 backdrop-blur-sm border-t border-[#E4E7DC]/60 rounded-b-3xl">
+                    <Link
+                      to={`/book-demo?plan=${encodeURIComponent('ATS AI + WhatsApp Automation')}`}
+                      className="w-full py-2.5 px-3 rounded-xl bg-[#111215] text-white hover:bg-black text-xs font-black transition-all flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"
+                    >
+                      <span>Start 1-Month Free Trial</span>
+                      <ArrowRight size={12} />
+                    </Link>
+                    <p className="text-[10px] text-[#73766C] text-center mt-1">
+                      1 Month Free Trial • No Credit Card Required
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Bottom Callout to Dedicated Pricing Page */}
+              <div className="p-4 sm:p-5 rounded-2xl bg-white border border-[#E4E7DC] shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
+                <div>
+                  <h4 className="text-sm font-bold text-[#111215]">
+                    Need agency packages (5+ seats), full feature comparison, or modular add-ons?
+                  </h4>
+                  <p className="text-xs text-[#575A51] mt-0.5">
+                    Agency package starts at ₹7,999/mo. WhatsApp add-on for AI Pro at ₹499/mo. Modular AI voice interviews available on demand.
+                  </p>
+                </div>
+                <Link
+                  to="/pricing"
+                  className="px-5 py-2.5 rounded-xl bg-[#F8F9F5] hover:bg-[#E4E7DC] text-[#111215] text-xs font-bold border border-[#E4E7DC] transition-colors flex items-center gap-1.5 shrink-0"
+                >
+                  <span>View Full Pricing Page & Matrix</span>
+                  <ArrowRight size={13} />
+                </Link>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 2: AI VIDEO INTERVIEWS (DYNAMIC ₹149 TO ₹129 / INTERVIEW + MODULAR ROUNDS) */}
           {pricingTab === 'ai-interviews' && (
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 items-start">
               
@@ -4827,14 +5180,13 @@ export default function LandingPage() {
                 </div>
 
                 <div className="pt-3.5 border-t border-white/10 space-y-2.5 relative z-10">
-                  <button
-                    type="button"
-                    onClick={() => setBookingModalOpen(true)}
+                  <Link
+                    to="/book-demo"
                     className="w-full py-3.5 rounded-full bg-[#D4F82C] hover:bg-[#bde023] text-[#111215] text-xs font-black transition-all cursor-pointer shadow-md shadow-[#D4F82C]/10 flex items-center justify-center gap-2 hover:scale-[1.01] active:scale-[0.99]"
                   >
-                    <span>Get Started • Buy Evaluation Credits</span>
+                    <span>Get Started • 30-Day Free Trial</span>
                     <ArrowRight size={14} />
-                  </button>
+                  </Link>
 
                   <Link
                     to="/upload-resume"
@@ -4843,146 +5195,6 @@ export default function LandingPage() {
                     Candidate Onboard & Free Demo
                   </Link>
                 </div>
-              </div>
-
-            </div>
-          )}
-
-          {/* TAB 2: RECRUITER TEAM PLATFORM SUBSCRIPTIONS */}
-          {pricingTab === 'subscription' && (
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 items-start">
-              
-              {/* Left Calculator Controls */}
-              <div className="lg:col-span-7 bg-white rounded-2xl border border-[#E4E7DC] p-4 sm:p-5 space-y-4 shadow-sm">
-                
-                {/* 1. Recruiters */}
-                <div>
-                  <div className="flex items-center justify-between text-xs font-bold mb-1.5">
-                    <span className="text-[#111215]">Recruiter & Team Seats</span>
-                    <span className="px-2 py-0.5 rounded bg-[#F8F9F5] text-[#111215] font-black border border-[#E4E7DC]">
-                      {calcRecruiters} {calcRecruiters === 1 ? 'Seat' : 'Seats'}
-                    </span>
-                  </div>
-                  <input
-                    type="range"
-                    min={1}
-                    max={20}
-                    value={calcRecruiters}
-                    onChange={(e) => setCalcRecruiters(parseInt(e.target.value))}
-                    className="w-full accent-[#111215] cursor-pointer"
-                  />
-                  <div className="flex justify-between text-[10px] text-[#73766C] mt-1 font-mono">
-                    <span>1 Seat</span>
-                    <span>5 Seats</span>
-                    <span>10 Seats</span>
-                    <span>20+ Seats</span>
-                  </div>
-                </div>
-
-                {/* 2. Monthly Resumes */}
-                <div>
-                  <div className="flex items-center justify-between text-xs font-bold mb-1.5">
-                    <span className="text-[#111215]">Resumes Processed / Month</span>
-                    <span className="px-2 py-0.5 rounded bg-[#D4F82C] text-[#111215] font-black">
-                      {calcResumes} Resumes
-                    </span>
-                  </div>
-                  <input
-                    type="range"
-                    min={200}
-                    max={10000}
-                    step={200}
-                    value={calcResumes}
-                    onChange={(e) => setCalcResumes(parseInt(e.target.value))}
-                    className="w-full accent-[#111215] cursor-pointer"
-                  />
-                  <div className="flex justify-between text-[10px] text-[#73766C] mt-1 font-mono">
-                    <span>200</span>
-                    <span>2,500</span>
-                    <span>5,000</span>
-                    <span>10,000+</span>
-                  </div>
-                </div>
-
-                {/* 3. Billing Toggle */}
-                <div className="pt-0.5">
-                  <div className="text-xs font-bold text-[#111215] mb-1.5">Billing Frequency</div>
-                  <div className="grid grid-cols-2 gap-2.5">
-                    <button
-                      type="button"
-                      onClick={() => setCalcBilling('annual')}
-                      className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
-                        calcBilling === 'annual'
-                          ? 'border-[#111215] bg-[#111215] text-white'
-                          : 'border-[#E4E7DC] bg-[#F8F9F5] text-[#111215]'
-                      }`}
-                    >
-                      <div className="text-xs font-bold flex items-center justify-between">
-                        <span>Annual Billing</span>
-                        <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-[#D4F82C] text-[#111215]">Save 20%</span>
-                      </div>
-                      <div className="text-[10px] text-slate-400 mt-0.5">Discounted yearly rate</div>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setCalcBilling('monthly')}
-                      className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
-                        calcBilling === 'monthly'
-                          ? 'border-[#111215] bg-[#111215] text-white'
-                          : 'border-[#E4E7DC] bg-[#F8F9F5] text-[#111215]'
-                      }`}
-                    >
-                      <div className="text-xs font-bold">Monthly Billing</div>
-                      <div className="text-[10px] text-[#73766C] mt-0.5">Cancel anytime</div>
-                    </button>
-                  </div>
-                </div>
-
-              </div>
-
-              {/* Right Quote Summary Card */}
-              <div className="lg:col-span-5 rounded-2xl border border-[#111215] bg-[#111215] text-white p-5 sm:p-6 space-y-4 shadow-xl">
-                <div className="flex items-center justify-between pb-2.5 border-b border-white/10">
-                  <div>
-                    <span className="text-[10px] uppercase tracking-wider text-[#D4F82C] font-bold">Recommended Tier</span>
-                    <h3 className="text-lg sm:text-xl font-black text-white">{quoteCalculation.tierName}</h3>
-                  </div>
-                  <HireXMark size={28} />
-                </div>
-
-                <div>
-                  <div className="text-2xl sm:text-3xl font-black text-white">
-                    ₹{quoteCalculation.subtotalMonthly.toLocaleString('en-IN')}
-                    <span className="text-xs text-slate-400 font-normal"> / month</span>
-                  </div>
-                  <div className="text-xs text-slate-400 mt-1">
-                    <span>Transparent flat pricing • Zero hidden charges</span>
-                  </div>
-                </div>
-
-                <div className="space-y-1.5 text-xs text-slate-300 pt-2 border-t border-white/10">
-                  <div className="flex items-center gap-2">
-                    <Check className="size-3.5 text-[#D4F82C]" />
-                    <span>Unlimited WhatsApp candidate messaging included</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Check className="size-3.5 text-[#D4F82C]" />
-                    <span>Zero-friction client review links with live sync</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Check className="size-3.5 text-[#D4F82C]" />
-                    <span>Visual Kanban pipeline & slide-over resume preview</span>
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => setBookingModalOpen(true)}
-                  className="w-full py-3 rounded-full bg-[#D4F82C] hover:bg-[#bde023] text-[#111215] text-xs font-black transition-all cursor-pointer shadow-sm flex items-center justify-center gap-2"
-                >
-                  <span>Get Started With 1-Month Free Trial</span>
-                  <span>↗</span>
-                </button>
               </div>
 
             </div>
@@ -5064,14 +5276,13 @@ export default function LandingPage() {
                 Start your 30-day free trial. No credit card required. Onboard your hiring team in under 5 minutes.
               </p>
               <div>
-                <button
-                  type="button"
-                  onClick={() => setBookingModalOpen(true)}
+                <Link
+                  to="/book-demo"
                   className="inline-flex h-11 sm:h-12 items-center gap-2.5 px-6 sm:px-7 rounded-full bg-[#D4F82C] hover:bg-[#bde023] text-[#111215] text-xs sm:text-sm font-black transition-all cursor-pointer group shadow-lg"
                 >
                   <span>Start free trial today</span>
                   <span className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform">↗</span>
-                </button>
+                </Link>
               </div>
             </div>
 
@@ -5173,8 +5384,8 @@ export default function LandingPage() {
                 <li><Link to="/auth" className="hover:text-[#111215] transition-colors font-medium">Recruiter & ATS Login</Link></li>
                 <li><a href="#client-portal" onClick={(e) => scrollToSection(e, 'client-portal')} className="hover:text-[#111215] transition-colors">Client Review Gateway</a></li>
                 <li><Link to="/active-jobs" className="hover:text-[#111215] transition-colors">Public Job Board</Link></li>
-                <li><button type="button" onClick={() => setBookingModalOpen(true)} className="hover:text-[#111215] transition-colors text-left font-bold text-[#111215]">Schedule 1-on-1 Demo ↗</button></li>
-                <li><button type="button" onClick={() => setBookingModalOpen(true)} className="hover:text-[#111215] transition-colors text-left text-emerald-700 font-bold">Start 30-Day Free Trial</button></li>
+                <li><Link to="/book-demo" className="hover:text-[#111215] transition-colors text-left font-bold text-[#111215]">Schedule 1-on-1 Demo ↗</Link></li>
+                <li><Link to="/book-demo" className="hover:text-[#111215] transition-colors text-left text-emerald-700 font-bold">Start 30-Day Free Trial</Link></li>
               </ul>
             </div>
 
@@ -5189,7 +5400,7 @@ export default function LandingPage() {
                 <li><a href="#pricing" onClick={(e) => scrollToSection(e, 'pricing')} className="hover:text-[#111215] transition-colors">For In-House Talent Teams</a></li>
                 <li><a href="#pricing" onClick={(e) => scrollToSection(e, 'pricing')} className="hover:text-[#111215] transition-colors">For Fast-Growing Startups</a></li>
                 <li><a href="#productivity" onClick={(e) => scrollToSection(e, 'productivity')} className="hover:text-[#111215] transition-colors">Hours Returned Calculator</a></li>
-                <li><a href="#pricing" onClick={(e) => scrollToSection(e, 'pricing')} className="hover:text-[#111215] transition-colors">Pricing & ROI Estimator</a></li>
+                <li><Link to="/pricing" className="hover:text-[#111215] transition-colors font-semibold text-[#111215]">Pricing & Plans (1 Mo Free)</Link></li>
                 <li><a href="#faq" onClick={(e) => scrollToSection(e, 'faq')} className="hover:text-[#111215] transition-colors">Frequently Asked Questions</a></li>
               </ul>
             </div>
@@ -5593,18 +5804,50 @@ export default function LandingPage() {
                     />
                   </div>
 
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[11px] font-bold text-[#111215] mb-1">Hiring Volume</label>
+                      <select
+                        name="hiringVolume"
+                        value={leadForm.hiringVolume}
+                        onChange={(e) => setLeadForm({ ...leadForm, hiringVolume: e.target.value })}
+                        className="w-full h-10 px-3 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] text-xs text-[#111215] focus:outline-none focus:border-[#111215] focus:bg-white"
+                      >
+                        <option value="1–5 roles / month">1–5 roles / month</option>
+                        <option value="6–20 roles / month">6–20 roles / month</option>
+                        <option value="21–50 roles / month">21–50 roles / month</option>
+                        <option value="50+ roles / month">50+ roles / month</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold text-[#111215] mb-1">Primary Demo Focus</label>
+                      <select
+                        name="primaryInterest"
+                        value={leadForm.primaryInterest}
+                        onChange={(e) => setLeadForm({ ...leadForm, primaryInterest: e.target.value })}
+                        className="w-full h-10 px-3 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] text-xs text-[#111215] focus:outline-none focus:border-[#111215] focus:bg-white"
+                      >
+                        <option value="Full ATS Recruitment Suite">Full ATS Suite (from ₹599/mo)</option>
+                        <option value="AI Resume Parsing & Match Scoring">AI Resume Parsing & 0-100 Matching</option>
+                        <option value="WhatsApp Business Automation">WhatsApp Automation & 1-Tap Alerts</option>
+                        <option value="AI Video Pre-Screening Interviews">AI Video Interviews & Tests</option>
+                      </select>
+                    </div>
+                  </div>
+
                   <div>
-                    <label className="block text-[11px] font-bold text-[#111215] mb-1">Hiring Volume</label>
+                    <label className="block text-[11px] font-bold text-[#111215] mb-1">Preferred Walkthrough Time</label>
                     <select
-                      name="hiringVolume"
-                      value={leadForm.hiringVolume}
-                      onChange={(e) => setLeadForm({ ...leadForm, hiringVolume: e.target.value })}
+                      name="preferredTime"
+                      value={leadForm.preferredTime}
+                      onChange={(e) => setLeadForm({ ...leadForm, preferredTime: e.target.value })}
                       className="w-full h-10 px-3 rounded-xl border border-[#E4E7DC] bg-[#F8F9F5] text-xs text-[#111215] focus:outline-none focus:border-[#111215] focus:bg-white"
                     >
-                      <option value="1–5 roles / month">1–5 roles / month</option>
-                      <option value="6–20 roles / month">6–20 roles / month</option>
-                      <option value="21–50 roles / month">21–50 roles / month</option>
-                      <option value="50+ roles / month">50+ roles / month</option>
+                      <option value="Earliest Available (Next 15–30 Mins)">Earliest Available (Next 15–30 Mins)</option>
+                      <option value="Morning (10:00 AM – 1:00 PM)">Morning (10:00 AM – 1:00 PM)</option>
+                      <option value="Afternoon (2:00 PM – 5:00 PM)">Afternoon (2:00 PM – 5:00 PM)</option>
+                      <option value="Evening (5:00 PM – 8:00 PM)">Evening (5:00 PM – 8:00 PM)</option>
                     </select>
                   </div>
 
@@ -5614,7 +5857,7 @@ export default function LandingPage() {
                       disabled={submittingLead || formspreeState.submitting}
                       className="w-full h-11 rounded-full bg-[#111215] hover:bg-black text-white text-xs font-black transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2 group"
                     >
-                      <span>{submittingLead || formspreeState.submitting ? 'Submitting...' : 'Claim 1-Month Free Demo'}</span>
+                      <span>{submittingLead || formspreeState.submitting ? 'Submitting Request...' : 'Claim 30-Day Free Trial & Book Walkthrough'}</span>
                       <span className="text-[#D4F82C] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform">↗</span>
                     </button>
                     <div className="mt-2 text-center text-[10px] text-[#73766C]">
@@ -5698,18 +5941,15 @@ export default function LandingPage() {
               </div>
 
               <div className="flex items-center gap-2.5 w-full sm:w-auto shrink-0">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setVideoModalOpen(false);
-                    setBookingModalOpen(true);
-                  }}
+                <Link
+                  to="/book-demo"
+                  onClick={() => setVideoModalOpen(false)}
                   className="flex-1 sm:flex-initial px-4 py-2.5 rounded-full bg-white/10 hover:bg-white/15 text-white font-bold transition-all border border-white/15 text-xs text-center cursor-pointer"
                 >
                   Schedule 1-on-1 Demo
-                </button>
+                </Link>
                 <Link
-                  to="/auth"
+                  to="/book-demo"
                   onClick={() => setVideoModalOpen(false)}
                   className="flex-1 sm:flex-initial px-5 py-2.5 rounded-full bg-[#D4F82C] hover:bg-[#c2e424] text-[#111215] font-black transition-all shadow-md text-xs text-center flex items-center justify-center gap-1.5"
                 >

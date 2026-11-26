@@ -46,6 +46,8 @@ import SecurityWhitepaper from './pages/SecurityWhitepaper';
 import ProductGuide from './pages/ProductGuide';
 import SubmitReview from './pages/SubmitReview';
 import ReviewsPage from './pages/Reviews';
+import Pricing from './pages/Pricing';
+import BookDemo from './pages/BookDemo';
 import OurJourney from './pages/OurJourney';
 import InvitedCandidates from './pages/InvitedCandidates';
 import CareerHub from './pages/CareerHub';
@@ -204,6 +206,17 @@ const App: React.FC = () => {
                 <ReviewsPage />
               </ThemeProvider>
             } />
+            <Route path="pricing" element={
+              <ThemeProvider>
+                <Pricing />
+              </ThemeProvider>
+            } />
+            <Route path="book-demo" element={
+              <ThemeProvider>
+                <BookDemo />
+              </ThemeProvider>
+            } />
+            <Route path="demo" element={<Navigate to="/book-demo" replace />} />
             <Route path="submit-review" element={
               <ThemeProvider>
                 <SubmitReview />

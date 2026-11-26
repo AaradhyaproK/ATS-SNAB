@@ -346,12 +346,12 @@ export default function ProductGuide() {
             >
               Compare
             </a>
-            <a
-              href="/#pricing"
+            <Link
+              to="/pricing"
               className="hover:text-[#111215] transition-colors cursor-pointer whitespace-nowrap shrink-0"
             >
               Pricing
-            </a>
+            </Link>
             <a
               href="/#faq"
               className="hover:text-[#111215] transition-colors cursor-pointer whitespace-nowrap shrink-0"
@@ -384,15 +384,13 @@ export default function ProductGuide() {
                 >
                   Sign In
                 </Link>
-                <a
-                  href="https://wa.me/919511779317?text=Hi%20InterviewXpert%20team,%20I%20would%20like%20to%20know%20more%20about%20the%20platform%20and%20request%20a%20demo."
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <Link
+                  to="/book-demo"
                   className="inline-flex h-9 sm:h-9.5 items-center gap-1.5 sm:gap-2 px-3.5 sm:px-4.5 rounded-full bg-[#111215] hover:bg-black text-white text-xs font-bold transition-all shadow-xs cursor-pointer group"
                 >
                   <span>Book Demo</span>
                   <span className="text-[#D4F82C] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform">↗</span>
-                </a>
+                </Link>
               </div>
             )}
 
@@ -440,7 +438,7 @@ export default function ProductGuide() {
               <a href="/#services" onClick={() => setMobileMenuOpen(false)} className="block py-2 px-3 rounded-lg hover:bg-white hover:text-[#111215]">Services</a>
               <a href="/#process" onClick={() => setMobileMenuOpen(false)} className="block py-2 px-3 rounded-lg hover:bg-white hover:text-[#111215]">Process</a>
               <a href="/#ai-interview" onClick={() => setMobileMenuOpen(false)} className="block py-2 px-3 rounded-lg hover:bg-white hover:text-[#111215]">AI Interview</a>
-              <a href="/#pricing" onClick={() => setMobileMenuOpen(false)} className="block py-2 px-3 rounded-lg hover:bg-white hover:text-[#111215]">Pricing</a>
+              <Link to="/pricing" onClick={() => setMobileMenuOpen(false)} className="block py-2 px-3 rounded-lg hover:bg-white hover:text-[#111215]">Pricing & Plans</Link>
               <a href="/#faq" onClick={() => setMobileMenuOpen(false)} className="block py-2 px-3 rounded-lg hover:bg-white hover:text-[#111215]">FAQ</a>
               <Link to="/active-jobs" onClick={() => setMobileMenuOpen(false)} className="block py-2 px-3 rounded-lg hover:bg-white hover:text-[#111215]">Job Board</Link>
               <Link to="/reviews" onClick={() => setMobileMenuOpen(false)} className="block py-2 px-3 rounded-lg hover:bg-white hover:text-[#111215]">Candidate Reviews</Link>
@@ -1557,7 +1555,7 @@ export default function ProductGuide() {
                 <li><a href="/#pricing" className="hover:text-[#111215] transition-colors">For In-House Talent Teams</a></li>
                 <li><a href="/#pricing" className="hover:text-[#111215] transition-colors">For Fast-Growing Startups</a></li>
                 <li><a href="/#productivity" className="hover:text-[#111215] transition-colors">Hours Returned Calculator</a></li>
-                <li><a href="/#pricing" className="hover:text-[#111215] transition-colors">Pricing & ROI Estimator</a></li>
+                <li><Link to="/pricing" className="hover:text-[#111215] transition-colors font-semibold text-[#111215]">Pricing & Plans (1 Mo Free)</Link></li>
                 <li><a href="/#faq" className="hover:text-[#111215] transition-colors">Frequently Asked Questions</a></li>
               </ul>
             </div>

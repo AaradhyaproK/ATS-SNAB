@@ -27,7 +27,7 @@ const Navbar: React.FC = () => {
     { name: "Jobs", href: "/jobs", isRoute: true },
     { name: "Features", href: "#features" },
     { name: "How it Works", href: "#process" },
-    { name: "Pricing", href: "#pricing" },
+    { name: "Pricing", href: "/pricing", isRoute: true },
     { name: "FAQ", href: "#faq" },
     { name: "Blogs", href: "/blogs", isRoute: true },
     { name: "Career Hub", href: "/career-hub", isRoute: true },
@@ -128,14 +128,16 @@ const Navbar: React.FC = () => {
                 </MagnetButton>
               </Link>
             ) : (
-              <>
-                <Link to="/auth" className={`text-sm font-medium ${isDark ? 'text-slate-300 hover:text-white' : 'text-slate-600 hover:text-slate-900'}`}>Log in</Link>
-                <Link to="/auth">
-                  <MagnetButton variant="primary" className="!px-4 !py-2 !text-sm">
-                    Get Started
-                  </MagnetButton>
+              <div className="flex items-center gap-2.5">
+                <Link to="/auth" className={`text-sm font-medium px-2 py-1 ${isDark ? 'text-slate-300 hover:text-white' : 'text-slate-600 hover:text-slate-900'}`}>Log in</Link>
+                <Link
+                  to="/book-demo"
+                  className="inline-flex h-9 items-center gap-1.5 px-4 rounded-full bg-[#111215] hover:bg-black text-white text-xs font-bold transition-all shadow-xs cursor-pointer group"
+                >
+                  <span>Book Demo</span>
+                  <span className="text-[#D4F82C] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform">↗</span>
                 </Link>
-              </>
+              </div>
             )}
           </div>
 
@@ -204,14 +206,21 @@ const Navbar: React.FC = () => {
                 </MagnetButton>
               </Link>
             ) : (
-              <>
-                <Link to="/auth" onClick={() => setIsMobileMenuOpen(false)} className={`text-xl font-medium ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Log in</Link>
-                <Link to="/auth" onClick={() => setIsMobileMenuOpen(false)}>
-                  <MagnetButton variant="primary" className="w-full justify-center py-3">
-                    Get Started
-                  </MagnetButton>
+              <div className="space-y-3">
+                <Link
+                  to="/book-demo"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="w-full py-3.5 px-4 rounded-full bg-[#111215] text-white text-xs font-black flex items-center justify-center gap-2 shadow-sm text-center"
+                >
+                  <span>Book Demo & 30-Day Free Trial</span>
+                  <span className="text-[#D4F82C]">↗</span>
                 </Link>
-              </>
+                <div className="flex items-center justify-center gap-4 pt-1">
+                  <Link to="/auth" onClick={() => setIsMobileMenuOpen(false)} className={`text-sm font-medium ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Log in</Link>
+                  <span className="text-slate-400">•</span>
+                  <Link to="/book-demo" onClick={() => setIsMobileMenuOpen(false)} className="text-sm font-bold text-[#8FB305]">Start Free Trial</Link>
+                </div>
+              </div>
             )}
           </div>
         </motion.div>

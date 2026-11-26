@@ -3284,7 +3284,7 @@ export default function PublicJobSeekerUpload() {
               <div className="font-bold text-[#111215] uppercase tracking-wider text-[11px]">Product</div>
               <div><Link to="/#pipeline" className="text-[#73766C] hover:text-[#111215]">Pipeline Kanban</Link></div>
               <div><Link to="/#client-portal" className="text-[#73766C] hover:text-[#111215]">Client Portal</Link></div>
-              <div><Link to="/#pricing" className="text-[#73766C] hover:text-[#111215]">Pricing Estimator</Link></div>
+              <div><Link to="/pricing" className="text-[#73766C] hover:text-[#111215]">Pricing & Plans</Link></div>
               <div><Link to="/active-jobs" className="text-[#111215] font-bold">Active Job Board</Link></div>
             </div>
 
