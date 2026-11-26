@@ -60,6 +60,7 @@ export const Pricing: React.FC = () => {
         {
           title: 'Candidate Management',
           items: [
+            'Store up to 2,500 Cloud Candidates',
             'Upload candidate resumes in standard formats',
             'Store candidate information & contact details',
             'Centralized candidate database & searchable talent pool',
@@ -88,7 +89,7 @@ export const Pricing: React.FC = () => {
       features: [
         'Centralized Job Openings Management (Open, Closed, On Hold)',
         'Full JD Details: Requirements, Experience, Location & Salary',
-        'Centralized Candidate Database & Resume Storage',
+        'Centralized Candidate Database: Up to 2,500 Cloud Candidates',
         'Visual Kanban Pipeline (Applied → Screening → Interview → Selection → Rejection)',
         'Resume Preview & PDF Download with Job Association',
         'Candidate Notes, Activity Log & Application History',
@@ -121,7 +122,7 @@ export const Pricing: React.FC = () => {
         {
           title: 'Includes Everything in ATS Starter, plus:',
           items: [
-            'All Job & Candidate Management features',
+            'All Job & Candidate Management features (up to 10,000 Cloud Candidates)',
             'Full visual Kanban pipeline & resume database'
           ]
         },
@@ -155,6 +156,7 @@ export const Pricing: React.FC = () => {
       ],
       features: [
         'Everything in ATS Starter',
+        'Centralized Candidate Database: Up to 10,000 Cloud Candidates',
         'Automated Candidate Notifications on New Job Creation',
         'Automated Matching Job Alerts to Eligible Candidates',
         'Interview Invitation, Confirmation & 24h Reminder Emails',
@@ -226,8 +228,9 @@ export const Pricing: React.FC = () => {
           ]
         },
         {
-          title: 'Unlimited AI Usage & Requisitions',
+          title: 'Unlimited AI Usage & Candidate Pool',
           items: [
+            'Candidate Database: Up to 50,000 Cloud Candidates',
             'Unlimited AI Resume Parsing',
             'Unlimited Job Requisitions & Creation',
             'Unlimited AI Resume-to-Job Match Scores',
@@ -237,6 +240,7 @@ export const Pricing: React.FC = () => {
       ],
       features: [
         'Everything in ATS + Email Automation',
+        'Candidate Database: Up to 50,000 Cloud Candidates',
         'AI Resume Parsing (PDF & DOCX to structured candidate profiles)',
         '1-Click AI Candidate Creation (Zero manual data entry)',
         'AI Job Creation from Normal Text Description or PDF JD',
@@ -311,6 +315,7 @@ export const Pricing: React.FC = () => {
         {
           title: 'Unlimited AI Usage & Requisitions',
           items: [
+            'Candidate Database: Unlimited Candidates (Fair Use 100k+)',
             'Unlimited AI Resume Parsing',
             'Unlimited Job Requisitions & Creation',
             'Unlimited AI Resume-to-Job Match Scores',
@@ -321,6 +326,7 @@ export const Pricing: React.FC = () => {
       ],
       features: [
         'Everything in ATS AI Pro',
+        'Candidate Database: Unlimited Candidates (Fair Use 100k+)',
         'Official WhatsApp Business API Automation Integration',
         'Automated WhatsApp Job Alerts with 1-Tap Candidate Apply',
         'Automated WhatsApp Interview Invitations & Confirmations',
@@ -743,11 +749,11 @@ export const Pricing: React.FC = () => {
                   <td className="px-4 py-3 text-center"><Check size={14} className="text-emerald-600 mx-auto" /></td>
                 </tr>
                 <tr>
-                  <td className="px-6 py-3 font-semibold text-slate-800">Resume Upload & Central Database</td>
-                  <td className="px-4 py-3 text-center"><Check size={14} className="text-emerald-600 mx-auto" /></td>
-                  <td className="px-4 py-3 text-center"><Check size={14} className="text-emerald-600 mx-auto" /></td>
-                  <td className="px-4 py-3 text-center bg-[#D4F82C]/5 border-x border-[#D4F82C]/20"><Check size={14} className="text-emerald-600 mx-auto" /></td>
-                  <td className="px-4 py-3 text-center"><Check size={14} className="text-emerald-600 mx-auto" /></td>
+                  <td className="px-6 py-3 font-semibold text-slate-800">Candidate Database Storage</td>
+                  <td className="px-4 py-3 text-center text-xs font-semibold text-slate-700">2,500 Candidates</td>
+                  <td className="px-4 py-3 text-center text-xs font-semibold text-slate-700">10,000 Candidates</td>
+                  <td className="px-4 py-3 text-center bg-[#D4F82C]/5 border-x border-[#D4F82C]/20 text-xs font-bold text-slate-900">50,000 Candidates</td>
+                  <td className="px-4 py-3 text-center text-xs font-bold text-slate-900">Unlimited (100k+ Fair Use)</td>
                 </tr>
                 <tr>
                   <td className="px-6 py-3 font-semibold text-slate-800">Visual Kanban Pipeline Stages</td>
