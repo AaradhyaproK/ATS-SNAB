@@ -541,47 +541,58 @@ export default function LandingPage() {
   const handleLeadSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmittingLead(true);
+
+    const payload = {
+      name: leadForm.name,
+      email: leadForm.email,
+      phone: leadForm.phone,
+      company: leadForm.company,
+      hiringVolume: leadForm.hiringVolume,
+      primaryInterest: leadForm.primaryInterest,
+      preferredTime: leadForm.preferredTime,
+      source: '1-Month Free Demo Modal',
+    };
+
+    // 1. Primary: Direct submission to Formspree endpoint
     try {
-      // 1. Direct Firebase Firestore write to 'leads'
-      try {
-        await addDoc(collection(db, 'leads'), {
-          ...leadForm,
-          createdAt: serverTimestamp(),
-          source: '1-Month Free Demo Modal',
-        });
-      } catch (err) {
-        console.warn('Firestore lead logging note:', err);
-      }
-
-      // 2. Also log to contactSubmissions
-      try {
-        await addDoc(collection(db, 'contactSubmissions'), {
-          name: leadForm.name,
-          email: leadForm.email,
-          phone: leadForm.phone,
-          subject: `30-Day Free Trial Demo: ${leadForm.company || leadForm.name}`,
-          message: `Company: ${leadForm.company} | Hiring Volume: ${leadForm.hiringVolume} | Interest: ${leadForm.primaryInterest} | Preferred Time: ${leadForm.preferredTime}`,
-          createdAt: serverTimestamp(),
-          status: 'new'
-        });
-      } catch (err) {
-        console.warn('Contact submission note:', err);
-      }
-
-      // 3. Graceful Formspree dispatch
-      try {
-        await handleFormspreeSubmit(e);
-      } catch (formErr) {
-        console.warn('Formspree dispatch note:', formErr);
-      }
-
-      setLeadSubmitted(true);
-    } catch (err) {
-      console.error('Error submitting lead form:', err);
-      setLeadSubmitted(true);
-    } finally {
-      setSubmittingLead(false);
+      await fetch('https://formspree.io/f/mgawlaan', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify({
+          ...payload,
+          _subject: `30-Day Free Trial Demo: ${leadForm.name} (${leadForm.company}) - Plan: ${leadForm.primaryInterest}`,
+        }),
+      });
+    } catch (formErr) {
+      console.warn('Formspree dispatch notice:', formErr);
     }
+
+    // 2. Safe background sync to Firestore (non-blocking)
+    try {
+      addDoc(collection(db, 'leads'), {
+        ...payload,
+        createdAt: serverTimestamp(),
+        status: 'new',
+      }).catch((err) => console.warn('Firestore lead notice:', err?.message || err));
+
+      addDoc(collection(db, 'contactSubmissions'), {
+        name: leadForm.name,
+        email: leadForm.email,
+        phone: leadForm.phone,
+        subject: `30-Day Free Trial Demo: ${leadForm.company || leadForm.name}`,
+        message: `Company: ${leadForm.company} | Hiring Volume: ${leadForm.hiringVolume} | Interest: ${leadForm.primaryInterest} | Preferred Time: ${leadForm.preferredTime}`,
+        createdAt: serverTimestamp(),
+        status: 'new',
+      }).catch((err) => console.warn('Firestore contactSubmissions notice:', err?.message || err));
+    } catch (err) {
+      // Ignore background sync errors
+    }
+
+    setLeadSubmitted(true);
+    setSubmittingLead(false);
   };
 
   useEffect(() => {
@@ -4641,7 +4652,7 @@ export default function LandingPage() {
                       </div>
                       <div className="flex items-start gap-2 text-[11px] text-slate-300">
                         <Check size={14} className="text-[#D4F82C] shrink-0 mt-0.5" />
-                        <span><strong>Monthly Allowance:</strong> 1,000 parses, 1,000 match scores & 100 AI jobs / month</span>
+                        <span><strong>Unlimited Usage:</strong> Unlimited AI Resume Parsing & Unlimited Job Openings</span>
                       </div>
                     </div>
                   </div>
@@ -4709,7 +4720,7 @@ export default function LandingPage() {
                       </div>
                       <div className="flex items-start gap-2 text-[11px] text-[#575A51]">
                         <Check size={14} className="text-emerald-600 shrink-0 mt-0.5" />
-                        <span><strong>Expanded Limits:</strong> 2,500 parses & scores, 150 AI jobs / month</span>
+                        <span><strong>Unlimited Usage:</strong> Unlimited AI Resume Parsing & Unlimited Job Openings</span>
                       </div>
                     </div>
                   </div>

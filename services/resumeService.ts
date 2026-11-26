@@ -117,6 +117,7 @@ export interface ResumeDumpRecord extends ParsedResumeProfile {
   source?: ResumeSource;
   sourceInterviewId?: string;
   sourceJobTitle?: string;
+  openToApply?: boolean;
   isHired?: boolean;
   doNotSuggest?: boolean;
   isBlocked?: boolean;
@@ -1255,6 +1256,7 @@ export const saveResumeDumpCandidate = async ({
     summary: summaryText,
     professionalSummary: summaryText,
     skills: skillsArray,
+    openToApply: (normalizedProfile as any).openToApply !== false,
     isPublicUpload: isPublic,
     isPublicCandidate: isPublic,
     isGlobalPublicCandidate: isPublic,

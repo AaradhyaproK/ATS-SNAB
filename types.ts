@@ -51,6 +51,7 @@ export interface Interview {
     uid: string;
     email: string;
     role: 'candidate' | 'recruiter' | 'admin';
+    openToApply?: boolean;
     name: string;
     displayName?: string;
     phone?: string;

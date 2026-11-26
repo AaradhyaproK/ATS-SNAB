@@ -226,12 +226,12 @@ export const Pricing: React.FC = () => {
           ]
         },
         {
-          title: 'Monthly AI Usage Allowance Included',
+          title: 'Unlimited AI Usage & Requisitions',
           items: [
-            '100 AI Job Creations / month',
-            '1,000 AI Resume Parses / month',
-            '1,000 AI Resume-to-Job Match Scores / month',
-            '500 AI Candidate Recommendation Runs / month'
+            'Unlimited AI Resume Parsing',
+            'Unlimited Job Requisitions & Creation',
+            'Unlimited AI Resume-to-Job Match Scores',
+            'Unlimited AI Candidate Recommendations'
           ]
         }
       ],
@@ -245,11 +245,9 @@ export const Pricing: React.FC = () => {
         'AI Candidate Recommendations from Existing Talent Pool',
         'Automated AI Candidate Outreach with 1-Click Apply Links',
         'Algorithmic Candidate Ranking by Relevance',
-        'Monthly AI Usage Allowance Included:',
-        '• 100 AI Job Creations / month',
-        '• 1,000 AI Resume Parses / month',
-        '• 1,000 AI Match Scores / month',
-        '• 500 Candidate Recommendation Runs / month'
+        'Unlimited AI Resume Parsing (Drop 100+ Resumes in 3s)',
+        'Unlimited Job Requisitions & Structured AI Creation',
+        'Unlimited 0-100 AI Match Scores & Candidate Recommendations'
       ],
       notIncluded: [
         'WhatsApp Business Integration (Available as ₹499/mo Add-On)'
@@ -311,12 +309,12 @@ export const Pricing: React.FC = () => {
           ]
         },
         {
-          title: 'Expanded Monthly Allowances Included',
+          title: 'Unlimited AI Usage & Requisitions',
           items: [
-            '150 AI Job Creations / month',
-            '2,500 AI Resume Parses / month',
-            '2,500 AI Match Scores / month',
-            '1,000 AI Recommendation Runs / month',
+            'Unlimited AI Resume Parsing',
+            'Unlimited Job Requisitions & Creation',
+            'Unlimited AI Resume-to-Job Match Scores',
+            'Unlimited AI Candidate Recommendations',
             'Full WhatsApp Business Automation workflows & trigger engine'
           ]
         }
@@ -332,7 +330,7 @@ export const Pricing: React.FC = () => {
         'Smart Fallback: Auto-Email if WhatsApp Message Unopened',
         'Approved Meta Templates with Rich Media & Quick-Action Buttons',
         'Live Delivery, Read Status & Candidate Response Tracking',
-        'Expanded Usage: 2,500 Parses & Scores, 150 Jobs / month',
+        'Unlimited AI Resume Parsing & Unlimited Job Openings',
         'Priority Technical & Template Approval Support'
       ],
       notIncluded: []
@@ -618,13 +616,13 @@ export const Pricing: React.FC = () => {
                   High Volume
                 </span>
               </div>
-              <h3 className="text-base font-bold text-[#111215]">AI Parsing & Scoring Packs</h3>
+              <h3 className="text-base font-bold text-[#111215]">Custom Enterprise Integrations</h3>
               <div className="mt-2 flex items-baseline gap-1">
-                <span className="text-2xl font-black">Custom Packs</span>
+                <span className="text-2xl font-black">Tailored Setup</span>
                 <span className="text-xs text-[#73766C]">from ₹999</span>
               </div>
               <p className="text-xs text-[#575A51] mt-2 leading-relaxed">
-                Exceeded your monthly 1,000 resume parsing or scoring allowance? Top up with instant credit packs that never expire.
+                Connect your existing HRIS, bespoke webhook pipelines, or custom career domains with dedicated engineering assistance.
               </p>
             </div>
             <div className="mt-5 pt-3 border-t border-[#E4E7DC] text-[11px] text-[#73766C]">

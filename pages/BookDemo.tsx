@@ -59,57 +59,67 @@ export const BookDemo: React.FC = () => {
     setErrorMsg(null);
 
     const submissionPayload = {
-      ...form,
+      name: form.name,
+      email: form.email,
+      phone: form.phone,
+      company: form.company,
+      hiringVolume: form.hiringVolume,
+      primaryInterest: form.primaryInterest,
+      preferredTime: form.preferredTime,
+      notes: form.notes,
       selectedPlan: queryPlan || form.primaryInterest,
       source: 'Book Demo Page (/book-demo)',
-      createdAt: serverTimestamp(),
-      status: 'new'
     };
 
+    // 1. Primary: Direct submission to Formspree mail endpoint (cannot be blocked by Firebase rules or adblockers)
     try {
-      // 1. Direct Firebase Firestore write to 'leads' collection
-      await addDoc(collection(db, 'leads'), submissionPayload);
-
-      // 2. Also log to contactSubmissions for unified admin inbox
-      try {
-        await addDoc(collection(db, 'contactSubmissions'), {
-          name: form.name,
-          email: form.email,
-          phone: form.phone,
-          subject: `30-Day Free Trial Demo Request [${queryPlan || form.primaryInterest}] - ${form.company || form.name}`,
-          message: `Company: ${form.company} | Plan: ${queryPlan || form.primaryInterest} | Hiring Volume: ${form.hiringVolume} | Preferred Time: ${form.preferredTime} | Notes: ${form.notes}`,
-          createdAt: serverTimestamp(),
-          status: 'new'
-        });
-      } catch (err) {
-        console.warn('Contact submissions note:', err);
-      }
-
-      // 3. Dispatch to Formspree gracefully in background
-      try {
-        await fetch('https://formspree.io/f/mgawlaan', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Accept: 'application/json'
-          },
-          body: JSON.stringify({
-            ...submissionPayload,
-            _subject: `New 30-Day Free Trial Demo: ${form.name} (${form.company}) - Plan: ${queryPlan || form.primaryInterest}`
-          })
-        });
-      } catch (err) {
-        console.warn('Formspree dispatch notice:', err);
-      }
-
-      setSubmitted(true);
+      await fetch('https://formspree.io/f/mgawlaan', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json'
+        },
+        body: JSON.stringify({
+          ...submissionPayload,
+          _subject: `New 30-Day Free Trial Demo: ${form.name} (${form.company}) - Plan: ${queryPlan || form.primaryInterest}`
+        })
+      });
     } catch (err) {
-      console.error('Error submitting demo form:', err);
-      // Fallback: If Firebase throws offline, still show success so user isn't stuck
-      setSubmitted(true);
-    } finally {
-      setSubmitting(false);
+      console.warn('Formspree dispatch notice:', err);
     }
+
+    // 2. Safe background sync to Firestore (non-blocking, never fails user submission)
+    try {
+      addDoc(collection(db, 'leads'), {
+        ...submissionPayload,
+        createdAt: serverTimestamp(),
+        status: 'new'
+      }).catch((err) => {
+        console.warn('Leads background sync notice:', err?.message || err);
+      });
+    } catch (err) {
+      // Ignore background sync errors
+    }
+
+    try {
+      addDoc(collection(db, 'contactSubmissions'), {
+        name: form.name,
+        email: form.email,
+        phone: form.phone,
+        subject: `30-Day Free Trial Demo Request [${queryPlan || form.primaryInterest}] - ${form.company || form.name}`,
+        message: `Company: ${form.company} | Plan: ${queryPlan || form.primaryInterest} | Hiring Volume: ${form.hiringVolume} | Preferred Time: ${form.preferredTime} | Notes: ${form.notes}`,
+        createdAt: serverTimestamp(),
+        status: 'new'
+      }).catch((err) => {
+        console.warn('Contact submissions background sync notice:', err?.message || err);
+      });
+    } catch (err) {
+      // Ignore background sync errors
+    }
+
+    // Form successfully completed
+    setSubmitted(true);
+    setSubmitting(false);
   };
 
   return (

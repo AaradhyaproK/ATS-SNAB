@@ -1719,6 +1719,12 @@ const InterviewCandidates: React.FC = () => {
                               <span className="geist-small rounded-full border border-blue-500/40 bg-blue-500/10 px-2.5 py-0.5 text-[11px] font-bold text-blue-400">
                                 {candidate.matchScore}% Match
                               </span>
+                              {(candidate as any).openToApply !== false && (
+                                <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-bold text-emerald-400 shadow-xs">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                                  Open to Apply
+                                </span>
+                              )}
                             </div>
 
                             <div className="geist-small mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[#8bbde8]">

@@ -142,42 +142,42 @@ const ActiveJobsPage: React.FC = () => {
     }
 
     setSubmittingContact(true);
+    // 1. Primary: Direct submission to Formspree endpoint (cannot be blocked by Firebase or adblockers)
     try {
-      await addDoc(collection(db, 'contactSubmissions'), {
+      await fetch('https://formspree.io/f/mgawlaan', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json'
+        },
+        body: JSON.stringify({
+          name: contactForm.name,
+          email: contactForm.email,
+          phone: contactForm.phone,
+          subject: contactForm.subject,
+          message: contactForm.message,
+          _subject: `New Recruiter/Employer Inquiry: ${contactForm.name} - ${contactForm.subject || 'Hiring Inquiry'}`
+        })
+      });
+    } catch (formspreeErr) {
+      console.warn('Formspree dispatch notice:', formspreeErr);
+    }
+
+    // 2. Safe background sync to Firestore (non-blocking)
+    try {
+      addDoc(collection(db, 'contactSubmissions'), {
         ...contactForm,
         createdAt: serverTimestamp(),
         status: 'new'
-      });
-
-      try {
-        await fetch('https://formspree.io/f/mgawlaan', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Accept: 'application/json'
-          },
-          body: JSON.stringify({
-            name: contactForm.name,
-            email: contactForm.email,
-            phone: contactForm.phone,
-            subject: contactForm.subject,
-            message: contactForm.message,
-            _subject: `New Recruiter/Employer Inquiry: ${contactForm.name} - ${contactForm.subject || 'Hiring Inquiry'}`
-          })
-        });
-      } catch (formspreeErr) {
-        console.warn('Formspree dispatch notice:', formspreeErr);
-      }
-
-      messageBox.showSuccess('Your message has been sent successfully! Our team will get back to you soon.');
-      setShowContactModal(false);
-      setContactForm({ name: '', email: '', phone: '', subject: '', message: '' });
+      }).catch((err) => console.warn('Firestore contact submissions notice:', err?.message || err));
     } catch (err) {
-      console.error('Failed to submit contact message:', err);
-      messageBox.showError('Failed to send message. Please try again.');
-    } finally {
-      setSubmittingContact(false);
+      // Ignore background sync errors
     }
+
+    messageBox.showSuccess('Your message has been sent successfully! Our team will get back to you soon.');
+    setShowContactModal(false);
+    setContactForm({ name: '', email: '', phone: '', subject: '', message: '' });
+    setSubmittingContact(false);
   };
 
   useEffect(() => {

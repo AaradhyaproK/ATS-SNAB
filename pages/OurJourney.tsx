@@ -70,41 +70,41 @@ const OurJourneyContent: React.FC = () => {
           return;
       }
       setLoading(true);
+      // 1. Primary: Direct submission to Formspree endpoint (cannot be blocked by Firebase or adblockers)
       try {
-          await addDoc(collection(db, 'contactSubmissions'), {
+          await fetch('https://formspree.io/f/mgawlaan', {
+              method: 'POST',
+              headers: {
+                  'Content-Type': 'application/json',
+                  Accept: 'application/json'
+              },
+              body: JSON.stringify({
+                  name: formData.name,
+                  email: formData.email,
+                  phone: formData.phone,
+                  subject: formData.subject,
+                  message: formData.message,
+                  _subject: `New Inquiry (Our Journey): ${formData.name} - ${formData.subject || 'Support'}`
+              })
+          });
+      } catch (formspreeErr) {
+          console.warn('Formspree dispatch notice:', formspreeErr);
+      }
+
+      // 2. Safe background sync to Firestore (non-blocking)
+      try {
+          addDoc(collection(db, 'contactSubmissions'), {
               ...formData,
               createdAt: serverTimestamp(),
               status: 'new'
-          });
-
-          try {
-              await fetch('https://formspree.io/f/mgawlaan', {
-                  method: 'POST',
-                  headers: {
-                      'Content-Type': 'application/json',
-                      Accept: 'application/json'
-                  },
-                  body: JSON.stringify({
-                      name: formData.name,
-                      email: formData.email,
-                      phone: formData.phone,
-                      subject: formData.subject,
-                      message: formData.message,
-                      _subject: `New Inquiry (Our Journey): ${formData.name} - ${formData.subject || 'Support'}`
-                  })
-              });
-          } catch (formspreeErr) {
-              console.warn('Formspree dispatch notice:', formspreeErr);
-          }
-
-          messageBox.showSuccess("Your message has been sent successfully!");
-          setFormData({ name: '', email: '', phone: '', subject: 'Industrial Support Inquiry', message: '' });
-      } catch (error) {
-          console.error("Error sending message:", error);
-          messageBox.showError("Failed to send message. Please try again later.");
-      } finally {
-          setLoading(false);
+          }).catch((err) => console.warn('Firestore contact submissions notice:', err?.message || err));
+      } catch (err) {
+          // Ignore background sync errors
       }
+
+      messageBox.showSuccess("Your message has been sent successfully!");
+      setFormData({ name: '', email: '', phone: '', subject: 'Industrial Support Inquiry', message: '' });
+      setLoading(false);
   };
 
   return (

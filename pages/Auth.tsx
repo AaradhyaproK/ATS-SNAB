@@ -22,6 +22,7 @@ import {
   ChevronRight,
   Activity,
   Award,
+  Users,
 } from 'lucide-react';
 import {
   browserLocalPersistence,
@@ -33,9 +34,21 @@ import {
   signInWithEmailAndPassword,
   signInWithPopup,
   signOut,
+  createUserWithEmailAndPassword,
+  updateProfile,
 } from 'firebase/auth';
-import { addDoc, collection, doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore';
-import { Link, useNavigate } from 'react-router-dom';
+import {
+  addDoc,
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  query,
+  serverTimestamp,
+  setDoc,
+  where,
+} from 'firebase/firestore';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import HireXLogo, { HireXMark } from '../components/HireXLogo';
 import { useTheme } from '../context/ThemeContext';
 import { auth, db } from '../services/firebase';
@@ -46,7 +59,18 @@ type AuthMode = 'login' | 'signup' | 'reset';
 const AuthPage: React.FC = () => {
   const { user, userProfile, loading: authLoading } = useAuth();
   const { isDark } = useTheme();
-  const [mode, setMode] = useState<AuthMode>('login');
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const [userRoleSelection, setUserRoleSelection] = useState<'recruiter' | 'candidate'>(() => {
+    const searchParams = new URLSearchParams(location.search);
+    return searchParams.get('role') === 'candidate' ? 'candidate' : 'recruiter';
+  });
+
+  const [mode, setMode] = useState<AuthMode>(() => {
+    const searchParams = new URLSearchParams(location.search);
+    return searchParams.get('mode') === 'signup' ? 'signup' : 'login';
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -58,7 +82,6 @@ const AuthPage: React.FC = () => {
   const [fullname, setFullname] = useState('');
   const [experience, setExperience] = useState(0);
   const [rememberMe, setRememberMe] = useState(true);
-  const navigate = useNavigate();
 
   React.useEffect(() => {
     if (!authLoading && user) {
@@ -66,14 +89,16 @@ const AuthPage: React.FC = () => {
         userProfile?.role ||
         (user.email === 'admin@snab.co.in' || user.email?.includes('admin')
           ? 'admin'
-          : 'recruiter');
+          : (userRoleSelection === 'candidate' ? 'candidate' : 'recruiter'));
       if (role === 'admin') {
         navigate('/admin', { replace: true });
+      } else if (role === 'candidate') {
+        navigate('/candidate/dashboard', { replace: true });
       } else {
         navigate('/recruiter/jobs', { replace: true });
       }
     }
-  }, [user, userProfile, authLoading, navigate]);
+  }, [user, userProfile, authLoading, navigate, userRoleSelection]);
 
   const switchMode = (nextMode: AuthMode) => {
     setMode(nextMode);
@@ -109,7 +134,51 @@ const AuthPage: React.FC = () => {
       }
 
       const isAdminEmail = cleanEmail === 'admin@snab.co.in' || cleanEmail.includes('admin');
-      const userRole = userData.role || (isAdminEmail ? 'admin' : 'recruiter');
+      const isCandidateExplicit = userRoleSelection === 'candidate' || userData.role === 'candidate';
+      const userRole = userData.role || (isAdminEmail ? 'admin' : isCandidateExplicit ? 'candidate' : 'recruiter');
+
+      // Candidate login path: full candidate dashboard access
+      if (userRole === 'candidate') {
+        let matchedDoc: any = null;
+        let snap = await getDocs(query(collection(db, 'resumeDumpCandidates'), where('email', '==', cleanEmail))).catch(() => null);
+        if (!snap || snap.empty) {
+          snap = await getDocs(query(collection(db, 'resumeDumpCandidates'), where('profile.email', '==', cleanEmail))).catch(() => null);
+        }
+        if (snap && !snap.empty) {
+          const rawData = snap.docs[0].data();
+          matchedDoc = { id: snap.docs[0].id, ...(rawData.profile || {}), ...rawData, openToApply: rawData.openToApply !== false };
+        } else {
+          const newCand = {
+            name: userCredential.user.displayName || cleanEmail.split('@')[0],
+            email: cleanEmail,
+            phone: userCredential.user.phoneNumber || '',
+            openToApply: true,
+            source: 'email_auth',
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+          };
+          const docRef = await addDoc(collection(db, 'resumeDumpCandidates'), newCand);
+          matchedDoc = { id: docRef.id, ...newCand };
+        }
+
+        if (!userData.role) {
+          await setDoc(
+            doc(db, 'users', userCredential.user.uid),
+            {
+              email: cleanEmail,
+              displayName: userCredential.user.displayName || cleanEmail.split('@')[0],
+              role: 'candidate',
+              openToApply: true,
+              updatedAt: serverTimestamp(),
+            },
+            { merge: true }
+          ).catch(() => null);
+        }
+
+        localStorage.setItem('snab_candidate_session', JSON.stringify(matchedDoc));
+        navigate('/candidate/dashboard');
+        return;
+      }
 
       if (userRole !== 'admin') {
         if (!userCredential.user.emailVerified && !userData.adminVerified) {
@@ -122,7 +191,7 @@ const AuthPage: React.FC = () => {
       if (userRole !== 'recruiter' && userRole !== 'admin') {
         await signOut(auth);
         setError(
-          'This InterviewXpert portal is only for recruiters and admins. Candidates should use the interview or assessment link sent to them.'
+          'This account is registered as a candidate. Please select the Candidate tab above to access your Candidate Portal.'
         );
         return;
       }
@@ -188,9 +257,10 @@ const AuthPage: React.FC = () => {
       }
 
       const isAdminEmail = cleanEmail === 'admin@snab.co.in' || cleanEmail.includes('admin');
-      const userRole = userData.role || (isAdminEmail ? 'admin' : 'recruiter');
+      const isCandidateMode = userRoleSelection === 'candidate' || userData.role === 'candidate';
+      const userRole = userData.role || (isAdminEmail ? 'admin' : isCandidateMode ? 'candidate' : 'recruiter');
 
-      // If user document doesn't exist yet, initialize it as recruiter or admin
+      // If user document doesn't exist yet, initialize it
       if (!userData.role) {
         await setDoc(
           doc(db, 'users', googleUser.uid),
@@ -199,6 +269,7 @@ const AuthPage: React.FC = () => {
             displayName: googleUser.displayName || cleanEmail.split('@')[0],
             photoURL: googleUser.photoURL || '',
             role: userRole,
+            openToApply: userRole === 'candidate' ? true : undefined,
             adminVerified: true,
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
@@ -207,10 +278,40 @@ const AuthPage: React.FC = () => {
         ).catch((err) => console.warn('Could not save user profile:', err));
       }
 
-      // Check role permissions
+      // Candidate login path
+      if (userRole === 'candidate') {
+        let matchedDoc: any = null;
+        let snap = await getDocs(query(collection(db, 'resumeDumpCandidates'), where('email', '==', cleanEmail))).catch(() => null);
+        if (!snap || snap.empty) {
+          snap = await getDocs(query(collection(db, 'resumeDumpCandidates'), where('profile.email', '==', cleanEmail))).catch(() => null);
+        }
+        if (snap && !snap.empty) {
+          const rawData = snap.docs[0].data();
+          matchedDoc = { id: snap.docs[0].id, ...(rawData.profile || {}), ...rawData, openToApply: rawData.openToApply !== false };
+        } else {
+          const newCand = {
+            name: googleUser.displayName || cleanEmail.split('@')[0],
+            email: cleanEmail,
+            phone: googleUser.phoneNumber || '',
+            photoURL: googleUser.photoURL || '',
+            openToApply: true,
+            source: 'google_signin',
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+          };
+          const docRef = await addDoc(collection(db, 'resumeDumpCandidates'), newCand);
+          matchedDoc = { id: docRef.id, ...newCand };
+        }
+
+        localStorage.setItem('snab_candidate_session', JSON.stringify(matchedDoc));
+        navigate('/candidate/dashboard');
+        return;
+      }
+
+      // Check role permissions for recruiters/admins
       if (userRole !== 'recruiter' && userRole !== 'admin') {
         await signOut(auth);
-        setError('This portal is strictly for recruiters and admins. Candidates should use the candidate portal.');
+        setError('This account is registered as a candidate. Please select the Candidate tab above to sign in.');
         setLoading(false);
         return;
       }
@@ -269,9 +370,10 @@ const AuthPage: React.FC = () => {
       }
 
       const isAdminEmail = cleanEmail === 'admin@snab.co.in' || cleanEmail.includes('admin');
-      const userRole = userData.role || (isAdminEmail ? 'admin' : 'recruiter');
+      const isCandidateMode = userRoleSelection === 'candidate' || userData.role === 'candidate';
+      const userRole = userData.role || (isAdminEmail ? 'admin' : isCandidateMode ? 'candidate' : 'recruiter');
 
-      // If user document doesn't exist yet, initialize it as recruiter or admin
+      // If user document doesn't exist yet, initialize it
       if (!userData.role) {
         await setDoc(
           doc(db, 'users', githubUser.uid),
@@ -280,6 +382,7 @@ const AuthPage: React.FC = () => {
             displayName: githubUser.displayName || cleanEmail.split('@')[0],
             photoURL: githubUser.photoURL || '',
             role: userRole,
+            openToApply: userRole === 'candidate' ? true : undefined,
             authProvider: 'github',
             adminVerified: true,
             createdAt: serverTimestamp(),
@@ -289,10 +392,40 @@ const AuthPage: React.FC = () => {
         ).catch((err) => console.warn('Could not save user profile:', err));
       }
 
-      // Check role permissions
+      // Candidate login path
+      if (userRole === 'candidate') {
+        let matchedDoc: any = null;
+        let snap = await getDocs(query(collection(db, 'resumeDumpCandidates'), where('email', '==', cleanEmail))).catch(() => null);
+        if (!snap || snap.empty) {
+          snap = await getDocs(query(collection(db, 'resumeDumpCandidates'), where('profile.email', '==', cleanEmail))).catch(() => null);
+        }
+        if (snap && !snap.empty) {
+          const rawData = snap.docs[0].data();
+          matchedDoc = { id: snap.docs[0].id, ...(rawData.profile || {}), ...rawData, openToApply: rawData.openToApply !== false };
+        } else {
+          const newCand = {
+            name: githubUser.displayName || cleanEmail.split('@')[0],
+            email: cleanEmail,
+            phone: '',
+            photoURL: githubUser.photoURL || '',
+            openToApply: true,
+            source: 'github_signin',
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+          };
+          const docRef = await addDoc(collection(db, 'resumeDumpCandidates'), newCand);
+          matchedDoc = { id: docRef.id, ...newCand };
+        }
+
+        localStorage.setItem('snab_candidate_session', JSON.stringify(matchedDoc));
+        navigate('/candidate/dashboard');
+        return;
+      }
+
+      // Check role permissions for recruiters/admins
       if (userRole !== 'recruiter' && userRole !== 'admin') {
         await signOut(auth);
-        setError('This portal is strictly for recruiters and admins. Candidates should use the candidate portal.');
+        setError('This account is registered as a candidate. Please select the Candidate tab above to sign in.');
         setLoading(false);
         return;
       }
@@ -337,6 +470,63 @@ const AuthPage: React.FC = () => {
       setError('Please provide your name and email address.');
       setLoading(false);
       return;
+    }
+
+    // Candidate instant registration path
+    if (userRoleSelection === 'candidate') {
+      const cleanPassword = password.trim();
+      if (!cleanPassword || cleanPassword.length < 6) {
+        setError('Password must be at least 6 characters long.');
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const userCredential = await createUserWithEmailAndPassword(auth, cleanEmail, cleanPassword);
+        if (cleanName && userCredential.user) {
+          await updateProfile(userCredential.user, { displayName: cleanName }).catch(() => null);
+        }
+
+        await setDoc(
+          doc(db, 'users', userCredential.user.uid),
+          {
+            email: cleanEmail,
+            displayName: cleanName,
+            role: 'candidate',
+            openToApply: true,
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+          },
+          { merge: true }
+        );
+
+        const newCand = {
+          name: cleanName,
+          email: cleanEmail,
+          phone: '',
+          openToApply: true,
+          source: 'candidate_signup',
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        };
+        const candRef = await addDoc(collection(db, 'resumeDumpCandidates'), newCand);
+        const candidateSession = { id: candRef.id, ...newCand };
+        localStorage.setItem('snab_candidate_session', JSON.stringify(candidateSession));
+        navigate('/candidate/dashboard');
+        return;
+      } catch (signupErr: any) {
+        console.error('Candidate registration error:', signupErr);
+        if (signupErr.code === 'auth/email-already-in-use') {
+          setError('An account with this email already exists. Please sign in or reset your password.');
+        } else if (signupErr.code === 'auth/weak-password') {
+          setError('Password is too weak. Please use at least 6 characters.');
+        } else {
+          setError(signupErr.message?.replace(/^Firebase:\s*/, '') || 'Registration failed. Please try again.');
+        }
+        return;
+      } finally {
+        setLoading(false);
+      }
     }
 
     try {
@@ -596,12 +786,48 @@ const AuthPage: React.FC = () => {
               {/* Top Accent Strip */}
               <div className="absolute top-0 left-1/2 -translate-x-1/2 h-1.5 w-24 bg-[#D4F82C] rounded-b-full"></div>
 
+              {/* Segmented Role Selector: Recruiter vs Candidate */}
+              <div className="grid grid-cols-2 p-1 mb-5 rounded-2xl bg-[#F8F9F5] dark:bg-[#1D1F24] border border-[#E4E7DC] dark:border-white/10 shadow-2xs">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setUserRoleSelection('recruiter');
+                    setError(null);
+                    setMessage(null);
+                  }}
+                  className={`flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    userRoleSelection === 'recruiter'
+                      ? 'bg-[#111215] text-white dark:bg-[#D4F82C] dark:text-[#111215] shadow-xs'
+                      : 'text-[#73766C] dark:text-neutral-400 hover:text-[#111215] dark:hover:text-white'
+                  }`}
+                >
+                  <Building2 size={15} />
+                  <span>Recruiter / Employer</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setUserRoleSelection('candidate');
+                    setError(null);
+                    setMessage(null);
+                  }}
+                  className={`flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    userRoleSelection === 'candidate'
+                      ? 'bg-[#111215] text-white dark:bg-[#D4F82C] dark:text-[#111215] shadow-xs'
+                      : 'text-[#73766C] dark:text-neutral-400 hover:text-[#111215] dark:hover:text-white'
+                  }`}
+                >
+                  <UserRound size={15} />
+                  <span>Candidate / Job Seeker</span>
+                </button>
+              </div>
+
               {/* Card Header & Mode Switcher */}
               <div className="mb-6">
                 <div className="flex items-center justify-between gap-2 mb-3">
                   <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-[#73766C] dark:text-neutral-400">
                     <span className="w-1.5 h-1.5 rounded-full bg-[#D4F82C]"></span>
-                    Portal Access
+                    {userRoleSelection === 'candidate' ? 'Candidate Desk' : 'Recruiter Workspace'}
                   </span>
                   
                   {mode !== 'reset' && (
@@ -626,21 +852,33 @@ const AuthPage: React.FC = () => {
                             : 'text-[#73766C] dark:text-neutral-400 hover:text-[#111215] dark:hover:text-white'
                         }`}
                       >
-                        Request
+                        {userRoleSelection === 'candidate' ? 'Sign Up' : 'Request'}
                       </button>
                     </div>
                   )}
                 </div>
 
                 <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-[#111215] dark:text-white">
-                  {mode === 'login' && 'Welcome back'}
-                  {mode === 'signup' && 'Request Recruiter Access'}
-                  {mode === 'reset' && 'Reset your password'}
+                  {userRoleSelection === 'candidate' ? (
+                    mode === 'login' ? 'Candidate Sign In' : mode === 'signup' ? 'Create Candidate Account' : 'Reset Password'
+                  ) : (
+                    mode === 'login' ? 'Welcome back' : mode === 'signup' ? 'Request Recruiter Access' : 'Reset your password'
+                  )}
                 </h2>
                 <p className="mt-1.5 text-xs sm:text-sm text-[#575A51] dark:text-neutral-400">
-                  {mode === 'login' && 'Enter your credentials to access candidate pipelines & analytics.'}
-                  {mode === 'signup' && 'Submit your details for verification and workspace allocation.'}
-                  {mode === 'reset' && 'Enter your verified email to receive a secure recovery link.'}
+                  {userRoleSelection === 'candidate' ? (
+                    mode === 'login'
+                      ? 'Sign in to access your AI job matches, 1-tap apply, and Open to Apply status.'
+                      : mode === 'signup'
+                      ? 'Instant candidate registration with Google, GitHub, or Email to start applying.'
+                      : 'Enter your email to receive a secure recovery link.'
+                  ) : (
+                    mode === 'login'
+                      ? 'Enter your credentials to access candidate pipelines & analytics.'
+                      : mode === 'signup'
+                      ? 'Submit your details for verification and workspace allocation.'
+                      : 'Enter your verified email to receive a secure recovery link.'
+                  )}
                 </p>
               </div>
 
@@ -783,40 +1021,51 @@ const AuthPage: React.FC = () => {
                             required
                             value={fullname}
                             onChange={(e) => setFullname(e.target.value)}
-                            placeholder="e.g. Maya Patel"
+                            placeholder={userRoleSelection === 'candidate' ? 'e.g. Rahul Sharma' : 'e.g. Maya Patel'}
                             autoComplete="name"
                             className="w-full h-11 pl-10 pr-4 rounded-xl bg-[#F8F9F5] dark:bg-[#1D1F24] border border-[#E4E7DC] dark:border-white/10 text-sm text-[#111215] dark:text-white placeholder-[#73766C]/60 dark:placeholder-neutral-500 focus:outline-none focus:border-[#111215] dark:focus:border-[#D4F82C] focus:bg-white dark:focus:bg-[#15161A] transition-all"
                           />
                         </div>
                       </div>
 
-                      <div className="space-y-1.5">
-                        <label htmlFor="experience" className="block text-xs font-bold text-[#111215] dark:text-neutral-200 uppercase tracking-wider">
-                          Recruiting Experience (Years)
-                        </label>
-                        <div className="relative flex items-center">
-                          <span className="absolute left-3.5 text-[#73766C] dark:text-neutral-500 pointer-events-none">
-                            <BriefcaseBusiness size={17} />
-                          </span>
-                          <input
-                            id="experience"
-                            type="number"
-                            min="0"
-                            required
-                            value={String(experience)}
-                            onChange={(e) => setExperience(Number(e.target.value))}
-                            placeholder="Years of experience"
-                            className="w-full h-11 pl-10 pr-4 rounded-xl bg-[#F8F9F5] dark:bg-[#1D1F24] border border-[#E4E7DC] dark:border-white/10 text-sm text-[#111215] dark:text-white placeholder-[#73766C]/60 dark:placeholder-neutral-500 focus:outline-none focus:border-[#111215] dark:focus:border-[#D4F82C] focus:bg-white dark:focus:bg-[#15161A] transition-all"
-                          />
+                      {userRoleSelection === 'recruiter' && (
+                        <div className="space-y-1.5">
+                          <label htmlFor="experience" className="block text-xs font-bold text-[#111215] dark:text-neutral-200 uppercase tracking-wider">
+                            Recruiting Experience (Years)
+                          </label>
+                          <div className="relative flex items-center">
+                            <span className="absolute left-3.5 text-[#73766C] dark:text-neutral-500 pointer-events-none">
+                              <BriefcaseBusiness size={17} />
+                            </span>
+                            <input
+                              id="experience"
+                              type="number"
+                              min="0"
+                              required
+                              value={String(experience)}
+                              onChange={(e) => setExperience(Number(e.target.value))}
+                              placeholder="Years of experience"
+                              className="w-full h-11 pl-10 pr-4 rounded-xl bg-[#F8F9F5] dark:bg-[#1D1F24] border border-[#E4E7DC] dark:border-white/10 text-sm text-[#111215] dark:text-white placeholder-[#73766C]/60 dark:placeholder-neutral-500 focus:outline-none focus:border-[#111215] dark:focus:border-[#D4F82C] focus:bg-white dark:focus:bg-[#15161A] transition-all"
+                            />
+                          </div>
                         </div>
-                      </div>
+                      )}
+
+                      {userRoleSelection === 'candidate' && (
+                        <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-800 dark:text-emerald-300 flex items-start gap-2">
+                          <Sparkles size={16} className="text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                          <div>
+                            <span className="font-bold">Open to Apply Activated:</span> Recruiters will be able to discover your profile and invite you to instant interview rounds as soon as you sign up.
+                          </div>
+                        </div>
+                      )}
                     </>
                   )}
 
                   {/* Email Field */}
                   <div className="space-y-1.5">
                     <label htmlFor="email" className="block text-xs font-bold text-[#111215] dark:text-neutral-200 uppercase tracking-wider">
-                      Work Email
+                      {userRoleSelection === 'candidate' ? 'Email Address' : 'Work Email'}
                     </label>
                     <div className="relative flex items-center">
                       <span className="absolute left-3.5 text-[#73766C] dark:text-neutral-500 pointer-events-none">
@@ -828,27 +1077,29 @@ const AuthPage: React.FC = () => {
                         required
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        placeholder="recruiter@company.com"
+                        placeholder={userRoleSelection === 'candidate' ? 'candidate@example.com' : 'recruiter@company.com'}
                         autoComplete="email"
                         className="w-full h-11 pl-10 pr-4 rounded-xl bg-[#F8F9F5] dark:bg-[#1D1F24] border border-[#E4E7DC] dark:border-white/10 text-sm text-[#111215] dark:text-white placeholder-[#73766C]/60 dark:placeholder-neutral-500 focus:outline-none focus:border-[#111215] dark:focus:border-[#D4F82C] focus:bg-white dark:focus:bg-[#15161A] transition-all"
                       />
                     </div>
                   </div>
 
-                  {/* Password Field (Login Mode Only) */}
-                  {mode === 'login' && (
+                  {/* Password Field (Login Mode or Candidate Signup) */}
+                  {(mode === 'login' || (mode === 'signup' && userRoleSelection === 'candidate')) && (
                     <div className="space-y-1.5">
                       <div className="flex items-center justify-between">
                         <label htmlFor="password" className="block text-xs font-bold text-[#111215] dark:text-neutral-200 uppercase tracking-wider">
-                          Password
+                          {mode === 'signup' ? 'Create Password (min 6 chars)' : 'Password'}
                         </label>
-                        <button
-                          type="button"
-                          onClick={() => switchMode('reset')}
-                          className="text-xs font-semibold text-[#8FB305] dark:text-[#D4F82C] hover:underline cursor-pointer"
-                        >
-                          Forgot?
-                        </button>
+                        {mode === 'login' && (
+                          <button
+                            type="button"
+                            onClick={() => switchMode('reset')}
+                            className="text-xs font-semibold text-[#8FB305] dark:text-[#D4F82C] hover:underline cursor-pointer"
+                          >
+                            Forgot?
+                          </button>
+                        )}
                       </div>
                       <div className="relative flex items-center">
                         <span className="absolute left-3.5 text-[#73766C] dark:text-neutral-500 pointer-events-none">
@@ -861,7 +1112,7 @@ const AuthPage: React.FC = () => {
                           value={password}
                           onChange={(e) => setPassword(e.target.value)}
                           placeholder="••••••••••••"
-                          autoComplete="current-password"
+                          autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
                           minLength={6}
                           className="w-full h-11 pl-10 pr-11 rounded-xl bg-[#F8F9F5] dark:bg-[#1D1F24] border border-[#E4E7DC] dark:border-white/10 text-sm text-[#111215] dark:text-white placeholder-[#73766C]/60 dark:placeholder-neutral-500 focus:outline-none focus:border-[#111215] dark:focus:border-[#D4F82C] focus:bg-white dark:focus:bg-[#15161A] transition-all"
                         />
@@ -913,9 +1164,15 @@ const AuthPage: React.FC = () => {
                       {loading
                         ? mode === 'login'
                           ? 'Authenticating…'
+                          : userRoleSelection === 'candidate'
+                          ? 'Creating Candidate Account…'
                           : 'Submitting request…'
                         : mode === 'login'
-                        ? 'Sign In to Workspace'
+                        ? userRoleSelection === 'candidate'
+                          ? 'Sign In as Candidate'
+                          : 'Sign In to Workspace'
+                        : userRoleSelection === 'candidate'
+                        ? 'Create Candidate Account & Activate'
                         : 'Submit Recruiter Request'}
                     </span>
                     {!loading && <ArrowRight size={17} className="group-hover:translate-x-0.5 transition-transform" />}
@@ -925,18 +1182,20 @@ const AuthPage: React.FC = () => {
                   <div className="pt-2 text-center text-xs text-[#73766C] dark:text-neutral-400">
                     {mode === 'login' ? (
                       <>
-                        Need a recruiter or enterprise seat?{' '}
+                        {userRoleSelection === 'candidate' ? 'New candidate? ' : 'Need a recruiter or enterprise seat? '}
                         <button
                           type="button"
                           onClick={() => switchMode('signup')}
                           className="font-bold text-[#111215] dark:text-white hover:underline cursor-pointer ml-1"
                         >
-                          Request Access
+                          {userRoleSelection === 'candidate' ? 'Create Candidate Account' : 'Request Access'}
                         </button>
                       </>
                     ) : (
                       <>
-                        Already registered with InterviewXpert?{' '}
+                        {userRoleSelection === 'candidate'
+                          ? 'Already have a candidate account? '
+                          : 'Already registered with InterviewXpert? '}
                         <button
                           type="button"
                           onClick={() => switchMode('login')}

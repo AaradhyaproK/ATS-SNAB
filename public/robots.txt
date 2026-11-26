@@ -1,5 +1,5 @@
 # Robots.txt for InterviewXpert
-# https://interviewxpert.com
+# https://interviewxpert.in
 
 User-agent: *
 Allow: /
@@ -28,5 +28,5 @@ Disallow: /voice-report/*
 Disallow: /interview/room/*
 
 # Host & Sitemap
-Host: https://interviewxpert.com
-Sitemap: https://interviewxpert.com/sitemap.xml
+Host: https://interviewxpert.in
+Sitemap: https://interviewxpert.in/sitemap.xml

@@ -221,6 +221,44 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab, in
     return initialStageFilter || 'all';
   });
 
+  // ── Open to Apply & Immediate Hiring State ──
+  const [isOpenToApply, setIsOpenToApply] = useState<boolean>(() => {
+    return candidate?.openToApply !== false;
+  });
+  const [isTogglingOpenToApply, setIsTogglingOpenToApply] = useState(false);
+
+  useEffect(() => {
+    if (candidate) {
+      setIsOpenToApply(candidate.openToApply !== false);
+    }
+  }, [candidate?.openToApply]);
+
+  const handleToggleOpenToApply = async (newVal: boolean) => {
+    setIsTogglingOpenToApply(true);
+    setIsOpenToApply(newVal);
+    const updatedCandidate = { ...candidate, openToApply: newVal };
+    setCandidate(updatedCandidate);
+    try {
+      localStorage.setItem(CANDIDATE_SESSION_KEY, JSON.stringify(updatedCandidate));
+      if (candidate?.id) {
+        await updateDoc(doc(db, 'resumeDumpCandidates', candidate.id), {
+          openToApply: newVal,
+          updatedAt: serverTimestamp(),
+        }).catch((e) => console.warn('Could not update openToApply in resumeDumpCandidates:', e));
+      }
+      if (auth.currentUser) {
+        await updateDoc(doc(db, 'users', auth.currentUser.uid), {
+          openToApply: newVal,
+          updatedAt: serverTimestamp(),
+        }).catch((e) => console.warn('Could not update openToApply in users:', e));
+      }
+    } catch (err) {
+      console.warn('Error saving openToApply status:', err);
+    } finally {
+      setIsTogglingOpenToApply(false);
+    }
+  };
+
   const goToTab = (
     tab: CandidateTab,
     stageFilter?: 'all' | 'shortlisted' | 'under-review' | 'selected' | 'rejected'
@@ -2528,6 +2566,7 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab, in
         email: cleanEmail,
         phone: googleUser.phoneNumber || '',
         photoURL: googleUser.photoURL || '',
+        openToApply: true,
         source: 'google_signin',
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
@@ -2636,6 +2675,7 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab, in
         email: cleanEmail,
         phone: githubUser.phoneNumber || '',
         photoURL: githubUser.photoURL || '',
+        openToApply: true,
         source: 'github_signin',
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
@@ -6209,6 +6249,89 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab, in
                   </div>
                 </section>
 
+                {/* ── Open to Apply & Immediate Hiring Radar Banner ── */}
+                <section
+                  className={`p-4 sm:p-5 rounded-3xl border transition-all duration-200 shadow-xs ${
+                    isOpenToApply
+                      ? 'bg-gradient-to-r from-emerald-500/10 via-[#D4F82C]/10 to-transparent border-emerald-500/30 dark:border-emerald-500/20'
+                      : 'bg-[#F8F9F5] dark:bg-white/5 border-[#E4E7DC] dark:border-white/10'
+                  }`}
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="flex items-start gap-3.5">
+                      <div
+                        className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 transition-all ${
+                          isOpenToApply
+                            ? 'bg-emerald-600 dark:bg-[#D4F82C] text-white dark:text-[#111215] shadow-sm'
+                            : 'bg-[#E4E7DC] dark:bg-white/10 text-[#73766C] dark:text-neutral-400'
+                        }`}
+                      >
+                        <Zap size={20} className={isOpenToApply ? 'fill-current animate-pulse' : ''} />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h3 className="text-base sm:text-lg font-black text-[#111215] dark:text-white tracking-tight">
+                            Open to Apply & Direct Recruiter Matching
+                          </h3>
+                          <span
+                            className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
+                              isOpenToApply
+                                ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/50'
+                                : 'bg-neutral-200 text-neutral-700 dark:bg-white/10 dark:text-neutral-400'
+                            }`}
+                          >
+                            <span
+                              className={`w-2 h-2 rounded-full ${
+                                isOpenToApply ? 'bg-emerald-500 animate-ping' : 'bg-neutral-400'
+                              }`}
+                            />
+                            {isOpenToApply ? 'Active • Recruiter Visible' : 'Paused'}
+                          </span>
+                        </div>
+                        <p className="mt-1 text-xs sm:text-sm text-[#575A51] dark:text-neutral-400 max-w-2xl leading-relaxed">
+                          {isOpenToApply
+                            ? 'Top tech recruiters and AI headhunters can discover your profile, bypass initial screening filters, and send instant interview invitations for roles matching your skills.'
+                            : 'Your profile is currently hidden from outbound recruiter discovery. Toggle ON to receive direct interview invites from verified hiring partners.'}
+                        </p>
+                        <div className="flex flex-wrap items-center gap-2 mt-2.5">
+                          <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-white/80 dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 text-[#111215] dark:text-neutral-300">
+                            ⚡ Instant AI Job Matching
+                          </span>
+                          <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-white/80 dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 text-[#111215] dark:text-neutral-300">
+                            🎯 1-Tap Direct Apply
+                          </span>
+                          <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-white/80 dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 text-[#111215] dark:text-neutral-300">
+                            🛡️ Privacy Protected
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex sm:flex-col items-center sm:items-end justify-between gap-3 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-[#E4E7DC]/60 dark:border-white/5">
+                      <button
+                        type="button"
+                        disabled={isTogglingOpenToApply}
+                        onClick={() => handleToggleOpenToApply(!isOpenToApply)}
+                        className={`relative inline-flex h-8 w-14 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                          isOpenToApply ? 'bg-emerald-600 dark:bg-[#D4F82C]' : 'bg-neutral-300 dark:bg-white/20'
+                        }`}
+                        role="switch"
+                        aria-checked={isOpenToApply}
+                        aria-label="Toggle Open to Apply Status"
+                      >
+                        <span
+                          className={`pointer-events-none inline-block h-7 w-7 transform rounded-full bg-white dark:bg-[#111215] shadow-lg ring-0 transition duration-200 ease-in-out ${
+                            isOpenToApply ? 'translate-x-6' : 'translate-x-0'
+                          }`}
+                        />
+                      </button>
+                      <span className="text-[11px] font-bold text-[#73766C] dark:text-neutral-400">
+                        {isOpenToApply ? 'Open to Apply ON' : 'Open to Apply OFF'}
+                      </span>
+                    </div>
+                  </div>
+                </section>
+
                 {/* ── 4 High-Impact ATS Metric Cards (ONLY inside Dashboard Tab) ── */}
                 <section className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
                   {/* Card 1: All Applications */}
@@ -8357,6 +8480,16 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab, in
                         <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-[#D4F82C] text-[#111215] shadow-xs">
                           Active Job Seeker
                         </span>
+                        {isOpenToApply ? (
+                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 flex items-center gap-1 shadow-xs">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                            Open to Apply
+                          </span>
+                        ) : (
+                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-neutral-200 text-neutral-600 dark:bg-white/10 dark:text-neutral-400">
+                            Discovery Paused
+                          </span>
+                        )}
                       </div>
                       <p className="text-xs sm:text-sm text-[#575A51] dark:text-neutral-400">
                         {editForm.currentTitle || 'Professional'} • {editForm.totalExperienceYears ? `${editForm.totalExperienceYears} Yrs Experience` : 'Fresh Graduate'} • 📍 {editForm.location || 'Maharashtra, India'}
@@ -8381,6 +8514,35 @@ export const CandidatePortal: React.FC<CandidatePortalProps> = ({ initialTab, in
                           </>
                         )}
                       </div>
+                    </div>
+
+                    {/* Open to Apply Toggle in Profile Header */}
+                    <div className="flex items-center gap-3 shrink-0 p-3 rounded-2xl bg-[#F8F9F5] dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10">
+                      <div className="text-right">
+                        <div className="text-xs font-bold text-[#111215] dark:text-white">
+                          {isOpenToApply ? 'Open to Apply: ON' : 'Open to Apply: OFF'}
+                        </div>
+                        <div className="text-[10px] text-[#73766C] dark:text-neutral-400">
+                          {isOpenToApply ? 'Visible to recruiters' : 'Hidden from search'}
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        disabled={isTogglingOpenToApply}
+                        onClick={() => handleToggleOpenToApply(!isOpenToApply)}
+                        className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                          isOpenToApply ? 'bg-emerald-600 dark:bg-[#D4F82C]' : 'bg-neutral-300 dark:bg-white/20'
+                        }`}
+                        role="switch"
+                        aria-checked={isOpenToApply}
+                        aria-label="Toggle Open to Apply Status"
+                      >
+                        <span
+                          className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white dark:bg-[#111215] shadow ring-0 transition duration-200 ease-in-out ${
+                            isOpenToApply ? 'translate-x-5' : 'translate-x-0'
+                          }`}
+                        />
+                      </button>
                     </div>
 
                     {/* Quick Action Button */}
