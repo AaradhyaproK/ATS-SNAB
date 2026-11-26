@@ -87,7 +87,7 @@ export const BookDemo: React.FC = () => {
 
       // 3. Dispatch to Formspree gracefully in background
       try {
-        await fetch('https://formspree.io/f/movdbzab', {
+        await fetch('https://formspree.io/f/mgawlaan', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

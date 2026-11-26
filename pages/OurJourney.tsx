@@ -76,6 +76,27 @@ const OurJourneyContent: React.FC = () => {
               createdAt: serverTimestamp(),
               status: 'new'
           });
+
+          try {
+              await fetch('https://formspree.io/f/mgawlaan', {
+                  method: 'POST',
+                  headers: {
+                      'Content-Type': 'application/json',
+                      Accept: 'application/json'
+                  },
+                  body: JSON.stringify({
+                      name: formData.name,
+                      email: formData.email,
+                      phone: formData.phone,
+                      subject: formData.subject,
+                      message: formData.message,
+                      _subject: `New Inquiry (Our Journey): ${formData.name} - ${formData.subject || 'Support'}`
+                  })
+              });
+          } catch (formspreeErr) {
+              console.warn('Formspree dispatch notice:', formspreeErr);
+          }
+
           messageBox.showSuccess("Your message has been sent successfully!");
           setFormData({ name: '', email: '', phone: '', subject: 'Industrial Support Inquiry', message: '' });
       } catch (error) {

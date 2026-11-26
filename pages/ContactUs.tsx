@@ -22,11 +22,34 @@ const ContactUsContent: React.FC = () => {
         }
         setLoading(true);
         try {
+            // 1. Log to Firestore contactSubmissions
             await addDoc(collection(db, 'contactSubmissions'), {
                 ...formData,
                 createdAt: serverTimestamp(),
                 status: 'new'
             });
+
+            // 2. Dispatch to Formspree endpoint
+            try {
+                await fetch('https://formspree.io/f/mgawlaan', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Accept: 'application/json'
+                    },
+                    body: JSON.stringify({
+                        name: formData.name,
+                        email: formData.email,
+                        phone: formData.phone,
+                        subject: formData.subject,
+                        message: formData.message,
+                        _subject: `New Contact Us Message: ${formData.name} - ${formData.subject || 'General Inquiry'}`
+                    })
+                });
+            } catch (formspreeErr) {
+                console.warn('Formspree dispatch notice:', formspreeErr);
+            }
+
             messageBox.showSuccess("Your message has been sent successfully!");
             setFormData({ name: '', email: '', phone: '', subject: '', message: '' });
         } catch (error) {

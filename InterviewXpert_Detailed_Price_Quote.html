@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>InterviewXpert ATS - Detailed Commercial Price Quote</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap');
+
+  @page {
+    size: A4 portrait;
+    margin: 12mm 14mm 14mm 14mm;
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  body {
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: #111215;
+    background-color: #ffffff;
+    font-size: 11px;
+    line-height: 1.45;
+  }
+
+  .page-break {
+    page-break-before: always;
+  }
+
+  /* Header */
+  .quote-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding-bottom: 14px;
+    border-bottom: 2px solid #111215;
+    margin-bottom: 14px;
+  }
+
+  .brand-logo-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .brand-mark {
+    width: 32px;
+    height: 32px;
+    background-color: #111215;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #D4F82C;
+    font-weight: 800;
+    font-size: 18px;
+  }
+
+  .brand-text h1 {
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    color: #111215;
+    line-height: 1.1;
+  }
+
+  .brand-text p {
+    font-size: 9.5px;
+    color: #73766C;
+    font-weight: 600;
+  }
+
+  .quote-meta {
+    text-align: right;
+  }
+
+  .quote-meta .badge {
+    display: inline-block;
+    background-color: #111215;
+    color: #D4F82C;
+    font-size: 9px;
+    font-weight: 800;
+    padding: 3px 8px;
+    border-radius: 999px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+  }
+
+  .quote-meta p {
+    font-size: 9.5px;
+    color: #575A51;
+    line-height: 1.35;
+  }
+
+  .quote-meta strong {
+    color: #111215;
+  }
+
+  /* Client & Summary strip */
+  .info-strip {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: 12px;
+    background: #F8F9F5;
+    border: 1px solid #E4E7DC;
+    border-radius: 10px;
+    padding: 10px 14px;
+    margin-bottom: 16px;
+  }
+
+  .info-col h3 {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: #73766C;
+    margin-bottom: 4px;
+    font-weight: 700;
+  }
+
+  .info-col p {
+    font-size: 10.5px;
+    color: #111215;
+  }
+
+  .info-col p span {
+    color: #575A51;
+  }
+
+  /* Section Title */
+  .section-title {
+    font-size: 13px;
+    font-weight: 800;
+    color: #111215;
+    letter-spacing: -0.3px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 8px;
+  }
+
+  .section-title .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: #8FB305;
+  }
+
+  /* Pricing Cards Grid */
+  .plans-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+
+  .plan-card {
+    border: 1px solid #E4E7DC;
+    background: #ffffff;
+    border-radius: 10px;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    position: relative;
+  }
+
+  .plan-card.highlight {
+    background: #111215;
+    color: #ffffff;
+    border: 1.5px solid #D4F82C;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+  }
+
+  .plan-badge {
+    display: inline-block;
+    font-size: 8px;
+    font-weight: 800;
+    text-transform: uppercase;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: #F0F2EB;
+    color: #575A51;
+    margin-bottom: 4px;
+  }
+
+  .plan-card.highlight .plan-badge {
+    background: #D4F82C;
+    color: #111215;
+  }
+
+  .plan-name {
+    font-size: 12px;
+    font-weight: 800;
+    margin-bottom: 2px;
+  }
+
+  .plan-tagline {
+    font-size: 8.5px;
+    color: #73766C;
+    line-height: 1.25;
+    min-height: 24px;
+    margin-bottom: 6px;
+  }
+
+  .plan-card.highlight .plan-tagline {
+    color: #A3A69D;
+  }
+
+  .plan-price-box {
+    padding: 6px 0;
+    border-top: 1px solid #E4E7DC;
+    border-bottom: 1px solid #E4E7DC;
+    margin-bottom: 8px;
+  }
+
+  .plan-card.highlight .plan-price-box {
+    border-color: rgba(255,255,255,0.15);
+  }
+
+  .plan-price {
+    font-size: 16px;
+    font-weight: 800;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .plan-period {
+    font-size: 8.5px;
+    color: #73766C;
+  }
+
+  .plan-card.highlight .plan-period {
+    color: #A3A69D;
+  }
+
+  .annual-subtext {
+    font-size: 8px;
+    font-weight: 700;
+    color: #15803D;
+    margin-top: 2px;
+  }
+
+  .plan-card.highlight .annual-subtext {
+    color: #D4F82C;
+  }
+
+  .monthly-subtext {
+    font-size: 7.5px;
+    color: #73766C;
+  }
+
+  .plan-card.highlight .monthly-subtext {
+    color: #8E9285;
+  }
+
+  .features-list {
+    list-style: none;
+    font-size: 8.5px;
+    space-y: 4px;
+    line-height: 1.35;
+  }
+
+  .features-list li {
+    position: relative;
+    padding-left: 11px;
+    margin-bottom: 3.5px;
+    color: #40423B;
+  }
+
+  .plan-card.highlight .features-list li {
+    color: #E4E7DC;
+  }
+
+  .features-list li::before {
+    content: "✓";
+    position: absolute;
+    left: 0;
+    color: #15803D;
+    font-weight: 800;
+    font-size: 9px;
+  }
+
+  .plan-card.highlight .features-list li::before {
+    color: #D4F82C;
+  }
+
+  .features-list li strong {
+    color: #111215;
+  }
+
+  .plan-card.highlight .features-list li strong {
+    color: #ffffff;
+  }
+
+  /* Table styling */
+  .comparison-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 8.5px;
+    margin-bottom: 14px;
+    background: #ffffff;
+  }
+
+  .comparison-table th, .comparison-table td {
+    padding: 5px 7px;
+    border: 1px solid #E4E7DC;
+    text-align: left;
+  }
+
+  .comparison-table th {
+    background-color: #F8F9F5;
+    font-weight: 700;
+    color: #111215;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    font-size: 8px;
+  }
+
+  .comparison-table th.highlight-col, .comparison-table td.highlight-col {
+    background-color: #F7FDE8;
+    border-color: #D1E598;
+    font-weight: 600;
+  }
+
+  .comparison-table tr:nth-child(even) td:not(.highlight-col) {
+    background-color: #FAFAFA;
+  }
+
+  .cat-header {
+    background-color: #EEEEEE !important;
+    font-weight: 800 !important;
+    color: #111215 !important;
+    text-transform: uppercase;
+    font-size: 8.5px !important;
+    padding: 4px 7px !important;
+  }
+
+  .check {
+    color: #15803D;
+    font-weight: bold;
+    text-align: center;
+  }
+
+  .cross {
+    color: #9CA3AF;
+    text-align: center;
+  }
+
+  /* Add-ons & Modular Box */
+  .addons-box {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+
+  .addon-item {
+    border: 1px solid #E4E7DC;
+    background: #F8F9F5;
+    border-radius: 8px;
+    padding: 8px 10px;
+  }
+
+  .addon-title {
+    font-size: 9.5px;
+    font-weight: 800;
+    color: #111215;
+    margin-bottom: 2px;
+  }
+
+  .addon-rate {
+    font-size: 11px;
+    font-weight: 800;
+    font-family: 'JetBrains Mono', monospace;
+    color: #15803D;
+    margin-bottom: 3px;
+  }
+
+  .addon-desc {
+    font-size: 8px;
+    color: #575A51;
+    line-height: 1.3;
+  }
+
+  /* Terms and Footer */
+  .terms-box {
+    background: #FAFAFA;
+    border: 1px solid #E4E7DC;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 8px;
+    color: #575A51;
+    margin-bottom: 14px;
+  }
+
+  .terms-box h4 {
+    font-size: 9px;
+    font-weight: 700;
+    color: #111215;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .terms-box ul {
+    list-style-type: square;
+    margin-left: 14px;
+    line-height: 1.45;
+  }
+
+  .quote-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid #E4E7DC;
+    padding-top: 8px;
+    font-size: 8px;
+    color: #73766C;
+  }
+
+  .sign-area {
+    margin-top: 8px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+  }
+
+  .sign-box {
+    border-top: 1px dashed #73766C;
+    padding-top: 5px;
+    font-size: 8.5px;
+  }
+
+  .tag-pill {
+    display: inline-block;
+    padding: 1px 5px;
+    border-radius: 4px;
+    background: #E8F5E9;
+    color: #1B5E20;
+    font-weight: 700;
+    font-size: 7.5px;
+  }
+</style>
+</head>
+<body>
+
+  <!-- PAGE 1: EXECUTIVE COMMERCIAL PROPOSAL & TIER MATRIX -->
+  <div class="quote-header">
+    <div class="brand-logo-wrap">
+      <div class="brand-mark">α</div>
+      <div class="brand-text">
+        <h1>InterviewXpert ATS</h1>
+        <p>Enterprise AI Applicant Tracking & Recruitment Automation Platform</p>
+      </div>
+    </div>
+    <div class="quote-meta">
+      <span class="badge">Commercial Proposal • 2026</span>
+      <p><strong>Quote Ref:</strong> IXP-ATS-2026-V4</p>
+      <p><strong>Proposal Date:</strong> 26 November 2026</p>
+      <p><strong>Validity:</strong> 30 Days (Valid till 26 Dec 2026)</p>
+    </div>
+  </div>
+
+  <div class="info-strip">
+    <div class="info-col">
+      <h3>Customer / Organization</h3>
+      <p><strong>Prepared For:</strong> Prospective Talent Partner / Recruitment Agency</p>
+      <p><span>Contact Person:</span> Talent Acquisition Head / HR Leadership</p>
+      <p><span>Email / WhatsApp:</span> Verified Recruiter Desk / Enterprise Channel</p>
+    </div>
+    <div class="info-col">
+      <h3>Provider & Entity</h3>
+      <p><strong>SNAB Innovations LLP</strong> (InterviewXpert Platform)</p>
+      <p><span>Website:</span> interviewxpert.com | snab.co.in</p>
+      <p><span>Support & Sales:</span> hello@snab.co.in | +91 95117 79317</p>
+    </div>
+  </div>
+
+  <div class="section-title">
+    <span class="dot"></span>
+    <span>1. ATS Core Subscription Plans (Per Recruiter Seat)</span>
+    <span class="tag-pill" style="margin-left: 8px;">★ 1 Month Free Trial Included On All Plans</span>
+  </div>
+
+  <!-- Plans Grid -->
+  <div class="plans-grid">
+    <!-- 1. ATS Starter -->
+    <div class="plan-card">
+      <div>
+        <span class="plan-badge">Core System</span>
+        <div class="plan-name">ATS Starter</div>
+        <div class="plan-tagline">Individual recruiters & small teams wanting centralized applicant management.</div>
+
+        <div class="plan-price-box">
+          <div class="plan-price">₹599 <span class="plan-period">/ seat / mo</span></div>
+          <div class="annual-subtext">₹7,188/yr billed annually</div>
+          <div class="monthly-subtext">Monthly: ₹799/month (Save 25%)</div>
+        </div>
+
+        <ul class="features-list">
+          <li><strong>Job Management:</strong> Create, publish & track requisitions</li>
+          <li><strong>Candidate DB:</strong> Cloud database with basic filters</li>
+          <li><strong>Pipeline Stages:</strong> Applied, Screen, Interview, Hired</li>
+          <li><strong>Resume Storage:</strong> Cloud PDF viewer & download</li>
+          <li><strong>Activity Log:</strong> Recruiter notes & status tracking</li>
+          <li><strong>Standard Alerts:</strong> Basic email interview updates</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- 2. ATS + Email Automation -->
+    <div class="plan-card">
+      <div>
+        <span class="plan-badge">Outreach Suite</span>
+        <div class="plan-name">ATS + Email Auto</div>
+        <div class="plan-tagline">Recruitment teams wanting automated email workflows without AI overhead.</div>
+
+        <div class="plan-price-box">
+          <div class="plan-price">₹899 <span class="plan-period">/ seat / mo</span></div>
+          <div class="annual-subtext">₹10,788/yr billed annually</div>
+          <div class="monthly-subtext">Monthly: ₹1,199/month (Save 25%)</div>
+        </div>
+
+        <ul class="features-list">
+          <li><strong>Everything in Starter</strong>, plus:</li>
+          <li><strong>Automated Job Alerts:</strong> Notify candidates when jobs open</li>
+          <li><strong>Interview Automation:</strong> Invites, confirms & 24h reminders</li>
+          <li><strong>Stage Notifications:</strong> Shortlist, offer & custom rejects</li>
+          <li><strong>Rule-Based Matching:</strong> Filter by skills, exp, location</li>
+          <li><strong>Workflow Sequences:</strong> Multi-step email tracking</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- 3. ATS AI Pro (Recommended) -->
+    <div class="plan-card highlight">
+      <div>
+        <span class="plan-badge">⭐️ Flagship AI Plan</span>
+        <div class="plan-name">ATS AI Pro</div>
+        <div class="plan-tagline">Growing staffing agencies & HR departments managing high volume resumes.</div>
+
+        <div class="plan-price-box">
+          <div class="plan-price" style="color: #D4F82C;">₹1,499 <span class="plan-period" style="color: #A3A69D;">/ seat / mo</span></div>
+          <div class="annual-subtext">₹17,988/yr billed annually</div>
+          <div class="monthly-subtext">Monthly: ₹1,999/month (Save 25%)</div>
+        </div>
+
+        <ul class="features-list">
+          <li><strong>Everything in Email Auto</strong>, plus:</li>
+          <li><strong>AI Resume Parsing:</strong> 3s PDF extraction into DB</li>
+          <li><strong>AI Job Creation:</strong> PDF/Text to structured requisitions</li>
+          <li><strong>0–100 AI Match Score:</strong> Personalized fit & gap reasoning</li>
+          <li><strong>AI Recommendations:</strong> Auto-match talent pool to jobs</li>
+          <li><strong>Automated Outreach:</strong> 1-Tap apply links to candidates</li>
+          <li><strong>Monthly Quota:</strong> 1,000 parses, 1,000 match scores & 100 AI jobs/mo</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- 4. ATS AI + WhatsApp Automation -->
+    <div class="plan-card">
+      <div>
+        <span class="plan-badge">High Turnaround</span>
+        <div class="plan-name">ATS AI + WhatsApp</div>
+        <div class="plan-tagline">High-volume staffing firms needing instant candidate WhatsApp response.</div>
+
+        <div class="plan-price-box">
+          <div class="plan-price">₹2,299 <span class="plan-period">/ seat / mo</span></div>
+          <div class="annual-subtext">₹27,588/yr billed annually</div>
+          <div class="monthly-subtext">Monthly: ₹2,999/month (Save 23%)</div>
+        </div>
+
+        <ul class="features-list">
+          <li><strong>Everything in AI Pro</strong>, plus:</li>
+          <li><strong>WhatsApp Business API:</strong> Automated candidate alerts</li>
+          <li><strong>1-Tap Apply on WA:</strong> Instant candidate mobile apply</li>
+          <li><strong>WhatsApp Interview Flows:</strong> Invites & 24h/1h reminders</li>
+          <li><strong>Multi-Channel Sync:</strong> Coordinated WhatsApp + Email</li>
+          <li><strong>Live Status:</strong> Sent, delivered, read & response logs</li>
+          <li><strong>Expanded Quota:</strong> 2,500 parses, 2,500 scores & 150 AI jobs/mo</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Subscription Billing Summary Table -->
+  <div class="section-title">
+    <span class="dot"></span>
+    <span>2. Subscription Billing & Savings Breakdown</span>
+  </div>
+
+  <table class="comparison-table">
+    <thead>
+      <tr>
+        <th>Subscription Tier</th>
+        <th>Target Recruiter Audience</th>
+        <th>Monthly Billing</th>
+        <th>Annual Billing (Per Mo)</th>
+        <th>Annual Upfront Total</th>
+        <th>Annual Savings</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>ATS Starter</strong></td>
+        <td>Individual Recruiters, Freelance Sourcers, Early Startups</td>
+        <td>₹799 / seat</td>
+        <td><strong>₹599 / seat</strong></td>
+        <td>₹7,188 / seat</td>
+        <td><span class="tag-pill">Save 25% (₹2,400)</span></td>
+      </tr>
+      <tr>
+        <td><strong>ATS + Email Automation</strong></td>
+        <td>Recruitment Agencies & HR Teams focused on Email Outreach</td>
+        <td>₹1,199 / seat</td>
+        <td><strong>₹899 / seat</strong></td>
+        <td>₹10,788 / seat</td>
+        <td><span class="tag-pill">Save 25% (₹3,600)</span></td>
+      </tr>
+      <tr class="highlight-col">
+        <td><strong>ATS AI Pro (Recommended)</strong></td>
+        <td>Growing Agencies, Mid-Size Tech/Corporate HR Departments</td>
+        <td>₹1,999 / seat</td>
+        <td><strong>₹1,499 / seat</strong></td>
+        <td>₹17,988 / seat</td>
+        <td><span class="tag-pill">Save 25% (₹6,000)</span></td>
+      </tr>
+      <tr>
+        <td><strong>ATS AI + WhatsApp Automation</strong></td>
+        <td>High-Volume Staffing, Temp/Contract Agencies, Rapid Turnaround</td>
+        <td>₹2,999 / seat</td>
+        <td><strong>₹2,299 / seat</strong></td>
+        <td>₹27,588 / seat</td>
+        <td><span class="tag-pill">Save 23% (₹8,400)</span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- PAGE BREAK FOR CLEAN SECTION 3 & 4 -->
+  <div class="page-break"></div>
+
+  <!-- PAGE 2: DETAILED FEATURE MATRIX & MODULAR SERVICES -->
+  <div class="quote-header">
+    <div class="brand-logo-wrap">
+      <div class="brand-mark">α</div>
+      <div class="brand-text">
+        <h1>InterviewXpert ATS</h1>
+        <p>Detailed Feature Comparison & Modular Add-On Quote</p>
+      </div>
+    </div>
+    <div class="quote-meta">
+      <p><strong>Quote Ref:</strong> IXP-ATS-2026-V4</p>
+      <p><strong>Page:</strong> 2 of 2</p>
+    </div>
+  </div>
+
+  <div class="section-title">
+    <span class="dot"></span>
+    <span>3. Comprehensive Feature Comparison Matrix</span>
+  </div>
+
+  <table class="comparison-table">
+    <thead>
+      <tr>
+        <th style="width: 32%;">Feature / Capability</th>
+        <th style="width: 17%;">ATS Starter</th>
+        <th style="width: 17%;">ATS + Email</th>
+        <th style="width: 17%;" class="highlight-col">ATS AI Pro (★)</th>
+        <th style="width: 17%;">ATS AI + WhatsApp</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td colspan="5" class="cat-header">A. Job Requisition & Posting</td></tr>
+      <tr>
+        <td>Job Creation & Centralized Desk</td>
+        <td class="check">✓ Manual Entry</td>
+        <td class="check">✓ Manual Entry</td>
+        <td class="check highlight-col">✓ Manual + AI Text/PDF</td>
+        <td class="check">✓ Manual + AI Text/PDF</td>
+      </tr>
+      <tr>
+        <td>AI Job Description Structuring from PDF</td>
+        <td class="cross">—</td>
+        <td class="cross">—</td>
+        <td class="check highlight-col">✓ 100 Jobs / Mo</td>
+        <td class="check">✓ 150 Jobs / Mo</td>
+      </tr>
+      <tr>
+        <td>Multi-Channel Public Job Application Link</td>
+        <td class="check">✓ Included</td>
+        <td class="check">✓ Included</td>
+        <td class="check highlight-col">✓ Included</td>
+        <td class="check">✓ Included</td>
+      </tr>
+
+      <tr><td colspan="5" class="cat-header">B. Candidate & Resume Management</td></tr>
+      <tr>
+        <td>Centralized Cloud Candidate Database</td>
+        <td class="check">✓ Unlimited</td>
+        <td class="check">✓ Unlimited</td>
+        <td class="check highlight-col">✓ Unlimited</td>
+        <td class="check">✓ Unlimited</td>
+      </tr>
+      <tr>
+        <td>AI Resume Parsing (PDF/DOC in 3s)</td>
+        <td class="cross">—</td>
+        <td class="cross">—</td>
+        <td class="check highlight-col">✓ 1,000 Resumes/mo</td>
+        <td class="check">✓ 2,500 Resumes/mo</td>
+      </tr>
+      <tr>
+        <td>Auto-Populated Candidate Profile Creation</td>
+        <td class="cross">—</td>
+        <td class="cross">—</td>
+        <td class="check highlight-col">✓ Fully Automated</td>
+        <td class="check">✓ Fully Automated</td>
+      </tr>
+
+      <tr><td colspan="5" class="cat-header">C. Matching & Evaluation Engine</td></tr>
+      <tr>
+        <td>Rule-Based Skill & Keyword Search</td>
+        <td class="check">✓ Basic Search</td>
+        <td class="check">✓ Predefined Filters</td>
+        <td class="check highlight-col">✓ Advanced Filters</td>
+        <td class="check">✓ Advanced Filters</td>
+      </tr>
+      <tr>
+        <td>Personalized 0–100 AI Match Scoring</td>
+        <td class="cross">—</td>
+        <td class="cross">—</td>
+        <td class="check highlight-col">✓ 1,000 Scores/mo</td>
+        <td class="check">✓ 2,500 Scores/mo</td>
+      </tr>
+      <tr>
+        <td>Match Explanation & Skill Gap Breakdown</td>
+        <td class="cross">—</td>
+        <td class="cross">—</td>
+        <td class="check highlight-col">✓ Detailed Breakdown</td>
+        <td class="check">✓ Detailed Breakdown</td>
+      </tr>
+      <tr>
+        <td>Existing Database Auto-Recommendations</td>
+        <td class="cross">—</td>
+        <td class="cross">—</td>
+        <td class="check highlight-col">✓ Instant Match</td>
+        <td class="check">✓ Instant Match</td>
+      </tr>
+
+      <tr><td colspan="5" class="cat-header">D. Outreach & Automation Workflows</td></tr>
+      <tr>
+        <td>Automated Candidate Email Alerts & Sequences</td>
+        <td class="cross">—</td>
+        <td class="check">✓ Automated</td>
+        <td class="check highlight-col">✓ Automated + AI Links</td>
+        <td class="check">✓ Automated + AI Links</td>
+      </tr>
+      <tr>
+        <td>WhatsApp Business API Outreach</td>
+        <td class="cross">—</td>
+        <td class="cross">—</td>
+        <td class="cross highlight-col">Add-on (₹499/mo)</td>
+        <td class="check">✓ Built-In Integration</td>
+      </tr>
+      <tr>
+        <td>1-Tap Apply Candidate Mobile Experience</td>
+        <td class="cross">—</td>
+        <td class="check">✓ Email 1-Tap</td>
+        <td class="check highlight-col">✓ Email 1-Tap</td>
+        <td class="check">✓ Dual WhatsApp + Email</td>
+      </tr>
+      <tr>
+        <td>Automated 24h & 1h Interview Reminders</td>
+        <td class="cross">—</td>
+        <td class="check">✓ Email Only</td>
+        <td class="check highlight-col">✓ Email Only</td>
+        <td class="check">✓ WhatsApp + Email Dual</td>
+      </tr>
+
+      <tr><td colspan="5" class="cat-header">E. Screening & Pipeline Control</td></tr>
+      <tr>
+        <td>Interactive Screener with Voice-AI Readout</td>
+        <td class="check">✓ Basic Screener</td>
+        <td class="check">✓ Basic Screener</td>
+        <td class="check highlight-col">✓ Voice-AI Powered</td>
+        <td class="check">✓ Voice-AI Powered</td>
+      </tr>
+      <tr>
+        <td>Visual Recruiter Kanban Pipeline Desk</td>
+        <td class="check">✓ Included</td>
+        <td class="check">✓ Included</td>
+        <td class="check highlight-col">✓ Included</td>
+        <td class="check">✓ Included</td>
+      </tr>
+      <tr>
+        <td>Client Review Sharing Gateway</td>
+        <td class="check">✓ Included</td>
+        <td class="check">✓ Included</td>
+        <td class="check highlight-col">✓ Included</td>
+        <td class="check">✓ Included</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- Modular Add-Ons Section -->
+  <div class="section-title">
+    <span class="dot"></span>
+    <span>4. Optional Modular Add-Ons & Usage Packages</span>
+  </div>
+
+  <div class="addons-box">
+    <div class="addon-item">
+      <div class="addon-title">Autonomous AI Video Interviews</div>
+      <div class="addon-rate">₹129 – ₹149 <span style="font-size: 8px; font-weight: normal; color: #575A51;">/ candidate</span></div>
+      <div class="addon-desc">2-way spoken voice & video pre-screening with anti-cheat proctoring and comprehensive executive scorecard. Credits never expire.</div>
+    </div>
+    <div class="addon-item">
+      <div class="addon-title">MCQ & Live Coding Add-Ons</div>
+      <div class="addon-rate">+₹29 / +₹49 <span style="font-size: 8px; font-weight: normal; color: #575A51;">/ candidate</span></div>
+      <div class="addon-desc">Aptitude, domain cognitive banks (+₹29) or live Monaco code editor with 40+ language runtimes & automated unit test suites (+₹49).</div>
+    </div>
+    <div class="addon-item">
+      <div class="addon-title">Additional AI Capacity Packs</div>
+      <div class="addon-rate">₹499 <span style="font-size: 8px; font-weight: normal; color: #575A51;">/ 500 actions</span></div>
+      <div class="addon-desc">Top up 500 AI resume parses + 500 match score analyses on demand whenever monthly requisition volume spikes.</div>
+    </div>
+  </div>
+
+  <!-- Commercial Terms -->
+  <div class="terms-box">
+    <h4>Commercial Terms & Conditions</h4>
+    <ul>
+      <li><strong>Risk-Free Evaluation:</strong> All subscriptions include a <strong>1-Month (30-Day) Free Trial</strong> with full feature activation and zero credit card required.</li>
+      <li><strong>Billing & Taxes:</strong> Annual plans are billed upfront for 12 months. All prices are exclusive of statutory GST (18%). WhatsApp messaging utility charges apply as per Meta Business rates.</li>
+      <li><strong>Multi-Seat Agency Discount:</strong> Staffing firms onboarding 5+ recruiter seats qualify for an additional 25% agency volume discount and dedicated relationship manager.</li>
+      <li><strong>Activation & Data Security:</strong> Tenant provisioned within 15 minutes of authorization. 100% cloud-encrypted storage with strict candidate data privacy compliance.</li>
+    </ul>
+  </div>
+
+  <div class="sign-area">
+    <div class="sign-box">
+      <strong>Authorized Representative (InterviewXpert / SNAB)</strong><br>
+      Name: Enterprise Solutions Team<br>
+      Email: hello@snab.co.in | Phone: +91 95117 79317
+    </div>
+    <div class="sign-box">
+      <strong>Accepted & Confirmed By (Client Partner)</strong><br>
+      Authorized Signature / Designation:<br>
+      Date & Organization Seal:
+    </div>
+  </div>
+
+  <div class="quote-footer" style="margin-top: 10px;">
+    <span>InterviewXpert ATS • SNAB Innovations LLP • Commercial Confidential</span>
+    <span>https://interviewxpert.com • Generated on 26 Nov 2026</span>
+  </div>
+
+</body>
+</html>

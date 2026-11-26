@@ -399,9 +399,6 @@ export const Pricing: React.FC = () => {
             }`}
           >
             <span>Annual Billing</span>
-            <span className="px-2 py-0.5 rounded-full bg-[#D4F82C] text-[#111215] text-[10px] font-black uppercase tracking-wider">
-              Save 25% + 1 Mo Free
-            </span>
           </button>
           <button
             type="button"
