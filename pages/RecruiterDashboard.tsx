@@ -84,6 +84,15 @@ interface InterviewAttemptRecord {
   id: string;
   interviewId?: string;
   submittedAt?: TimestampLike;
+  candidateName?: string;
+  candidateEmail?: string;
+  candidateInfo?: { name?: string; email?: string; phone?: string };
+  overallScore?: number | string;
+  matchScore?: number | string;
+  status?: string;
+  interviewTitle?: string;
+  title?: string;
+  jobTitle?: string;
 }
 
 interface DashboardRoleEntry {
@@ -124,6 +133,21 @@ const formatDate = (value: TimestampLike, options?: Intl.DateTimeFormatOptions):
     month: 'short',
     year: 'numeric',
   });
+};
+
+const formatRelativeTime = (value: TimestampLike): string => {
+  const millis = toMillis(value);
+  if (!millis) return 'Recently';
+  const diffSec = Math.floor((Date.now() - millis) / 1000);
+  if (diffSec < 60) return 'Just now';
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffHr = Math.floor(diffMin / 60);
+  if (diffHr < 24) return `${diffHr}h ago`;
+  const diffDays = Math.floor(diffHr / 24);
+  if (diffDays === 1) return 'Yesterday';
+  if (diffDays < 30) return `${diffDays}d ago`;
+  return new Date(millis).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
 };
 
 const normalizeInterviewTitle = (title?: string) => {
@@ -589,9 +613,88 @@ const RecruiterDashboard: React.FC = () => {
     return buckets;
   }, [attempts, dashboardRoles, tests]);
 
-  const hasActivity = activityData.some(
-    (bucket) => bucket.roles > 0 || bucket.assessments > 0 || bucket.responses > 0
-  );
+  const hasActivity = useMemo(() => {
+    return (
+      dashboardRoles.length > 0 ||
+      attempts.length > 0 ||
+      tests.length > 0 ||
+      interviews.length > 0 ||
+      activityData.some(
+        (bucket) => bucket.roles > 0 || bucket.assessments > 0 || bucket.responses > 0
+      )
+    );
+  }, [attempts.length, dashboardRoles.length, tests.length, interviews.length, activityData]);
+
+  // Auto-switch to monthly if the last 7 days has no events, but current year month does
+  useEffect(() => {
+    if (dashboardRoles.length > 0 || attempts.length > 0) {
+      const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+      const hasRecentWeek = attempts.some(a => toMillis(a.submittedAt) >= sevenDaysAgo) ||
+                            dashboardRoles.some(r => toMillis(r.createdAt) >= sevenDaysAgo);
+      if (!hasRecentWeek) {
+        setTileTimeRange('monthly');
+      }
+    }
+  }, [attempts, dashboardRoles]);
+
+  // Recent activity stream across candidate responses, published jobs, and tests
+  const recentActivities = useMemo(() => {
+    const list: Array<{
+      id: string;
+      type: 'response' | 'job' | 'assessment';
+      title: string;
+      subtitle: string;
+      timestamp: TimestampLike;
+      badgeText: string;
+      badgeColor: string;
+      href: string;
+      score?: number | string;
+    }> = [];
+
+    attempts.forEach((att) => {
+      const candName = att.candidateName || att.candidateInfo?.name || att.candidateEmail || 'Candidate';
+      const roleTitle = att.interviewTitle || att.title || att.jobTitle || 'Role Opening';
+      list.push({
+        id: `att_${att.id}`,
+        type: 'response',
+        title: `${candName} submitted response`,
+        subtitle: `Applied for ${roleTitle}`,
+        timestamp: att.submittedAt,
+        badgeText: att.status || 'Under Review',
+        badgeColor: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800',
+        href: '/recruiter/hot-leads',
+        score: att.matchScore || att.overallScore
+      });
+    });
+
+    dashboardRoles.forEach((role) => {
+      list.push({
+        id: `role_${role.id}`,
+        type: 'job',
+        title: `Job published: ${role.title}`,
+        subtitle: `${role.location || 'Remote'} • ${role.sourceLabel}`,
+        timestamp: role.createdAt,
+        badgeText: role.isActive ? 'Active' : 'Live',
+        badgeColor: 'bg-[#D4F82C]/30 text-[#111215] border-[#8FB305]/30',
+        href: role.hasInterviewDoc ? `/recruiter/interviews` : `/recruiter/all-jobs`,
+      });
+    });
+
+    tests.forEach((test) => {
+      list.push({
+        id: `test_${test.id}`,
+        type: 'assessment',
+        title: `Screening Test: ${test.title || 'Assessment'}`,
+        subtitle: `${(test.questions || []).length} questions configured`,
+        timestamp: test.createdAt,
+        badgeText: 'Screening',
+        badgeColor: 'bg-purple-50 text-purple-700 border-purple-200',
+        href: '/recruiter/tests',
+      });
+    });
+
+    return list.sort((a, b) => toMillis(b.timestamp) - toMillis(a.timestamp)).slice(0, 4);
+  }, [attempts, dashboardRoles, tests]);
 
   // Tile chart data computation
   const tileChartData = useMemo(() => {
@@ -968,20 +1071,98 @@ const RecruiterDashboard: React.FC = () => {
 
           <div className="min-h-[260px] flex-1 w-full">
             {hasActivity ? (
-              <StackedTileChart
-                data={tileChartData}
-                timeRange={tileTimeRange}
-                onTimeRangeChange={setTileTimeRange}
-              />
+              <div className="space-y-5">
+                <StackedTileChart
+                  data={tileChartData}
+                  timeRange={tileTimeRange}
+                  onTimeRangeChange={setTileTimeRange}
+                />
+
+                {/* Recent Pipeline Activity Stream */}
+                {recentActivities.length > 0 && (
+                  <div className="pt-4 border-t border-[#E4E7DC]">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <TrendingUp size={14} className="text-[#8FB305]" />
+                        <span className="text-xs font-bold uppercase tracking-wider text-[#111215]">
+                          Recent Activity Feed
+                        </span>
+                      </div>
+                      <Link
+                        to="/recruiter/hot-leads"
+                        className="text-[11px] font-semibold text-[#575A51] hover:text-[#111215] inline-flex items-center gap-1 transition-colors"
+                      >
+                        <span>View all candidate responses</span>
+                        <ArrowRight size={12} />
+                      </Link>
+                    </div>
+
+                    <div className="space-y-2">
+                      {recentActivities.map((act) => (
+                        <Link
+                          key={act.id}
+                          to={act.href}
+                          className="flex items-center justify-between p-2.5 rounded-xl border border-[#E4E7DC] hover:border-[#111215]/30 bg-[#F8F9F5]/50 hover:bg-[#F8F9F5] transition-all group"
+                        >
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="h-7 w-7 rounded-lg bg-white border border-[#E4E7DC] flex items-center justify-center shrink-0 text-[#111215] group-hover:bg-[#111215] group-hover:text-[#D4F82C] transition-colors">
+                              {act.type === 'response' ? <TrendingUp size={13} /> : act.type === 'job' ? <BriefcaseBusiness size={13} /> : <ClipboardList size={13} />}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-xs font-semibold text-[#111215] truncate group-hover:text-[#8FB305] transition-colors">
+                                {act.title}
+                              </p>
+                              <p className="text-[11px] text-[#73766C] truncate">
+                                {act.subtitle}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2.5 shrink-0 ml-3">
+                            {act.score !== undefined && act.score !== null && act.score !== '' && (
+                              <span className="text-[11px] font-bold text-[#111215] bg-[#D4F82C]/60 px-2 py-0.5 rounded-full">
+                                {typeof act.score === 'number' ? `${act.score}%` : act.score}
+                              </span>
+                            )}
+                            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${act.badgeColor}`}>
+                              {act.badgeText}
+                            </span>
+                            <span className="text-[10px] text-[#73766C]">
+                              {formatRelativeTime(act.timestamp)}
+                            </span>
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             ) : (
-              <div className="h-full flex flex-col items-center justify-center text-center p-8">
-                <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl border border-[#E4E7DC] bg-[#F8F9F5] text-[#73766C]">
+              <div className="h-full flex flex-col items-center justify-center text-center p-8 space-y-3">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[#E4E7DC] bg-[#F8F9F5] text-[#73766C]">
                   <Activity size={20} />
                 </div>
-                <p className="text-sm font-semibold text-[#111215]">No live activity yet</p>
-                <p className="mt-1 max-w-sm text-xs text-[#575A51]">
-                  New recruiter activity will appear here automatically as jobs are published, assessments completed, and candidates respond.
-                </p>
+                <div>
+                  <p className="text-sm font-semibold text-[#111215]">No live activity yet</p>
+                  <p className="mt-1 max-w-sm text-xs text-[#575A51]">
+                    New recruiter activity will appear here automatically as jobs are published, assessments completed, and candidates respond.
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
+                  <Link
+                    to="/recruiter/interview/create"
+                    className="inline-flex items-center gap-1.5 rounded-full bg-[#111215] px-3.5 py-1.5 text-xs font-semibold text-white shadow-xs hover:bg-[#202227] transition-colors"
+                  >
+                    <Plus size={12} className="text-[#D4F82C]" />
+                    <span>Create First Job</span>
+                  </Link>
+                  <Link
+                    to="/recruiter/resume-dump"
+                    className="inline-flex items-center gap-1.5 rounded-full border border-[#E4E7DC] bg-[#F8F9F5] px-3.5 py-1.5 text-xs font-semibold text-[#111215] hover:bg-[#E4E7DC] transition-colors"
+                  >
+                    <span>Import Candidates</span>
+                  </Link>
+                </div>
               </div>
             )}
           </div>
