@@ -636,7 +636,6 @@ const ResumeDump: React.FC = () => {
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [copiedInviteLink, setCopiedInviteLink] = useState(false);
   const [copiedUploadPortalLink, setCopiedUploadPortalLink] = useState(false);
-  const [inviteModalEducation, setInviteModalEducation] = useState<string>('B.Tech / B.E. (Bachelor of Engineering / Technology)');
   const [inviteDeliveryMode, setInviteDeliveryMode] = useState<'both' | 'whatsapp_api' | 'whatsapp_web' | 'email'>('both');
   const [isSendingInvites, setIsSendingInvites] = useState(false);
   const [sendingProgressMsg, setSendingProgressMsg] = useState('');
@@ -3814,18 +3813,6 @@ const ResumeDump: React.FC = () => {
 
               {/* Modal Content Body */}
               <div className="p-6 space-y-4.5 flex-1 min-h-0 overflow-y-auto overscroll-contain">
-                {/* Highest Education Qualification Input */}
-                <div>
-                  <label className="block geist-label uppercase text-gray-600 dark:text-[#6b7280] mb-1.5 font-medium">
-                    Highest Education Qualification
-                  </label>
-                  <EducationInput
-                    value={inviteModalEducation}
-                    onChange={setInviteModalEducation}
-                    placeholder="Type or select education (e.g. B.Tech Civil, Diploma, B.Com)..."
-                  />
-                </div>
-
                 {/* 1. Job Role Selection */}
                 <div>
                   <label className="block geist-label uppercase text-gray-600 dark:text-[#6b7280] mb-1.5 font-medium">
@@ -4027,151 +4014,6 @@ const ResumeDump: React.FC = () => {
                 </button>
 
                 <div className="flex items-center gap-2 flex-wrap">
-                  {activeSelectedJob && (
-                    <button
-                      type="button"
-                      disabled={isSendingInvites}
-                      onClick={() => {
-                        const targetCandidates = selectedCandidateIds.length > 0
-                          ? candidates.filter(c => selectedCandidateIds.includes(c.id))
-                          : filteredCandidates;
-                        const targetCand = targetCandidates[0];
-                        const candName = targetCand?.name || 'Candidate';
-                        const jobTitle = activeSelectedJob.title || activeSelectedJob.jobRole || 'Open Position';
-                        const jobLink = `${window.location.origin}/candidate?job=${activeSelectedJob.id}${targetCand?.email ? `&email=${encodeURIComponent(targetCand.email)}` : ''}`;
-                        const messageText = getHighIntentJobInviteMessage({
-                          candidateName: candName,
-                          jobTitle,
-                          jobLink,
-                          location: activeSelectedJob.location || activeSelectedJob.city,
-                          experience: activeSelectedJob.experience,
-                          salary: activeSelectedJob.salary,
-                          qualification: activeSelectedJob.qualification || activeSelectedJob.education,
-                          employmentType: activeSelectedJob.employmentType,
-                          skills: activeSelectedJob.skills,
-                          description: activeSelectedJob.description,
-                          recruiterName: userProfile?.name || 'Recruiting Team',
-                          recruiterPhone: (userProfile as any)?.phone || '9511779317'
-                        });
-                        const phone = (targetCand?.phone || (targetCand as any)?.mobile || '').replace(/[^0-9]/g, '');
-                        window.open(phone ? `https://web.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(messageText)}` : `https://wa.me/?text=${encodeURIComponent(messageText)}`, '_blank');
-                      }}
-                      className="geist-caption inline-flex h-9 items-center justify-center gap-1.5 rounded-[6px] border border-amber-600/40 dark:border-amber-500/40 bg-amber-50 dark:bg-amber-500/10 text-amber-800 dark:text-amber-300 font-semibold text-xs px-3 hover:bg-amber-100 dark:hover:bg-amber-500/20 transition-colors disabled:opacity-50 cursor-pointer"
-                      title="Open pre-filled invitation in WhatsApp Web app"
-                    >
-                      <ExternalLink size={13} />
-                      WhatsApp Web
-                    </button>
-                  )}
-
-                  {activeSelectedJob && (
-                    <button
-                      type="button"
-                      disabled={isSendingInvites}
-                      onClick={async () => {
-                        const targetCandidates = selectedCandidateIds.length > 0
-                          ? candidates.filter(c => selectedCandidateIds.includes(c.id))
-                          : filteredCandidates;
-                        const candidatesWithPhones = targetCandidates
-                          .map(c => ({
-                            phone: (c.phone || (c as any).mobile || (c as any).whatsapp || (c as any).profile?.phone || '').trim(),
-                            name: c.name || c.email?.split('@')[0] || 'Candidate',
-                            email: c.email
-                          }))
-                          .filter(c => !!c.phone);
-
-                        if (candidatesWithPhones.length === 0) {
-                          messageBox.showError("No candidate phone numbers found for WhatsApp API invitation.");
-                          return;
-                        }
-
-                        const jobTitle = activeSelectedJob.title || activeSelectedJob.jobRole || 'Open Position';
-                        const accessCode = '';
-                        const jobLink = `${window.location.origin}/candidate?job=${activeSelectedJob.id}`;
-
-                        const waOptions = {
-                          recruiterName: userProfile?.name || (user as any)?.displayName || (user as any)?.email || 'Recruiting Desk',
-                          recruiterPhone: (userProfile as any)?.phone || (userProfile as any)?.phoneNumber || '9511779317',
-                          deadline: activeSelectedJob.deadline || activeSelectedJob.interviewDeadline || '',
-                          whatsappSessionId: (userProfile as any)?.whatsappSessionId || localStorage.getItem('wa_session_id') || '',
-                          whatsappSessionPasscode: (userProfile as any)?.whatsappSessionPasscode || localStorage.getItem('wa_session_passcode') || '',
-                          customMessageText: (cand: { name: string; phone: string; email?: string }) => getHighIntentJobInviteMessage({
-                            candidateName: cand.name || 'Candidate',
-                            jobTitle,
-                            jobLink: cand.email ? `${window.location.origin}/candidate?job=${activeSelectedJob.id}&email=${encodeURIComponent(cand.email)}` : jobLink,
-                            location: activeSelectedJob.location || activeSelectedJob.city,
-                            experience: activeSelectedJob.experience,
-                            salary: activeSelectedJob.salary,
-                            qualification: activeSelectedJob.qualification || activeSelectedJob.education,
-                            employmentType: activeSelectedJob.employmentType,
-                            skills: activeSelectedJob.skills,
-                            description: activeSelectedJob.description,
-                            recruiterName: userProfile?.name || 'Recruiting Desk',
-                            recruiterPhone: (userProfile as any)?.phone || '9511779317'
-                          })
-                        };
-
-                        setIsSendingInvites(true);
-                        setSendingProgressMsg(`Sending WhatsApp API invites to ${candidatesWithPhones.length} candidate(s)...`);
-                        try {
-                          const waResult = await sendBulkWhatsAppInvites(
-                            candidatesWithPhones,
-                            jobTitle,
-                            jobLink,
-                            accessCode,
-                            false,
-                            (sentCount, totalCount, currentCand, isWait) => {
-                              if (isWait) {
-                                setSendingProgressMsg(`⏳ Sent WhatsApp to ${currentCand} (${sentCount}/${totalCount}). Delaying 15s anti-spam...`);
-                              } else {
-                                setSendingProgressMsg(`📱 Sending WhatsApp API invite ${sentCount}/${totalCount} to ${currentCand}...`);
-                              }
-                            },
-                            waOptions
-                          );
-
-                          if (waResult.totalSent > 0) {
-                            messageBox.showSuccess(`✅ WhatsApp API invitations sent to ${waResult.totalSent} candidate(s)!`);
-                            setIsInviteModalOpen(false);
-                            setSelectedCandidateIds([]);
-                          } else {
-                            const errReason = waResult.errors.length > 0 ? waResult.errors[0] : 'WhatsApp API session is disconnected or offline.';
-                            messageBox.showError(`WhatsApp API Dispatch Failed (${errReason}). Opening WhatsApp Web fallback...`);
-                            
-                            // Fallback to WhatsApp Web
-                            const firstPhone = candidatesWithPhones[0]?.phone || '';
-                            const candName = candidatesWithPhones[0]?.name || 'Candidate';
-                            const msgText = getHighIntentJobInviteMessage({
-                              candidateName: candName,
-                              jobTitle,
-                              jobLink,
-                              location: activeSelectedJob.location || activeSelectedJob.city,
-                              experience: activeSelectedJob.experience,
-                              salary: activeSelectedJob.salary,
-                              qualification: activeSelectedJob.qualification || activeSelectedJob.education,
-                              employmentType: activeSelectedJob.employmentType,
-                              skills: activeSelectedJob.skills,
-                              description: activeSelectedJob.description,
-                              recruiterName: userProfile?.name || 'Recruiting Desk',
-                              recruiterPhone: (userProfile as any)?.phone || '9511779317'
-                            });
-                            window.open(`https://web.whatsapp.com/send?phone=${firstPhone.replace(/[^0-9]/g, '')}&text=${encodeURIComponent(msgText)}`, '_blank');
-                          }
-                        } catch (err: any) {
-                          messageBox.showError(err?.message || "Failed to send WhatsApp API invites.");
-                        } finally {
-                          setIsSendingInvites(false);
-                          setSendingProgressMsg('');
-                        }
-                      }}
-                      className="geist-caption inline-flex h-9 items-center justify-center gap-1.5 rounded-[6px] border border-emerald-600/40 dark:border-emerald-500/40 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 font-semibold text-xs px-3 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 transition-colors disabled:opacity-50 cursor-pointer"
-                      title="Send automated WhatsApp invitations via REST API"
-                    >
-                      <MessageSquare size={13} />
-                      WhatsApp API
-                    </button>
-                  )}
-
                   <button
                     type="button"
                     disabled={!activeSelectedJob || isSendingInvites}
@@ -4189,25 +4031,6 @@ const ResumeDump: React.FC = () => {
                       setSendingProgressMsg("Sending invitations via " + (inviteDeliveryMode === 'both' ? 'Both Email & WhatsApp API...' : inviteDeliveryMode === 'email' ? 'Email...' : 'WhatsApp...'));
 
                       try {
-                        if (inviteModalEducation.trim()) {
-                          await Promise.all(targetCandidates.map(async (cand) => {
-                            const selectedDegree = inviteModalEducation.trim();
-                            const existingEdu = cand.education || [];
-                            const updatedEdu = [
-                              { degree: selectedDegree, institution: 'Verified Qualification', year: '' },
-                              ...existingEdu.filter(e => e.degree.toLowerCase() !== selectedDegree.toLowerCase())
-                            ];
-                            try {
-                              await updateDoc(doc(db, 'resumeDumpCandidates', cand.id), {
-                                education: updatedEdu,
-                                updatedAt: serverTimestamp(),
-                              });
-                            } catch (err) {
-                              console.error('Failed to update candidate education on invite:', err);
-                            }
-                          }));
-                        }
-
                         const jobTitle = activeSelectedJob.title || activeSelectedJob.jobRole || 'Open Position';
                         const accessCode = '';
                         const interviewLink = `${window.location.origin}/candidate?job=${activeSelectedJob.id}`;
@@ -4361,17 +4184,17 @@ const ResumeDump: React.FC = () => {
                         setSendingProgressMsg('');
                       }
                     }}
-                    className="geist-caption inline-flex h-9 items-center justify-center gap-1.5 rounded-[6px] bg-slate-900 dark:bg-white text-white dark:text-black hover:bg-slate-800 dark:hover:bg-neutral-200 font-semibold text-xs px-4 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                    className="geist-caption inline-flex h-9 items-center justify-center gap-2 rounded-[6px] bg-slate-900 dark:bg-white text-white dark:text-black hover:bg-slate-800 dark:hover:bg-neutral-200 font-semibold text-xs px-5 shadow-xs disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
                   >
                     {isSendingInvites ? (
                       <>
-                        <RotateCcw size={13} className="animate-spin" />
-                        <span>Sending Invites...</span>
+                        <RotateCcw size={14} className="animate-spin" />
+                        <span>Sending Invitations...</span>
                       </>
                     ) : (
                       <>
-                        <Sparkles size={13} />
-                        <span>Send Invites ({inviteDeliveryMode === 'both' ? 'Both (Email + WA API)' : inviteDeliveryMode === 'whatsapp_api' ? 'WhatsApp API' : inviteDeliveryMode === 'whatsapp_web' ? 'WhatsApp Web' : 'Email Only'})</span>
+                        <Send size={14} />
+                        <span>Send Job Invitations</span>
                       </>
                     )}
                   </button>
