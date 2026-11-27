@@ -90,10 +90,17 @@ const ProtectedRoute: React.FC<{
 
   if (!user) return <Navigate to="/auth" replace />;
 
-  const userRole: string = userProfile?.role || (user.email === 'admin@snab.co.in' || user.email?.includes('admin') ? 'admin' : 'recruiter');
+  const isAdmin = user.email === 'admin@snab.co.in' || user.email?.includes('admin') || userProfile?.role === 'admin';
+  const isApprovedRecruiter = userProfile?.role === 'recruiter' && userProfile?.adminVerified !== false && userProfile?.accountStatus !== 'disabled';
+
+  if (!isAdmin && !isApprovedRecruiter) {
+    return <Navigate to="/auth" replace />;
+  }
+
+  const userRole: string = isAdmin ? 'admin' : 'recruiter';
   if (role && userRole !== role) {
-    if (role === 'admin' && userRole !== 'admin') return <Navigate to="/recruiter/jobs" replace />;
-    if (role === 'recruiter' && userRole === 'admin') return <Navigate to="/admin" replace />;
+    if (role === 'admin' && !isAdmin) return <Navigate to="/recruiter/jobs" replace />;
+    if (role === 'recruiter' && isAdmin) return <Navigate to="/admin" replace />;
     return <Navigate to="/recruiter/jobs" replace />;
   }
 

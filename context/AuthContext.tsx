@@ -53,8 +53,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       const currentUser = auth.currentUser;
-      const resolvedRole = merged.role || (currentUser?.email === 'admin@snab.co.in' || currentUser?.email?.includes('admin') ? 'admin' : 'recruiter');
-      const resolvedName = merged.name || merged.displayName || currentUser?.displayName || 'Recruiter';
+      const isAdminEmail = currentUser?.email === 'admin@snab.co.in' || currentUser?.email === 'admin@dsauce.io' || currentUser?.email?.includes('admin');
+      const resolvedRole = merged.role || (isAdminEmail ? 'admin' : undefined);
+      const resolvedName = merged.name || merged.displayName || currentUser?.displayName || 'User';
       const resolvedPhone = merged.phoneNumber || merged.phone || merged.contactNumber || currentUser?.phoneNumber || '';
 
       const updatedProfile: UserProfile = {
@@ -97,8 +98,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             if (cached) cachedRole = JSON.parse(cached)?.role;
           } catch (e) {}
 
-          const resolvedRole = combined.role || cachedRole || (currentUser.email === 'admin@dsauce.io' || currentUser.email?.includes('admin') ? 'admin' : 'recruiter');
-          const resolvedName = combined.name || combined.displayName || currentUser.displayName || 'Recruiter';
+          const isAdminEmail = currentUser.email === 'admin@snab.co.in' || currentUser.email === 'admin@dsauce.io' || currentUser.email?.includes('admin');
+          const resolvedRole = combined.role || cachedRole || (isAdminEmail ? 'admin' : undefined);
+          const resolvedName = combined.name || combined.displayName || currentUser.displayName || 'User';
           const resolvedPhone = combined.phoneNumber || combined.phone || combined.contactNumber || currentUser.phoneNumber || '';
 
           const updated: UserProfile = {
