@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>InterviewXpert ATS - Commercial Proposal & Agreement (₹45,000)</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap');
+
+  @page {
+    size: A4 portrait;
+    margin: 12mm 14mm 14mm 14mm;
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  body {
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: #111215;
+    background-color: #ffffff;
+    font-size: 11px;
+    line-height: 1.45;
+  }
+
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding-bottom: 12px;
+    border-bottom: 2px solid #111215;
+    margin-bottom: 12px;
+  }
+
+  .logo-area {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .logo-icon {
+    width: 28px;
+    height: 28px;
+    background: #111215;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    color: #D4F82C;
+    font-size: 14px;
+  }
+
+  .brand-name {
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: -0.4px;
+  }
+
+  .brand-tag {
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #575A51;
+  }
+
+  .meta-box {
+    text-align: right;
+    font-size: 10px;
+    color: #575A51;
+    line-height: 1.4;
+  }
+
+  .meta-box strong {
+    color: #111215;
+  }
+
+  .badge-deal {
+    display: inline-block;
+    background: #D4F82C;
+    color: #111215;
+    font-weight: 800;
+    font-size: 10px;
+    padding: 3px 8px;
+    border-radius: 6px;
+    margin-top: 4px;
+    text-transform: uppercase;
+  }
+
+  h1 {
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: -0.3px;
+    margin-bottom: 4px;
+  }
+
+  h2 {
+    font-size: 13px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-left: 3px solid #111215;
+    padding-left: 6px;
+    margin-top: 14px;
+    margin-bottom: 8px;
+    color: #111215;
+  }
+
+  h3 {
+    font-size: 11px;
+    font-weight: 700;
+    color: #111215;
+    margin-top: 6px;
+    margin-bottom: 2px;
+  }
+
+  p {
+    font-size: 10.5px;
+    color: #3b3e39;
+    margin-bottom: 6px;
+  }
+
+  .callout-box {
+    background: #F8F9F5;
+    border: 1px solid #E4E7DC;
+    border-left: 3px solid #8FB305;
+    padding: 8px 12px;
+    border-radius: 6px;
+    margin: 8px 0;
+    font-size: 10px;
+  }
+
+  .callout-box strong {
+    color: #111215;
+  }
+
+  .pricing-summary {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin: 10px 0;
+  }
+
+  .price-card {
+    border: 1px solid #E4E7DC;
+    background: #FAFAF7;
+    border-radius: 8px;
+    padding: 10px;
+    text-align: center;
+  }
+
+  .price-card.featured {
+    border: 2px solid #111215;
+    background: #ffffff;
+  }
+
+  .price-label {
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: #73766C;
+  }
+
+  .price-value {
+    font-size: 18px;
+    font-weight: 800;
+    color: #111215;
+    margin: 3px 0;
+  }
+
+  .price-sub {
+    font-size: 9px;
+    color: #575A51;
+  }
+
+  .features-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 6px;
+  }
+
+  .feature-box {
+    border: 1px solid #E4E7DC;
+    border-radius: 6px;
+    padding: 8px 10px;
+    background: #ffffff;
+  }
+
+  .feature-box h4 {
+    font-size: 10.5px;
+    font-weight: 700;
+    color: #111215;
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .feature-box ul {
+    list-style: none;
+    padding-left: 0;
+  }
+
+  .feature-box li {
+    font-size: 9.5px;
+    color: #4A4D45;
+    margin-bottom: 3px;
+    position: relative;
+    padding-left: 12px;
+  }
+
+  .feature-box li::before {
+    content: "✓";
+    position: absolute;
+    left: 0;
+    color: #8FB305;
+    font-weight: 800;
+    font-size: 9px;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 8px;
+    font-size: 10px;
+  }
+
+  th {
+    background: #111215;
+    color: #ffffff;
+    font-weight: 700;
+    text-align: left;
+    padding: 6px 8px;
+    font-size: 9.5px;
+  }
+
+  td {
+    border-bottom: 1px solid #E4E7DC;
+    padding: 6px 8px;
+    color: #3b3e39;
+  }
+
+  .sign-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-top: 18px;
+    padding-top: 12px;
+    border-top: 1px dashed #C0C4B8;
+  }
+
+  .sign-box {
+    border: 1px solid #E4E7DC;
+    border-radius: 6px;
+    padding: 10px;
+    font-size: 9.5px;
+  }
+
+  .sign-line {
+    margin-top: 24px;
+    border-bottom: 1px solid #111215;
+    padding-bottom: 2px;
+  }
+
+  .page-break {
+    page-break-before: always;
+  }
+</style>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="logo-area">
+      <div class="logo-icon">IX</div>
+      <div>
+        <div class="brand-name">InterviewXpert</div>
+        <div class="brand-tag">Core ATS Commercial Proposal & Agreement</div>
+      </div>
+    </div>
+    <div class="meta-box">
+      <div><strong>Document Ref:</strong> IXP-COM-2026-45K</div>
+      <div><strong>Deployment Tier:</strong> Core ATS Standard License</div>
+      <div><strong>Validity:</strong> 15 Business Days</div>
+      <div class="badge-deal">Fixed Deal: ₹45,000</div>
+    </div>
+  </div>
+
+  <h1>Commercial Proposal & Software License Agreement</h1>
+  <p><strong>Prepared for:</strong> Valued Client / Recruitment Partner &nbsp;|&nbsp; <strong>Prepared by:</strong> SNAB Innovations (InterviewXpert Platform Group)</p>
+
+  <!-- PRICING SUMMARY -->
+  <div class="pricing-summary">
+    <div class="price-card">
+      <div class="price-label">Milestone 1 (50%)</div>
+      <div class="price-value">₹22,500</div>
+      <div class="price-sub">Kickoff & Cloud Setup</div>
+    </div>
+    <div class="price-card">
+      <div class="price-label">Milestone 2 (50%)</div>
+      <div class="price-value">₹22,500</div>
+      <div class="price-sub">Deployment & Handover</div>
+    </div>
+    <div class="price-card featured">
+      <div class="price-label">Total Commercial Price</div>
+      <div class="price-value">₹45,000</div>
+      <div class="price-sub">Includes 1-Year Full AMC</div>
+    </div>
+  </div>
+
+  <!-- 30-DAY PROMOTIONAL ACCESS & DEGRADATION CLAUSE -->
+  <h2>1. 30-Day VIP "All-Feature" Access & Perpetual Transition Clause</h2>
+  <div class="callout-box">
+    <strong>Special Promotional Access:</strong> To empower your recruitment team with complete technology exposure, this deployment includes <strong>30 Days of Complimentary Access to ALL Advanced Features</strong> (including AI Resume Parsing, AI 0–100 Match Scoring, and Automated Screening).
+  </div>
+
+  <table style="margin-bottom: 10px;">
+    <thead>
+      <tr>
+        <th style="width: 22%;">Timeline</th>
+        <th style="width: 48%;">Feature Access Level</th>
+        <th style="width: 30%;">Operational State</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Month 1 (Days 1–30)</strong></td>
+        <td><strong>VIP Full Access:</strong> Unrestricted usage of every platform capability, including all AI resume parsing, candidate scoring, and screening tools.</td>
+        <td><strong style="color: #8FB305;">100% Full Power</strong></td>
+      </tr>
+      <tr>
+        <td><strong>Day 31 Onwards</strong></td>
+        <td><strong>Graceful Perpetual Degradation:</strong> System automatically settles into the permanent <strong>Core ATS Standard Suite</strong> (Non-AI). All candidate profiles, resumes, notes, pipelines, and job records created during Month 1 remain permanently saved and intact.</td>
+        <td><strong style="color: #111215;">Perpetual Core ATS</strong> (Zero Data Loss)</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- FEATURE BREAKDOWN -->
+  <h2>2. Included Core ATS Feature Scope (Perpetual License)</h2>
+  <div class="features-grid">
+    
+    <div class="feature-box">
+      <h4>A. Requisitions & Job Tracking</h4>
+      <ul>
+        <li>Create, publish, pause, and close job postings</li>
+        <li>Structured specs: CTC, experience, location, sector</li>
+        <li>Unique Requisition Codes (e.g., REQ-1042)</li>
+        <li>Direct candidate application links per job</li>
+      </ul>
+    </div>
+
+    <div class="feature-box">
+      <h4>B. Centralized Candidate Database</h4>
+      <ul>
+        <li>Secure cloud resume vault (PDF/DOCX/TXT)</li>
+        <li>Instant 1-click in-browser PDF viewer & download</li>
+        <li>Clean candidate profiles (+91 phone, CTC, notice period)</li>
+        <li>Automated duplicate applicant prevention</li>
+      </ul>
+    </div>
+
+    <div class="feature-box">
+      <h4>C. Visual Drag-and-Drop Kanban</h4>
+      <ul>
+        <li>Stages: Applied → Screening → Interview → Offer</li>
+        <li>Smooth drag-and-drop workflow with live counts</li>
+        <li>Real-time recruiter pipeline synchronization</li>
+        <li>Timestamped candidate movement history</li>
+      </ul>
+    </div>
+
+    <div class="feature-box">
+      <h4>D. Branded Client Shortlist Portal</h4>
+      <ul>
+        <li>1-click client review links (e.g., /review/csl_...)</li>
+        <li>No client registration or software install required</li>
+        <li>PII masking (hide candidate phone/email)</li>
+        <li>Direct client feedback (Interested / Hold / Reject)</li>
+        <li>Permanent review links without expiration locks</li>
+      </ul>
+    </div>
+
+    <div class="feature-box">
+      <h4>E. Automated Email Notifications</h4>
+      <ul>
+        <li>Candidate application receipts & status updates</li>
+        <li>Automated interview schedule emails with mode & time</li>
+        <li>24-hour interview reminder workflow</li>
+        <li>Custom company-branded notification templates</li>
+      </ul>
+    </div>
+
+    <div class="feature-box">
+      <h4>F. Search, Filters & Administration</h4>
+      <ul>
+        <li>Fast keyword search across names & designations</li>
+        <li>Multi-attribute filters: CTC, notice period, location</li>
+        <li>Central admin dashboard & recruiter activity logs</li>
+        <li>Restricted recruiter login (admin-approved only)</li>
+      </ul>
+    </div>
+
+  </div>
+
+  <div class="page-break"></div>
+
+  <!-- EXCLUSIONS TABLE -->
+  <div class="header">
+    <div class="logo-area">
+      <div class="logo-icon">IX</div>
+      <div class="brand-name">InterviewXpert</div>
+    </div>
+    <div class="meta-box">
+      <div><strong>Proposal Ref:</strong> IXP-COM-2026-45K &nbsp;|&nbsp; <strong>Page:</strong> 2 of 2</div>
+    </div>
+  </div>
+
+  <h2>3. Transparent Feature Boundary (Post-Day 30 Exclusions)</h2>
+  <p>To eliminate operational ambiguity, the table below highlights features excluded from the perpetual ₹45,000 package after the 30-day promotional period:</p>
+  
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 25%;">Feature Category</th>
+        <th style="width: 25%;">Core Package State</th>
+        <th style="width: 50%;">Operational Handling</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>AI Resume Parsing</strong></td>
+        <td>Excluded post-Day 30</td>
+        <td>Resumes are stored as original PDF/DOCX files; recruiters verify candidate details directly.</td>
+      </tr>
+      <tr>
+        <td><strong>AI Match Scoring (0–100)</strong></td>
+        <td>Excluded post-Day 30</td>
+        <td>Filtering is based on exact qualification, experience range, location, and CTC criteria.</td>
+      </tr>
+      <tr>
+        <td><strong>AI Voice / Video Bot</strong></td>
+        <td>Excluded post-Day 30</td>
+        <td>Recruiters schedule standard human interviews (Google Meet / Zoom / In-person).</td>
+      </tr>
+      <tr>
+        <td><strong>AI Job Generator</strong></td>
+        <td>Excluded post-Day 30</td>
+        <td>Job requisitions are entered using standard structured input templates.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- AMC TERMS -->
+  <h2>4. Annual Maintenance Contract (AMC) & Technical Support</h2>
+  <div class="callout-box">
+    <strong>12 Months of Full Maintenance Included:</strong> This ₹45,000 commercial agreement includes 1 full year of standard maintenance and technical support to ensure uninterrupted operations.
+  </div>
+
+  <ul style="margin-left: 16px; margin-bottom: 10px; font-size: 10px; color: #3b3e39; line-height: 1.6;">
+    <li><strong>Cloud Uptime & Database Health:</strong> Continuous monitoring of Firestore database and hosting environment.</li>
+    <li><strong>Bug Resolution & Security Patches:</strong> Priority resolution of any platform defects or browser compatibility errors at no extra cost.</li>
+    <li><strong>Recruiter Support:</strong> Direct WhatsApp and email technical assistance (Mon–Fri, 10:00 AM – 6:00 PM IST).</li>
+    <li><strong>Optional Year 2 Renewal:</strong> Post 12 months, AMC can be renewed at a discounted rate of <strong>₹12,000 / year</strong> (₹1,000/month).</li>
+  </ul>
+
+  <!-- SIGN OFF -->
+  <h2>5. Commercial Acceptance & Authorization</h2>
+  <div class="sign-grid">
+    <div class="sign-box">
+      <strong>For InterviewXpert / SNAB Innovations:</strong>
+      <div style="margin-top: 10px;">Name: _______________________________</div>
+      <div>Title: Authorized Technology Partner</div>
+      <div class="sign-line">Signature:</div>
+      <div style="margin-top: 4px;">Date: ________________________________</div>
+    </div>
+    <div class="sign-box">
+      <strong>For Client / Recruitment Partner:</strong>
+      <div style="margin-top: 10px;">Name: _______________________________</div>
+      <div>Title: _______________________________</div>
+      <div class="sign-line">Signature:</div>
+      <div style="margin-top: 4px;">Date: ________________________________</div>
+    </div>
+  </div>
+
+  <div style="text-align: center; margin-top: 16px; font-size: 9px; color: #8C9083;">
+    © 2026 InterviewXpert & SNAB Innovations. Built with enterprise-grade data privacy and cloud architecture.
+  </div>
+
+</body>
+</html>
