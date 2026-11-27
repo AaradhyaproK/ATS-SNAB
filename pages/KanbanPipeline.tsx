@@ -744,7 +744,7 @@ export default function KanbanPipeline() {
         // Auto-create unique persistent shortlist link
         const newShareId = `csl_${Math.random().toString(36).substring(2, 10)}${Date.now().toString(36).slice(-4)}`;
         const expirationDate = new Date();
-        expirationDate.setDate(expirationDate.getDate() + 30);
+        expirationDate.setDate(expirationDate.getDate() + 365);
 
         try {
           await addDoc(collection(db, 'clientShortlists'), {

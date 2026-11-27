@@ -348,7 +348,7 @@ export default function HotLeads() {
         // Create unique persistent shortlist document for this job
         const newShareId = `csl_${Math.random().toString(36).substring(2, 10)}${Date.now().toString(36).slice(-4)}`;
         const expirationDate = new Date();
-        expirationDate.setDate(expirationDate.getDate() + 30);
+        expirationDate.setDate(expirationDate.getDate() + 365);
 
         const docRef = await addDoc(collection(db, 'clientShortlists'), {
           shareId: newShareId,

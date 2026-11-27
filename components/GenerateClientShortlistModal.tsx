@@ -56,7 +56,7 @@ export default function GenerateClientShortlistModal({
     'Hi team, please find attached the curated, pre-screened candidates for this role. All candidates have verified skills, match requirements, and are available for interview rounds.'
   );
   const [maskingLevel, setMaskingLevel] = useState<'standard' | 'anonymous'>('standard');
-  const [expiresInDays, setExpiresInDays] = useState<number>(14);
+  const [expiresInDays, setExpiresInDays] = useState<number>(365);
 
   // States
   const [isGenerating, setIsGenerating] = useState(false);

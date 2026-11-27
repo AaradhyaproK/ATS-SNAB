@@ -166,7 +166,7 @@ export default function ClientReviewPortal() {
         }
 
         if (snap.empty) {
-          setError('This candidate shortlist review link does not exist or has expired.');
+          setError('This candidate shortlist review link does not exist. Please check the URL or contact your recruitment partner.');
           setLoading(false);
           return;
         }
@@ -185,12 +185,7 @@ export default function ClientReviewPortal() {
 
             const data = docSnapshot.data() as any;
 
-            // Check expiration if set
-            if (data.expiresAt && new Date(data.expiresAt).getTime() < Date.now()) {
-              setError('This candidate shortlist review link has expired. Please contact your recruitment partner for an updated link.');
-              setLoading(false);
-              return;
-            }
+            // Shortlist review links remain permanently accessible (no hard expiration blocking)
 
             const rawCandidates: ShortlistedCandidate[] = Array.isArray(data.candidates) ? data.candidates : [];
 
@@ -594,10 +589,15 @@ export default function ClientReviewPortal() {
                     <span>{shortlist.recruiterEmail}</span>
                   </span>
                 )}
-                {shortlist.expiresAt && (
+                {shortlist.expiresAt && new Date(shortlist.expiresAt).getTime() >= Date.now() ? (
                   <span className="flex items-center gap-1.5">
-                    <Clock size={13} className="text-amber-500" />
+                    <Clock size={13} className="text-[#8FB305] dark:text-[#D4F82C]" />
                     <span>Valid until: {new Date(shortlist.expiresAt).toLocaleDateString()}</span>
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-medium">
+                    <CheckCircle2 size={13} />
+                    <span>Active Review Link</span>
                   </span>
                 )}
               </div>
