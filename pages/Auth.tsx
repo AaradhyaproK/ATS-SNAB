@@ -217,7 +217,7 @@ const AuthPage: React.FC = () => {
         isAuthorized: false,
         isAdmin: false,
         userDoc: matchedUser,
-        errorReason: 'This account is not authorized for recruiter access. If you are a candidate, please use the Candidate Portal.',
+        errorReason: 'This account is not authorized for recruiter access. Only admin-approved recruiter accounts can log in.',
       };
     }
 
@@ -1034,17 +1034,6 @@ const AuthPage: React.FC = () => {
                 </form>
               </>
             )}
-
-              {/* ── Candidate Portal Bridge ── */}
-              <div className="mt-6 pt-4 border-t border-[#E4E7DC] dark:border-white/10 text-center text-xs text-[#73766C] dark:text-neutral-400">
-                Are you a job seeker or candidate?{' '}
-                <Link
-                  to="/candidate/login"
-                  className="font-bold text-[#111215] dark:text-white hover:text-[#8FB305] dark:hover:text-[#D4F82C] underline decoration-1 underline-offset-2 ml-1 inline-flex items-center gap-1 transition-colors"
-                >
-                  Candidate Portal <ArrowRight size={12} />
-                </Link>
-              </div>
 
             </div>
           </div>
