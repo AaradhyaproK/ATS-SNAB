@@ -53,6 +53,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import HireXLogo, { HireXMark } from '../components/HireXLogo';
+import { useTheme } from '../context/ThemeContext';
 
 interface ShortlistedCandidate {
   id: string;
@@ -99,6 +100,7 @@ interface ClientShortlistData {
 
 export default function ClientReviewPortal() {
   const { shareId } = useParams<{ shareId: string }>();
+  const { isDark } = useTheme();
 
   const [loading, setLoading] = useState(true);
   const [shortlist, setShortlist] = useState<ClientShortlistData | null>(null);
