@@ -719,7 +719,7 @@ export const MorphResumeModal: React.FC<MorphResumeModalProps> = ({
     <div
       className={
         isClientPortal
-          ? 'fixed inset-0 z-[10000] flex items-center justify-center bg-black/75 p-2 sm:p-5 backdrop-blur-md animate-in fade-in duration-150'
+          ? 'fixed inset-0 z-[10000] flex items-center justify-center bg-black/80 p-1.5 sm:p-4 md:p-6 backdrop-blur-md animate-in fade-in duration-150'
           : `fixed inset-0 z-[10000] w-screen h-screen flex flex-col overflow-hidden transition-colors duration-200 animate-in fade-in duration-150 ${
               isDay ? 'bg-slate-100 text-slate-900' : 'bg-[#0a0b0e] text-white'
             }`
@@ -729,7 +729,7 @@ export const MorphResumeModal: React.FC<MorphResumeModalProps> = ({
       <div
         className={
           isClientPortal
-            ? `w-full max-w-5xl h-[92vh] max-h-[920px] flex flex-col rounded-3xl border shadow-2xl overflow-hidden animate-in zoom-in-95 duration-150 transition-colors ${
+            ? `w-full max-w-5xl h-[95dvh] sm:h-[92vh] max-h-[920px] flex flex-col rounded-2xl sm:rounded-3xl border shadow-2xl overflow-hidden animate-in zoom-in-95 duration-150 transition-colors ${
                 isDay
                   ? 'bg-white border-slate-200 text-slate-900'
                   : 'bg-[#121318] border-white/10 text-white'
@@ -740,16 +740,16 @@ export const MorphResumeModal: React.FC<MorphResumeModalProps> = ({
       >
         {/* Top Header Bar */}
         <div
-          className={`flex flex-wrap items-center justify-between gap-3 px-5 py-3 border-b transition-colors shrink-0 ${
+          className={`flex items-center justify-between gap-2 px-3 sm:px-5 py-2.5 sm:py-3 border-b transition-colors shrink-0 ${
             isDay
               ? 'bg-slate-50 border-slate-200 text-slate-900'
               : 'bg-[#121318] border-white/10 text-white'
           }`}
         >
           {/* Left Brand & Title */}
-          <div className="flex items-center gap-3 min-w-0">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             <div
-              className={`flex h-9 w-9 items-center justify-center rounded-xl shrink-0 transition-colors ${
+              className={`flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-xl shrink-0 transition-colors ${
                 isClientPortal
                   ? 'bg-[#D4F82C]/20 text-[#111215] dark:text-[#8FB305] border border-[#8FB305]/30'
                   : isDay
@@ -757,11 +757,11 @@ export const MorphResumeModal: React.FC<MorphResumeModalProps> = ({
                   : 'bg-purple-600/20 text-purple-400 border border-purple-500/30'
               }`}
             >
-              {isClientPortal ? <ShieldCheck size={18} strokeWidth={2.2} /> : <Wand2 size={18} strokeWidth={2.2} />}
+              {isClientPortal ? <ShieldCheck size={16} strokeWidth={2.2} /> : <Wand2 size={16} strokeWidth={2.2} />}
             </div>
             <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <h3 className="font-bold text-sm sm:text-base truncate">
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <h3 className="font-bold text-xs sm:text-base truncate max-w-[150px] xs:max-w-[220px] sm:max-w-md">
                   {isClientPortal
                     ? `${maskedTitle || 'Candidate Profile'} — Blind Verified Resume`
                     : 'Morph Resume — Blind Client Copy'}
@@ -780,7 +780,7 @@ export const MorphResumeModal: React.FC<MorphResumeModalProps> = ({
                 </span>
               </div>
               <p
-                className={`text-xs truncate ${
+                className={`text-[11px] sm:text-xs truncate hidden xs:block sm:block ${
                   isDay ? 'text-slate-500' : 'text-zinc-400'
                 }`}
               >
@@ -887,22 +887,23 @@ export const MorphResumeModal: React.FC<MorphResumeModalProps> = ({
               type="button"
               onClick={handleDownloadPDF}
               disabled={isDownloading || isProcessing}
-              className={`px-3.5 py-1.5 rounded-lg disabled:opacity-50 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer active:scale-95 ${
+              className={`px-2.5 sm:px-3.5 py-1.5 rounded-xl disabled:opacity-50 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer active:scale-95 ${
                 isClientPortal
                   ? 'bg-[#111215] text-[#D4F82C] dark:bg-[#D4F82C] dark:text-[#111215] hover:opacity-90 shadow-xs'
                   : 'bg-purple-600 hover:bg-purple-500 text-white shadow-md shadow-purple-600/25'
               }`}
               title="Download Masked Resume PDF"
+              aria-label="Download Masked PDF"
             >
               {isDownloading ? (
                 <>
                   <Loader2 size={13} className="animate-spin" />
-                  <span>Generating PDF...</span>
+                  <span className="hidden sm:inline">Generating...</span>
                 </>
               ) : (
                 <>
                   <Download size={13} strokeWidth={2.2} />
-                  <span>Download Masked PDF</span>
+                  <span className="hidden sm:inline">Download Masked PDF</span>
                 </>
               )}
             </button>
@@ -911,12 +912,13 @@ export const MorphResumeModal: React.FC<MorphResumeModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors cursor-pointer border ${
+              className={`w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center transition-colors cursor-pointer border ${
                 isDay
                   ? 'bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 border-slate-200'
                   : 'bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white border-white/5'
               }`}
               title="Close Preview"
+              aria-label="Close Preview"
             >
               <X size={16} />
             </button>
@@ -1065,7 +1067,7 @@ export const MorphResumeModal: React.FC<MorphResumeModalProps> = ({
 
         {/* Document Viewer Canvas Area */}
         <div
-          className={`flex-1 w-full h-full overflow-auto p-4 sm:p-6 flex justify-center items-start transition-colors ${
+          className={`flex-1 w-full h-full overflow-auto p-2 sm:p-6 flex justify-center items-start transition-colors ${
             isDay ? 'bg-slate-200/85' : 'bg-[#070709]'
           }`}
         >
@@ -1330,31 +1332,31 @@ export const MorphResumeModal: React.FC<MorphResumeModalProps> = ({
         {/* Bottom Client Review Decision Bar */}
         {isClientPortal && (
           <div
-            className={`border-t px-5 py-3.5 flex flex-wrap items-center justify-between gap-3 shrink-0 transition-colors ${
+            className={`border-t p-3 sm:px-5 sm:py-3.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 shrink-0 transition-colors ${
               isDay ? 'bg-white border-slate-200' : 'bg-[#121318] border-white/10'
             }`}
           >
-            <div className="flex items-center gap-2.5">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-neutral-400">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2.5">
+              <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-neutral-400">
                 Decision for {maskedTitle || 'Candidate'}:
               </span>
-              <div className="flex items-center gap-1.5">
+              <div className="grid grid-cols-3 sm:flex items-center gap-1.5">
                 <button
                   type="button"
                   onClick={() => onDecisionChange?.('interested')}
-                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                  className={`min-h-[40px] px-2.5 sm:px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                     clientDecision === 'interested'
                       ? 'bg-[#111215] text-[#D4F82C] dark:bg-[#D4F82C] dark:text-[#111215] shadow-xs'
                       : 'border border-slate-300 dark:border-white/15 hover:bg-[#D4F82C]/10 text-slate-700 dark:text-neutral-200'
                   }`}
                 >
                   <ThumbsUp size={13} />
-                  <span>Select / Interested</span>
+                  <span>Select</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => onDecisionChange?.('hold')}
-                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                  className={`min-h-[40px] px-2.5 sm:px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                     clientDecision === 'hold'
                       ? 'bg-amber-600 text-white shadow-xs'
                       : 'border border-slate-300 dark:border-white/15 hover:bg-amber-500/10 text-slate-700 dark:text-neutral-200'
@@ -1366,7 +1368,7 @@ export const MorphResumeModal: React.FC<MorphResumeModalProps> = ({
                 <button
                   type="button"
                   onClick={() => onDecisionChange?.('reject')}
-                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                  className={`min-h-[40px] px-2.5 sm:px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                     clientDecision === 'reject'
                       ? 'bg-rose-600 text-white shadow-xs'
                       : 'border border-slate-300 dark:border-white/15 hover:bg-rose-500/10 text-slate-700 dark:text-neutral-200'
@@ -1378,21 +1380,21 @@ export const MorphResumeModal: React.FC<MorphResumeModalProps> = ({
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 w-full sm:w-auto">
               {onDiscussWhatsApp && (
                 <button
                   type="button"
                   onClick={onDiscussWhatsApp}
-                  className="px-3.5 py-1.5 rounded-xl border border-[#8FB305]/40 bg-[#D4F82C]/15 hover:bg-[#D4F82C]/25 text-[#111215] dark:text-[#D4F82C] text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                  className="flex-1 sm:flex-initial min-h-[40px] px-3.5 py-1.5 rounded-xl border border-[#8FB305]/40 bg-[#D4F82C]/15 hover:bg-[#D4F82C]/25 text-[#111215] dark:text-[#D4F82C] text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
                 >
-                  <MessageCircle size={13} />
+                  <MessageCircle size={14} />
                   <span>Discuss Candidate</span>
                 </button>
               )}
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-1.5 rounded-xl border border-slate-300 dark:border-white/15 text-xs font-bold text-slate-700 dark:text-white hover:bg-slate-100 dark:hover:bg-white/10 transition-colors cursor-pointer"
+                className="flex-1 sm:flex-initial min-h-[40px] px-4 py-1.5 rounded-xl border border-slate-300 dark:border-white/15 text-xs font-bold text-slate-700 dark:text-white hover:bg-slate-100 dark:hover:bg-white/10 transition-colors cursor-pointer flex items-center justify-center"
               >
                 Close Resume
               </button>

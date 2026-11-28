@@ -535,22 +535,22 @@ export default function ClientReviewPortal() {
         </div>
       )}
 
-      {/* ── Top Header with hireX Logo & Co-Branding (Clean Navbar - No Dot) ── */}
+      {/* ── Top Header with hireX Logo & Co-Branding (Clean Navbar) ── */}
       <header className="sticky top-0 z-40 border-b border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5]/90 dark:bg-[#0D0E11]/90 backdrop-blur-md">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-18 flex items-center justify-between gap-4">
-          {/* Brand Left: hireX Logo + Client badge (NO DOT) */}
-          <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-            <Link to="/" className="flex items-center gap-2 shrink-0 group" title="hireX Talent Platform">
-              <HireXLogo className="h-8 sm:h-9 w-auto" isDark={isDark} />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 sm:h-18 flex items-center justify-between gap-3">
+          {/* Brand Left: hireX Logo + Client badge */}
+          <div className="flex items-center gap-2.5 sm:gap-4 min-w-0">
+            <Link to="/" className="flex items-center gap-2 shrink-0 group" title="InterviewXpert Talent Platform">
+              <HireXLogo className="h-7 sm:h-9 w-auto" isDark={isDark} />
             </Link>
 
             <div className="h-5 w-px bg-[#E4E7DC] dark:bg-white/10 hidden sm:block shrink-0" />
 
-            {/* Client Badge without any dot */}
-            <div className="min-w-0 flex items-center gap-2">
+            {/* Client Badge - hidden on small mobile to avoid crowding the navbar, client name is also prominently in hero */}
+            <div className="hidden sm:flex items-center gap-2 min-w-0">
               <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-[#E4E7DC] dark:border-white/10 bg-white/80 dark:bg-white/5 text-xs font-bold text-[#111215] dark:text-[#F8F9F5] shadow-xs">
                 <Building2 size={13} className="text-[#8FB305] shrink-0" />
-                <span className="truncate max-w-[130px] sm:max-w-[200px]">{shortlist.clientName}</span>
+                <span className="truncate max-w-[140px] md:max-w-[200px]">{shortlist.clientName}</span>
                 <span className="text-[#73766C] dark:text-neutral-400 font-normal hidden md:inline">• Client Portal</span>
               </div>
 
@@ -562,13 +562,13 @@ export default function ClientReviewPortal() {
           </div>
 
           {/* Controls Right */}
-          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
             {/* Compare Matrix Button */}
             {totalCount > 1 && (
               <button
                 type="button"
                 onClick={() => setIsCompareOpen(true)}
-                className="hidden md:inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-white/5 hover:border-[#111215] dark:hover:border-white/30 text-[#111215] dark:text-[#F8F9F5] transition-all shadow-xs cursor-pointer"
+                className="hidden md:inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-bold border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-white/5 hover:border-[#111215] dark:hover:border-white/30 text-[#111215] dark:text-[#F8F9F5] transition-all shadow-xs cursor-pointer min-h-[40px]"
                 title="Compare all candidates side-by-side"
               >
                 <Columns size={14} className="text-[#8FB305]" />
@@ -580,10 +580,11 @@ export default function ClientReviewPortal() {
             <button
               type="button"
               onClick={handleCopyLink}
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-white/5 hover:border-[#111215] dark:hover:border-white/30 text-[#111215] dark:text-[#F8F9F5] transition-all shadow-xs cursor-pointer"
+              className="inline-flex items-center justify-center gap-1.5 h-10 px-3 sm:px-4 rounded-full text-xs font-bold border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-white/5 hover:border-[#111215] dark:hover:border-white/30 text-[#111215] dark:text-[#F8F9F5] transition-all shadow-xs cursor-pointer min-w-[40px] sm:min-w-0"
               title="Copy review link"
+              aria-label="Share Shortlist Link"
             >
-              <Share2 size={13} />
+              <Share2 size={14} />
               <span className="hidden sm:inline">Share Link</span>
             </button>
 
@@ -593,9 +594,11 @@ export default function ClientReviewPortal() {
                 href={getWhatsAppDiscussionLink() || '#'}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#111215] text-[#D4F82C] hover:bg-[#202227] dark:bg-[#D4F82C] dark:text-[#111215] dark:hover:bg-[#c7eb22] text-xs font-bold shadow-xs transition-all cursor-pointer"
+                className="inline-flex items-center justify-center gap-1.5 h-10 px-3.5 sm:px-4 rounded-full bg-[#111215] text-[#D4F82C] hover:bg-[#202227] dark:bg-[#D4F82C] dark:text-[#111215] dark:hover:bg-[#c7eb22] text-xs font-bold shadow-xs transition-all cursor-pointer min-w-[40px] sm:min-w-0"
+                title="Discuss with Recruiter on WhatsApp"
+                aria-label="Discuss with Recruiter"
               >
-                <MessageCircle size={14} />
+                <MessageCircle size={15} />
                 <span className="hidden sm:inline">Discuss with Recruiter</span>
               </a>
             )}
@@ -604,38 +607,38 @@ export default function ClientReviewPortal() {
       </header>
 
       {/* ── Main Body ── */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 pt-6 sm:pt-8 space-y-6 flex-1 w-full">
+      <main className="max-w-7xl mx-auto px-3 sm:px-6 pt-4 sm:pt-8 space-y-4 sm:space-y-6 flex-1 w-full">
         {/* ── Hero Role Overview Bento Card ── */}
-        <div className="relative overflow-hidden rounded-3xl p-6 sm:p-8 bg-white dark:bg-[#15161A] border border-[#E4E7DC] dark:border-white/10 shadow-xs">
+        <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl p-4 sm:p-8 bg-white dark:bg-[#15161A] border border-[#E4E7DC] dark:border-white/10 shadow-xs">
           {/* Subtle decorative glow curve */}
           <div className="absolute top-0 right-0 -mt-16 -mr-16 w-80 h-80 bg-[#D4F82C]/10 rounded-full blur-3xl pointer-events-none" />
 
-          <div className="relative flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-            <div className="space-y-3 max-w-3xl">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-[#D4F82C] text-[#111215] border border-[#8FB305]/30">
+          <div className="relative flex flex-col lg:flex-row lg:items-center justify-between gap-4 sm:gap-6">
+            <div className="space-y-2.5 sm:space-y-3 max-w-3xl">
+              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                <span className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-full text-[11px] sm:text-xs font-bold bg-[#D4F82C] text-[#111215] border border-[#8FB305]/30">
                   <Briefcase size={12} className="text-[#8FB305]" />
                   <span>Job Role Shortlist</span>
                 </span>
-                <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-[#F8F9F5] dark:bg-white/5 text-[#575A51] dark:text-neutral-300 border border-[#E4E7DC] dark:border-white/10">
+                <span className="inline-flex items-center gap-1 px-2.5 sm:px-3 py-1 rounded-full text-[11px] sm:text-xs font-semibold bg-[#F8F9F5] dark:bg-white/5 text-[#575A51] dark:text-neutral-300 border border-[#E4E7DC] dark:border-white/10">
                   <Building2 size={12} />
                   <span>{shortlist.clientName}</span>
                 </span>
-                <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-[#F8F9F5] dark:bg-white/5 text-[#575A51] dark:text-neutral-300 border border-[#E4E7DC] dark:border-white/10">
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] sm:text-xs font-semibold bg-[#F8F9F5] dark:bg-white/5 text-[#575A51] dark:text-neutral-300 border border-[#E4E7DC] dark:border-white/10">
                   <span>Job ID #{shortlist.jobId?.slice(-6) || 'TALENT'}</span>
                 </span>
               </div>
 
-              <h1 className="text-2xl sm:text-4xl font-extrabold text-[#111215] dark:text-[#F8F9F5] tracking-tight leading-tight">
+              <h1 className="text-xl sm:text-4xl font-extrabold text-[#111215] dark:text-[#F8F9F5] tracking-tight leading-tight [text-wrap:balance]">
                 {shortlist.jobTitle}
               </h1>
 
-              <p className="text-xs sm:text-sm text-[#575A51] dark:text-neutral-300 leading-relaxed">
+              <p className="text-xs sm:text-sm text-[#575A51] dark:text-neutral-300 leading-relaxed [text-wrap:pretty]">
                 {shortlist.executiveNote ||
                   `Below are the vetted, AI-evaluated candidate profiles submitted by ${shortlist.agencyName} for your team's review. Review candidate match scores, skills breakdowns, and verified resumes.`}
               </p>
 
-              <div className="flex flex-wrap items-center gap-4 pt-1 text-xs text-[#575A51] dark:text-neutral-400">
+              <div className="flex flex-wrap items-center gap-2.5 sm:gap-4 pt-0.5 sm:pt-1 text-xs text-[#575A51] dark:text-neutral-400">
                 <span className="flex items-center gap-1.5">
                   <UserCheck size={14} className="text-[#8FB305]" />
                   <span>Recruiter Lead: <strong className="text-[#111215] dark:text-[#F8F9F5]">{shortlist.recruiterName || 'Lead Consultant'}</strong></span>
@@ -643,7 +646,7 @@ export default function ClientReviewPortal() {
                 {shortlist.recruiterEmail && (
                   <span className="flex items-center gap-1.5">
                     <Mail size={13} className="text-[#73766C]" />
-                    <span>{shortlist.recruiterEmail}</span>
+                    <span className="break-all">{shortlist.recruiterEmail}</span>
                   </span>
                 )}
                 {shortlist.expiresAt && new Date(shortlist.expiresAt).getTime() >= Date.now() ? (
@@ -661,28 +664,28 @@ export default function ClientReviewPortal() {
             </div>
 
             {/* Quick Summary Bento Metrics */}
-            <div className="grid grid-cols-3 gap-3 bg-[#F8F9F5] dark:bg-[#101114] p-4 sm:p-5 rounded-3xl border border-[#E4E7DC] dark:border-white/10 shrink-0">
-              <div className="text-center px-3 py-1">
-                <div className="text-2xl sm:text-3xl font-extrabold text-[#111215] dark:text-[#F8F9F5] font-mono">
+            <div className="grid grid-cols-3 gap-1.5 sm:gap-3 bg-[#F8F9F5] dark:bg-[#101114] p-3 sm:p-5 rounded-2xl sm:rounded-3xl border border-[#E4E7DC] dark:border-white/10 shrink-0">
+              <div className="text-center px-1.5 sm:px-3 py-1">
+                <div className="text-xl sm:text-3xl font-extrabold text-[#111215] dark:text-[#F8F9F5] font-mono">
                   {totalCount}
                 </div>
-                <div className="text-[10px] font-bold text-[#73766C] dark:text-neutral-400 uppercase tracking-wider mt-0.5">
+                <div className="text-[9px] sm:text-[10px] font-bold text-[#73766C] dark:text-neutral-400 uppercase tracking-wider mt-0.5">
                   Candidates
                 </div>
               </div>
-              <div className="text-center px-3 py-1 border-x border-[#E4E7DC] dark:border-white/10">
-                <div className="text-2xl sm:text-3xl font-extrabold text-[#111215] dark:text-[#D4F82C] font-mono">
+              <div className="text-center px-1.5 sm:px-3 py-1 border-x border-[#E4E7DC] dark:border-white/10">
+                <div className="text-xl sm:text-3xl font-extrabold text-[#111215] dark:text-[#D4F82C] font-mono">
                   {avgMatchScore}%
                 </div>
-                <div className="text-[10px] font-bold text-[#8FB305] dark:text-[#D4F82C] uppercase tracking-wider mt-0.5">
+                <div className="text-[9px] sm:text-[10px] font-bold text-[#8FB305] dark:text-[#D4F82C] uppercase tracking-wider mt-0.5">
                   Avg Match
                 </div>
               </div>
-              <div className="text-center px-3 py-1">
-                <div className="text-2xl sm:text-3xl font-extrabold text-[#111215] dark:text-[#F8F9F5] font-mono">
+              <div className="text-center px-1.5 sm:px-3 py-1">
+                <div className="text-xl sm:text-3xl font-extrabold text-[#111215] dark:text-[#F8F9F5] font-mono">
                   {topTierCount}
                 </div>
-                <div className="text-[10px] font-bold text-[#73766C] dark:text-neutral-400 uppercase tracking-wider mt-0.5">
+                <div className="text-[9px] sm:text-[10px] font-bold text-[#73766C] dark:text-neutral-400 uppercase tracking-wider mt-0.5">
                   Top Fit (85%+)
                 </div>
               </div>
@@ -691,13 +694,13 @@ export default function ClientReviewPortal() {
         </div>
 
         {/* ── Interactive Controls, Filters & Search Toolbar ── */}
-        <div className="bg-white dark:bg-[#15161A] rounded-3xl border border-[#E4E7DC] dark:border-white/10 p-4 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-xs">
+        <div className="bg-white dark:bg-[#15161A] rounded-2xl sm:rounded-3xl border border-[#E4E7DC] dark:border-white/10 p-3.5 sm:p-5 flex flex-col gap-3 shadow-xs">
           {/* Search Box */}
-          <div className="relative flex-1 min-w-[240px]">
+          <div className="relative w-full">
             <Search size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#73766C] dark:text-neutral-400" />
             <input
               type="text"
-              placeholder="Search by Candidate #, core skills, experience, or location..."
+              placeholder="Search candidate #, skills, experience, location..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full h-11 pl-11 pr-9 rounded-full border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-[#101114] text-xs font-medium text-[#111215] dark:text-[#F8F9F5] outline-none focus:border-[#111215] dark:focus:border-white/30 transition-all placeholder:text-[#73766C]"
@@ -706,7 +709,8 @@ export default function ClientReviewPortal() {
               <button
                 type="button"
                 onClick={() => setSearchQuery('')}
-                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#73766C] hover:text-[#111215] dark:hover:text-white cursor-pointer"
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#73766C] hover:text-[#111215] dark:hover:text-white cursor-pointer p-1"
+                aria-label="Clear search"
               >
                 <X size={14} />
               </button>
@@ -714,14 +718,14 @@ export default function ClientReviewPortal() {
           </div>
 
           {/* Filter Pills & Controls */}
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
             {/* Score Filter */}
-            <div className="flex items-center gap-1 bg-[#F8F9F5] dark:bg-[#101114] p-1 rounded-full border border-[#E4E7DC] dark:border-white/10 text-xs">
-              <span className="text-[10px] font-bold text-[#73766C] dark:text-neutral-400 uppercase px-2.5">Score:</span>
+            <div className="flex items-center gap-1 bg-[#F8F9F5] dark:bg-[#101114] p-1 rounded-full border border-[#E4E7DC] dark:border-white/10 text-xs w-fit">
+              <span className="text-[10px] font-bold text-[#73766C] dark:text-neutral-400 uppercase px-2">Score:</span>
               <button
                 type="button"
                 onClick={() => setMinScoreFilter('all')}
-                className={`px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer min-h-[32px] ${
                   minScoreFilter === 'all'
                     ? 'bg-[#111215] text-white dark:bg-[#D4F82C] dark:text-[#111215] shadow-xs'
                     : 'text-[#575A51] dark:text-neutral-400 hover:text-[#111215] dark:hover:text-white'
@@ -732,7 +736,7 @@ export default function ClientReviewPortal() {
               <button
                 type="button"
                 onClick={() => setMinScoreFilter('90')}
-                className={`px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer min-h-[32px] ${
                   minScoreFilter === '90'
                     ? 'bg-[#111215] text-[#D4F82C] dark:bg-[#D4F82C] dark:text-[#111215] shadow-xs'
                     : 'text-[#575A51] dark:text-neutral-400 hover:text-[#111215] dark:hover:text-white'
@@ -743,7 +747,7 @@ export default function ClientReviewPortal() {
               <button
                 type="button"
                 onClick={() => setMinScoreFilter('80')}
-                className={`px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer min-h-[32px] ${
                   minScoreFilter === '80'
                     ? 'bg-[#111215] text-[#D4F82C] dark:bg-[#D4F82C] dark:text-[#111215] shadow-xs'
                     : 'text-[#575A51] dark:text-neutral-400 hover:text-[#111215] dark:hover:text-white'
@@ -753,7 +757,7 @@ export default function ClientReviewPortal() {
               </button>
             </div>
 
-            {/* Decision Filter */}
+            {/* Decision Filter (Large screens) */}
             <div className="hidden lg:flex items-center gap-1 bg-[#F8F9F5] dark:bg-[#101114] p-1 rounded-full border border-[#E4E7DC] dark:border-white/10 text-xs">
               <button
                 type="button"
@@ -790,43 +794,48 @@ export default function ClientReviewPortal() {
               </button>
             </div>
 
-            {/* Sort Selector */}
-            <select
-              value={sortBy}
-              onChange={(e: any) => setSortBy(e.target.value)}
-              className="h-10 px-4 rounded-full border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-[#101114] text-xs font-bold text-[#111215] dark:text-[#F8F9F5] outline-none focus:border-[#111215] dark:focus:border-white/30 cursor-pointer"
-            >
-              <option value="score-desc">Sort: Highest Match Score</option>
-              <option value="exp-desc">Sort: Most Experience</option>
-              <option value="name-asc">Sort: Candidate Name (A-Z)</option>
-            </select>
+            {/* Sort & View Mode Row */}
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              {/* Sort Selector */}
+              <select
+                value={sortBy}
+                onChange={(e: any) => setSortBy(e.target.value)}
+                className="flex-1 sm:flex-initial h-10 px-3.5 rounded-full border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-[#101114] text-xs font-bold text-[#111215] dark:text-[#F8F9F5] outline-none focus:border-[#111215] dark:focus:border-white/30 cursor-pointer"
+              >
+                <option value="score-desc">Sort: Highest Match Score</option>
+                <option value="exp-desc">Sort: Most Experience</option>
+                <option value="name-asc">Sort: Candidate Name (A-Z)</option>
+              </select>
 
-            {/* View Mode Toggle */}
-            <div className="flex items-center gap-1 bg-[#F8F9F5] dark:bg-[#101114] p-1 rounded-full border border-[#E4E7DC] dark:border-white/10">
-              <button
-                type="button"
-                onClick={() => setViewMode('grid')}
-                className={`p-2 rounded-full transition-all cursor-pointer ${
-                  viewMode === 'grid'
-                    ? 'bg-white dark:bg-[#15161A] text-[#111215] dark:text-[#F8F9F5] shadow-xs'
-                    : 'text-[#73766C] hover:text-[#111215] dark:hover:text-white'
-                }`}
-                title="Grid Cards View"
-              >
-                <Grid size={15} />
-              </button>
-              <button
-                type="button"
-                onClick={() => setViewMode('table')}
-                className={`p-2 rounded-full transition-all cursor-pointer ${
-                  viewMode === 'table'
-                    ? 'bg-white dark:bg-[#15161A] text-[#111215] dark:text-[#F8F9F5] shadow-xs'
-                    : 'text-[#73766C] hover:text-[#111215] dark:hover:text-white'
-                }`}
-                title="Compact Table Matrix View"
-              >
-                <List size={15} />
-              </button>
+              {/* View Mode Toggle */}
+              <div className="flex items-center gap-0.5 bg-[#F8F9F5] dark:bg-[#101114] p-1 rounded-full border border-[#E4E7DC] dark:border-white/10 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setViewMode('grid')}
+                  className={`p-2 rounded-full transition-all cursor-pointer min-w-[36px] min-h-[36px] flex items-center justify-center ${
+                    viewMode === 'grid'
+                      ? 'bg-white dark:bg-[#15161A] text-[#111215] dark:text-[#F8F9F5] shadow-xs'
+                      : 'text-[#73766C] hover:text-[#111215] dark:hover:text-white'
+                  }`}
+                  title="Grid Cards View"
+                  aria-label="Grid Cards View"
+                >
+                  <Grid size={15} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode('table')}
+                  className={`p-2 rounded-full transition-all cursor-pointer min-w-[36px] min-h-[36px] flex items-center justify-center ${
+                    viewMode === 'table'
+                      ? 'bg-white dark:bg-[#15161A] text-[#111215] dark:text-[#F8F9F5] shadow-xs'
+                      : 'text-[#73766C] hover:text-[#111215] dark:hover:text-white'
+                  }`}
+                  title="Compact Table Matrix View"
+                  aria-label="Compact Table Matrix View"
+                >
+                  <List size={15} />
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -866,44 +875,44 @@ export default function ClientReviewPortal() {
               return (
                 <div
                   key={candidate.id || idx}
-                  className="rounded-3xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] hover:border-[#111215] dark:hover:border-white/30 transition-all p-6 sm:p-8 shadow-xs"
+                  className="rounded-2xl sm:rounded-3xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] hover:border-[#111215] dark:hover:border-white/30 transition-all p-4 sm:p-8 shadow-xs"
                 >
-                  <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-6">
+                  <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4 sm:gap-6">
                     {/* Left & Middle Column: Candidate Info */}
-                    <div className="flex-1 space-y-4">
+                    <div className="flex-1 space-y-3.5 sm:space-y-4">
                       {/* Name & Score Header */}
-                      <div className="flex flex-wrap items-center justify-between gap-3">
-                        <div className="flex items-center gap-3">
-                          <div className="w-11 h-11 rounded-2xl bg-[#F8F9F5] dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 text-[#111215] dark:text-white flex items-center justify-center font-bold text-sm">
+                      <div className="flex items-start justify-between gap-2.5 sm:gap-3">
+                        <div className="flex items-start gap-2.5 sm:gap-3 min-w-0">
+                          <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl bg-[#F8F9F5] dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 text-[#111215] dark:text-white flex items-center justify-center font-bold text-xs sm:text-sm shrink-0 mt-0.5">
                             #{idx + 1}
                           </div>
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <h2 className="font-extrabold text-lg sm:text-xl text-[#111215] dark:text-[#F8F9F5]">
+                          <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                              <h2 className="font-extrabold text-base sm:text-xl text-[#111215] dark:text-[#F8F9F5] truncate">
                                 {getCandidateDisplayName(candidate, idx)}
                               </h2>
                               {decision === 'interested' && (
-                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#D4F82C] text-[#111215] border border-[#8FB305]/40">
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#D4F82C] text-[#111215] border border-[#8FB305]/40 shrink-0">
                                   <ThumbsUp size={10} />
                                   <span>Interview Requested</span>
                                 </span>
                               )}
                               {decision === 'hold' && (
-                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-300">
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-300 shrink-0">
                                   <Bookmark size={10} />
                                   <span>On Hold</span>
                                 </span>
                               )}
                               {decision === 'reject' && (
-                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-300">
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-300 shrink-0">
                                   <ThumbsDown size={10} />
                                   <span>Declined</span>
                                 </span>
                               )}
                             </div>
-                            <p className="text-xs text-[#575A51] dark:text-neutral-400 mt-0.5 flex items-center gap-1.5">
+                            <p className="text-[11px] sm:text-xs text-[#575A51] dark:text-neutral-400 mt-0.5 flex flex-wrap items-center gap-1 sm:gap-1.5">
                               <span>{candidate.location || 'Location Confidential'}</span>
-                              <span>•</span>
+                              <span className="text-[#8FB305]">•</span>
                               <span className="inline-flex items-center gap-1 text-[#8FB305] font-semibold">
                                 <ShieldCheck size={11} />
                                 Verified Blind Profile
@@ -913,22 +922,22 @@ export default function ClientReviewPortal() {
                         </div>
 
                         {/* Match Score Radial Display */}
-                        <div className="flex items-center gap-2.5 bg-[#F8F9F5] dark:bg-[#101114] px-4 py-2 rounded-2xl border border-[#E4E7DC] dark:border-white/10">
-                          <div className="relative w-11 h-11 flex items-center justify-center">
-                            <svg className="w-11 h-11 -rotate-90">
+                        <div className="flex items-center gap-2 sm:gap-2.5 bg-[#F8F9F5] dark:bg-[#101114] px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-xl sm:rounded-2xl border border-[#E4E7DC] dark:border-white/10 shrink-0">
+                          <div className="relative w-9 h-9 sm:w-11 sm:h-11 flex items-center justify-center">
+                            <svg className="w-9 h-9 sm:w-11 sm:h-11 -rotate-90">
                               <circle
-                                cx="22"
-                                cy="22"
-                                r="18"
+                                cx="50%"
+                                cy="50%"
+                                r="40%"
                                 stroke="currentColor"
                                 strokeWidth="3"
                                 fill="none"
                                 className="text-[#E4E7DC] dark:text-white/10"
                               />
                               <circle
-                                cx="22"
-                                cy="22"
-                                r="18"
+                                cx="50%"
+                                cy="50%"
+                                r="40%"
                                 stroke="currentColor"
                                 strokeWidth="3"
                                 fill="none"
@@ -938,16 +947,16 @@ export default function ClientReviewPortal() {
                                 className={isHighMatch ? 'text-[#8FB305] dark:text-[#D4F82C]' : 'text-slate-700 dark:text-slate-300'}
                               />
                             </svg>
-                            <span className="absolute font-extrabold text-xs font-mono text-[#111215] dark:text-[#F8F9F5]">
+                            <span className="absolute font-extrabold text-[11px] sm:text-xs font-mono text-[#111215] dark:text-[#F8F9F5]">
                               {score}%
                             </span>
                           </div>
-                          <div>
-                            <div className="flex items-center gap-1 font-bold text-xs text-[#111215] dark:text-[#F8F9F5]">
+                          <div className="hidden xs:block sm:block">
+                            <div className="flex items-center gap-1 font-bold text-[11px] sm:text-xs text-[#111215] dark:text-[#F8F9F5]">
                               <Sparkles size={11} className="text-[#8FB305]" />
                               <span>{candidate.matchGrade || 'Great Fit'}</span>
                             </div>
-                            <span className="text-[10px] text-[#73766C] dark:text-neutral-400 uppercase font-bold">
+                            <span className="text-[9px] sm:text-[10px] text-[#73766C] dark:text-neutral-400 uppercase font-bold block">
                               AI Fit Evaluation
                             </span>
                           </div>
@@ -955,36 +964,36 @@ export default function ClientReviewPortal() {
                       </div>
 
                       {/* Key Attributes Bento Grid */}
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
-                        <div className="p-3 rounded-2xl bg-[#F8F9F5] dark:bg-[#1D1F24]/60 border border-[#E4E7DC] dark:border-white/10">
-                          <span className="text-[10px] text-[#73766C] dark:text-neutral-400 block font-bold uppercase tracking-wider mb-0.5">
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                        <div className="p-2.5 sm:p-3 rounded-xl sm:rounded-2xl bg-[#F8F9F5] dark:bg-[#1D1F24]/60 border border-[#E4E7DC] dark:border-white/10">
+                          <span className="text-[9px] sm:text-[10px] text-[#73766C] dark:text-neutral-400 block font-bold uppercase tracking-wider mb-0.5">
                             Experience
                           </span>
-                          <span className="font-bold text-[#111215] dark:text-[#F8F9F5] text-sm block">
+                          <span className="font-bold text-[#111215] dark:text-[#F8F9F5] text-xs sm:text-sm block">
                             {candidate.experience || '3+ Years'}
                           </span>
                         </div>
-                        <div className="p-3 rounded-2xl bg-[#F8F9F5] dark:bg-[#1D1F24]/60 border border-[#E4E7DC] dark:border-white/10">
-                          <span className="text-[10px] text-[#73766C] dark:text-neutral-400 block font-bold uppercase tracking-wider mb-0.5">
+                        <div className="p-2.5 sm:p-3 rounded-xl sm:rounded-2xl bg-[#F8F9F5] dark:bg-[#1D1F24]/60 border border-[#E4E7DC] dark:border-white/10">
+                          <span className="text-[9px] sm:text-[10px] text-[#73766C] dark:text-neutral-400 block font-bold uppercase tracking-wider mb-0.5">
                             Notice Period
                           </span>
-                          <span className="font-bold text-[#111215] dark:text-[#F8F9F5] text-sm block">
+                          <span className="font-bold text-[#111215] dark:text-[#F8F9F5] text-xs sm:text-sm block">
                             {candidate.noticePeriod || '15–30 Days'}
                           </span>
                         </div>
-                        <div className="p-3 rounded-2xl bg-[#F8F9F5] dark:bg-[#1D1F24]/60 border border-[#E4E7DC] dark:border-white/10">
-                          <span className="text-[10px] text-[#73766C] dark:text-neutral-400 block font-bold uppercase tracking-wider mb-0.5">
+                        <div className="p-2.5 sm:p-3 rounded-xl sm:rounded-2xl bg-[#F8F9F5] dark:bg-[#1D1F24]/60 border border-[#E4E7DC] dark:border-white/10">
+                          <span className="text-[9px] sm:text-[10px] text-[#73766C] dark:text-neutral-400 block font-bold uppercase tracking-wider mb-0.5">
                             Location
                           </span>
-                          <span className="font-bold text-[#111215] dark:text-[#F8F9F5] text-sm block truncate">
+                          <span className="font-bold text-[#111215] dark:text-[#F8F9F5] text-xs sm:text-sm block truncate">
                             {candidate.location || 'Bangalore'}
                           </span>
                         </div>
-                        <div className="p-3 rounded-2xl bg-[#F8F9F5] dark:bg-[#1D1F24]/60 border border-[#E4E7DC] dark:border-white/10">
-                          <span className="text-[10px] text-[#73766C] dark:text-neutral-400 block font-bold uppercase tracking-wider mb-0.5">
+                        <div className="p-2.5 sm:p-3 rounded-xl sm:rounded-2xl bg-[#F8F9F5] dark:bg-[#1D1F24]/60 border border-[#E4E7DC] dark:border-white/10">
+                          <span className="text-[9px] sm:text-[10px] text-[#73766C] dark:text-neutral-400 block font-bold uppercase tracking-wider mb-0.5">
                             Expected CTC
                           </span>
-                          <span className="font-bold text-[#111215] dark:text-[#F8F9F5] text-sm block">
+                          <span className="font-bold text-[#111215] dark:text-[#F8F9F5] text-xs sm:text-sm block">
                             {candidate.expectedSalary || 'Competitive'}
                           </span>
                         </div>
@@ -996,7 +1005,7 @@ export default function ClientReviewPortal() {
                           <span className="text-[10px] font-bold text-[#73766C] dark:text-neutral-400 uppercase tracking-wider">
                             Executive Profile Summary
                           </span>
-                          <p className="text-xs sm:text-sm text-[#575A51] dark:text-neutral-300 leading-relaxed bg-[#F8F9F5] dark:bg-[#101114] p-3.5 rounded-2xl border border-[#E4E7DC] dark:border-white/10">
+                          <p className="text-xs sm:text-sm text-[#575A51] dark:text-neutral-300 leading-relaxed bg-[#F8F9F5] dark:bg-[#101114] p-3 sm:p-3.5 rounded-xl sm:rounded-2xl border border-[#E4E7DC] dark:border-white/10 [text-wrap:pretty]">
                             {candidate.summary}
                           </p>
                         </div>
@@ -1008,11 +1017,11 @@ export default function ClientReviewPortal() {
                           <span className="text-[10px] font-bold text-[#73766C] dark:text-neutral-400 uppercase tracking-wider">
                             Demonstrated Core Skills ({candidate.skills.length})
                           </span>
-                          <div className="flex flex-wrap items-center gap-1.5">
+                          <div className="flex flex-wrap items-center gap-1 sm:gap-1.5">
                             {candidate.skills.map((skill, sIdx) => (
                               <span
                                 key={sIdx}
-                                className="px-3 py-1 rounded-full bg-white dark:bg-white/5 text-xs font-semibold text-[#111215] dark:text-[#F8F9F5] border border-[#E4E7DC] dark:border-white/10"
+                                className="px-2.5 py-1 sm:px-3 sm:py-1 rounded-full bg-white dark:bg-white/5 text-[11px] sm:text-xs font-semibold text-[#111215] dark:text-[#F8F9F5] border border-[#E4E7DC] dark:border-white/10"
                               >
                                 {skill}
                               </span>
@@ -1023,7 +1032,7 @@ export default function ClientReviewPortal() {
 
                       {/* Existing Client Feedback Note (if left) */}
                       {candidate.clientFeedback && (
-                        <div className="p-3 rounded-2xl bg-[#D4F82C]/10 dark:bg-[#D4F82C]/5 border border-[#8FB305]/30 text-xs">
+                        <div className="p-3 rounded-xl sm:rounded-2xl bg-[#D4F82C]/10 dark:bg-[#D4F82C]/5 border border-[#8FB305]/30 text-xs">
                           <span className="font-bold text-[#111215] dark:text-[#D4F82C] block mb-0.5">
                             📝 Client Review Note:
                           </span>
@@ -1035,17 +1044,17 @@ export default function ClientReviewPortal() {
                     </div>
 
                     {/* Right Column: Actions & Client Decision Center */}
-                    <div className="lg:w-72 flex flex-col gap-3 shrink-0 pt-4 lg:pt-0 border-t lg:border-t-0 lg:border-l border-[#E4E7DC] dark:border-white/10 lg:pl-6 justify-center">
+                    <div className="lg:w-72 flex flex-col gap-2.5 sm:gap-3 shrink-0 pt-4 lg:pt-0 border-t lg:border-t-0 lg:border-l border-[#E4E7DC] dark:border-white/10 lg:pl-6 justify-center">
                       {/* Client Decision Quick Toggles */}
-                      <div className="p-3.5 rounded-2xl bg-[#F8F9F5] dark:bg-[#101114] border border-[#E4E7DC] dark:border-white/10 space-y-2">
+                      <div className="p-3 sm:p-3.5 rounded-2xl bg-[#F8F9F5] dark:bg-[#101114] border border-[#E4E7DC] dark:border-white/10 space-y-2">
                         <span className="text-[10px] uppercase font-bold text-[#73766C] dark:text-neutral-400 tracking-wider block text-center">
                           Client Decision
                         </span>
-                        <div className="grid grid-cols-3 gap-1.5">
+                        <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
                           <button
                             type="button"
                             onClick={() => handleDecisionChange(candidate, 'interested')}
-                            className={`py-2 px-1 rounded-xl text-[11px] font-bold flex flex-col items-center gap-1 transition-all cursor-pointer ${
+                            className={`min-h-[44px] py-2 px-1 rounded-xl text-[11px] font-bold flex flex-col items-center justify-center gap-1 transition-all cursor-pointer ${
                               decision === 'interested'
                                 ? 'bg-[#111215] text-[#D4F82C] dark:bg-[#D4F82C] dark:text-[#111215] shadow-sm font-extrabold'
                                 : 'bg-white dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 text-[#575A51] dark:text-neutral-300 hover:border-[#8FB305]'
@@ -1058,7 +1067,7 @@ export default function ClientReviewPortal() {
                           <button
                             type="button"
                             onClick={() => handleDecisionChange(candidate, 'hold')}
-                            className={`py-2 px-1 rounded-xl text-[11px] font-bold flex flex-col items-center gap-1 transition-all cursor-pointer ${
+                            className={`min-h-[44px] py-2 px-1 rounded-xl text-[11px] font-bold flex flex-col items-center justify-center gap-1 transition-all cursor-pointer ${
                               decision === 'hold'
                                 ? 'bg-amber-600 text-white shadow-sm font-extrabold'
                                 : 'bg-white dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 text-[#575A51] dark:text-neutral-300 hover:border-amber-400'
@@ -1071,7 +1080,7 @@ export default function ClientReviewPortal() {
                           <button
                             type="button"
                             onClick={() => handleDecisionChange(candidate, 'reject')}
-                            className={`py-2 px-1 rounded-xl text-[11px] font-bold flex flex-col items-center gap-1 transition-all cursor-pointer ${
+                            className={`min-h-[44px] py-2 px-1 rounded-xl text-[11px] font-bold flex flex-col items-center justify-center gap-1 transition-all cursor-pointer ${
                               decision === 'reject'
                                 ? 'bg-rose-600 text-white shadow-sm font-extrabold'
                                 : 'bg-white dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 text-[#575A51] dark:text-neutral-300 hover:border-rose-400'
@@ -1090,7 +1099,7 @@ export default function ClientReviewPortal() {
                             setFeedbackCandidate(candidate);
                             setFeedbackInput(candidate.clientFeedback || '');
                           }}
-                          className="w-full py-1.5 rounded-xl border border-dashed border-[#E4E7DC] dark:border-white/10 text-[11px] font-semibold text-[#575A51] dark:text-neutral-300 hover:border-[#111215] dark:hover:border-white/30 flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                          className="w-full min-h-[38px] py-1.5 rounded-xl border border-dashed border-[#E4E7DC] dark:border-white/10 text-[11px] font-semibold text-[#575A51] dark:text-neutral-300 hover:border-[#111215] dark:hover:border-white/30 flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
                         >
                           <MessageSquare size={12} />
                           <span>{candidate.clientFeedback ? 'Edit Note' : 'Add Note for Recruiter'}</span>
@@ -1104,14 +1113,14 @@ export default function ClientReviewPortal() {
                           setPreviewResumeCandidate(candidate);
                           setPreviewCandidateIndex(idx);
                         }}
-                        className="w-full h-11 rounded-full bg-[#111215] text-white hover:bg-[#202227] dark:bg-[#D4F82C] dark:text-[#111215] dark:hover:bg-[#c7eb22] text-xs font-bold flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer active:scale-95"
+                        className="w-full min-h-[48px] h-12 rounded-full bg-[#111215] text-white hover:bg-[#202227] dark:bg-[#D4F82C] dark:text-[#111215] dark:hover:bg-[#c7eb22] text-xs font-bold flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer active:scale-95"
                       >
                         <FileText size={16} className="text-[#D4F82C] dark:text-[#111215]" />
                         <span>View Realtime Masked Resume</span>
                       </button>
 
                       {/* Agency PII Protection Notice (Zero raw resume links) */}
-                      <div className="flex items-center justify-center gap-1.5 text-[10px] text-[#73766C] dark:text-neutral-400 font-medium py-1">
+                      <div className="flex items-center justify-center gap-1.5 text-[10px] text-[#73766C] dark:text-neutral-400 font-medium py-0.5">
                         <Lock size={11} className="text-[#8FB305] shrink-0" />
                         <span>Contact & PII Redacted for Agency Privacy</span>
                       </div>
@@ -1122,9 +1131,9 @@ export default function ClientReviewPortal() {
                           href={getWhatsAppDiscussionLink(candidate) || '#'}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="w-full h-9 rounded-full border border-[#8FB305]/40 bg-[#D4F82C]/15 dark:bg-[#D4F82C]/10 hover:bg-[#D4F82C]/25 text-[#111215] dark:text-[#D4F82C] text-xs font-bold flex items-center justify-center gap-1.5 transition-colors"
+                          className="w-full min-h-[44px] h-11 rounded-full border border-[#8FB305]/40 bg-[#D4F82C]/15 dark:bg-[#D4F82C]/10 hover:bg-[#D4F82C]/25 text-[#111215] dark:text-[#D4F82C] text-xs font-bold flex items-center justify-center gap-1.5 transition-colors"
                         >
-                          <MessageCircle size={13} className="text-[#8FB305]" />
+                          <MessageCircle size={14} className="text-[#8FB305]" />
                           <span>Discuss Candidate</span>
                         </a>
                       )}
