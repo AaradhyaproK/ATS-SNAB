@@ -361,7 +361,9 @@ export const MorphResumeModal: React.FC<MorphResumeModalProps> = ({
     if (isPdf && candidate.resumeUrl) {
       loadAndRedactOriginalPdf(candidate.resumeUrl, candidate.email, candidate.phone, effectiveWordsToRemove);
     } else {
-      setActiveTab('executive');
+      if (!isClientPortal) {
+        setActiveTab('executive');
+      }
     }
   }, [isOpen, candidate, customWords]);
 
@@ -548,9 +550,11 @@ export const MorphResumeModal: React.FC<MorphResumeModalProps> = ({
       setMorphedPages(pagesList);
       setActiveTab('original');
     } catch (err: any) {
-      console.warn('Original PDF direct redaction not available (falling back to Executive Morphed Template):', err);
-      setLoadError('Using high-accuracy Executive Morphed Template.');
-      setActiveTab('executive');
+      console.warn('Original PDF direct redaction not available:', err);
+      setLoadError('Original PDF direct redaction not available.');
+      if (!isClientPortal) {
+        setActiveTab('executive');
+      }
     } finally {
       setIsProcessing(false);
     }
@@ -610,7 +614,7 @@ export const MorphResumeModal: React.FC<MorphResumeModalProps> = ({
 
       return pdf;
     } else {
-      // 2. Executive ATS Mode: High-fidelity multi-page A4 document
+      // 2. Formatted Mode: High-fidelity multi-page A4 document
       if (!executiveContainerRef.current) throw new Error('Preview not ready');
 
       const element = executiveContainerRef.current;
@@ -789,8 +793,8 @@ export const MorphResumeModal: React.FC<MorphResumeModalProps> = ({
 
           {/* Right Action Controls Toolbar */}
           <div className="flex items-center gap-2 shrink-0">
-            {/* View Tab Switcher (Original Redacted vs Executive ATS) */}
-            {morphedPages.length > 0 && (
+            {/* View Tab Switcher (Original Redacted vs Formatted Profile) - hidden in Client Portal */}
+            {!isClientPortal && morphedPages.length > 0 && (
               <div
                 className={`flex items-center rounded-lg p-0.5 border ${
                   isDay
@@ -803,9 +807,7 @@ export const MorphResumeModal: React.FC<MorphResumeModalProps> = ({
                   onClick={() => setActiveTab('original')}
                   className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-colors cursor-pointer ${
                     activeTab === 'original'
-                      ? isClientPortal
-                        ? 'bg-[#111215] text-[#D4F82C] dark:bg-[#D4F82C] dark:text-[#111215] shadow-xs'
-                        : isDay
+                      ? isDay
                         ? 'bg-white text-purple-700 shadow-xs'
                         : 'bg-purple-600 text-white shadow-xs'
                       : isDay
@@ -813,16 +815,14 @@ export const MorphResumeModal: React.FC<MorphResumeModalProps> = ({
                       : 'text-zinc-400 hover:text-white'
                   }`}
                 >
-                  {isClientPortal ? 'Masked Resume' : 'Original Redacted'}
+                  Original Redacted
                 </button>
                 <button
                   type="button"
                   onClick={() => setActiveTab('executive')}
                   className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-colors cursor-pointer ${
                     activeTab === 'executive'
-                      ? isClientPortal
-                        ? 'bg-[#111215] text-[#D4F82C] dark:bg-[#D4F82C] dark:text-[#111215] shadow-xs'
-                        : isDay
+                      ? isDay
                         ? 'bg-white text-purple-700 shadow-xs'
                         : 'bg-purple-600 text-white shadow-xs'
                       : isDay
@@ -830,7 +830,7 @@ export const MorphResumeModal: React.FC<MorphResumeModalProps> = ({
                       : 'text-zinc-400 hover:text-white'
                   }`}
                 >
-                  {isClientPortal ? 'Profile Summary' : 'Executive ATS'}
+                  Formatted Profile
                 </button>
               </div>
             )}
@@ -1116,8 +1116,33 @@ export const MorphResumeModal: React.FC<MorphResumeModalProps> = ({
                 </div>
               ))}
             </div>
+          ) : isClientPortal && morphedPages.length === 0 ? (
+            // Client Portal fallback when no original PDF is uploaded
+            <div className="w-full max-w-lg mx-auto bg-white dark:bg-[#15161A] p-8 rounded-3xl border border-[#E4E7DC] dark:border-white/10 text-center space-y-4 my-auto shadow-xl">
+              <div className="w-14 h-14 rounded-2xl bg-[#D4F82C]/20 border border-[#8FB305]/30 text-[#111215] dark:text-[#8FB305] flex items-center justify-center mx-auto">
+                <FileText size={28} />
+              </div>
+              <div className="space-y-1.5">
+                <h4 className="font-extrabold text-base text-[#111215] dark:text-[#F8F9F5]">
+                  Original Document Not Available
+                </h4>
+                <p className="text-xs text-[#575A51] dark:text-neutral-400 max-w-sm mx-auto leading-relaxed">
+                  An original PDF resume document has not been uploaded for {cleanCandidateName}. You can review their verified qualifications and assessment scores directly on the shortlist portal.
+                </p>
+              </div>
+              {recruiterPhone && (
+                <button
+                  type="button"
+                  onClick={onDiscussWhatsApp}
+                  className="px-5 py-2.5 rounded-full bg-[#111215] text-[#D4F82C] dark:bg-[#D4F82C] dark:text-[#111215] font-bold text-xs inline-flex items-center gap-2 hover:opacity-90 transition-all cursor-pointer shadow-sm"
+                >
+                  <MessageCircle size={14} />
+                  <span>Request Full Document from Recruiter</span>
+                </button>
+              )}
+            </div>
           ) : (
-            // Mode 2: Executive ATS Typeset Layout (100% Vector Clean A4 Presentation)
+            // Mode 2: Formatted Morphed Template Layout (100% Vector Clean A4 Presentation)
             <div
               ref={executiveContainerRef}
               className="w-full max-w-[210mm] min-h-[297mm] bg-white text-zinc-900 rounded-lg shadow-2xl p-8 sm:p-12 transition-transform duration-200 font-sans leading-relaxed border border-slate-300"
@@ -1166,7 +1191,7 @@ export const MorphResumeModal: React.FC<MorphResumeModalProps> = ({
                 <div className="mb-6">
                   <h2 className="text-xs font-black uppercase tracking-wider text-zinc-800 border-b border-zinc-300 pb-1 mb-2.5 flex items-center gap-1.5">
                     <FileText size={14} className="text-purple-600" />
-                    <span>Executive Summary</span>
+                    <span>Candidate Profile Summary</span>
                   </h2>
                   <p className="text-xs leading-relaxed text-zinc-700 whitespace-pre-line">
                     {cleanSummary}
