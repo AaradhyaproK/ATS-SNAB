@@ -25,7 +25,11 @@ import {
   MapPin,
   Briefcase,
   GraduationCap,
-  Award
+  Award,
+  ThumbsUp,
+  ThumbsDown,
+  Bookmark,
+  MessageCircle
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 
@@ -74,10 +78,16 @@ export interface MorphedCandidateData {
   [key: string]: any;
 }
 
-interface MorphResumeModalProps {
+export interface MorphResumeModalProps {
   candidate: MorphedCandidateData | null;
   isOpen: boolean;
   onClose: () => void;
+  isClientPortal?: boolean;
+  maskedTitle?: string;
+  clientDecision?: string;
+  onDecisionChange?: (decision: 'interested' | 'hold' | 'reject') => void;
+  recruiterPhone?: string;
+  onDiscussWhatsApp?: () => void;
 }
 
 interface MorphedPageInfo {
@@ -202,7 +212,17 @@ export function sanitizeMorphedContent(
   return { cleanText: sanitized, emailsRemoved, phonesRemoved, linksRemoved, customWordsRemoved };
 }
 
-export const MorphResumeModal: React.FC<MorphResumeModalProps> = ({ candidate, isOpen, onClose }) => {
+export const MorphResumeModal: React.FC<MorphResumeModalProps> = ({
+  candidate,
+  isOpen,
+  onClose,
+  isClientPortal = false,
+  maskedTitle,
+  clientDecision = 'pending',
+  onDecisionChange,
+  recruiterPhone,
+  onDiscussWhatsApp,
+}) => {
   const [activeTab, setActiveTab] = useState<'original' | 'executive'>('original');
   const [zoomLevel, setZoomLevel] = useState<number>(100);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
@@ -295,14 +315,29 @@ export const MorphResumeModal: React.FC<MorphResumeModalProps> = ({ candidate, i
       return;
     }
 
+    // In client portal or blind mode, automatically add candidate's real personal name and tokens to effectiveWordsToRemove
+    const effectiveWordsToRemove = [...customWords];
+    const realName = (candidate.realName || candidate.name || '').trim();
+    if (realName && !/^candidate\s*#\d+/i.test(realName)) {
+      if (!effectiveWordsToRemove.some((w) => w.toLowerCase() === realName.toLowerCase())) {
+        effectiveWordsToRemove.push(realName);
+      }
+      const parts = realName.split(/[\s,._-]+/).filter((p: string) => p.length >= 2);
+      parts.forEach((part: string) => {
+        if (!effectiveWordsToRemove.some((w) => w.toLowerCase() === part.toLowerCase())) {
+          effectiveWordsToRemove.push(part);
+        }
+      });
+    }
+
     // Calculate redaction statistics
     const rawContent = `${candidate.email || ''} ${candidate.phone || ''} ${candidate.resumeText || ''}`;
-    const result = sanitizeMorphedContent(rawContent, candidate.email, candidate.phone, customWords);
+    const result = sanitizeMorphedContent(rawContent, candidate.email, candidate.phone, effectiveWordsToRemove);
     setStats({
       emails: Math.max(1, result.emailsRemoved),
       phones: Math.max(1, result.phonesRemoved),
       links: result.linksRemoved,
-      customWords: customWords.length
+      customWords: effectiveWordsToRemove.length
     });
 
     // Check if original PDF is available and can be rendered
@@ -312,7 +347,7 @@ export const MorphResumeModal: React.FC<MorphResumeModalProps> = ({ candidate, i
     );
 
     if (isPdf && candidate.resumeUrl) {
-      loadAndRedactOriginalPdf(candidate.resumeUrl, candidate.email, candidate.phone, customWords);
+      loadAndRedactOriginalPdf(candidate.resumeUrl, candidate.email, candidate.phone, effectiveWordsToRemove);
     } else {
       setActiveTab('executive');
     }
@@ -622,8 +657,10 @@ export const MorphResumeModal: React.FC<MorphResumeModalProps> = ({ candidate, i
 
     try {
       const pdf = await generateMorphedPdfDocument();
-      const candidateTitle = candidate.name ? candidate.name.replace(/[^a-zA-Z0-9_-]/g, '_') : 'Candidate';
-      const fileName = `${candidateTitle}_Morphed_Resume.pdf`;
+      const candidateTitle = isClientPortal && maskedTitle
+        ? maskedTitle.replace(/[^a-zA-Z0-9_-]/g, '_')
+        : candidate.name ? candidate.name.replace(/[^a-zA-Z0-9_-]/g, '_') : 'Candidate';
+      const fileName = `${candidateTitle}_Masked_Resume.pdf`;
       pdf.save(fileName);
     } catch (error) {
       console.error('Failed to generate morphed PDF:', error);
@@ -655,7 +692,9 @@ export const MorphResumeModal: React.FC<MorphResumeModalProps> = ({ candidate, i
 
   // Sanitized content values for Executive Layout (reflecting custom removed words as well)
   const cleanSummary = sanitizeMorphedContent(candidate.summary || '', candidate.email, candidate.phone, customWords).cleanText;
-  const cleanCandidateName = candidate.name || 'Candidate Profile';
+  const cleanCandidateName = isClientPortal && maskedTitle
+    ? maskedTitle
+    : candidate.name || 'Candidate Profile';
   const cleanRole = candidate.currentTitle || 'Professional Candidate';
   const cleanCity = candidate.location || candidate.city || 'Location Verified';
   const expYears = candidate.totalExperienceYears !== undefined ? `${candidate.totalExperienceYears} Yrs Experience` : '';
@@ -680,27 +719,33 @@ export const MorphResumeModal: React.FC<MorphResumeModalProps> = ({ candidate, i
           <div className="flex items-center gap-3 min-w-0">
             <div
               className={`flex h-9 w-9 items-center justify-center rounded-xl shrink-0 transition-colors ${
-                isDay
+                isClientPortal
+                  ? 'bg-[#D4F82C]/20 text-[#111215] dark:text-[#8FB305] border border-[#8FB305]/30'
+                  : isDay
                   ? 'bg-purple-100 text-purple-700 border border-purple-200'
                   : 'bg-purple-600/20 text-purple-400 border border-purple-500/30'
               }`}
             >
-              <Wand2 size={18} strokeWidth={2.2} />
+              {isClientPortal ? <ShieldCheck size={18} strokeWidth={2.2} /> : <Wand2 size={18} strokeWidth={2.2} />}
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <h3 className="font-bold text-sm sm:text-base truncate">
-                  Morph Resume — Blind Client Copy
+                  {isClientPortal
+                    ? `${maskedTitle || 'Candidate Profile'} — Blind Verified Resume`
+                    : 'Morph Resume — Blind Client Copy'}
                 </h3>
                 <span
-                  className={`hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${
-                    isDay
+                  className={`hidden sm:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
+                    isClientPortal
+                      ? 'bg-[#D4F82C] text-[#111215] border-[#8FB305]/40'
+                      : isDay
                       ? 'bg-purple-100 text-purple-700 border-purple-200'
                       : 'bg-purple-500/15 text-purple-300 border-purple-500/25'
                   }`}
                 >
                   <ShieldCheck size={11} />
-                  Protected
+                  {isClientPortal ? 'Realtime Masked' : 'Protected'}
                 </span>
               </div>
               <p
@@ -708,7 +753,9 @@ export const MorphResumeModal: React.FC<MorphResumeModalProps> = ({ candidate, i
                   isDay ? 'text-slate-500' : 'text-zinc-400'
                 }`}
               >
-                {cleanCandidateName} · Contact info &amp; selected words completely blanked
+                {isClientPortal
+                  ? 'Personal name, contact info, email, phone & direct web links are automatically masked in real-time.'
+                  : `${cleanCandidateName} · Contact info & selected words completely blanked`}
               </p>
             </div>
           </div>
@@ -842,11 +889,12 @@ export const MorphResumeModal: React.FC<MorphResumeModalProps> = ({ candidate, i
         </div>
 
         {/* Auto-Remove Tool Bar */}
-        <div
-          className={`border-b px-5 py-2.5 transition-colors shrink-0 ${
-            isDay ? 'bg-slate-50/90 border-slate-200' : 'bg-[#151620] border-white/10'
-          }`}
-        >
+        {!isClientPortal && (
+          <div
+            className={`border-b px-5 py-2.5 transition-colors shrink-0 ${
+              isDay ? 'bg-slate-50/90 border-slate-200' : 'bg-[#151620] border-white/10'
+            }`}
+          >
           <div className="flex flex-wrap items-center justify-between gap-3">
             {/* Input to type word to remove */}
             <div className="flex items-center gap-2 flex-1 min-w-[280px]">
@@ -977,6 +1025,7 @@ export const MorphResumeModal: React.FC<MorphResumeModalProps> = ({ candidate, i
             </div>
           )}
         </div>
+        )}
 
 
         {/* Document Viewer Canvas Area */}
@@ -1217,6 +1266,79 @@ export const MorphResumeModal: React.FC<MorphResumeModalProps> = ({ candidate, i
             </div>
           )}
         </div>
+
+        {/* Bottom Client Review Decision Bar */}
+        {isClientPortal && (
+          <div
+            className={`border-t px-5 py-3.5 flex flex-wrap items-center justify-between gap-3 shrink-0 transition-colors ${
+              isDay ? 'bg-white border-slate-200' : 'bg-[#121318] border-white/10'
+            }`}
+          >
+            <div className="flex items-center gap-2.5">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-neutral-400">
+                Decision for {maskedTitle || 'Candidate'}:
+              </span>
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => onDecisionChange?.('interested')}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                    clientDecision === 'interested'
+                      ? 'bg-[#111215] text-[#D4F82C] dark:bg-[#D4F82C] dark:text-[#111215] shadow-xs'
+                      : 'border border-slate-300 dark:border-white/15 hover:bg-[#D4F82C]/10 text-slate-700 dark:text-neutral-200'
+                  }`}
+                >
+                  <ThumbsUp size={13} />
+                  <span>Select / Interested</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onDecisionChange?.('hold')}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                    clientDecision === 'hold'
+                      ? 'bg-amber-600 text-white shadow-xs'
+                      : 'border border-slate-300 dark:border-white/15 hover:bg-amber-500/10 text-slate-700 dark:text-neutral-200'
+                  }`}
+                >
+                  <Bookmark size={13} />
+                  <span>Hold</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onDecisionChange?.('reject')}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                    clientDecision === 'reject'
+                      ? 'bg-rose-600 text-white shadow-xs'
+                      : 'border border-slate-300 dark:border-white/15 hover:bg-rose-500/10 text-slate-700 dark:text-neutral-200'
+                  }`}
+                >
+                  <ThumbsDown size={13} />
+                  <span>Decline</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {onDiscussWhatsApp && (
+                <button
+                  type="button"
+                  onClick={onDiscussWhatsApp}
+                  className="px-3.5 py-1.5 rounded-xl border border-[#8FB305]/40 bg-[#D4F82C]/15 hover:bg-[#D4F82C]/25 text-[#111215] dark:text-[#D4F82C] text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <MessageCircle size={13} />
+                  <span>Discuss Candidate</span>
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-1.5 rounded-xl border border-slate-300 dark:border-white/15 text-xs font-bold text-slate-700 dark:text-white hover:bg-slate-100 dark:hover:bg-white/10 transition-colors cursor-pointer"
+              >
+                Close Resume
+              </button>
+            </div>
+          </div>
+        )}
     </div>,
     document.body
   );

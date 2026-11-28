@@ -53,6 +53,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import HireXLogo, { HireXMark } from '../components/HireXLogo';
+import { MorphResumeModal } from '../components/MorphResumeModal';
 import { useTheme } from '../context/ThemeContext';
 
 interface ShortlistedCandidate {
@@ -1096,7 +1097,7 @@ export default function ClientReviewPortal() {
                         </button>
                       </div>
 
-                      {/* Primary View Masked Profile Summary */}
+                      {/* Primary View Realtime Masked Resume */}
                       <button
                         type="button"
                         onClick={() => {
@@ -1105,8 +1106,8 @@ export default function ClientReviewPortal() {
                         }}
                         className="w-full h-11 rounded-full bg-[#111215] text-white hover:bg-[#202227] dark:bg-[#D4F82C] dark:text-[#111215] dark:hover:bg-[#c7eb22] text-xs font-bold flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer active:scale-95"
                       >
-                        <ShieldCheck size={16} className="text-[#D4F82C] dark:text-[#111215]" />
-                        <span>View Masked Profile Summary</span>
+                        <FileText size={16} className="text-[#D4F82C] dark:text-[#111215]" />
+                        <span>View Realtime Masked Resume</span>
                       </button>
 
                       {/* Agency PII Protection Notice (Zero raw resume links) */}
@@ -1239,10 +1240,10 @@ export default function ClientReviewPortal() {
                               setPreviewResumeCandidate(candidate);
                               setPreviewCandidateIndex(idx);
                             }}
-                            className="px-3 py-1.5 rounded-full bg-[#111215] text-white hover:bg-[#202227] dark:bg-[#D4F82C] dark:text-[#111215] font-bold text-xs inline-flex items-center gap-1.5 cursor-pointer shadow-2xs hover:scale-105 transition-all"
+                            className="px-3.5 py-1.5 rounded-full bg-[#111215] text-white hover:bg-[#202227] dark:bg-[#D4F82C] dark:text-[#111215] font-bold text-xs inline-flex items-center gap-1.5 cursor-pointer shadow-2xs hover:scale-105 transition-all"
                           >
-                            <ShieldCheck size={13} className="text-[#D4F82C] dark:text-[#111215]" />
-                            <span>View Profile</span>
+                            <FileText size={13} className="text-[#D4F82C] dark:text-[#111215]" />
+                            <span>View Masked Resume</span>
                           </button>
                         </td>
                       </tr>
@@ -1421,198 +1422,38 @@ export default function ClientReviewPortal() {
         </div>
       </footer>
 
-      {/* ── BLIND CANDIDATE PROFILE DOSSIER MODAL (MASKED PII & ZERO RAW RESUME LINKS) ── */}
-      {previewResumeCandidate && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-3 sm:p-6 backdrop-blur-md animate-in fade-in duration-200">
-          <div
-            className="w-full max-w-3xl max-h-[90vh] rounded-3xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] text-[#111215] dark:text-[#F8F9F5] shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-150"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Modal Header */}
-            <div className="px-6 py-4 border-b border-[#E4E7DC] dark:border-white/10 flex items-center justify-between gap-4 shrink-0 bg-white dark:bg-[#15161A]">
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="w-10 h-10 rounded-2xl bg-[#D4F82C]/20 border border-[#8FB305]/30 text-[#111215] dark:text-[#8FB305] flex items-center justify-center shrink-0">
-                  <ShieldCheck size={20} />
-                </div>
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-extrabold text-base text-[#111215] dark:text-[#F8F9F5] truncate">
-                      {getCandidateDisplayName(previewResumeCandidate, previewCandidateIndex)}
-                    </h3>
-                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#D4F82C] text-[#111215] border border-[#8FB305]/30 shrink-0">
-                      <Sparkles size={11} className="text-[#8FB305]" />
-                      <span>{previewResumeCandidate.matchScore}% Match</span>
-                    </span>
-                  </div>
-                  <p className="text-xs text-[#575A51] dark:text-neutral-400 truncate">
-                    {shortlist.jobTitle} • {previewResumeCandidate.experience} Experience • Blind Verified Dossier
-                  </p>
-                </div>
-              </div>
-
-              {/* Actions */}
-              <div className="flex items-center gap-2 shrink-0">
-                {shortlist.recruiterPhone && (
-                  <a
-                    href={getWhatsAppDiscussionLink(previewResumeCandidate) || '#'}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#111215] text-[#D4F82C] hover:bg-[#202227] dark:bg-[#D4F82C] dark:text-[#111215] text-xs font-bold transition-colors"
-                  >
-                    <MessageCircle size={13} />
-                    <span className="hidden sm:inline">Discuss Candidate</span>
-                  </a>
-                )}
-                <button
-                  type="button"
-                  onClick={() => setPreviewResumeCandidate(null)}
-                  className="p-2 rounded-full border border-[#E4E7DC] dark:border-white/10 text-[#575A51] dark:text-neutral-400 hover:text-[#111215] dark:hover:text-white hover:bg-[#F8F9F5] dark:hover:bg-white/10 transition-colors cursor-pointer"
-                >
-                  <X size={18} />
-                </button>
-              </div>
-            </div>
-
-            {/* Modal Body - Blind Profile Summary */}
-            <div className="flex-1 overflow-y-auto p-6 sm:p-8 space-y-6 bg-[#F8F9F5] dark:bg-[#101114]">
-              {/* Agency Anti-Poaching / PII Masking Shield */}
-              <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-500/20 flex items-start gap-3 text-xs">
-                <div className="p-2 rounded-xl bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 shrink-0">
-                  <Lock size={16} />
-                </div>
-                <div>
-                  <h4 className="font-bold text-amber-900 dark:text-amber-300">
-                    Confidential Masked Talent Profile
-                  </h4>
-                  <p className="text-amber-800/90 dark:text-amber-400/90 mt-0.5 leading-relaxed text-[11px]">
-                    Candidate personal name, direct email, phone number, and external resume links are masked under agency recruitment terms to protect confidential representation. Full unmasked onboarding documentation is coordinated once interview selection is confirmed.
-                  </p>
-                </div>
-              </div>
-
-              {/* Key Metrics Bento */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-                <div className="p-3.5 rounded-2xl bg-white dark:bg-[#15161A] border border-[#E4E7DC] dark:border-white/10">
-                  <span className="text-[10px] text-[#73766C] dark:text-neutral-400 block font-bold uppercase tracking-wider mb-1">
-                    Experience
-                  </span>
-                  <span className="font-bold text-[#111215] dark:text-[#F8F9F5] text-sm block">
-                    {previewResumeCandidate.experience || '3+ Years'}
-                  </span>
-                </div>
-                <div className="p-3.5 rounded-2xl bg-white dark:bg-[#15161A] border border-[#E4E7DC] dark:border-white/10">
-                  <span className="text-[10px] text-[#73766C] dark:text-neutral-400 block font-bold uppercase tracking-wider mb-1">
-                    Notice Period
-                  </span>
-                  <span className="font-bold text-[#111215] dark:text-[#F8F9F5] text-sm block">
-                    {previewResumeCandidate.noticePeriod || '15–30 Days'}
-                  </span>
-                </div>
-                <div className="p-3.5 rounded-2xl bg-white dark:bg-[#15161A] border border-[#E4E7DC] dark:border-white/10">
-                  <span className="text-[10px] text-[#73766C] dark:text-neutral-400 block font-bold uppercase tracking-wider mb-1">
-                    Location
-                  </span>
-                  <span className="font-bold text-[#111215] dark:text-[#F8F9F5] text-sm block truncate">
-                    {previewResumeCandidate.location || 'Location Confidential'}
-                  </span>
-                </div>
-                <div className="p-3.5 rounded-2xl bg-white dark:bg-[#15161A] border border-[#E4E7DC] dark:border-white/10">
-                  <span className="text-[10px] text-[#73766C] dark:text-neutral-400 block font-bold uppercase tracking-wider mb-1">
-                    Expected CTC
-                  </span>
-                  <span className="font-bold text-[#111215] dark:text-[#F8F9F5] text-sm block">
-                    {previewResumeCandidate.expectedSalary || 'Competitive'}
-                  </span>
-                </div>
-              </div>
-
-              {/* Career Summary */}
-              {previewResumeCandidate.summary && (
-                <div className="space-y-1.5">
-                  <span className="text-[10px] font-bold text-[#73766C] dark:text-neutral-400 uppercase tracking-wider block">
-                    Executive Summary & Verification
-                  </span>
-                  <p className="text-xs sm:text-sm text-[#111215] dark:text-[#F8F9F5] leading-relaxed bg-white dark:bg-[#15161A] p-4 rounded-2xl border border-[#E4E7DC] dark:border-white/10">
-                    {previewResumeCandidate.summary}
-                  </p>
-                </div>
-              )}
-
-              {/* Core Skills */}
-              {previewResumeCandidate.skills && previewResumeCandidate.skills.length > 0 && (
-                <div className="space-y-2">
-                  <span className="text-[10px] font-bold text-[#73766C] dark:text-neutral-400 uppercase tracking-wider block">
-                    Demonstrated Core Skills ({previewResumeCandidate.skills.length})
-                  </span>
-                  <div className="flex flex-wrap items-center gap-1.5 bg-white dark:bg-[#15161A] p-4 rounded-2xl border border-[#E4E7DC] dark:border-white/10">
-                    {previewResumeCandidate.skills.map((skill, sIdx) => (
-                      <span
-                        key={sIdx}
-                        className="px-3 py-1 rounded-full bg-[#F8F9F5] dark:bg-white/5 text-xs font-semibold text-[#111215] dark:text-[#F8F9F5] border border-[#E4E7DC] dark:border-white/10"
-                      >
-                        {skill}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Decision Section inside Modal */}
-              <div className="p-4 rounded-2xl bg-white dark:bg-[#15161A] border border-[#E4E7DC] dark:border-white/10 space-y-3">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-[#73766C] dark:text-neutral-400 block text-center">
-                  Client Decision for {getCandidateDisplayName(previewResumeCandidate, previewCandidateIndex)}
-                </span>
-                <div className="grid grid-cols-3 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      handleDecisionChange(previewResumeCandidate, 'interested');
-                      setPreviewResumeCandidate(null);
-                    }}
-                    className="py-2.5 px-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 bg-[#111215] text-[#D4F82C] dark:bg-[#D4F82C] dark:text-[#111215] cursor-pointer hover:opacity-90"
-                  >
-                    <ThumbsUp size={14} />
-                    <span>Select</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      handleDecisionChange(previewResumeCandidate, 'hold');
-                      setPreviewResumeCandidate(null);
-                    }}
-                    className="py-2.5 px-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 bg-amber-600 text-white cursor-pointer hover:opacity-90"
-                  >
-                    <Bookmark size={14} />
-                    <span>Hold</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      handleDecisionChange(previewResumeCandidate, 'reject');
-                      setPreviewResumeCandidate(null);
-                    }}
-                    className="py-2.5 px-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 bg-rose-600 text-white cursor-pointer hover:opacity-90"
-                  >
-                    <ThumbsDown size={14} />
-                    <span>Decline</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Modal Footer */}
-            <div className="px-6 py-4 border-t border-[#E4E7DC] dark:border-white/10 flex items-center justify-between text-xs text-[#575A51] dark:text-neutral-400 shrink-0 bg-white dark:bg-[#15161A]">
-              <span>Candidate Match: <strong>{previewResumeCandidate.matchScore}% ({previewResumeCandidate.matchGrade})</strong></span>
-              <button
-                type="button"
-                onClick={() => setPreviewResumeCandidate(null)}
-                className="px-5 py-2 rounded-full border border-[#E4E7DC] dark:border-white/10 hover:bg-[#F8F9F5] dark:hover:bg-white/10 font-bold text-[#111215] dark:text-[#F8F9F5] transition-colors cursor-pointer"
-              >
-                Close Profile
-              </button>
-            </div>
-          </div>
-        </div>
+      {/* ── REALTIME MASKED RESUME & PROFILE MODAL (ZERO PII & CONTACT LEAKS) ── */}
+      {previewResumeCandidate && shortlist && (
+        <MorphResumeModal
+          candidate={{
+            id: previewResumeCandidate.id || previewResumeCandidate.candidateId || '',
+            name: previewResumeCandidate.candidateName || getCandidateDisplayName(previewResumeCandidate, previewCandidateIndex),
+            realName: previewResumeCandidate.candidateName || '',
+            email: previewResumeCandidate.candidateEmail || '',
+            phone: previewResumeCandidate.candidatePhone || '',
+            location: previewResumeCandidate.location || '',
+            city: previewResumeCandidate.location || '',
+            currentTitle: shortlist.jobTitle || '',
+            summary: previewResumeCandidate.summary || '',
+            totalExperienceYears: previewResumeCandidate.experience || '',
+            skills: previewResumeCandidate.skills || [],
+            resumeUrl: previewResumeCandidate.resumeUrl || '',
+            resumeFileName: `${getCandidateDisplayName(previewResumeCandidate, previewCandidateIndex).replace(/\s+/g, '_')}_Resume.pdf`,
+          }}
+          isOpen={Boolean(previewResumeCandidate)}
+          onClose={() => setPreviewResumeCandidate(null)}
+          isClientPortal={true}
+          maskedTitle={getCandidateDisplayName(previewResumeCandidate, previewCandidateIndex)}
+          clientDecision={previewResumeCandidate.clientDecision || 'pending'}
+          onDecisionChange={(newDecision) => {
+            handleDecisionChange(previewResumeCandidate, newDecision);
+          }}
+          recruiterPhone={shortlist.recruiterPhone}
+          onDiscussWhatsApp={() => {
+            const waUrl = getWhatsAppDiscussionLink(previewResumeCandidate);
+            if (waUrl) window.open(waUrl, '_blank');
+          }}
+        />
       )}
 
       {/* ── SIDE-BY-SIDE CANDIDATE COMPARISON MATRIX MODAL ── */}
