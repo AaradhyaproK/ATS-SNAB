@@ -51,6 +51,8 @@ import {
   BadgeCheck,
   HelpCircle,
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import HireXLogo, { HireXMark } from '../components/HireXLogo';
 import { MorphResumeModal } from '../components/MorphResumeModal';
@@ -144,6 +146,16 @@ export default function ClientReviewPortal() {
   const [feedbackCandidate, setFeedbackCandidate] = useState<ShortlistedCandidate | null>(null);
   const [feedbackInput, setFeedbackInput] = useState('');
   const [savingFeedback, setSavingFeedback] = useState(false);
+
+  // Smart Candidate Core Skills Collapse/Expand Map (Default: collapsed to 3 skills)
+  const [expandedSkillsMap, setExpandedSkillsMap] = useState<Record<string, boolean>>({});
+
+  const toggleSkillsExpanded = (candKey: string) => {
+    setExpandedSkillsMap((prev) => ({
+      ...prev,
+      [candKey]: !prev[candKey],
+    }));
+  };
 
   // Toast Notification
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -1011,22 +1023,77 @@ export default function ClientReviewPortal() {
                         </div>
                       )}
 
-                      {/* Verified Skills */}
+                      {/* Verified Skills (Default: Collapsed to 3 skills with Smart Expand/Collapse) */}
                       {candidate.skills && candidate.skills.length > 0 && (
                         <div className="space-y-1.5 pt-1">
-                          <span className="text-[10px] font-bold text-[#73766C] dark:text-neutral-400 uppercase tracking-wider">
-                            Demonstrated Core Skills ({candidate.skills.length})
-                          </span>
-                          <div className="flex flex-wrap items-center gap-1 sm:gap-1.5">
-                            {candidate.skills.map((skill, sIdx) => (
-                              <span
-                                key={sIdx}
-                                className="px-2.5 py-1 sm:px-3 sm:py-1 rounded-full bg-white dark:bg-white/5 text-[11px] sm:text-xs font-semibold text-[#111215] dark:text-[#F8F9F5] border border-[#E4E7DC] dark:border-white/10"
-                              >
-                                {skill}
-                              </span>
-                            ))}
-                          </div>
+                          {(() => {
+                            const candKey = candidate.id || candidate.candidateId || candidate.candidateName || String(idx);
+                            const isExpanded = Boolean(expandedSkillsMap[candKey]);
+                            const visibleSkills = isExpanded ? candidate.skills : candidate.skills.slice(0, 3);
+                            const hasMore = candidate.skills.length > 3;
+
+                            return (
+                              <>
+                                <div className="flex items-center justify-between">
+                                  <span className="text-[10px] font-bold text-[#73766C] dark:text-neutral-400 uppercase tracking-wider">
+                                    Demonstrated Core Skills ({candidate.skills.length})
+                                    {!isExpanded && hasMore && (
+                                      <span className="normal-case font-normal text-[#8FB305] ml-1.5 hidden sm:inline">
+                                        (showing top 3)
+                                      </span>
+                                    )}
+                                  </span>
+                                  {hasMore && (
+                                    <button
+                                      type="button"
+                                      onClick={() => toggleSkillsExpanded(candKey)}
+                                      className="text-[11px] font-bold text-[#8FB305] dark:text-[#D4F82C] hover:underline flex items-center gap-1 cursor-pointer transition-colors"
+                                    >
+                                      <span>{isExpanded ? 'Hide' : `View All (${candidate.skills.length})`}</span>
+                                      {isExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                                    </button>
+                                  )}
+                                </div>
+
+                                <div className="flex flex-wrap items-center gap-1.5">
+                                  {visibleSkills.map((skill, sIdx) => (
+                                    <span
+                                      key={sIdx}
+                                      className="px-2.5 py-1 sm:px-3 sm:py-1 rounded-full bg-white dark:bg-white/5 text-[11px] sm:text-xs font-semibold text-[#111215] dark:text-[#F8F9F5] border border-[#E4E7DC] dark:border-white/10 shadow-2xs"
+                                    >
+                                      {skill}
+                                    </span>
+                                  ))}
+
+                                  {/* Smart Expand Button (+X more) */}
+                                  {hasMore && !isExpanded && (
+                                    <button
+                                      type="button"
+                                      onClick={() => toggleSkillsExpanded(candKey)}
+                                      className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-[#F8F9F5] dark:bg-white/5 hover:bg-[#D4F82C]/20 text-[#111215] dark:text-[#D4F82C] border border-[#E4E7DC] dark:border-white/10 hover:border-[#8FB305]/40 text-[11px] sm:text-xs font-bold transition-all cursor-pointer shadow-2xs group"
+                                      title={`View remaining ${candidate.skills.length - 3} skills`}
+                                    >
+                                      <span>+{candidate.skills.length - 3} more</span>
+                                      <ChevronDown size={12} className="text-[#8FB305] group-hover:translate-y-0.5 transition-transform" />
+                                    </button>
+                                  )}
+
+                                  {/* Smart Collapse Button (Show fewer) */}
+                                  {hasMore && isExpanded && (
+                                    <button
+                                      type="button"
+                                      onClick={() => toggleSkillsExpanded(candKey)}
+                                      className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-[#F8F9F5] dark:bg-white/5 hover:bg-[#E4E7DC] text-[#575A51] dark:text-neutral-300 border border-[#E4E7DC] dark:border-white/10 text-[11px] sm:text-xs font-bold transition-all cursor-pointer group"
+                                      title="Hide extra skills"
+                                    >
+                                      <span>Show fewer</span>
+                                      <ChevronUp size={12} className="group-hover:-translate-y-0.5 transition-transform" />
+                                    </button>
+                                  )}
+                                </div>
+                              </>
+                            );
+                          })()}
                         </div>
                       )}
 

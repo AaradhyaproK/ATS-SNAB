@@ -729,19 +729,30 @@ export const MorphResumeModal: React.FC<MorphResumeModalProps> = ({
       <div
         className={
           isClientPortal
-            ? `w-full max-w-5xl h-[95dvh] sm:h-[92vh] max-h-[920px] flex flex-col rounded-2xl sm:rounded-3xl border shadow-2xl overflow-hidden animate-in zoom-in-95 duration-150 transition-colors ${
-                isDay
-                  ? 'bg-white border-slate-200 text-slate-900'
-                  : 'bg-[#121318] border-white/10 text-white'
+            ? 'relative w-full max-w-5xl h-[95dvh] sm:h-[92vh] max-h-[920px] flex flex-col rounded-2xl sm:rounded-3xl border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-[#15161A] text-[#111215] dark:text-[#F8F9F5] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-150 transition-colors'
+            : `relative w-full h-full flex flex-col overflow-hidden ${
+                isDay ? 'bg-white text-slate-900' : 'bg-[#121318] text-white'
               }`
-            : 'w-full h-full flex flex-col overflow-hidden'
         }
         onClick={(e) => e.stopPropagation()}
       >
+        {/* Corner Close Button (Positioned prominently in the top-right corner) */}
+        <button
+          type="button"
+          onClick={onClose}
+          className="absolute top-2.5 right-2.5 sm:top-3.5 sm:right-3.5 z-40 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/95 hover:bg-[#E4E7DC] dark:bg-white/10 dark:hover:bg-white/20 border border-[#E4E7DC] dark:border-white/15 text-[#575A51] hover:text-[#111215] dark:text-neutral-300 dark:hover:text-white flex items-center justify-center transition-all cursor-pointer shadow-xs active:scale-95"
+          title="Close Preview (Esc)"
+          aria-label="Close Preview"
+        >
+          <X size={18} strokeWidth={2.4} />
+        </button>
+
         {/* Top Header Bar */}
         <div
-          className={`flex items-center justify-between gap-2 px-3 sm:px-5 py-2.5 sm:py-3 border-b transition-colors shrink-0 ${
-            isDay
+          className={`flex items-center justify-between gap-2 px-3 sm:px-5 py-2.5 sm:py-3.5 border-b transition-colors shrink-0 pr-13 sm:pr-16 ${
+            isClientPortal
+              ? 'bg-[#F8F9F5] dark:bg-[#15161A] border-[#E4E7DC] dark:border-white/10'
+              : isDay
               ? 'bg-slate-50 border-slate-200 text-slate-900'
               : 'bg-[#121318] border-white/10 text-white'
           }`}
@@ -751,37 +762,37 @@ export const MorphResumeModal: React.FC<MorphResumeModalProps> = ({
             <div
               className={`flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-xl shrink-0 transition-colors ${
                 isClientPortal
-                  ? 'bg-[#D4F82C]/20 text-[#111215] dark:text-[#8FB305] border border-[#8FB305]/30'
+                  ? 'bg-[#D4F82C] text-[#111215] border border-[#8FB305]/40 shadow-2xs'
                   : isDay
                   ? 'bg-purple-100 text-purple-700 border border-purple-200'
                   : 'bg-purple-600/20 text-purple-400 border border-purple-500/30'
               }`}
             >
-              {isClientPortal ? <ShieldCheck size={16} strokeWidth={2.2} /> : <Wand2 size={16} strokeWidth={2.2} />}
+              {isClientPortal ? <ShieldCheck size={18} strokeWidth={2.4} /> : <Wand2 size={16} strokeWidth={2.2} />}
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-1.5 sm:gap-2">
-                <h3 className="font-bold text-xs sm:text-base truncate max-w-[150px] xs:max-w-[220px] sm:max-w-md">
+                <h3 className="font-extrabold text-xs sm:text-base text-[#111215] dark:text-[#F8F9F5] truncate max-w-[130px] xs:max-w-[200px] sm:max-w-md">
                   {isClientPortal
                     ? `${maskedTitle || 'Candidate Profile'} — Blind Verified Resume`
                     : 'Morph Resume — Blind Client Copy'}
                 </h3>
                 <span
-                  className={`hidden sm:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
+                  className={`hidden sm:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border ${
                     isClientPortal
-                      ? 'bg-[#D4F82C] text-[#111215] border-[#8FB305]/40'
+                      ? 'bg-[#D4F82C]/25 text-[#111215] dark:text-[#D4F82C] border-[#8FB305]/40'
                       : isDay
                       ? 'bg-purple-100 text-purple-700 border-purple-200'
                       : 'bg-purple-500/15 text-purple-300 border-purple-500/25'
                   }`}
                 >
-                  <ShieldCheck size={11} />
+                  <ShieldCheck size={11} strokeWidth={2.4} />
                   {isClientPortal ? 'Realtime Masked' : 'Protected'}
                 </span>
               </div>
               <p
                 className={`text-[11px] sm:text-xs truncate hidden xs:block sm:block ${
-                  isDay ? 'text-slate-500' : 'text-zinc-400'
+                  isClientPortal ? 'text-[#73766C] dark:text-neutral-400' : isDay ? 'text-slate-500' : 'text-zinc-400'
                 }`}
               >
                 {isClientPortal
@@ -792,7 +803,7 @@ export const MorphResumeModal: React.FC<MorphResumeModalProps> = ({
           </div>
 
           {/* Right Action Controls Toolbar */}
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             {/* View Tab Switcher (Original Redacted vs Formatted Profile) - hidden in Client Portal */}
             {!isClientPortal && morphedPages.length > 0 && (
               <div
@@ -837,8 +848,10 @@ export const MorphResumeModal: React.FC<MorphResumeModalProps> = ({
 
             {/* Zoom Controls */}
             <div
-              className={`hidden md:flex items-center gap-1 rounded-lg px-2 py-1 border ${
-                isDay
+              className={`hidden md:flex items-center gap-1 rounded-full px-2.5 py-1 border ${
+                isClientPortal
+                  ? 'bg-white dark:bg-white/5 border-[#E4E7DC] dark:border-white/10 text-[#575A51] dark:text-neutral-300'
+                  : isDay
                   ? 'bg-slate-100 border-slate-300 text-slate-600'
                   : 'bg-white/5 border-white/10 text-zinc-400'
               }`}
@@ -846,16 +859,16 @@ export const MorphResumeModal: React.FC<MorphResumeModalProps> = ({
               <button
                 type="button"
                 onClick={() => setZoomLevel((z) => Math.max(60, z - 10))}
-                className={isDay ? 'hover:text-slate-900' : 'hover:text-white'}
+                className="hover:text-[#111215] dark:hover:text-white transition-colors cursor-pointer"
                 title="Zoom Out"
               >
                 <ZoomOut size={13} />
               </button>
-              <span className="text-[11px] font-medium w-9 text-center">{zoomLevel}%</span>
+              <span className="text-[11px] font-bold w-9 text-center">{zoomLevel}%</span>
               <button
                 type="button"
                 onClick={() => setZoomLevel((z) => Math.min(150, z + 10))}
-                className={isDay ? 'hover:text-slate-900' : 'hover:text-white'}
+                className="hover:text-[#111215] dark:hover:text-white transition-colors cursor-pointer"
                 title="Zoom In"
               >
                 <ZoomIn size={13} />
@@ -867,15 +880,17 @@ export const MorphResumeModal: React.FC<MorphResumeModalProps> = ({
               type="button"
               onClick={handleOpenPDFInNewTab}
               disabled={isOpeningTab || isProcessing}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50 border ${
-                isDay
+              className={`px-2.5 sm:px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50 border ${
+                isClientPortal
+                  ? 'bg-white dark:bg-white/5 hover:bg-[#F8F9F5] dark:hover:bg-white/10 text-[#111215] dark:text-[#F8F9F5] border-[#E4E7DC] dark:border-white/10 shadow-2xs'
+                  : isDay
                   ? 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300'
                   : 'bg-white/10 hover:bg-white/15 text-white border-white/10'
               }`}
               title="Open Morphed PDF in New Browser Tab"
             >
               {isOpeningTab ? (
-                <Loader2 size={13} className="animate-spin text-purple-600" />
+                <Loader2 size={13} className="animate-spin text-[#8FB305]" />
               ) : (
                 <ExternalLink size={13} />
               )}
@@ -887,9 +902,9 @@ export const MorphResumeModal: React.FC<MorphResumeModalProps> = ({
               type="button"
               onClick={handleDownloadPDF}
               disabled={isDownloading || isProcessing}
-              className={`px-2.5 sm:px-3.5 py-1.5 rounded-xl disabled:opacity-50 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer active:scale-95 ${
+              className={`px-3 sm:px-4 py-1.5 rounded-full disabled:opacity-50 text-xs font-extrabold flex items-center gap-1.5 transition-all cursor-pointer active:scale-95 ${
                 isClientPortal
-                  ? 'bg-[#111215] text-[#D4F82C] dark:bg-[#D4F82C] dark:text-[#111215] hover:opacity-90 shadow-xs'
+                  ? 'bg-[#111215] text-[#D4F82C] dark:bg-[#D4F82C] dark:text-[#111215] hover:opacity-90 shadow-2xs'
                   : 'bg-purple-600 hover:bg-purple-500 text-white shadow-md shadow-purple-600/25'
               }`}
               title="Download Masked Resume PDF"
@@ -902,25 +917,10 @@ export const MorphResumeModal: React.FC<MorphResumeModalProps> = ({
                 </>
               ) : (
                 <>
-                  <Download size={13} strokeWidth={2.2} />
+                  <Download size={13} strokeWidth={2.4} />
                   <span className="hidden sm:inline">Download Masked PDF</span>
                 </>
               )}
-            </button>
-
-            {/* Close Button */}
-            <button
-              type="button"
-              onClick={onClose}
-              className={`w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center transition-colors cursor-pointer border ${
-                isDay
-                  ? 'bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 border-slate-200'
-                  : 'bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white border-white/5'
-              }`}
-              title="Close Preview"
-              aria-label="Close Preview"
-            >
-              <X size={16} />
             </button>
           </div>
         </div>
@@ -1068,7 +1068,11 @@ export const MorphResumeModal: React.FC<MorphResumeModalProps> = ({
         {/* Document Viewer Canvas Area */}
         <div
           className={`flex-1 w-full h-full overflow-auto p-2 sm:p-6 flex justify-center items-start transition-colors ${
-            isDay ? 'bg-slate-200/85' : 'bg-[#070709]'
+            isClientPortal
+              ? 'bg-[#EEF0E6] dark:bg-[#0D0E11]'
+              : isDay
+              ? 'bg-slate-200/85'
+              : 'bg-[#070709]'
           }`}
         >
           {isProcessing ? (
@@ -1332,49 +1336,47 @@ export const MorphResumeModal: React.FC<MorphResumeModalProps> = ({
         {/* Bottom Client Review Decision Bar */}
         {isClientPortal && (
           <div
-            className={`border-t p-3 sm:px-5 sm:py-3.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 shrink-0 transition-colors ${
-              isDay ? 'bg-white border-slate-200' : 'bg-[#121318] border-white/10'
-            }`}
+            className="border-t border-[#E4E7DC] dark:border-white/10 p-3 sm:px-6 sm:py-3.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shrink-0 transition-colors bg-white dark:bg-[#15161A]"
           >
-            <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2.5">
-              <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-neutral-400">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+              <span className="text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-[#73766C] dark:text-neutral-400">
                 Decision for {maskedTitle || 'Candidate'}:
               </span>
               <div className="grid grid-cols-3 sm:flex items-center gap-1.5">
                 <button
                   type="button"
                   onClick={() => onDecisionChange?.('interested')}
-                  className={`min-h-[40px] px-2.5 sm:px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                  className={`min-h-[40px] px-3.5 sm:px-4 py-2 rounded-full text-xs font-extrabold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                     clientDecision === 'interested'
-                      ? 'bg-[#111215] text-[#D4F82C] dark:bg-[#D4F82C] dark:text-[#111215] shadow-xs'
-                      : 'border border-slate-300 dark:border-white/15 hover:bg-[#D4F82C]/10 text-slate-700 dark:text-neutral-200'
+                      ? 'bg-[#111215] text-[#D4F82C] dark:bg-[#D4F82C] dark:text-[#111215] shadow-xs ring-2 ring-[#8FB305]/40'
+                      : 'bg-[#F8F9F5] dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 hover:bg-[#D4F82C]/15 hover:border-[#8FB305]/40 text-[#111215] dark:text-[#F8F9F5]'
                   }`}
                 >
-                  <ThumbsUp size={13} />
+                  <ThumbsUp size={13} strokeWidth={2.4} />
                   <span>Select</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => onDecisionChange?.('hold')}
-                  className={`min-h-[40px] px-2.5 sm:px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                  className={`min-h-[40px] px-3.5 sm:px-4 py-2 rounded-full text-xs font-extrabold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                     clientDecision === 'hold'
-                      ? 'bg-amber-600 text-white shadow-xs'
-                      : 'border border-slate-300 dark:border-white/15 hover:bg-amber-500/10 text-slate-700 dark:text-neutral-200'
+                      ? 'bg-amber-500 text-white shadow-xs ring-2 ring-amber-400/40'
+                      : 'bg-[#F8F9F5] dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 hover:bg-amber-500/10 hover:border-amber-400/40 text-[#111215] dark:text-[#F8F9F5]'
                   }`}
                 >
-                  <Bookmark size={13} />
+                  <Bookmark size={13} strokeWidth={2.4} />
                   <span>Hold</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => onDecisionChange?.('reject')}
-                  className={`min-h-[40px] px-2.5 sm:px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                  className={`min-h-[40px] px-3.5 sm:px-4 py-2 rounded-full text-xs font-extrabold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                     clientDecision === 'reject'
-                      ? 'bg-rose-600 text-white shadow-xs'
-                      : 'border border-slate-300 dark:border-white/15 hover:bg-rose-500/10 text-slate-700 dark:text-neutral-200'
+                      ? 'bg-rose-500 text-white shadow-xs ring-2 ring-rose-400/40'
+                      : 'bg-[#F8F9F5] dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 hover:bg-rose-500/10 hover:border-rose-400/40 text-[#111215] dark:text-[#F8F9F5]'
                   }`}
                 >
-                  <ThumbsDown size={13} />
+                  <ThumbsDown size={13} strokeWidth={2.4} />
                   <span>Decline</span>
                 </button>
               </div>
@@ -1385,7 +1387,7 @@ export const MorphResumeModal: React.FC<MorphResumeModalProps> = ({
                 <button
                   type="button"
                   onClick={onDiscussWhatsApp}
-                  className="flex-1 sm:flex-initial min-h-[40px] px-3.5 py-1.5 rounded-xl border border-[#8FB305]/40 bg-[#D4F82C]/15 hover:bg-[#D4F82C]/25 text-[#111215] dark:text-[#D4F82C] text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                  className="flex-1 sm:flex-initial min-h-[40px] px-4 py-2 rounded-full border border-[#8FB305]/40 bg-[#D4F82C]/20 hover:bg-[#D4F82C]/30 text-[#111215] dark:text-[#D4F82C] text-xs font-extrabold flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
                 >
                   <MessageCircle size={14} />
                   <span>Discuss Candidate</span>
@@ -1394,7 +1396,7 @@ export const MorphResumeModal: React.FC<MorphResumeModalProps> = ({
               <button
                 type="button"
                 onClick={onClose}
-                className="flex-1 sm:flex-initial min-h-[40px] px-4 py-1.5 rounded-xl border border-slate-300 dark:border-white/15 text-xs font-bold text-slate-700 dark:text-white hover:bg-slate-100 dark:hover:bg-white/10 transition-colors cursor-pointer flex items-center justify-center"
+                className="flex-1 sm:flex-initial min-h-[40px] px-4 py-2 rounded-full border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-white/5 hover:bg-[#E4E7DC] dark:hover:bg-white/10 text-xs font-bold text-[#575A51] dark:text-neutral-300 transition-colors cursor-pointer flex items-center justify-center"
               >
                 Close Resume
               </button>
