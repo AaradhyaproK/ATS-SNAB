@@ -201,7 +201,25 @@ export default function KanbanPipeline() {
 
   // Client Shortlist Review Link State
   const [clientShortlistUrl, setClientShortlistUrl] = useState<string>('');
+  const [clientShortlistCandidates, setClientShortlistCandidates] = useState<any[]>([]);
   const [copiedLink, setCopiedLink] = useState<boolean>(false);
+
+  // Memoized Client Review Decisions & Remarks Map
+  const clientDecisionsMap = useMemo(() => {
+    const map = new Map<string, { decision: string; feedback: string; decidedAt?: string }>();
+    clientShortlistCandidates.forEach((c: any) => {
+      const payload = {
+        decision: c.clientDecision || 'pending',
+        feedback: c.clientFeedback || '',
+        decidedAt: c.decidedAt || '',
+      };
+      const email = (c.candidateEmail || '').toLowerCase().trim();
+      const id = c.id || c.candidateId || '';
+      if (email) map.set(email, payload);
+      if (id) map.set(id, payload);
+    });
+    return map;
+  }, [clientShortlistCandidates]);
 
   // Schedule Modal State
   const [schedulePromptCandidate, setSchedulePromptCandidate] = useState<PipelineCandidate | null>(null);
@@ -740,7 +758,9 @@ export default function KanbanPipeline() {
         const d = snap.docs[0];
         const data = d.data();
         setClientShortlistUrl(`${window.location.origin}/review/${data.shareId}`);
+        setClientShortlistCandidates(data.candidates || []);
       } else {
+        setClientShortlistCandidates([]);
         // Auto-create unique persistent shortlist link
         const newShareId = `csl_${Math.random().toString(36).substring(2, 10)}${Date.now().toString(36).slice(-4)}`;
         const expirationDate = new Date();
@@ -757,7 +777,7 @@ export default function KanbanPipeline() {
             recruiterName: userProfile?.name || user?.displayName || 'Recruiter Lead',
             recruiterPhone,
             recruiterEmail,
-            maskingLevel: 'standard',
+            maskingLevel: 'anonymous',
             expiresAt: expirationDate.toISOString(),
             createdAt: serverTimestamp(),
             viewCount: 0,
@@ -793,15 +813,25 @@ export default function KanbanPipeline() {
       const qShortlist = query(collection(db, 'clientShortlists'), where('jobId', '==', targetJobId));
       const snap = await getDocs(qShortlist);
 
-      const candidatePayloads = shortlisted.map((c) => {
-        const parts = (c.candidateName || 'Candidate').split(' ');
-        const maskedName = parts.length > 1 ? `${parts[0]} ${parts[1][0]}.` : parts[0];
+      const existingDoc = snap.empty ? null : snap.docs[0].data();
+      const existingCandidatesMap = new Map<string, any>();
+      if (existingDoc && Array.isArray(existingDoc.candidates)) {
+        existingDoc.candidates.forEach((ec: any) => {
+          const k = (ec.candidateEmail || ec.id || '').toLowerCase().trim();
+          if (k) existingCandidatesMap.set(k, ec);
+        });
+      }
+
+      const candidatePayloads = shortlisted.map((c, index) => {
+        const k = (c.candidateEmail || c.id || '').toLowerCase().trim();
+        const prev = existingCandidatesMap.get(k);
+
         return {
           id: c.id,
           applicationDocId: c.applicationDocId || '',
           candidateEmail: c.candidateEmail,
           candidateName: c.candidateName,
-          maskedName,
+          maskedName: `Candidate #${index + 1}`,
           matchScore: c.matchScore || 85,
           matchGrade: c.matchGrade || 'Great Fit',
           skills: c.skills || [],
@@ -810,9 +840,9 @@ export default function KanbanPipeline() {
           location: c.location || 'Bangalore / Remote',
           summary: `Pre-screened verified talent in ${c.jobTitle} with AI match score of ${c.matchScore}%.`,
           resumeUrl: c.resumeUrl || '',
-          clientDecision: 'pending',
-          clientFeedback: '',
-          decidedAt: null,
+          clientDecision: prev?.clientDecision || 'pending',
+          clientFeedback: prev?.clientFeedback || '',
+          decidedAt: prev?.decidedAt || null,
         };
       });
 
@@ -1592,6 +1622,56 @@ export default function KanbanPipeline() {
                                 </div>
                               )}
 
+                              {/* Client Review Portal Decision & Remark Badge */}
+                              {(() => {
+                                const clientFeedbackData = clientDecisionsMap.get(cand.candidateEmail?.toLowerCase()) || clientDecisionsMap.get(cand.id);
+                                if (!clientFeedbackData || !clientFeedbackData.decision || clientFeedbackData.decision === 'pending') {
+                                  return null;
+                                }
+                                return (
+                                  <div className={`p-2 rounded-xl text-[10px] space-y-1 border ${
+                                    clientFeedbackData.decision === 'interested'
+                                      ? 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-900 dark:text-emerald-300 border-emerald-200 dark:border-emerald-500/20'
+                                      : clientFeedbackData.decision === 'hold'
+                                      ? 'bg-amber-50 dark:bg-amber-950/30 text-amber-900 dark:text-amber-300 border-amber-200 dark:border-amber-500/20'
+                                      : 'bg-rose-50 dark:bg-rose-950/30 text-rose-900 dark:text-rose-300 border-rose-200 dark:border-rose-500/20'
+                                  }`}>
+                                    <div className="flex items-center justify-between font-bold">
+                                      <span className="flex items-center gap-1">
+                                        {clientFeedbackData.decision === 'interested' && (
+                                          <>
+                                            <span className="inline-block size-2 rounded-full bg-emerald-500 animate-pulse" />
+                                            <span>👍 Client Selected</span>
+                                          </>
+                                        )}
+                                        {clientFeedbackData.decision === 'hold' && (
+                                          <>
+                                            <span className="inline-block size-2 rounded-full bg-amber-500" />
+                                            <span>⏸️ Client On Hold</span>
+                                          </>
+                                        )}
+                                        {clientFeedbackData.decision === 'reject' && (
+                                          <>
+                                            <span className="inline-block size-2 rounded-full bg-rose-500" />
+                                            <span>👎 Client Declined</span>
+                                          </>
+                                        )}
+                                      </span>
+                                      {clientFeedbackData.decidedAt && (
+                                        <span className="text-[9px] opacity-70 font-normal">
+                                          {new Date(clientFeedbackData.decidedAt).toLocaleDateString()}
+                                        </span>
+                                      )}
+                                    </div>
+                                    {clientFeedbackData.feedback && (
+                                      <div className="bg-white/80 dark:bg-black/30 p-1.5 rounded-lg border border-black/5 dark:border-white/5 italic text-[10px] text-gray-800 dark:text-neutral-200 font-medium">
+                                        "{clientFeedbackData.feedback}"
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })()}
+
                               {/* Scheduled Interview Details (if present) */}
                               {cand.scheduledInterview && (
                                 <div className="p-2 rounded-md bg-indigo-50/70 dark:bg-indigo-950/20 border border-indigo-200/80 dark:border-indigo-500/20 text-[10px] text-indigo-900 dark:text-indigo-300 space-y-1">
@@ -1810,6 +1890,59 @@ export default function KanbanPipeline() {
             >
               {drawerActiveTab === 'profile' ? (
                 <>
+                  {/* ── CLIENT REVIEW PORTAL FEEDBACK CARD ── */}
+                  {(() => {
+                    const clientFeedbackData = clientDecisionsMap.get(selectedDrawerCandidate.candidateEmail?.toLowerCase()) || clientDecisionsMap.get(selectedDrawerCandidate.id);
+                    if (!clientFeedbackData || !clientFeedbackData.decision || clientFeedbackData.decision === 'pending') {
+                      return null;
+                    }
+                    return (
+                      <div className={`p-4 rounded-xl border space-y-2.5 ${
+                        clientFeedbackData.decision === 'interested'
+                          ? 'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-500/20 text-emerald-950 dark:text-emerald-200'
+                          : clientFeedbackData.decision === 'hold'
+                          ? 'bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-500/20 text-amber-950 dark:text-amber-200'
+                          : 'bg-rose-50 dark:bg-rose-950/20 border-rose-200 dark:border-rose-500/20 text-rose-950 dark:text-rose-200'
+                      }`}>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="text-base">
+                              {clientFeedbackData.decision === 'interested' ? '👍' : clientFeedbackData.decision === 'hold' ? '⏸️' : '👎'}
+                            </span>
+                            <div>
+                              <h4 className="text-[10px] font-bold uppercase tracking-wider opacity-75">
+                                Client Portal Review Decision
+                              </h4>
+                              <p className="text-xs font-bold">
+                                {clientFeedbackData.decision === 'interested'
+                                  ? 'Candidate Selected (Interview Requested)'
+                                  : clientFeedbackData.decision === 'hold'
+                                  ? 'Candidate Placed On Hold'
+                                  : 'Candidate Declined by Client'}
+                              </p>
+                            </div>
+                          </div>
+                          {clientFeedbackData.decidedAt && (
+                            <span className="text-[10px] opacity-70 font-mono">
+                              {new Date(clientFeedbackData.decidedAt).toLocaleDateString()}
+                            </span>
+                          )}
+                        </div>
+
+                        {clientFeedbackData.feedback && (
+                          <div className="bg-white/80 dark:bg-black/30 p-2.5 rounded-lg border border-black/5 dark:border-white/5 space-y-1">
+                            <span className="text-[10px] font-bold uppercase tracking-wider opacity-75 block">
+                              Client Remark / Note:
+                            </span>
+                            <p className="text-xs font-medium italic">
+                              "{clientFeedbackData.feedback}"
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+
                   {/* 1. Objective AI Match Breakdown Card */}
                   <div className="p-4 rounded-xl border border-indigo-200/80 dark:border-indigo-500/20 bg-indigo-50/30 dark:bg-indigo-950/10 space-y-3">
                     <div className="flex items-center justify-between">

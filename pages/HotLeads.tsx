@@ -200,7 +200,25 @@ export default function HotLeads() {
     clientName: string;
     shortlistUrl: string;
   } | null>(null);
+  const [clientShortlistCandidates, setClientShortlistCandidates] = useState<any[]>([]);
   const [linkCopied, setLinkCopied] = useState<boolean>(false);
+
+  // Memoized Client Review Decisions & Remarks Map
+  const clientDecisionsMap = useMemo(() => {
+    const map = new Map<string, { decision: string; feedback: string; decidedAt?: string }>();
+    clientShortlistCandidates.forEach((c: any) => {
+      const payload = {
+        decision: c.clientDecision || 'pending',
+        feedback: c.clientFeedback || '',
+        decidedAt: c.decidedAt || '',
+      };
+      const email = (c.candidateEmail || '').toLowerCase().trim();
+      const id = c.id || c.candidateId || '';
+      if (email) map.set(email, payload);
+      if (id) map.set(id, payload);
+    });
+    return map;
+  }, [clientShortlistCandidates]);
 
   const handleCopyJobClientLink = async (targetJobId?: string) => {
     const jId = targetJobId || selectedJobId;
@@ -236,12 +254,25 @@ export default function HotLeads() {
         (l) => l.jobId === targetJobId && l.status === 'Shortlisted'
       );
 
+      // Query persistent clientShortlists document for this jobId to preserve decisions & remarks
+      const qShortlist = query(collection(db, 'clientShortlists'), where('jobId', '==', targetJobId));
+      const snap = await getDocs(qShortlist);
+
+      const existingDoc = snap.empty ? null : snap.docs[0].data();
+      const existingCandidatesMap = new Map<string, any>();
+      if (existingDoc && Array.isArray(existingDoc.candidates)) {
+        existingDoc.candidates.forEach((ec: any) => {
+          const k = (ec.candidateEmail || ec.id || '').toLowerCase().trim();
+          if (k) existingCandidatesMap.set(k, ec);
+        });
+      }
+
       // Prepare candidate payloads with Cloudinary resumes and match scores
       const candidatePayloads = await Promise.all(
-        shortlistedLeads.map(async (lead) => {
-          const rawName = lead.candidateName || 'Candidate';
-          const parts = rawName.split(' ');
-          const maskedName = parts.length > 1 ? `${parts[0]} ${parts[1][0]}.` : `${parts[0]}`;
+        shortlistedLeads.map(async (lead, index) => {
+          const k = (lead.candidateEmail || lead.id || '').toLowerCase().trim();
+          const prev = existingCandidatesMap.get(k);
+          const maskedName = `Candidate #${index + 1}`;
 
           let skills = lead.candidateDetails?.skills || [];
           const exp = lead.candidateDetails?.experience || '3+';
@@ -257,9 +288,9 @@ export default function HotLeads() {
             try {
               const cleanEmail = lead.candidateEmail.toLowerCase().trim();
               const qDump = query(collection(db, 'resumeDumpCandidates'), where('email', '==', cleanEmail));
-              const snap = await getDocs(qDump).catch(() => null);
-              if (snap && !snap.empty) {
-                const dData = snap.docs[0].data();
+              const snapDump = await getDocs(qDump).catch(() => null);
+              if (snapDump && !snapDump.empty) {
+                const dData = snapDump.docs[0].data();
                 if (!resumeUrl) {
                   resumeUrl = dData.resumeUrl || dData.profile?.resumeUrl || dData.fileUrl || '';
                 }
@@ -290,22 +321,19 @@ export default function HotLeads() {
             expectedSalary: lead.candidateDetails?.expectedSalary || 'As per norms',
             summary,
             resumeUrl,
-            clientDecision: 'pending',
-            clientFeedback: '',
-            decidedAt: null,
-            interviewDetails: null,
+            clientDecision: prev?.clientDecision || 'pending',
+            clientFeedback: prev?.clientFeedback || '',
+            decidedAt: prev?.decidedAt || null,
+            interviewDetails: prev?.interviewDetails || null,
           };
         })
       );
-
-      // Query persistent clientShortlists document for this jobId
-      const qShortlist = query(collection(db, 'clientShortlists'), where('jobId', '==', targetJobId));
-      const snap = await getDocs(qShortlist);
 
       if (!snap.empty) {
         const docId = snap.docs[0].id;
         await updateDoc(doc(db, 'clientShortlists', docId), {
           candidates: candidatePayloads,
+          maskingLevel: 'anonymous',
           updatedAt: serverTimestamp(),
         });
       }
@@ -318,6 +346,7 @@ export default function HotLeads() {
   useEffect(() => {
     if (selectedJobId === 'all') {
       setActiveJobShortlist(null);
+      setClientShortlistCandidates([]);
       return;
     }
 
@@ -336,6 +365,7 @@ export default function HotLeads() {
       if (!snap.empty) {
         const d = snap.docs[0];
         const data = d.data();
+        setClientShortlistCandidates(data.candidates || []);
         setActiveJobShortlist({
           id: d.id,
           shareId: data.shareId,
@@ -345,6 +375,7 @@ export default function HotLeads() {
           shortlistUrl: `${window.location.origin}/review/${data.shareId}`,
         });
       } else {
+        setClientShortlistCandidates([]);
         // Create unique persistent shortlist document for this job
         const newShareId = `csl_${Math.random().toString(36).substring(2, 10)}${Date.now().toString(36).slice(-4)}`;
         const expirationDate = new Date();
@@ -363,7 +394,7 @@ export default function HotLeads() {
           clientContactPerson: '',
           clientPhone: '',
           executiveNote: 'Hi team, please find attached the curated, pre-screened candidates for this role. All candidates have verified skills, match requirements, and are available for interview rounds.',
-          maskingLevel: 'standard',
+          maskingLevel: 'anonymous',
           expiresAt: expirationDate.toISOString(),
           createdAt: serverTimestamp(),
           viewCount: 0,
@@ -2334,6 +2365,43 @@ export default function HotLeads() {
                                   <a href={`tel:${lead.candidatePhone}`} className="hover:underline">{lead.candidatePhone}</a>
                                 </div>
                               )}
+
+                              {/* Client Review Portal Decision & Remark Badge */}
+                              {(() => {
+                                const clientFeedbackData = clientDecisionsMap.get(lead.candidateEmail?.toLowerCase()) || clientDecisionsMap.get(lead.id);
+                                if (!clientFeedbackData || !clientFeedbackData.decision || clientFeedbackData.decision === 'pending') {
+                                  return null;
+                                }
+                                return (
+                                  <div className="mt-1.5 space-y-1">
+                                    <div className="inline-flex items-center gap-1.5">
+                                      {clientFeedbackData.decision === 'interested' ? (
+                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#D4F82C] text-[#111215] border border-[#8FB305]/40 shadow-xs">
+                                          👍 Client Selected
+                                        </span>
+                                      ) : clientFeedbackData.decision === 'hold' ? (
+                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-300 shadow-xs">
+                                          ⏸️ Client On Hold
+                                        </span>
+                                      ) : (
+                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-300 shadow-xs">
+                                          👎 Client Declined
+                                        </span>
+                                      )}
+                                      {clientFeedbackData.decidedAt && (
+                                        <span className="text-[9px] text-gray-400 font-mono">
+                                          {new Date(clientFeedbackData.decidedAt).toLocaleDateString()}
+                                        </span>
+                                      )}
+                                    </div>
+                                    {clientFeedbackData.feedback && (
+                                      <div className="bg-amber-50/70 dark:bg-amber-950/20 border border-amber-200/60 dark:border-amber-500/20 text-amber-900 dark:text-amber-200 px-2 py-1 rounded text-[10px] italic max-w-[280px] truncate" title={clientFeedbackData.feedback}>
+                                        "{clientFeedbackData.feedback}"
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })()}
                             </div>
                           </div>
                         </td>
@@ -2944,7 +3012,60 @@ export default function HotLeads() {
             </div>
 
             {/* Modal Body */}
-            <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-gray-50/50 dark:bg-[#08080a]">
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-gray-50/50 dark:bg-[#08080a] space-y-4">
+              {/* ── CLIENT REVIEW PORTAL FEEDBACK CARD ── */}
+              {(() => {
+                const clientFeedbackData = clientDecisionsMap.get(selectedCandidateDetail.candidateEmail?.toLowerCase()) || clientDecisionsMap.get(selectedCandidateDetail.id);
+                if (!clientFeedbackData || !clientFeedbackData.decision || clientFeedbackData.decision === 'pending') {
+                  return null;
+                }
+                return (
+                  <div className={`p-4 rounded-xl border space-y-2.5 ${
+                    clientFeedbackData.decision === 'interested'
+                      ? 'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-500/20 text-emerald-950 dark:text-emerald-200'
+                      : clientFeedbackData.decision === 'hold'
+                      ? 'bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-500/20 text-amber-950 dark:text-amber-200'
+                      : 'bg-rose-50 dark:bg-rose-950/20 border-rose-200 dark:border-rose-500/20 text-rose-950 dark:text-rose-200'
+                  }`}>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-base">
+                          {clientFeedbackData.decision === 'interested' ? '👍' : clientFeedbackData.decision === 'hold' ? '⏸️' : '👎'}
+                        </span>
+                        <div>
+                          <h4 className="text-[10px] font-bold uppercase tracking-wider opacity-75">
+                            Client Portal Review Decision
+                          </h4>
+                          <p className="text-xs font-bold">
+                            {clientFeedbackData.decision === 'interested'
+                              ? 'Candidate Selected (Interview Requested)'
+                              : clientFeedbackData.decision === 'hold'
+                              ? 'Candidate Placed On Hold'
+                              : 'Candidate Declined by Client'}
+                          </p>
+                        </div>
+                      </div>
+                      {clientFeedbackData.decidedAt && (
+                        <span className="text-[10px] opacity-70 font-mono">
+                          {new Date(clientFeedbackData.decidedAt).toLocaleDateString()}
+                        </span>
+                      )}
+                    </div>
+
+                    {clientFeedbackData.feedback && (
+                      <div className="bg-white/80 dark:bg-black/30 p-2.5 rounded-lg border border-black/5 dark:border-white/5 space-y-1">
+                        <span className="text-[10px] font-bold uppercase tracking-wider opacity-75 block">
+                          Client Remark / Note:
+                        </span>
+                        <p className="text-xs font-medium italic">
+                          "{clientFeedbackData.feedback}"
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
               {isLoadingCandidateProfile ? (
                 <div className="h-64 flex flex-col items-center justify-center gap-2 text-gray-400">
                   <RotateCw className="size-6 animate-spin text-emerald-500" />

@@ -115,6 +115,26 @@ export default function ClientReviewPortal() {
 
   // Resume Viewer Modal State
   const [previewResumeCandidate, setPreviewResumeCandidate] = useState<ShortlistedCandidate | null>(null);
+  const [previewCandidateIndex, setPreviewCandidateIndex] = useState<number>(0);
+
+  // Safe Blind Candidate Name Display (Never leaks personal name, contact, email or phone to client)
+  const getCandidateDisplayName = (candidate: ShortlistedCandidate, index?: number) => {
+    if (candidate.maskedName && /^candidate\s*#\d+/i.test(candidate.maskedName.trim())) {
+      return candidate.maskedName;
+    }
+    if (typeof index === 'number' && index >= 0) {
+      return `Candidate #${index + 1}`;
+    }
+    if (shortlist && Array.isArray(shortlist.candidates)) {
+      const idx = shortlist.candidates.findIndex(
+        (c) => (c.id || c.candidateId || c.candidateEmail) === (candidate.id || candidate.candidateId || candidate.candidateEmail)
+      );
+      if (idx >= 0) {
+        return `Candidate #${idx + 1}`;
+      }
+    }
+    return 'Candidate';
+  };
 
   // Compare Matrix Modal State
   const [isCompareOpen, setIsCompareOpen] = useState(false);
@@ -284,6 +304,19 @@ export default function ClientReviewPortal() {
         lastClientActivityAt: new Date().toISOString(),
       });
 
+      // Also sync decision to the candidate's core application document if available
+      if (candidate.applicationDocId) {
+        try {
+          await updateDoc(doc(db, 'jobApplications', candidate.applicationDocId), {
+            clientDecision: updatedCandidates.find(c => (c.id || c.candidateId || c.candidateName) === targetCandKey)?.clientDecision || 'pending',
+            clientDecisionAt: new Date().toISOString(),
+            clientName: shortlist.clientName || 'Client',
+          }).catch(() => null);
+        } catch (e) {
+          // ignore if document not in jobApplications
+        }
+      }
+
       setShortlist({
         ...shortlist,
         candidates: updatedCandidates,
@@ -327,6 +360,19 @@ export default function ClientReviewPortal() {
         lastClientActivityAt: new Date().toISOString(),
       });
 
+      // Also sync feedback note to the candidate's core application document if available
+      if (feedbackCandidate.applicationDocId) {
+        try {
+          await updateDoc(doc(db, 'jobApplications', feedbackCandidate.applicationDocId), {
+            clientFeedback: feedbackInput.trim(),
+            clientFeedbackAt: new Date().toISOString(),
+            clientName: shortlist.clientName || 'Client',
+          }).catch(() => null);
+        } catch (e) {
+          // ignore if document not in jobApplications
+        }
+      }
+
       setShortlist({
         ...shortlist,
         candidates: updatedCandidates,
@@ -348,11 +394,15 @@ export default function ClientReviewPortal() {
     if (!shortlist) return [];
     let list = [...shortlist.candidates];
 
-    // Search query
+    // Search query (Searches blind masked name, skills, location, or experience — never leaks personal PII)
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase().trim();
       list = list.filter((c) => {
-        const nameMatch = (c.candidateName || c.maskedName || '').toLowerCase().includes(q);
+        const origIdx = shortlist.candidates.findIndex(
+          (orig) => (orig.id || orig.candidateId || orig.candidateEmail) === (c.id || c.candidateId || c.candidateEmail)
+        );
+        const blindName = getCandidateDisplayName(c, origIdx >= 0 ? origIdx : undefined).toLowerCase();
+        const nameMatch = blindName.includes(q) || `candidate #${origIdx + 1}`.includes(q) || `#${origIdx + 1}`.includes(q);
         const skillMatch = (c.skills || []).some((s) => s.toLowerCase().includes(q));
         const locMatch = (c.location || '').toLowerCase().includes(q);
         const expMatch = (c.experience || '').toLowerCase().includes(q);
@@ -387,7 +437,9 @@ export default function ClientReviewPortal() {
         return getNum(b.experience) - getNum(a.experience);
       }
       if (sortBy === 'name-asc') {
-        return (a.candidateName || a.maskedName || '').localeCompare(b.candidateName || b.maskedName || '');
+        const idxA = shortlist.candidates.findIndex(c => (c.id || c.candidateId || c.candidateEmail) === (a.id || a.candidateId || a.candidateEmail));
+        const idxB = shortlist.candidates.findIndex(c => (c.id || c.candidateId || c.candidateEmail) === (b.id || b.candidateId || b.candidateEmail));
+        return getCandidateDisplayName(a, idxA >= 0 ? idxA : undefined).localeCompare(getCandidateDisplayName(b, idxB >= 0 ? idxB : undefined));
       }
       return 0;
     });
@@ -412,9 +464,11 @@ export default function ClientReviewPortal() {
 
     let text = `Hi ${shortlist.recruiterName || 'Team'},\n\nI am reviewing the candidate shortlist for *${shortlist.jobTitle}* on the hireX Client Review Portal for *${shortlist.clientName}*.`;
     if (candidate) {
-      text += `\n\nI would like to discuss candidate *${candidate.candidateName || candidate.maskedName}* (Match Score: ${candidate.matchScore}% - ${candidate.matchGrade}).`;
+      const candIdx = shortlist.candidates.findIndex(c => (c.id || c.candidateId || c.candidateName) === (candidate.id || candidate.candidateId || candidate.candidateName));
+      const candTitle = getCandidateDisplayName(candidate, candIdx >= 0 ? candIdx : undefined);
+      text += `\n\nI would like to discuss *${candTitle}* (Match Score: ${candidate.matchScore}% - ${candidate.matchGrade}) for *${shortlist.jobTitle}*.`;
       if (candidate.clientDecision) {
-        text += `\nCurrent Status: *${candidate.clientDecision.toUpperCase()}*`;
+        text += `\nCurrent Client Decision: *${candidate.clientDecision.toUpperCase()}*`;
       }
     }
     return `https://wa.me/${phone}?text=${encodeURIComponent(text)}`;
@@ -642,7 +696,7 @@ export default function ClientReviewPortal() {
             <Search size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#73766C] dark:text-neutral-400" />
             <input
               type="text"
-              placeholder="Search by name, core skills, experience, or location..."
+              placeholder="Search by Candidate #, core skills, experience, or location..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full h-11 pl-11 pr-9 rounded-full border border-[#E4E7DC] dark:border-white/10 bg-[#F8F9F5] dark:bg-[#101114] text-xs font-medium text-[#111215] dark:text-[#F8F9F5] outline-none focus:border-[#111215] dark:focus:border-white/30 transition-all placeholder:text-[#73766C]"
@@ -825,7 +879,7 @@ export default function ClientReviewPortal() {
                           <div>
                             <div className="flex items-center gap-2">
                               <h2 className="font-extrabold text-lg sm:text-xl text-[#111215] dark:text-[#F8F9F5]">
-                                {candidate.candidateName || candidate.maskedName}
+                                {getCandidateDisplayName(candidate, idx)}
                               </h2>
                               {decision === 'interested' && (
                                 <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#D4F82C] text-[#111215] border border-[#8FB305]/40">
@@ -846,8 +900,13 @@ export default function ClientReviewPortal() {
                                 </span>
                               )}
                             </div>
-                            <p className="text-xs text-[#575A51] dark:text-neutral-400 mt-0.5">
-                              {candidate.location || 'Location Confidential'} • Verified Candidate Profile
+                            <p className="text-xs text-[#575A51] dark:text-neutral-400 mt-0.5 flex items-center gap-1.5">
+                              <span>{candidate.location || 'Location Confidential'}</span>
+                              <span>•</span>
+                              <span className="inline-flex items-center gap-1 text-[#8FB305] font-semibold">
+                                <ShieldCheck size={11} />
+                                Verified Blind Profile
+                              </span>
                             </p>
                           </div>
                         </div>
@@ -1037,28 +1096,24 @@ export default function ClientReviewPortal() {
                         </button>
                       </div>
 
-                      {/* Primary View Cloudinary Resume */}
+                      {/* Primary View Masked Profile Summary */}
                       <button
                         type="button"
-                        onClick={() => setPreviewResumeCandidate(candidate)}
+                        onClick={() => {
+                          setPreviewResumeCandidate(candidate);
+                          setPreviewCandidateIndex(idx);
+                        }}
                         className="w-full h-11 rounded-full bg-[#111215] text-white hover:bg-[#202227] dark:bg-[#D4F82C] dark:text-[#111215] dark:hover:bg-[#c7eb22] text-xs font-bold flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer active:scale-95"
                       >
-                        <FileText size={15} />
-                        <span>View Verified Resume</span>
+                        <ShieldCheck size={16} className="text-[#D4F82C] dark:text-[#111215]" />
+                        <span>View Masked Profile Summary</span>
                       </button>
 
-                      {/* Direct Open in New Tab if Resume URL exists */}
-                      {candidate.resumeUrl && (
-                        <a
-                          href={candidate.resumeUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="w-full h-9 rounded-full border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-white/5 hover:border-[#111215] dark:hover:border-white/30 text-[#111215] dark:text-[#F8F9F5] text-xs font-bold flex items-center justify-center gap-1.5 transition-colors"
-                        >
-                          <ExternalLink size={13} />
-                          <span>Open Document</span>
-                        </a>
-                      )}
+                      {/* Agency PII Protection Notice (Zero raw resume links) */}
+                      <div className="flex items-center justify-center gap-1.5 text-[10px] text-[#73766C] dark:text-neutral-400 font-medium py-1">
+                        <Lock size={11} className="text-[#8FB305] shrink-0" />
+                        <span>Contact & PII Redacted for Agency Privacy</span>
+                      </div>
 
                       {/* WhatsApp Inquiry for this candidate */}
                       {shortlist.recruiterPhone && (
@@ -1103,7 +1158,7 @@ export default function ClientReviewPortal() {
                       <tr key={candidate.id || idx} className="hover:bg-[#F8F9F5]/70 dark:hover:bg-white/[0.02] transition-colors">
                         <td className="py-4 px-4 font-mono font-bold text-[#73766C]">{idx + 1}</td>
                         <td className="py-4 px-4 font-bold text-[#111215] dark:text-[#F8F9F5]">
-                          <div>{candidate.candidateName || candidate.maskedName}</div>
+                          <div>{getCandidateDisplayName(candidate, idx)}</div>
                           {candidate.clientFeedback && (
                             <div className="text-[10px] text-[#8FB305] italic truncate max-w-xs">
                               "{candidate.clientFeedback}"
@@ -1180,11 +1235,14 @@ export default function ClientReviewPortal() {
                         <td className="py-4 px-4 text-right">
                           <button
                             type="button"
-                            onClick={() => setPreviewResumeCandidate(candidate)}
-                            className="px-3 py-1.5 rounded-full bg-[#111215] text-white hover:bg-[#202227] dark:bg-[#D4F82C] dark:text-[#111215] font-bold text-xs inline-flex items-center gap-1 cursor-pointer"
+                            onClick={() => {
+                              setPreviewResumeCandidate(candidate);
+                              setPreviewCandidateIndex(idx);
+                            }}
+                            className="px-3 py-1.5 rounded-full bg-[#111215] text-white hover:bg-[#202227] dark:bg-[#D4F82C] dark:text-[#111215] font-bold text-xs inline-flex items-center gap-1.5 cursor-pointer shadow-2xs hover:scale-105 transition-all"
                           >
-                            <FileText size={12} />
-                            <span>Resume</span>
+                            <ShieldCheck size={13} className="text-[#D4F82C] dark:text-[#111215]" />
+                            <span>View Profile</span>
                           </button>
                         </td>
                       </tr>
@@ -1363,23 +1421,23 @@ export default function ClientReviewPortal() {
         </div>
       </footer>
 
-      {/* ── CLOUDINARY RESUME VIEWER MODAL ── */}
+      {/* ── BLIND CANDIDATE PROFILE DOSSIER MODAL (MASKED PII & ZERO RAW RESUME LINKS) ── */}
       {previewResumeCandidate && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-3 sm:p-6 backdrop-blur-md animate-in fade-in duration-200">
           <div
-            className="w-full max-w-4xl h-[92vh] rounded-3xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] text-[#111215] dark:text-[#F8F9F5] shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-150"
+            className="w-full max-w-3xl max-h-[90vh] rounded-3xl border border-[#E4E7DC] dark:border-white/10 bg-white dark:bg-[#15161A] text-[#111215] dark:text-[#F8F9F5] shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-150"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
             <div className="px-6 py-4 border-b border-[#E4E7DC] dark:border-white/10 flex items-center justify-between gap-4 shrink-0 bg-white dark:bg-[#15161A]">
               <div className="flex items-center gap-3 min-w-0">
-                <div className="w-10 h-10 rounded-2xl bg-[#D4F82C]/20 border border-[#8FB305]/30 text-[#111215] dark:text-[#D4F82C] flex items-center justify-center shrink-0">
-                  <FileText size={20} />
+                <div className="w-10 h-10 rounded-2xl bg-[#D4F82C]/20 border border-[#8FB305]/30 text-[#111215] dark:text-[#8FB305] flex items-center justify-center shrink-0">
+                  <ShieldCheck size={20} />
                 </div>
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
                     <h3 className="font-extrabold text-base text-[#111215] dark:text-[#F8F9F5] truncate">
-                      {previewResumeCandidate.candidateName || previewResumeCandidate.maskedName}
+                      {getCandidateDisplayName(previewResumeCandidate, previewCandidateIndex)}
                     </h3>
                     <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#D4F82C] text-[#111215] border border-[#8FB305]/30 shrink-0">
                       <Sparkles size={11} className="text-[#8FB305]" />
@@ -1387,25 +1445,13 @@ export default function ClientReviewPortal() {
                     </span>
                   </div>
                   <p className="text-xs text-[#575A51] dark:text-neutral-400 truncate">
-                    {shortlist.jobTitle} • {previewResumeCandidate.experience} Experience • Verified Document
+                    {shortlist.jobTitle} • {previewResumeCandidate.experience} Experience • Blind Verified Dossier
                   </p>
                 </div>
               </div>
 
-              {/* Action buttons */}
+              {/* Actions */}
               <div className="flex items-center gap-2 shrink-0">
-                {previewResumeCandidate.resumeUrl && (
-                  <a
-                    href={previewResumeCandidate.resumeUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full border border-[#E4E7DC] dark:border-white/10 text-xs font-bold hover:bg-[#F8F9F5] dark:hover:bg-white/10 transition-colors"
-                    title="Open document in original tab"
-                  >
-                    <ExternalLink size={13} />
-                    <span className="hidden sm:inline">Open Tab</span>
-                  </a>
-                )}
                 {shortlist.recruiterPhone && (
                   <a
                     href={getWhatsAppDiscussionLink(previewResumeCandidate) || '#'}
@@ -1414,7 +1460,7 @@ export default function ClientReviewPortal() {
                     className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#111215] text-[#D4F82C] hover:bg-[#202227] dark:bg-[#D4F82C] dark:text-[#111215] text-xs font-bold transition-colors"
                   >
                     <MessageCircle size={13} />
-                    <span className="hidden sm:inline">Discuss</span>
+                    <span className="hidden sm:inline">Discuss Candidate</span>
                   </a>
                 )}
                 <button
@@ -1427,49 +1473,131 @@ export default function ClientReviewPortal() {
               </div>
             </div>
 
-            {/* Modal Body - Document Preview */}
-            <div className="flex-1 bg-slate-900/60 overflow-hidden relative">
-              {previewResumeCandidate.resumeUrl ? (
-                <iframe
-                  src={
-                    previewResumeCandidate.resumeUrl.endsWith('.docx')
-                      ? `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(previewResumeCandidate.resumeUrl)}`
-                      : previewResumeCandidate.resumeUrl
-                  }
-                  title="Candidate Resume"
-                  className="w-full h-full border-0"
-                />
-              ) : (
-                <div className="h-full flex flex-col items-center justify-center p-6 text-center space-y-4 bg-white dark:bg-[#15161A]">
-                  <div className="w-16 h-16 rounded-3xl bg-[#D4F82C]/20 border border-[#8FB305]/30 text-[#111215] dark:text-[#D4F82C] flex items-center justify-center">
-                    <FileText size={32} />
-                  </div>
-                  <div>
-                    <h4 className="font-extrabold text-base text-[#111215] dark:text-[#F8F9F5]">Executive Profile Overview</h4>
-                    <p className="text-xs text-[#575A51] dark:text-neutral-400 max-w-md mt-1">
-                      Direct document link is pending sync. Review verified career profile details below:
-                    </p>
-                  </div>
-                  <div className="max-w-xl text-left bg-[#F8F9F5] dark:bg-[#101114] p-5 rounded-3xl border border-[#E4E7DC] dark:border-white/10 space-y-3 text-xs">
-                    <div>
-                      <span className="font-bold text-[#73766C] dark:text-neutral-400 block uppercase text-[10px]">Career Summary</span>
-                      <p className="text-[#111215] dark:text-[#F8F9F5] mt-1 leading-relaxed">
-                        {previewResumeCandidate.summary}
-                      </p>
-                    </div>
-                    <div>
-                      <span className="font-bold text-[#73766C] dark:text-neutral-400 block uppercase text-[10px] mb-1">Demonstrated Skills</span>
-                      <div className="flex flex-wrap gap-1.5">
-                        {previewResumeCandidate.skills.map((s, idx) => (
-                          <span key={idx} className="px-3 py-1 rounded-full bg-white dark:bg-white/5 border border-[#E4E7DC] dark:border-white/10 text-xs font-semibold text-[#111215] dark:text-[#F8F9F5]">
-                            {s}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
+            {/* Modal Body - Blind Profile Summary */}
+            <div className="flex-1 overflow-y-auto p-6 sm:p-8 space-y-6 bg-[#F8F9F5] dark:bg-[#101114]">
+              {/* Agency Anti-Poaching / PII Masking Shield */}
+              <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-500/20 flex items-start gap-3 text-xs">
+                <div className="p-2 rounded-xl bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 shrink-0">
+                  <Lock size={16} />
+                </div>
+                <div>
+                  <h4 className="font-bold text-amber-900 dark:text-amber-300">
+                    Confidential Masked Talent Profile
+                  </h4>
+                  <p className="text-amber-800/90 dark:text-amber-400/90 mt-0.5 leading-relaxed text-[11px]">
+                    Candidate personal name, direct email, phone number, and external resume links are masked under agency recruitment terms to protect confidential representation. Full unmasked onboarding documentation is coordinated once interview selection is confirmed.
+                  </p>
+                </div>
+              </div>
+
+              {/* Key Metrics Bento */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                <div className="p-3.5 rounded-2xl bg-white dark:bg-[#15161A] border border-[#E4E7DC] dark:border-white/10">
+                  <span className="text-[10px] text-[#73766C] dark:text-neutral-400 block font-bold uppercase tracking-wider mb-1">
+                    Experience
+                  </span>
+                  <span className="font-bold text-[#111215] dark:text-[#F8F9F5] text-sm block">
+                    {previewResumeCandidate.experience || '3+ Years'}
+                  </span>
+                </div>
+                <div className="p-3.5 rounded-2xl bg-white dark:bg-[#15161A] border border-[#E4E7DC] dark:border-white/10">
+                  <span className="text-[10px] text-[#73766C] dark:text-neutral-400 block font-bold uppercase tracking-wider mb-1">
+                    Notice Period
+                  </span>
+                  <span className="font-bold text-[#111215] dark:text-[#F8F9F5] text-sm block">
+                    {previewResumeCandidate.noticePeriod || '15–30 Days'}
+                  </span>
+                </div>
+                <div className="p-3.5 rounded-2xl bg-white dark:bg-[#15161A] border border-[#E4E7DC] dark:border-white/10">
+                  <span className="text-[10px] text-[#73766C] dark:text-neutral-400 block font-bold uppercase tracking-wider mb-1">
+                    Location
+                  </span>
+                  <span className="font-bold text-[#111215] dark:text-[#F8F9F5] text-sm block truncate">
+                    {previewResumeCandidate.location || 'Location Confidential'}
+                  </span>
+                </div>
+                <div className="p-3.5 rounded-2xl bg-white dark:bg-[#15161A] border border-[#E4E7DC] dark:border-white/10">
+                  <span className="text-[10px] text-[#73766C] dark:text-neutral-400 block font-bold uppercase tracking-wider mb-1">
+                    Expected CTC
+                  </span>
+                  <span className="font-bold text-[#111215] dark:text-[#F8F9F5] text-sm block">
+                    {previewResumeCandidate.expectedSalary || 'Competitive'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Career Summary */}
+              {previewResumeCandidate.summary && (
+                <div className="space-y-1.5">
+                  <span className="text-[10px] font-bold text-[#73766C] dark:text-neutral-400 uppercase tracking-wider block">
+                    Executive Summary & Verification
+                  </span>
+                  <p className="text-xs sm:text-sm text-[#111215] dark:text-[#F8F9F5] leading-relaxed bg-white dark:bg-[#15161A] p-4 rounded-2xl border border-[#E4E7DC] dark:border-white/10">
+                    {previewResumeCandidate.summary}
+                  </p>
+                </div>
+              )}
+
+              {/* Core Skills */}
+              {previewResumeCandidate.skills && previewResumeCandidate.skills.length > 0 && (
+                <div className="space-y-2">
+                  <span className="text-[10px] font-bold text-[#73766C] dark:text-neutral-400 uppercase tracking-wider block">
+                    Demonstrated Core Skills ({previewResumeCandidate.skills.length})
+                  </span>
+                  <div className="flex flex-wrap items-center gap-1.5 bg-white dark:bg-[#15161A] p-4 rounded-2xl border border-[#E4E7DC] dark:border-white/10">
+                    {previewResumeCandidate.skills.map((skill, sIdx) => (
+                      <span
+                        key={sIdx}
+                        className="px-3 py-1 rounded-full bg-[#F8F9F5] dark:bg-white/5 text-xs font-semibold text-[#111215] dark:text-[#F8F9F5] border border-[#E4E7DC] dark:border-white/10"
+                      >
+                        {skill}
+                      </span>
+                    ))}
                   </div>
                 </div>
               )}
+
+              {/* Decision Section inside Modal */}
+              <div className="p-4 rounded-2xl bg-white dark:bg-[#15161A] border border-[#E4E7DC] dark:border-white/10 space-y-3">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#73766C] dark:text-neutral-400 block text-center">
+                  Client Decision for {getCandidateDisplayName(previewResumeCandidate, previewCandidateIndex)}
+                </span>
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleDecisionChange(previewResumeCandidate, 'interested');
+                      setPreviewResumeCandidate(null);
+                    }}
+                    className="py-2.5 px-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 bg-[#111215] text-[#D4F82C] dark:bg-[#D4F82C] dark:text-[#111215] cursor-pointer hover:opacity-90"
+                  >
+                    <ThumbsUp size={14} />
+                    <span>Select</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleDecisionChange(previewResumeCandidate, 'hold');
+                      setPreviewResumeCandidate(null);
+                    }}
+                    className="py-2.5 px-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 bg-amber-600 text-white cursor-pointer hover:opacity-90"
+                  >
+                    <Bookmark size={14} />
+                    <span>Hold</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleDecisionChange(previewResumeCandidate, 'reject');
+                      setPreviewResumeCandidate(null);
+                    }}
+                    className="py-2.5 px-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 bg-rose-600 text-white cursor-pointer hover:opacity-90"
+                  >
+                    <ThumbsDown size={14} />
+                    <span>Decline</span>
+                  </button>
+                </div>
+              </div>
             </div>
 
             {/* Modal Footer */}
@@ -1480,7 +1608,7 @@ export default function ClientReviewPortal() {
                 onClick={() => setPreviewResumeCandidate(null)}
                 className="px-5 py-2 rounded-full border border-[#E4E7DC] dark:border-white/10 hover:bg-[#F8F9F5] dark:hover:bg-white/10 font-bold text-[#111215] dark:text-[#F8F9F5] transition-colors cursor-pointer"
               >
-                Close Preview
+                Close Profile
               </button>
             </div>
           </div>
@@ -1525,7 +1653,7 @@ export default function ClientReviewPortal() {
                     <div>
                       <span className="text-[10px] font-bold uppercase tracking-wider text-[#73766C] dark:text-neutral-400">Candidate #{idx + 1}</span>
                       <h4 className="font-bold text-base text-[#111215] dark:text-[#F8F9F5] truncate mt-0.5">
-                        {cand.candidateName || cand.maskedName}
+                        {getCandidateDisplayName(cand, idx)}
                       </h4>
                       <div className="mt-2 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-[#D4F82C] text-[#111215] border border-[#8FB305]/30">
                         <Sparkles size={11} className="text-[#8FB305]" />
@@ -1611,7 +1739,12 @@ export default function ClientReviewPortal() {
                     Client Feedback Note
                   </h3>
                   <p className="text-xs text-[#575A51] dark:text-neutral-400">
-                    Candidate: {feedbackCandidate.candidateName || feedbackCandidate.maskedName}
+                    Candidate: {getCandidateDisplayName(
+                      feedbackCandidate,
+                      shortlist.candidates.findIndex(
+                        (c) => (c.id || c.candidateId || c.candidateName) === (feedbackCandidate.id || feedbackCandidate.candidateId || feedbackCandidate.candidateName)
+                      )
+                    )}
                   </p>
                 </div>
               </div>
