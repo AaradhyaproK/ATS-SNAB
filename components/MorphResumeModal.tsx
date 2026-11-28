@@ -310,6 +310,18 @@ export const MorphResumeModal: React.FC<MorphResumeModalProps> = ({
     prevIsOpenRef.current = isOpen;
   }, [isOpen]);
 
+  // Close modal on Escape key press
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   useEffect(() => {
     if (!isOpen || !candidate) {
       return;
@@ -701,12 +713,27 @@ export const MorphResumeModal: React.FC<MorphResumeModalProps> = ({
 
   return createPortal(
     <div
-      className={`fixed inset-0 z-[10000] w-screen h-screen flex flex-col overflow-hidden transition-colors duration-200 animate-in fade-in duration-150 ${
-        isDay
-          ? 'bg-slate-100 text-slate-900'
-          : 'bg-[#0a0b0e] text-white'
-      }`}
+      className={
+        isClientPortal
+          ? 'fixed inset-0 z-[10000] flex items-center justify-center bg-black/75 p-2 sm:p-5 backdrop-blur-md animate-in fade-in duration-150'
+          : `fixed inset-0 z-[10000] w-screen h-screen flex flex-col overflow-hidden transition-colors duration-200 animate-in fade-in duration-150 ${
+              isDay ? 'bg-slate-100 text-slate-900' : 'bg-[#0a0b0e] text-white'
+            }`
+      }
+      onClick={isClientPortal ? onClose : undefined}
     >
+      <div
+        className={
+          isClientPortal
+            ? `w-full max-w-5xl h-[92vh] max-h-[920px] flex flex-col rounded-3xl border shadow-2xl overflow-hidden animate-in zoom-in-95 duration-150 transition-colors ${
+                isDay
+                  ? 'bg-white border-slate-200 text-slate-900'
+                  : 'bg-[#121318] border-white/10 text-white'
+              }`
+            : 'w-full h-full flex flex-col overflow-hidden'
+        }
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Top Header Bar */}
         <div
           className={`flex flex-wrap items-center justify-between gap-3 px-5 py-3 border-b transition-colors shrink-0 ${
@@ -776,7 +803,9 @@ export const MorphResumeModal: React.FC<MorphResumeModalProps> = ({
                   onClick={() => setActiveTab('original')}
                   className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-colors cursor-pointer ${
                     activeTab === 'original'
-                      ? isDay
+                      ? isClientPortal
+                        ? 'bg-[#111215] text-[#D4F82C] dark:bg-[#D4F82C] dark:text-[#111215] shadow-xs'
+                        : isDay
                         ? 'bg-white text-purple-700 shadow-xs'
                         : 'bg-purple-600 text-white shadow-xs'
                       : isDay
@@ -784,14 +813,16 @@ export const MorphResumeModal: React.FC<MorphResumeModalProps> = ({
                       : 'text-zinc-400 hover:text-white'
                   }`}
                 >
-                  Original Redacted
+                  {isClientPortal ? 'Masked Resume' : 'Original Redacted'}
                 </button>
                 <button
                   type="button"
                   onClick={() => setActiveTab('executive')}
                   className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-colors cursor-pointer ${
                     activeTab === 'executive'
-                      ? isDay
+                      ? isClientPortal
+                        ? 'bg-[#111215] text-[#D4F82C] dark:bg-[#D4F82C] dark:text-[#111215] shadow-xs'
+                        : isDay
                         ? 'bg-white text-purple-700 shadow-xs'
                         : 'bg-purple-600 text-white shadow-xs'
                       : isDay
@@ -799,7 +830,7 @@ export const MorphResumeModal: React.FC<MorphResumeModalProps> = ({
                       : 'text-zinc-400 hover:text-white'
                   }`}
                 >
-                  Executive ATS
+                  {isClientPortal ? 'Profile Summary' : 'Executive ATS'}
                 </button>
               </div>
             )}
@@ -856,8 +887,12 @@ export const MorphResumeModal: React.FC<MorphResumeModalProps> = ({
               type="button"
               onClick={handleDownloadPDF}
               disabled={isDownloading || isProcessing}
-              className="px-3.5 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-xs font-bold text-white flex items-center gap-1.5 transition-all shadow-md shadow-purple-600/25 cursor-pointer active:scale-95"
-              title="Download Morphed PDF"
+              className={`px-3.5 py-1.5 rounded-lg disabled:opacity-50 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer active:scale-95 ${
+                isClientPortal
+                  ? 'bg-[#111215] text-[#D4F82C] dark:bg-[#D4F82C] dark:text-[#111215] hover:opacity-90 shadow-xs'
+                  : 'bg-purple-600 hover:bg-purple-500 text-white shadow-md shadow-purple-600/25'
+              }`}
+              title="Download Masked Resume PDF"
             >
               {isDownloading ? (
                 <>
@@ -867,7 +902,7 @@ export const MorphResumeModal: React.FC<MorphResumeModalProps> = ({
               ) : (
                 <>
                   <Download size={13} strokeWidth={2.2} />
-                  <span>Download Morphed PDF</span>
+                  <span>Download Masked PDF</span>
                 </>
               )}
             </button>
@@ -1339,6 +1374,7 @@ export const MorphResumeModal: React.FC<MorphResumeModalProps> = ({
             </div>
           </div>
         )}
+      </div>
     </div>,
     document.body
   );
